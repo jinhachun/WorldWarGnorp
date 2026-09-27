@@ -15,4 +15,6 @@ MonoBehaviour:
   _startResource: 100
   _resourcePerSecond: 25
   _maxResource: 500
-  _enemySpawnInterval: 2.5
+  _enemySpawnIntervalStart: 2.2
+  _enemySpawnIntervalEnd: 1
+  _enemySpawnRampSeconds: 240

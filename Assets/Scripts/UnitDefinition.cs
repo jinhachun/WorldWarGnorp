@@ -15,6 +15,11 @@ namespace GnorpWar
         [SerializeField] private float _attackRange = 0.8f;
         [Tooltip("맞았을 때 뒤로 밀려나는 속도")]
         [SerializeField] private float _hitKnockback = 2f;
+        [Tooltip("큰 넉백(냥코식) — 체력이 이 비율 아래로 처음 떨어질 때 한 번 크게 튕겨난다")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _bigKnockbackAt = 0.5f;
+        [Tooltip("큰 넉백의 후방 속도")]
+        [SerializeField] private float _bigKnockbackSpeed = 6f;
         [Tooltip("산에서의 층 순위. 낮을수록 아래(탱커 0 · 근접 1 · 원딜 2). 위 유닛 순위가 아래보다 낮으면 자리를 바꾼다")]
         [SerializeField] private int _stackRank = 1;
         [SerializeField] private AttackType _attackType = AttackType.Melee;
@@ -36,6 +41,8 @@ namespace GnorpWar
         public float AttackInterval => _attackInterval;
         public float AttackRange => _attackRange;
         public float HitKnockback => _hitKnockback;
+        public float BigKnockbackAt => _bigKnockbackAt;
+        public float BigKnockbackSpeed => _bigKnockbackSpeed;
         public int StackRank => _stackRank;
         public AttackType AttackType => _attackType;
         public float PushPower => _pushPower;

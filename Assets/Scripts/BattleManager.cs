@@ -31,6 +31,7 @@ namespace GnorpWar
                 return;
 
             _over = true;
+            Debug.Log($"[Battle] {(destroyed.Team == Team.Enemy ? "승리" : "패배")} — {Time.timeSinceLevelLoad:F1}초");
             _resultText.text = destroyed.Team == Team.Enemy ? "승리!" : "패배...";
             _resultPanel.SetActive(true);
             Time.timeScale = 0f;

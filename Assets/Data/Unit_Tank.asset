@@ -19,6 +19,8 @@ MonoBehaviour:
   _attackInterval: 1.2
   _attackRange: 0.8
   _hitKnockback: 1
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 3
   _stackRank: 0
   _attackType: 0
   _pushPower: 2.5

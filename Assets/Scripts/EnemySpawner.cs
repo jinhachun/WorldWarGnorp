@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 적 AI — 지금은 일정 간격으로 무작위 유닛을 소환하는 단순 시간표
+    // 적 AI — 점점 짧아지는 간격으로 무작위 유닛을 소환하는 단순 시간표
     public class EnemySpawner : MonoBehaviour
     {
         [SerializeField] private Unit[] _unitPrefabs;
@@ -16,7 +16,7 @@ namespace GnorpWar
             if (_timer > 0f)
                 return;
 
-            _timer = _config.EnemySpawnInterval;
+            _timer = _config.EnemySpawnIntervalAt(Time.timeSinceLevelLoad);
             Instantiate(_unitPrefabs[Random.Range(0, _unitPrefabs.Length)], transform.position, Quaternion.identity);
         }
     }

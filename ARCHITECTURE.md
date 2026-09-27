@@ -44,7 +44,9 @@
 | `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(`UnitDefinition.KillReward`), 최대치에서 멈춤. 수치는 `BattleConfig` SO | `Unit.Died`(static 이벤트) 구독 |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `SummonButton` | 소환 버튼 하나. 쿨다운·자원 확인 후 소환 지점에 유닛 프리팹 생성 | `PlayerWallet.TrySpend` |
-| `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig` 간격마다 `_unitPrefabs` 중 무작위 생성 | — |
+| `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig.EnemySpawnIntervalAt(경과 시간)` 간격마다 `_unitPrefabs` 중 무작위 생성 — 간격은 시작→끝 값으로 점점 짧아짐 | — |
+| `BaseHealthBar` | 기지 체력 비율을 채움 게이지로 표시 | `Base.Hp01` |
+| `AutoPlayer` | **측정 전용.** 누를 수 있는 소환 버튼을 무작위로 계속 누름. 씬에 두지 않고 플레이 중에 `Battle`에 붙여 쓴다(HANDOFF 「밸런스」) | `Button.onClick` |
 | `Projectile` | 화살. 목표 지점에 떨어지도록 발사 속도를 역산(수평 속도 고정) → 중력 포물선. 트리거 — 아군 통과, 적에게 피해 후 소멸, 바닥·벽에 닿아도 소멸 | `IDamageable.TakeDamage` |
 | `BattleManager` | 승패. 어느 기지든 `Destroyed` 이벤트가 오면 결과 패널 + `timeScale=0`, 다시하기 = 씬 재로드 | `Base.Destroyed` 구독 |
 

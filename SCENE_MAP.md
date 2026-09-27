@@ -35,6 +35,7 @@ EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
  ├─ ResourceLabel        ← Text · ResourceLabel        (위쪽 줄 맨 왼쪽 "현재 / 최대")
  ├─ SummonButton_Shield · _Sword · _Bow   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽부터 180px 간격) → Name · Cost · CooldownFill(Filled)
+ ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (위쪽 줄 오른쪽 끝) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준)
  └─ ResultPanel          [실행 시 꺼짐] ← Image          → ResultText · RetryButton
 ```
 

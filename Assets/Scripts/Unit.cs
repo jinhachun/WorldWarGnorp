@@ -17,6 +17,9 @@ namespace GnorpWar
         private const float SquashDuration = 0.3f;
         private const float SquashAmount = 0.3f;
         private const float FlashDuration = 0.08f;
+        // 큰 넉백 — 뒤로 튕겨 오르며 날아가는 동안은 경직
+        private const float BigKnockbackDuration = 0.6f;
+        private const float BigKnockbackHopRatio = 0.6f;
         // 칼 찌르기 — 몸 중심 근처에서 타겟 방향으로 뻗었다가 돌아온다
         private const float ThrustDuration = 0.2f;
         private const float ThrustDistance = 0.3f;
@@ -56,6 +59,7 @@ namespace GnorpWar
         private float _thrustTime = ThrustDuration;
         private Vector2 _thrustDirection;
         private bool _swapping;
+        private bool _bigKnockbackUsed;
 
         // 유닛이 죽는 순간 (처치 보상 등). static이라 구독자는 OnDisable에서 반드시 해제할 것
         public static event System.Action<Unit> Died;
@@ -184,12 +188,24 @@ namespace GnorpWar
                 return;
             }
 
+            _squashTime = 0f;
+            _flashTimer = FlashDuration;
+
+            // 냥코식 큰 넉백 — 생명당 한 번, 맞은 방향과 상관없이 후방으로 튕겨 오른다
+            if (!_bigKnockbackUsed && _hp <= _definition.MaxHp * _definition.BigKnockbackAt)
+            {
+                _bigKnockbackUsed = true;
+                _knockbackTimer = BigKnockbackDuration;
+                float speed = _definition.BigKnockbackSpeed;
+                _rb.linearVelocity = new Vector2(-Forward * speed, speed * BigKnockbackHopRatio);
+                _squashVertical = false;
+                return;
+            }
+
             // 맞은 방향으로 밀리고, 맞은 축으로 찌그러진다 (위에서 맞으면 납작, 옆에서 맞으면 홀쭉)
             _knockbackTimer = KnockbackDuration;
             _rb.linearVelocity = hitDirection * (_definition.HitKnockback * push);
             _squashVertical = Mathf.Abs(hitDirection.y) > Mathf.Abs(hitDirection.x);
-            _squashTime = 0f;
-            _flashTimer = FlashDuration;
         }
 
         private void Update()

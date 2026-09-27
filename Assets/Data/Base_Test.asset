@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 29bf1c2459a294d429225a459ccfa319, type: 3}
   m_Name: Base_Test
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BaseDefinition
-  _maxHp: 500
+  _maxHp: 700

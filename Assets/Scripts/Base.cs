@@ -13,6 +13,7 @@ namespace GnorpWar
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
+        public float Hp01 => Mathf.Clamp01(_hp / _definition.MaxHp);
 
         private void Awake()
         {

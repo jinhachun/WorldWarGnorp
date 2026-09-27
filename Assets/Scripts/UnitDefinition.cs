@@ -15,6 +15,8 @@ namespace GnorpWar
         [SerializeField] private float _attackRange = 0.8f;
         [Tooltip("맞았을 때 뒤로 밀려나는 속도")]
         [SerializeField] private float _hitKnockback = 2f;
+        [SerializeField] private float _cost = 50f;
+        [SerializeField] private float _summonCooldown = 1.5f;
 
         public float MoveSpeed => _moveSpeed;
         public float JumpHeight => _jumpHeight;
@@ -23,5 +25,7 @@ namespace GnorpWar
         public float AttackInterval => _attackInterval;
         public float AttackRange => _attackRange;
         public float HitKnockback => _hitKnockback;
+        public float Cost => _cost;
+        public float SummonCooldown => _summonCooldown;
     }
 }

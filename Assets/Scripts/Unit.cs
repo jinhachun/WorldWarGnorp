@@ -49,6 +49,7 @@ namespace GnorpWar
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
+        public UnitDefinition Definition => _definition;
         private float Forward => _team == Team.Ally ? 1f : -1f;
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정

@@ -28,11 +28,18 @@ Base_Ally        ← SpriteRenderer · BoxCollider2D · Base(Team=Ally)    x=-34
  └─ BackStop     ← BoxCollider2D   (보이지 않음) 기지 뒤쪽 끝 ~ 화면 위
 Base_Enemy       ← SpriteRenderer · BoxCollider2D · Base(Team=Enemy)   x=+34.5
  └─ BackStop     ← BoxCollider2D
-Spawner_Ally     ← StackTestSpawner   [검증용 임시] `Unit_Ally` 프리팹
-Spawner_Enemy    ← StackTestSpawner   [검증용 임시] `Unit_Enemy` 프리팹
+Battle           ← PlayerWallet · BattleManager      (전투 로직 허브)
+AllySpawnPoint   ← (Transform만) 소환 버튼이 아군을 내는 자리
+EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Unit_Enemy`)
+EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
+Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
+ ├─ ResourceLabel        ← Text · ResourceLabel        (위쪽 줄 맨 왼쪽 "현재 / 최대")
+ ├─ SummonButton_Gnorp   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽) → Name · Cost · CooldownFill(Filled)
+ └─ ResultPanel          [실행 시 꺼짐] ← Image          → ResultText · RetryButton
 ```
 
-- **임시 오브젝트**(`Spawner_*`)는 소환 버튼·적 AI가 생기면 지운다.
+- UI는 **임시 모양**(단색 사각형 + 레거시 Text)이다. 아트가 오면 CLAUDE.md §5-1 규칙대로 바꾼다.
+- 🔴 **전투 UI는 전부 화면 위쪽 줄에 둔다**(사용자 결정 9/27 — 전장이 화면 아래쪽이라 겹치지 않게). 새 버튼도 위쪽 줄 오른쪽으로 이어 붙인다.
 
 **핵심 배선:**
 - **`BackStop`은 기지 스케일(1.5×3)의 자식이라 localScale·localPosition이 그 역수로 보정돼 있다.** 기지 크기를 바꾸면 BackStop도 다시 맞출 것.
@@ -47,3 +54,6 @@ Spawner_Enemy    ← StackTestSpawner   [검증용 임시] `Unit_Enemy` 프리�
 |---|---|
 | 새 유닛 종류 | `Assets/Prefabs/`에 프리팹(`Unit` + `Rigidbody2D` + `BoxCollider2D` + 마찰 0 재질) + `Assets/Data/`에 `UnitDefinition` 에셋. 씬 구조 변경 없음 |
 | 기지 체력 | `Assets/Data/Base_Test.asset` (씬 X) |
+| 자원·적 소환 간격 | `Assets/Data/BattleConfig.asset` (씬 X) |
+| 새 소환 버튼 | `SummonButton_Gnorp`를 복제해 `_unitPrefab`만 바꾼다. 비용·쿨다운은 그 유닛의 `UnitDefinition` |
+| 판 시작 시 도는 신규 로직 | `Battle` 오브젝트에 컴포넌트 추가 |

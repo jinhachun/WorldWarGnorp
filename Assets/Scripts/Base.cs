@@ -9,6 +9,8 @@ namespace GnorpWar
 
         private float _hp;
 
+        public event System.Action<Base> Destroyed;
+
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
 
@@ -27,6 +29,7 @@ namespace GnorpWar
             {
                 Debug.Log($"[Base] {_team} 기지 파괴");
                 gameObject.SetActive(false);
+                Destroyed?.Invoke(this);
             }
         }
     }

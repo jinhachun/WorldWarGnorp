@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
-  m_Name: Unit_Test
+  m_Name: Unit_Melee
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
   _moveSpeed: 2.25
   _jumpHeight: 1.2

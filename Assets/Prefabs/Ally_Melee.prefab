@@ -105,7 +105,7 @@ GameObject:
   - component: {fileID: 8929475736715168664}
   - component: {fileID: 638779955689807151}
   m_Layer: 0
-  m_Name: Unit_Ally
+  m_Name: Ally_Melee
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

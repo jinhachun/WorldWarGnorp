@@ -41,9 +41,11 @@
 |---|---|---|
 | `Unit` | 유닛 한 마리. 사거리 안에 적(`IDamageable`)이 있으면 멈춰서 공격 + 칼 찌르기(점프보다 우선). 없으면 전진, 앞 아군이 멈춰 있고 머리 위가 비고 기지 위가 아니면 점프. 피격 시 맞은 방향으로 밀림·찌그러짐·번쩍. 죽으면 콜라이더 끄고 뒤집혀 맨 앞 레이어로 튀어 떨어진 뒤 3초 후 파괴. 수치는 `UnitDefinition` SO, 연출 상수는 `Unit.cs` 상단 | 사거리 안 `IDamageable.TakeDamage(피해, 맞은 방향)` · 접촉한 `Unit`의 `IsStopped`·`IsHeadFree`·`_onBase` |
 | `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
-| `PlayerWallet` | 플레이어 자원. 초당 증가, 최대치에서 멈춤. 수치는 `BattleConfig` SO | — |
+| `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(`UnitDefinition.KillReward`), 최대치에서 멈춤. 수치는 `BattleConfig` SO | `Unit.Died`(static 이벤트) 구독 |
+| `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `SummonButton` | 소환 버튼 하나. 쿨다운·자원 확인 후 소환 지점에 유닛 프리팹 생성 | `PlayerWallet.TrySpend` |
-| `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig` 간격마다 적 프리팹 생성 | — |
+| `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig` 간격마다 `_unitPrefabs` 중 무작위 생성 | — |
+| `Projectile` | 화살. 목표 지점에 떨어지도록 발사 속도를 역산(수평 속도 고정) → 중력 포물선. 트리거 — 아군 통과, 적에게 피해 후 소멸, 바닥·벽에 닿아도 소멸 | `IDamageable.TakeDamage` |
 | `BattleManager` | 승패. 어느 기지든 `Destroyed` 이벤트가 오면 결과 패널 + `timeScale=0`, 다시하기 = 씬 재로드 | `Base.Destroyed` 구독 |
 
 ---
@@ -58,7 +60,9 @@
 
 | 변경하고 싶은 것 | 손대야 할 파일 |
 |---|---|
-| (구현 후 채움) | |
+| **새 유닛 종류** | `Assets/Data/Unit_*.asset` 하나(수치·공격 방식·밀치는 힘·화살) + `Ally_*`/`Enemy_*` 프리팹 두 개(`*_Melee` 복제 → `_definition`·`Visual/Weapon` 그림 교체) + 위쪽 줄에 소환 버튼 복제 + `EnemySpawner._unitPrefabs`에 추가. 코드 X |
+| **새 공격 방식** | `AttackType` enum(**맨 뒤에만**) + `Unit.FixedUpdate`의 공격 분기 |
+| 전투 수치 | `Unit_*.asset` · `BattleConfig.asset` · `Base_Test.asset` (코드 X) |
 
 ---
 
@@ -70,8 +74,11 @@
   `transform`을 직접 쓰면 머리 위에 선 유닛과의 접촉이 끊겨 산이 무너지거나 겹친다.
 - 🔴 **유닛 프리팹은 "몸체 루트(물리) + `Visual` 자식(그림·무기)"으로 나뉜다.** 찌그러짐·번쩍임 같은 연출은 `Visual`에만 건다.
   루트 스케일을 건드리면 충돌 박스가 같이 변해 쌓인 산이 흔들린다. (적의 좌우 반전만은 예외 — 루트 x스케일 -1, 박스 크기는 안 변한다)
+- 🔴 **칸·사거리 검사는 트리거를 무시한다**(`Unit.SolidOnly`). 화살이 트리거라서, 무시하지 않으면 날아가는 화살 때문에 "머리 위가 막혔다"로 오판한다.
+  새 물리 검사를 추가할 때도 같은 필터를 쓸 것.
 - 🔴 **죽은 유닛은 즉시 충돌에서 빠져야 한다.** 튕겨나가는 동안 다른 유닛을 밀거나 받치면 안 된다(그래야 위의 산이 무너진다).
-- 🔴 **위치 교환(넘어가기)은 임시 받침대로 한다.** 두 유닛이 충돌을 끄고 넘어가는 동안, 둘이 있던 자리에
+- 🔴 **`Unit.Died`는 static 이벤트다 — 구독자는 `OnEnable`에서 걸고 `OnDisable`에서 반드시 푼다.** 안 풀면 씬을 다시 시작할 때 파괴된 구독자가 남는다.
+- 🔴 **위치 교환(넘어가기)은 임시 받침대로 한다.** 구현은 `Unit.SwapDownWith`(위 유닛이 주도, 교환 중 두 유닛은 콜라이더 끔 + Kinematic). 두 유닛이 충돌을 끄고 넘어가는 동안, 둘이 있던 자리에
   보이지 않는 받침 콜라이더(높이 2)를 세워 위의 산을 받친다. 끝나면 받침대를 치우고 충돌을 다시 켠다.
   - 교환 중인 유닛은 **잠가서** 다른 교환에 끼지 못하게 한다.
   - 교환 중 한쪽이 죽으면 **받침대도 같이 정리**한다 — 안 하면 산이 허공에 뜬다.

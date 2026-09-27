@@ -30,11 +30,11 @@ Base_Enemy       ← SpriteRenderer · BoxCollider2D · Base(Team=Enemy)   x=+34
  └─ BackStop     ← BoxCollider2D
 Battle           ← PlayerWallet · BattleManager      (전투 로직 허브)
 AllySpawnPoint   ← (Transform만) 소환 버튼이 아군을 내는 자리
-EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Unit_Enemy`)
+EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Enemy_Tank/Melee/Ranged` 중 무작위)
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
  ├─ ResourceLabel        ← Text · ResourceLabel        (위쪽 줄 맨 왼쪽 "현재 / 최대")
- ├─ SummonButton_Gnorp   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽) → Name · Cost · CooldownFill(Filled)
+ ├─ SummonButton_Shield · _Sword · _Bow   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽부터 180px 간격) → Name · Cost · CooldownFill(Filled)
  └─ ResultPanel          [실행 시 꺼짐] ← Image          → ResultText · RetryButton
 ```
 
@@ -55,5 +55,5 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 | 새 유닛 종류 | `Assets/Prefabs/`에 프리팹(`Unit` + `Rigidbody2D` + `BoxCollider2D` + 마찰 0 재질) + `Assets/Data/`에 `UnitDefinition` 에셋. 씬 구조 변경 없음 |
 | 기지 체력 | `Assets/Data/Base_Test.asset` (씬 X) |
 | 자원·적 소환 간격 | `Assets/Data/BattleConfig.asset` (씬 X) |
-| 새 소환 버튼 | `SummonButton_Gnorp`를 복제해 `_unitPrefab`만 바꾼다. 비용·쿨다운은 그 유닛의 `UnitDefinition` |
+| 새 소환 버튼 | 기존 버튼을 복제해 `_unitPrefab`과 `Name` 글자를 바꾼다. 🔴 **복제본의 `_cooldownFill`·`_costText`는 원본 자식을 가리키므로 자기 자식으로 다시 연결.** 비용·쿨다운은 그 유닛의 `UnitDefinition` |
 | 판 시작 시 도는 신규 로직 | `Battle` 오브젝트에 컴포넌트 추가 |

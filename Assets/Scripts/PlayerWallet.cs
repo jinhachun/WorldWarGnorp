@@ -15,9 +15,26 @@ namespace GnorpWar
             Current = _config.StartResource;
         }
 
+        private void OnEnable()
+        {
+            Unit.Died += OnUnitDied;
+        }
+
+        private void OnDisable()
+        {
+            Unit.Died -= OnUnitDied;
+        }
+
         private void Update()
         {
             Current = Mathf.Min(Current + _config.ResourcePerSecond * Time.deltaTime, Max);
+        }
+
+        // 냥코대전쟁처럼 적을 처치하면 자원을 받는다
+        private void OnUnitDied(Unit unit)
+        {
+            if (unit.Team == Team.Enemy)
+                Current = Mathf.Min(Current + unit.Definition.KillReward, Max);
         }
 
         public bool TrySpend(float amount)

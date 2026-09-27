@@ -19,7 +19,7 @@ namespace GnorpWar
             _hp = _definition.MaxHp;
         }
 
-        public void TakeDamage(float amount, Vector2 hitDirection)
+        public void TakeDamage(float amount, Vector2 hitDirection, float push)
         {
             if (!IsAlive)
                 return;

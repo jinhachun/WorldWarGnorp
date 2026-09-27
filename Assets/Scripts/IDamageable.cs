@@ -8,6 +8,7 @@ namespace GnorpWar
         Team Team { get; }
         bool IsAlive { get; }
         // hitDirection: 공격이 날아가는 방향(공격자 → 피격자), 정규화됨
-        void TakeDamage(float amount, Vector2 hitDirection);
+        // push: 공격자의 밀치는 힘 배율 — 피격자의 밀림 값에 곱한다
+        void TakeDamage(float amount, Vector2 hitDirection, float push);
     }
 }

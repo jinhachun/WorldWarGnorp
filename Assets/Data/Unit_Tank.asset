@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_Tank
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _moveSpeed: 1.8
+  _jumpHeight: 1.2
+  _maxHp: 300
+  _attackDamage: 4
+  _attackInterval: 1.2
+  _attackRange: 0.8
+  _hitKnockback: 1
+  _stackRank: 0
+  _attackType: 0
+  _pushPower: 2.5
+  _projectile: {fileID: 0}
+  _projectileArcHeight: 2.5
+  _cost: 80
+  _killReward: 30
+  _summonCooldown: 3

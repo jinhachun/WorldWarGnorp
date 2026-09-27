@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,6 +22,14 @@ namespace GnorpWar
         private const float ThrustDistance = 0.3f;
         private static readonly Vector2 WeaponAnchor = new Vector2(0f, -0.1f);
         private const float WeaponReach = 0.45f;
+        // 칸 검사는 몸(고체)만 본다 — 날아가는 화살(트리거) 때문에 칸이 막힌 걸로 보이면 안 된다
+        private static readonly ContactFilter2D SolidOnly = new ContactFilter2D { useTriggers = false };
+        private static readonly List<Collider2D> CellProbe = new List<Collider2D>();
+        // 층 정렬 — 아래 유닛이 뒤쪽으로 호를 그리며 타고 올라가고, 위 유닛은 앞쪽으로 미끄러져 내려온다
+        private const float SwapDuration = 0.35f;
+        private const float SwapClimbArc = 0.7f;
+        private const float SwapSlideArc = 0.3f;
+        private const float SwapMaxOffsetX = 0.5f;
 
         [SerializeField] private UnitDefinition _definition;
         [SerializeField] private Team _team;
@@ -46,6 +55,10 @@ namespace GnorpWar
         private float _flashTimer;
         private float _thrustTime = ThrustDuration;
         private Vector2 _thrustDirection;
+        private bool _swapping;
+
+        // 유닛이 죽는 순간 (처치 보상 등). static이라 구독자는 OnDisable에서 반드시 해제할 것
+        public static event System.Action<Unit> Died;
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
@@ -59,7 +72,7 @@ namespace GnorpWar
             get
             {
                 Vector2 above = (Vector2)transform.position + Vector2.up;
-                return Physics2D.OverlapBox(above, new Vector2(0.8f, 0.8f), 0f) == null;
+                return Physics2D.OverlapBox(above, new Vector2(0.8f, 0.8f), 0f, SolidOnly, CellProbe) == 0;
             }
         }
 
@@ -79,7 +92,7 @@ namespace GnorpWar
 
         private void FixedUpdate()
         {
-            if (!IsAlive)
+            if (!IsAlive || _swapping)
                 return;
 
             _advanceSpeed = (_rb.position.x - _lastX) * Forward / Time.fixedDeltaTime;
@@ -89,6 +102,7 @@ namespace GnorpWar
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
             bool canClimb = false;
+            Unit allyBelow = null;
             _onBase = false;
             int count = _rb.GetContacts(_contacts);
             for (int i = 0; i < count; i++)
@@ -99,6 +113,8 @@ namespace GnorpWar
                     grounded = true;
                     if (contact.collider.TryGetComponent(out Base _))
                         _onBase = true;
+                    else if (contact.collider.TryGetComponent(out Unit below) && below._team == _team)
+                        allyBelow = below;
                 }
                 else if (contact.normal.x * Forward < -0.5f
                          && contact.collider.TryGetComponent(out Unit other)
@@ -115,6 +131,13 @@ namespace GnorpWar
                 return;
             }
 
+            // 층 정렬: 내가 바로 아래 아군보다 아래층 역할이면(예: 원딜 위의 탱커) 자리를 바꾼다
+            if (allyBelow != null && CanSwapDownWith(allyBelow))
+            {
+                StartCoroutine(SwapDownWith(allyBelow));
+                return;
+            }
+
             Vector2 velocity = _rb.linearVelocity;
 
             // 싸움이 점프·전진보다 우선
@@ -126,7 +149,15 @@ namespace GnorpWar
                 {
                     Vector2 toTarget = targetPoint - _rb.position;
                     Vector2 hitDirection = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
-                    target.TakeDamage(_definition.AttackDamage, hitDirection);
+                    if (_definition.AttackType == AttackType.Ranged)
+                    {
+                        Projectile arrow = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
+                        arrow.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight);
+                    }
+                    else
+                    {
+                        target.TakeDamage(_definition.AttackDamage, hitDirection, _definition.PushPower);
+                    }
                     StartThrust(hitDirection);
                     _attackCooldown = _definition.AttackInterval;
                 }
@@ -141,7 +172,7 @@ namespace GnorpWar
             _rb.linearVelocity = velocity;
         }
 
-        public void TakeDamage(float amount, Vector2 hitDirection)
+        public void TakeDamage(float amount, Vector2 hitDirection, float push)
         {
             if (!IsAlive)
                 return;
@@ -155,7 +186,7 @@ namespace GnorpWar
 
             // 맞은 방향으로 밀리고, 맞은 축으로 찌그러진다 (위에서 맞으면 납작, 옆에서 맞으면 홀쭉)
             _knockbackTimer = KnockbackDuration;
-            _rb.linearVelocity = hitDirection * _definition.HitKnockback;
+            _rb.linearVelocity = hitDirection * (_definition.HitKnockback * push);
             _squashVertical = Mathf.Abs(hitDirection.y) > Mathf.Abs(hitDirection.x);
             _squashTime = 0f;
             _flashTimer = FlashDuration;
@@ -213,31 +244,103 @@ namespace GnorpWar
 
         private bool FindTarget(out IDamageable target, out Vector2 targetPoint)
         {
-            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, ContactFilter2D.noFilter, _overlaps);
-            foreach (Collider2D col in _overlaps)
-            {
-                if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                {
-                    target = damageable;
-                    targetPoint = col.ClosestPoint(_rb.position);
-                    return true;
-                }
-            }
+            // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게
+            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
             target = null;
             targetPoint = default;
-            return false;
+            float best = float.MaxValue;
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive)
+                    continue;
+
+                Vector2 point = col.ClosestPoint(_rb.position);
+                float distance = (point - _rb.position).sqrMagnitude;
+                if (distance < best)
+                {
+                    best = distance;
+                    target = damageable;
+                    targetPoint = point;
+                }
+            }
+            return target != null;
         }
 
         private bool IsAheadOnBaseUnit()
         {
             // 한 칸 앞, 발밑 높이에 기지 위 유닛이 있으면 그 머리로 걸어 들어가게 된다
             Vector2 aheadBelow = _rb.position + new Vector2(Forward, -1f);
-            Collider2D col = Physics2D.OverlapBox(aheadBelow, new Vector2(0.8f, 0.8f), 0f);
-            return col != null && col.TryGetComponent(out Unit unit) && unit._onBase;
+            Physics2D.OverlapBox(aheadBelow, new Vector2(0.8f, 0.8f), 0f, SolidOnly, CellProbe);
+            foreach (Collider2D col in CellProbe)
+            {
+                if (col.TryGetComponent(out Unit unit) && unit._onBase)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool CanSwapDownWith(Unit below)
+        {
+            return _definition.StackRank < below._definition.StackRank
+                   && below.IsAlive && !below._swapping && below._knockbackTimer <= 0f
+                   && Mathf.Abs(below._rb.position.x - _rb.position.x) <= SwapMaxOffsetX;
+        }
+
+        // 교환 동안 두 칸 자리에 보이지 않는 받침대를 세워 위의 산을 받친다(ARCHITECTURE 「위치 교환」)
+        private IEnumerator SwapDownWith(Unit below)
+        {
+            Vector2 upperStart = _rb.position;
+            Vector2 lowerStart = below._rb.position;
+
+            var support = new GameObject("SwapSupport");
+            support.transform.position = (upperStart + lowerStart) * 0.5f;
+            support.AddComponent<BoxCollider2D>().size = new Vector2(1f, upperStart.y - lowerStart.y + 1f);
+
+            BeginSwap();
+            below.BeginSwap();
+            for (float t = 0f; t < SwapDuration; t += Time.fixedDeltaTime)
+            {
+                if (!IsAlive || !below.IsAlive)
+                    break;
+
+                float k = t / SwapDuration;
+                float arc = Mathf.Sin(k * Mathf.PI);
+                below._rb.MovePosition(Vector2.Lerp(lowerStart, upperStart, k) + new Vector2(-Forward * SwapClimbArc * arc, 0f));
+                _rb.MovePosition(Vector2.Lerp(upperStart, lowerStart, k) + new Vector2(Forward * SwapSlideArc * arc, 0f));
+                yield return new WaitForFixedUpdate();
+            }
+
+            Destroy(support);
+            if (IsAlive)
+                EndSwap(lowerStart);
+            if (below.IsAlive)
+                below.EndSwap(upperStart);
+        }
+
+        private void BeginSwap()
+        {
+            _swapping = true;
+            foreach (Collider2D col in GetComponents<Collider2D>())
+                col.enabled = false;
+            _rb.linearVelocity = Vector2.zero;
+            _rb.bodyType = RigidbodyType2D.Kinematic;
+        }
+
+        private void EndSwap(Vector2 position)
+        {
+            _rb.position = position;
+            _rb.bodyType = RigidbodyType2D.Dynamic;
+            _rb.linearVelocity = Vector2.zero;
+            foreach (Collider2D col in GetComponents<Collider2D>())
+                col.enabled = true;
+            _lastX = position.x;
+            _swapping = false;
         }
 
         private void Die()
         {
+            // 교환 중이었다면 운동학 상태 — 중력을 받게 되돌려야 떨어진다
+            _rb.bodyType = RigidbodyType2D.Dynamic;
             // 물리 제거 — 콜라이더가 꺼지면 위에 서 있던 유닛들이 빈자리로 내려앉는다
             foreach (Collider2D col in GetComponents<Collider2D>())
                 col.enabled = false;
@@ -253,6 +356,7 @@ namespace GnorpWar
             _visual.localScale = new Vector3(1f, -1f, 1f);
 
             Destroy(gameObject, DeathDestroyDelay);
+            Died?.Invoke(this);
         }
     }
 }

@@ -2,21 +2,35 @@ using UnityEngine;
 
 namespace GnorpWar
 {
+    // 자원 획득 레벨 한 칸 (냥코 일꾼 레벨 / 카툰워즈 마나 업그레이드)
+    [System.Serializable]
+    public struct IncomeLevel
+    {
+        [SerializeField] private float _perSecond;
+        [SerializeField] private float _max;
+        [Tooltip("이 레벨에서 다음 레벨로 올리는 비용. 마지막 레벨은 쓰지 않는다")]
+        [SerializeField] private float _upgradeCost;
+
+        public float PerSecond => _perSecond;
+        public float Max => _max;
+        public float UpgradeCost => _upgradeCost;
+    }
+
     // 전투 한 판 전체에 걸친 수치 (자원 · 적 소환)
     [CreateAssetMenu(menuName = "GnorpWar/Battle Config")]
     public class BattleConfig : ScriptableObject
     {
         [SerializeField] private float _startResource = 100f;
-        [SerializeField] private float _resourcePerSecond = 25f;
-        [SerializeField] private float _maxResource = 500f;
+        [Tooltip("0번이 시작 레벨. 강화 버튼으로 한 칸씩 올라간다")]
+        [SerializeField] private IncomeLevel[] _incomeLevels;
         [Tooltip("적 소환 간격 — 시작 값에서 끝 값까지 Ramp 시간 동안 줄어든다. 교착이 길어지면 적이 강해져 판이 반드시 끝난다")]
         [SerializeField] private float _enemySpawnIntervalStart = 2.2f;
         [SerializeField] private float _enemySpawnIntervalEnd = 1.2f;
         [SerializeField] private float _enemySpawnRampSeconds = 300f;
 
         public float StartResource => _startResource;
-        public float ResourcePerSecond => _resourcePerSecond;
-        public float MaxResource => _maxResource;
+        public int IncomeLevelCount => _incomeLevels.Length;
+        public IncomeLevel GetIncomeLevel(int level) => _incomeLevels[level];
         public float EnemySpawnIntervalAt(float elapsed)
         {
             return Mathf.Lerp(_enemySpawnIntervalStart, _enemySpawnIntervalEnd, elapsed / _enemySpawnRampSeconds);

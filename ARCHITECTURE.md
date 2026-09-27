@@ -41,11 +41,14 @@
 |---|---|---|
 | `Unit` | 유닛 한 마리. 사거리 안에 적(`IDamageable`)이 있으면 멈춰서 공격 + 칼 찌르기(점프보다 우선). 없으면 전진, 앞 아군이 멈춰 있고 머리 위가 비고 기지 위가 아니면 점프. 피격 시 맞은 방향으로 밀림·찌그러짐·번쩍. 죽으면 콜라이더 끄고 뒤집혀 맨 앞 레이어로 튀어 떨어진 뒤 3초 후 파괴. 수치는 `UnitDefinition` SO, 연출 상수는 `Unit.cs` 상단 | 사거리 안 `IDamageable.TakeDamage(피해, 맞은 방향)` · 접촉한 `Unit`의 `IsStopped`·`IsHeadFree`·`_onBase` |
 | `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
-| `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(`UnitDefinition.KillReward`), 최대치에서 멈춤. 수치는 `BattleConfig` SO | `Unit.Died`(static 이벤트) 구독 |
+| `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(`UnitDefinition.KillReward`), 최대치에서 멈춤. **획득 레벨**(`IncomeLevel`, 0부터)이 초당 획득량·최대치를 정한다 — 레벨 표는 `BattleConfig._incomeLevels` | `Unit.Died`(static 이벤트) 구독 |
+| `IncomeUpgradeButton` | 획득 레벨 강화 버튼. 레벨·다음 비용(만렙이면 MAX) 표시 | `PlayerWallet.TryUpgradeIncome` |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `SummonButton` | 소환 버튼 하나. 쿨다운·자원 확인 후 소환 지점에 유닛 프리팹 생성 | `PlayerWallet.TrySpend` |
 | `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig.EnemySpawnIntervalAt(경과 시간)` 간격마다 `_unitPrefabs` 중 무작위 생성 — 간격은 시작→끝 값으로 점점 짧아짐 | — |
 | `BaseHealthBar` | 기지 체력 비율을 채움 게이지로 표시 | `Base.Hp01` |
+| `FxDirector` | 타격감 창구(씬의 `Fx` 오브젝트, `Instance`로 접근). 파편·사망 먼지(파티클 프리팹 `Assets/Fx/`) · 화면 흔들림 · 히트스톱 | `CameraShake.Add` |
+| `CameraShake` | 메인 카메라에 붙음. 충격이 쌓였다 잦아드는 흔들림(실제 시간 기준) | — |
 | `AutoPlayer` | **측정 전용.** 누를 수 있는 소환 버튼을 무작위로 계속 누름. 씬에 두지 않고 플레이 중에 `Battle`에 붙여 쓴다(HANDOFF 「밸런스」) | `Button.onClick` |
 | `Projectile` | 화살. 목표 지점에 떨어지도록 발사 속도를 역산(수평 속도 고정) → 중력 포물선. 트리거 — 아군 통과, 적에게 피해 후 소멸, 바닥·벽에 닿아도 소멸 | `IDamageable.TakeDamage` |
 | `BattleManager` | 승패. 어느 기지든 `Destroyed` 이벤트가 오면 결과 패널 + `timeScale=0`, 다시하기 = 씬 재로드 | `Base.Destroyed` 구독 |
@@ -79,6 +82,9 @@
 - 🔴 **칸·사거리 검사는 트리거를 무시한다**(`Unit.SolidOnly`). 화살이 트리거라서, 무시하지 않으면 날아가는 화살 때문에 "머리 위가 막혔다"로 오판한다.
   새 물리 검사를 추가할 때도 같은 필터를 쓸 것.
 - 🔴 **죽은 유닛은 즉시 충돌에서 빠져야 한다.** 튕겨나가는 동안 다른 유닛을 밀거나 받치면 안 된다(그래야 위의 산이 무너진다).
+- 🔴 **`Time.timeScale`을 쓰는 곳이 셋이다** — 결과 화면(0) · 히트스톱(현재값×0.02) · 측정 배속(8). 히트스톱은 끝날 때 **자기가 건 값일 때만** 되돌린다.
+  새로 timeScale을 만지는 코드를 넣으면 이 셋과 부딪히지 않는지 본다.
+- 🔴 **카메라 위치를 코드로 옮기면 `CameraShake`가 흔들릴 때 원래 위치로 되돌린다**(Awake에서 기준 위치를 기억). 카메라 이동 기능을 넣으면 흔들림 기준도 같이 옮길 것.
 - 🔴 **`Unit.Died`는 static 이벤트다 — 구독자는 `OnEnable`에서 걸고 `OnDisable`에서 반드시 푼다.** 안 풀면 씬을 다시 시작할 때 파괴된 구독자가 남는다.
 - 🔴 **위치 교환(넘어가기)은 임시 받침대로 한다.** 구현은 `Unit.SwapDownWith`(위 유닛이 주도, 교환 중 두 유닛은 콜라이더 끔 + Kinematic). 두 유닛이 충돌을 끄고 넘어가는 동안, 둘이 있던 자리에
   보이지 않는 받침 콜라이더(높이 2)를 세워 위의 산을 받친다. 끝나면 받침대를 치우고 충돌을 다시 켠다.

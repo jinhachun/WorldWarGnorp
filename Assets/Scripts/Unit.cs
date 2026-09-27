@@ -20,6 +20,12 @@ namespace GnorpWar
         // 큰 넉백 — 뒤로 튕겨 오르며 날아가는 동안은 경직
         private const float BigKnockbackDuration = 0.6f;
         private const float BigKnockbackHopRatio = 0.6f;
+        // 타격감 연출 세기 (FxDirector)
+        private static readonly Color SparkColor = new Color(1f, 0.9f, 0.25f);
+        private const float SparkSurfaceOffset = 0.4f;
+        private const float DeathShake = 0.08f;
+        private const float BigKnockbackShake = 0.35f;
+        private const float BigKnockbackHitStop = 0.06f;
         // 칼 찌르기 — 몸 중심 근처에서 타겟 방향으로 뻗었다가 돌아온다
         private const float ThrustDuration = 0.2f;
         private const float ThrustDistance = 0.3f;
@@ -182,6 +188,9 @@ namespace GnorpWar
                 return;
 
             _hp -= amount;
+            // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다
+            if (FxDirector.Instance != null)
+                FxDirector.Instance.HitSpark(_rb.position - hitDirection * SparkSurfaceOffset, hitDirection, SparkColor);
             if (!IsAlive)
             {
                 Die();
@@ -199,6 +208,11 @@ namespace GnorpWar
                 float speed = _definition.BigKnockbackSpeed;
                 _rb.linearVelocity = new Vector2(-Forward * speed, speed * BigKnockbackHopRatio);
                 _squashVertical = false;
+                if (FxDirector.Instance != null)
+                {
+                    FxDirector.Instance.HitStop(BigKnockbackHitStop);
+                    FxDirector.Instance.Shake(BigKnockbackShake);
+                }
                 return;
             }
 
@@ -370,6 +384,12 @@ namespace GnorpWar
             _weapon.localRotation = Quaternion.identity;
             _visual.localPosition = Vector3.zero;
             _visual.localScale = new Vector3(1f, -1f, 1f);
+
+            if (FxDirector.Instance != null)
+            {
+                FxDirector.Instance.DeathPuff(_rb.position);
+                FxDirector.Instance.Shake(DeathShake);
+            }
 
             Destroy(gameObject, DeathDestroyDelay);
             Died?.Invoke(this);

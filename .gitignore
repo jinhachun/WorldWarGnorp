@@ -12,6 +12,10 @@
 # 에셋 스토어 툴
 /[Aa]ssets/AssetStoreTools*
 
+# 유료 에셋 — 공개 저장소에 올리면 라이선스 위반. 새로 클론하면 직접 다시 임포트할 것
+/[Aa]ssets/Plugins/Sirenix/
+/[Aa]ssets/Plugins/Sirenix.meta
+
 # IDE가 생성하는 파일
 .vs/
 .idea/

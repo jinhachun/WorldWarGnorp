@@ -115,6 +115,8 @@ For multi-step tasks, state a brief plan:
 
 ### 코드 컨벤션
 - 네임스페이스 `GnorpWar`. 클래스/메서드/프로퍼티 PascalCase, private 필드 `_camelCase`, 인스펙터 노출은 `[SerializeField] private`.
+- **새 스크립트는 `Assets/Scripts/` 아래 역할 폴더에**(Core · Units · Bases · Battle · UI · Fx · Dev — 책임은 ARCHITECTURE.md 「폴더 책임」). 루트에 두지 않는다. 폴더가 달라도 네임스페이스는 `GnorpWar` 하나.
+- 스크립트를 옮길 땐 `.cs`와 `.meta`를 **짝으로** `git mv` — GUID가 바뀌면 씬·프리팹의 스크립트 참조가 끊긴다.
 - **수치 데이터(체력·공격력·비용·쿨다운 등)는 코드가 아니라 ScriptableObject 에셋에.**
 - **아군/적군은 같은 유닛 코드를 쓴다.** 진영(Team) 값과 진행 방향으로만 구분하고, 진영 전용 분기를 만들지 않는다.
 

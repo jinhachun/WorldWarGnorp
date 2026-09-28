@@ -24,10 +24,18 @@
 
 | 폴더 | 책임 | 새 코드는 어디로 |
 |---|---|---|
-| `Assets/Scripts/` | 모든 게임플레이 코드 (매니저·유닛·기지·UI·ScriptableObject 정의) | 런타임 로직 전부 |
+| `Assets/Scripts/Core/` | 여러 곳이 같이 쓰는 기본 타입 (`Team` · `IDamageable`) | 진영·공통 인터페이스 |
+| `Assets/Scripts/Units/` | 유닛·공격·화살 (`Unit` · `UnitDefinition` · `AttackType` · `Projectile`) | 유닛 행동·유닛 SO 정의 |
+| `Assets/Scripts/Bases/` | 기지 (`Base` · `BaseDefinition`) | 기지 로직·기지 SO 정의 |
+| `Assets/Scripts/Battle/` | 한 판의 흐름·자원·적 AI (`BattleManager` · `BattleConfig` · `EnemySpawner` · `PlayerWallet`) | 판 단위 규칙·경제 |
+| `Assets/Scripts/UI/` | 전투 HUD (`SummonButton` · `IncomeUpgradeButton` · `ResourceLabel` · `BaseHealthBar`) | 화면 표시·버튼 |
+| `Assets/Scripts/Fx/` | 타격감 연출 (`FxDirector` · `CameraShake`) | 연출 |
+| `Assets/Scripts/Dev/` | 측정·디버그 전용 (`AutoPlayer`) — 게임에 쓰이지 않음 | 개발 도구 |
 | `Assets/Editor/` | 에디터 전용 툴 | 에디터 툴·인스펙터 |
+| `Assets/Plugins/Sirenix/` | Odin Inspector (사용자가 추가한 **유료 에셋**) — `.gitignore`로 저장소에서 제외 | 손대지 말 것 |
 | `Assets/Data/` | 데이터 에셋 (유닛 정의 SO · 물리 재질) | 코드 X, 에셋만 |
 | `Assets/Prefabs/` | 프리팹 (유닛 등) | — |
+| `Assets/Fx/` | 파티클 프리팹·재질 (`FX_HitSpark` · `FX_DeathPuff` · `FX_Pixel`) | — |
 | `Assets/Sprites/` | 스프라이트. 사용자 도트(`gnorp` · `sword` · `shield` · `bow` · `arrow`, PPU 8)와 바닥·기지용 `Square.png`(PPU 32) | 새 그림 임포트 규칙은 CLAUDE.md 「픽셀 크기 컨벤션」 |
 | `Assets/Settings/` | URP 설정 (템플릿) | — |
 

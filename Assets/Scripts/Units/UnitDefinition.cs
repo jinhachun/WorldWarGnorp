@@ -25,10 +25,16 @@ namespace GnorpWar
         [SerializeField] private AttackType _attackType = AttackType.Melee;
         [Tooltip("때린 상대가 밀려나는 배율 (상대의 Hit Knockback × 이 값)")]
         [SerializeField] private float _pushPower = 1f;
+        [Tooltip("돌격 — 적 없이 이 시간 이상 달려온 뒤의 첫 타격이 돌격이 된다. 배율이 1이면 돌격 없음")]
+        [SerializeField] private float _chargeReadySeconds = 1f;
+        [SerializeField] private float _chargeDamageMultiplier = 1f;
+        [SerializeField] private float _chargePushMultiplier = 1f;
         [Tooltip("원거리 전용")]
         [SerializeField] private Projectile _projectile;
         [Tooltip("원거리 전용 — 화살이 발사 지점·목표 중 높은 쪽보다 이만큼 더 솟았다가 떨어진다. 거리와 상관없이 늘 포물선")]
         [SerializeField] private float _projectileArcHeight = 2.5f;
+        [Tooltip("원거리 전용 — 0이면 단일 대상. 0보다 크면 착탄 지점 반경 안의 적 전부에게 피해 + 바깥·위로 날림")]
+        [SerializeField] private float _projectileSplashRadius = 0f;
         [SerializeField] private float _cost = 50f;
         [Tooltip("이 유닛이 적으로 나와 죽었을 때 플레이어가 받는 자원")]
         [SerializeField] private float _killReward = 20f;
@@ -46,8 +52,12 @@ namespace GnorpWar
         public int StackRank => _stackRank;
         public AttackType AttackType => _attackType;
         public float PushPower => _pushPower;
+        public float ChargeReadySeconds => _chargeReadySeconds;
+        public float ChargeDamageMultiplier => _chargeDamageMultiplier;
+        public float ChargePushMultiplier => _chargePushMultiplier;
         public Projectile Projectile => _projectile;
         public float ProjectileArcHeight => _projectileArcHeight;
+        public float ProjectileSplashRadius => _projectileSplashRadius;
         public float Cost => _cost;
         public float KillReward => _killReward;
         public float SummonCooldown => _summonCooldown;

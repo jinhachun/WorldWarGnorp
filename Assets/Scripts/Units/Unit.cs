@@ -66,6 +66,8 @@ namespace GnorpWar
         private Vector2 _thrustDirection;
         private bool _swapping;
         private bool _bigKnockbackUsed;
+        // 돌격 충전 — 적 없이 실제로 달린 시간. 막혀 서 있으면 0으로
+        private float _runTime;
 
         // 유닛이 죽는 순간 (처치 보상 등). static이라 구독자는 OnDisable에서 반드시 해제할 것
         public static event System.Action<Unit> Died;
@@ -162,17 +164,24 @@ namespace GnorpWar
                     if (_definition.AttackType == AttackType.Ranged)
                     {
                         Projectile arrow = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
-                        arrow.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight);
+                        arrow.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius);
                     }
                     else
                     {
-                        target.TakeDamage(_definition.AttackDamage, hitDirection, _definition.PushPower);
+                        // 달려와서 치는 첫 타격은 돌격 — 피해·밀치기에 배율
+                        bool charge = _runTime >= _definition.ChargeReadySeconds;
+                        float damage = _definition.AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f);
+                        float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
+                        target.TakeDamage(damage, hitDirection, push);
                     }
+                    _runTime = 0f;
                     StartThrust(hitDirection);
                     _attackCooldown = _definition.AttackInterval;
                 }
                 return;
             }
+
+            _runTime = IsStopped ? 0f : _runTime + Time.fixedDeltaTime;
 
             // 기지 위는 한 층만 — 기지 위 유닛 머리로 걸어 올라가지도 않는다
             velocity.x = IsAheadOnBaseUnit() ? 0f : Forward * _definition.MoveSpeed;
@@ -216,8 +225,9 @@ namespace GnorpWar
                 return;
             }
 
-            // 맞은 방향으로 밀리고, 맞은 축으로 찌그러진다 (위에서 맞으면 납작, 옆에서 맞으면 홀쭉)
-            _knockbackTimer = KnockbackDuration;
+            // 맞은 방향으로 밀리고, 맞은 축으로 찌그러진다 (위에서 맞으면 납작, 옆에서 맞으면 홀쭉).
+            // 세게 맞을수록 오래 조종 불능 — 짧으면 다음 스텝에 걷기가 속도를 덮어써 날아가다 끊긴다
+            _knockbackTimer = KnockbackDuration * Mathf.Max(1f, push);
             _rb.linearVelocity = hitDirection * (_definition.HitKnockback * push);
             _squashVertical = Mathf.Abs(hitDirection.y) > Mathf.Abs(hitDirection.x);
         }

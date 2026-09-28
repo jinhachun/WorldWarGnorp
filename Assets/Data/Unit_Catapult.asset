@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_Catapult
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _moveSpeed: 1.2
+  _jumpHeight: 1.2
+  _maxHp: 80
+  _attackDamage: 15
+  _attackInterval: 3.5
+  _attackRange: 10
+  _hitKnockback: 2
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 6
+  _stackRank: 2
+  _attackType: 1
+  _pushPower: 4
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
+  _projectile: {fileID: 5840658882024782479, guid: 1dbe067fa1dd696418590937fdb06100, type: 3}
+  _projectileArcHeight: 5
+  _projectileSplashRadius: 1.5
+  _cost: 150
+  _killReward: 50
+  _summonCooldown: 5

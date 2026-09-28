@@ -31,11 +31,11 @@ Base_Enemy       ← SpriteRenderer · BoxCollider2D · Base(Team=Enemy)   x=+34
  └─ BackStop     ← BoxCollider2D
 Battle           ← PlayerWallet · BattleManager      (전투 로직 허브)
 AllySpawnPoint   ← (Transform만) 소환 버튼이 아군을 내는 자리
-EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Enemy_Tank/Melee/Ranged` 중 무작위)
+EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Enemy_Tank/Melee/Ranged/Knight/Catapult` 중 무작위)
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
  ├─ ResourceLabel        ← Text · ResourceLabel        (위쪽 줄 맨 왼쪽 "현재 / 최대")
- ├─ SummonButton_Shield · _Sword · _Bow   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽부터 180px 간격) → Name · Cost · CooldownFill(Filled)
+ ├─ SummonButton_Shield · _Sword · _Bow · _Knight   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽부터 180px 간격) → Name · Cost · CooldownFill(Filled)
  ├─ IncomeUpgradeButton  ← Image · Button · IncomeUpgradeButton   (위쪽 줄, Bow 오른쪽, 노란색) → Name(레벨) · Cost
  ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (위쪽 줄 오른쪽 끝, 폭 300) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준)
  └─ ResultPanel          [실행 시 꺼짐] ← Image          → ResultText · RetryButton
@@ -43,7 +43,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 
 - UI는 **임시 모양**(단색 사각형 + 레거시 Text)이다. 아트가 오면 CLAUDE.md §5-1 규칙대로 바꾼다.
 - 🔴 **전투 UI는 전부 화면 위쪽 줄에 둔다**(사용자 결정 9/27 — 전장이 화면 아래쪽이라 겹치지 않게). 새 버튼도 위쪽 줄 오른쪽으로 이어 붙인다.
-  현재 가로 구간(기준 1920): 자원 40~440 · 소환 480~1000 · 강화 1060~1220 · 기지 바 1260~1880. **새 요소를 넣기 전에 이 구간과 겹치는지 계산할 것.**
+  현재 가로 구간(기준 1920): 자원 40~440 · 소환 480~1180 · 강화 1240~1400 · 기지 바 1450~1880(각 폭 200). **새 요소를 넣기 전에 이 구간과 겹치는지 계산할 것.**
 
 **핵심 배선:**
 - **`BackStop`은 기지 스케일(1.5×3)의 자식이라 localScale·localPosition이 그 역수로 보정돼 있다.** 기지 크기를 바꾸면 BackStop도 다시 맞출 것.

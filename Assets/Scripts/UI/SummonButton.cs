@@ -37,7 +37,7 @@ namespace GnorpWar
             if (_cooldown > 0f || !_wallet.TrySpend(Definition.Cost))
                 return;
 
-            Instantiate(_unitPrefab, _spawnPoint.position, Quaternion.identity);
+            Unit.Spawn(_unitPrefab, _spawnPoint.position);
             _cooldown = Definition.SummonCooldown;
         }
     }

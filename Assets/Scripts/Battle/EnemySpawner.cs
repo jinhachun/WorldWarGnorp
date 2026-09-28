@@ -17,7 +17,7 @@ namespace GnorpWar
                 return;
 
             _timer = _config.EnemySpawnIntervalAt(Time.timeSinceLevelLoad);
-            Instantiate(_unitPrefabs[Random.Range(0, _unitPrefabs.Length)], transform.position, Quaternion.identity);
+            Unit.Spawn(_unitPrefabs[Random.Range(0, _unitPrefabs.Length)], transform.position);
         }
     }
 }

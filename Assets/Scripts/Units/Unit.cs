@@ -75,6 +75,23 @@ namespace GnorpWar
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
         public UnitDefinition Definition => _definition;
+
+        // 소환 — 소환 지점 칸이 (적이든 아군이든) 차 있으면 한 층씩 올라가 비어 있는 가장 낮은 층에 만든다.
+        // 그냥 겹쳐 만들면 1층에 끼인 채 쌓인다
+        private const int SpawnMaxFloors = 30;
+        private static readonly Vector2 SpawnCellProbe = new Vector2(0.9f, 0.9f);
+
+        public static Unit Spawn(Unit prefab, Vector2 groundPoint)
+        {
+            Vector2 position = groundPoint;
+            for (int floor = 0; floor < SpawnMaxFloors; floor++)
+            {
+                position = groundPoint + Vector2.up * floor;
+                if (Physics2D.OverlapBox(position, SpawnCellProbe, 0f, SolidOnly, CellProbe) == 0)
+                    break;
+            }
+            return Instantiate(prefab, position, Quaternion.identity);
+        }
         private float Forward => _team == Team.Ally ? 1f : -1f;
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정

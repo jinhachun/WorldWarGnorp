@@ -57,7 +57,7 @@ namespace GnorpWar
         private SpriteRenderer[] _bodyRenderers;
         private Color[] _bodyColors;
         private SpriteRenderer _weaponRenderer;
-        // 키의 절반 — 충돌 박스 높이에서 읽는다(보통 0.5, 기사 1). 칸 검사·발 고정이 이 값을 쓴다
+        // 키의 절반 — 충돌 박스 높이에서 읽는다(보통 0.5, 기사 0.75). 칸 검사·발 고정이 이 값을 쓴다
         private float _halfHeight;
         private Vector3 _weaponRestPosition;
         private float _knockbackTimer;

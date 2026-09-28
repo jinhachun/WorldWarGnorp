@@ -21,7 +21,7 @@
 ## Battle.unity
 
 ```
-Main Camera      ← Camera(Orthographic, size 20, y=14) · UniversalAdditionalCameraData · CameraShake   [tag=MainCamera]
+Main Camera      ← Camera(Orthographic, size 20, y=14, 배경 검정) · UniversalAdditionalCameraData · CameraShake   [tag=MainCamera]
 Fx               ← FxDirector   (파편·먼지 프리팹 + CameraShake 참조)
 Global Light 2D  ← Light2D(Global)
 Ground           ← SpriteRenderer · BoxCollider2D   (윗면 y=-4, x -36~36)

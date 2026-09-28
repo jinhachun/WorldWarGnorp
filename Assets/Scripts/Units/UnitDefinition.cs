@@ -35,6 +35,8 @@ namespace GnorpWar
         [SerializeField] private float _projectileArcHeight = 2.5f;
         [Tooltip("원거리 전용 — 0이면 단일 대상. 0보다 크면 착탄 지점 반경 안의 적 전부에게 피해 + 바깥·위로 날림")]
         [SerializeField] private float _projectileSplashRadius = 0f;
+        [Tooltip("화염 전용(AttackType.Flame) — 불길 띠의 두께. 길이는 Attack Range")]
+        [SerializeField] private float _flameThickness = 2f;
         [Tooltip("회복 전용(AttackType.Heal) — 회복 투사체 한 번에 채우는 체력")]
         [SerializeField] private float _healAmount = 0f;
         [Tooltip("이 유닛의 업그레이드 (아군에게만 적용)")]
@@ -65,6 +67,7 @@ namespace GnorpWar
         public Projectile Projectile => _projectile;
         public float ProjectileArcHeight => _projectileArcHeight;
         public float ProjectileSplashRadius => _projectileSplashRadius;
+        public float FlameThickness => _flameThickness;
         public float HealAmount => _healAmount;
         public UpgradeKind Upgrade => _upgrade;
         public float UpgradeCost => _upgradeCost;

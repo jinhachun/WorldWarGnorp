@@ -31,6 +31,7 @@ Base_Enemy       ← SpriteRenderer · BoxCollider2D · Base(Team=Enemy)   x=+34
  └─ BackStop     ← BoxCollider2D
 Battle           ← PlayerWallet · BattleManager · UpgradeState   (전투 로직 허브)
 AllySpawnPoint   ← (Transform만) 소환 버튼이 아군을 내는 자리
+BossSpawnPoint   ← (Transform만) 보스 공룡이 나오는 자리 — 몸이 3칸이라 적 기지와 안 겹치게 조금 앞(x=31.5)
 EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Enemy_Tank/Melee/Ranged/Knight/Catapult` 중 무작위)
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster

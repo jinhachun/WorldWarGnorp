@@ -27,6 +27,19 @@ namespace GnorpWar
         [SerializeField] private float _enemySpawnIntervalStart = 2.2f;
         [SerializeField] private float _enemySpawnIntervalEnd = 1.2f;
         [SerializeField] private float _enemySpawnRampSeconds = 300f;
+        [Tooltip("보스(공룡) — 판 시작 후 처음 나오는 시각, 이후 간격")]
+        [SerializeField] private float _bossFirstSeconds = 40f;
+        [SerializeField] private float _bossIntervalSeconds = 60f;
+        [Tooltip("보스 등장 충격파 — 아군 전체가 뒤로 밀려나는 속도(가로)·솟는 속도(세로)·조종 불능 시간")]
+        [SerializeField] private float _bossShockwaveSpeed = 8f;
+        [SerializeField] private float _bossShockwaveLift = 4f;
+        [SerializeField] private float _bossShockwaveStun = 0.6f;
+
+        public float BossFirstSeconds => _bossFirstSeconds;
+        public float BossIntervalSeconds => _bossIntervalSeconds;
+        public float BossShockwaveSpeed => _bossShockwaveSpeed;
+        public float BossShockwaveLift => _bossShockwaveLift;
+        public float BossShockwaveStun => _bossShockwaveStun;
 
         public float StartResource => _startResource;
         public int IncomeLevelCount => _incomeLevels.Length;

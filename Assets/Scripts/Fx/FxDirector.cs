@@ -12,6 +12,7 @@ namespace GnorpWar
         [SerializeField] private ParticleSystem _hitSpark;
         [SerializeField] private ParticleSystem _deathPuff;
         [SerializeField] private CameraShake _cameraShake;
+        [SerializeField] private FlameBit _flameBit;
 
         private bool _hitStopping;
 
@@ -41,6 +42,22 @@ namespace GnorpWar
         public void DeathPuff(Vector2 position)
         {
             Instantiate(_deathPuff, position, Quaternion.identity).Play();
+        }
+
+        // 화염방사 — 입에서 앞으로 불꽃 조각을 뿜는다(한 번 부를 때 두 조각)
+        private const float FlameSpeed = 9f;
+        private const int FlameBitsPerPuff = 2;
+        private const float FlameSpreadY = 0.35f;
+        private static readonly Color FlameHot = new Color(1f, 0.85f, 0.3f);
+        private static readonly Color FlameCool = new Color(1f, 0.45f, 0.15f);
+
+        public void Flame(Vector2 mouth, float forward, float length)
+        {
+            for (int i = 0; i < FlameBitsPerPuff; i++)
+            {
+                FlameBit bit = Instantiate(_flameBit, mouth + new Vector2(0f, Random.Range(-FlameSpreadY, FlameSpreadY)), Quaternion.identity);
+                bit.Launch(new Vector2(forward * FlameSpeed, Random.Range(-0.5f, 0.5f)), length / FlameSpeed, Color.Lerp(FlameHot, FlameCool, Random.value));
+            }
         }
 
         public void Shake(float amount)

@@ -87,8 +87,10 @@ namespace GnorpWar
         public static Unit Spawn(Unit prefab, Vector2 groundPoint)
         {
             // groundPoint는 1층 칸의 중심. 키가 큰 유닛은 발을 같은 높이에 맞추도록 중심을 올리고, 키만큼 빈 공간을 찾는다
-            float height = prefab.GetComponent<BoxCollider2D>().size.y;
-            Vector2 probe = new Vector2(SpawnCellProbe.x, height - (1f - SpawnCellProbe.y));
+            Vector2 box = prefab.GetComponent<BoxCollider2D>().size;
+            float height = box.y;
+            // 폭이 큰 유닛(공룡)도 몸 전체가 들어갈 공간을 찾는다
+            Vector2 probe = new Vector2(box.x - (1f - SpawnCellProbe.x), height - (1f - SpawnCellProbe.y));
             Vector2 baseCenter = groundPoint + Vector2.up * ((height - 1f) * 0.5f);
             Vector2 position = baseCenter;
             for (int floor = 0; floor < SpawnMaxFloors; floor++)
@@ -229,7 +231,11 @@ namespace GnorpWar
                 {
                     Vector2 toTarget = targetPoint - _rb.position;
                     Vector2 hitDirection = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
-                    if (_definition.AttackType == AttackType.Ranged)
+                    if (_definition.AttackType == AttackType.Flame)
+                    {
+                        BreatheFire();
+                    }
+                    else if (_definition.AttackType == AttackType.Ranged)
                     {
                         FireProjectile(targetPoint);
                         // Bow 업그레이드: 서로 다른 적에게 한 발 더 (적이 하나뿐이면 한 발)
@@ -246,7 +252,8 @@ namespace GnorpWar
                         target.TakeDamage(damage, hitDirection, push, this);
                     }
                     _runTime = 0f;
-                    StartThrust(hitDirection);
+                    if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
+                        StartThrust(hitDirection);
                     _attackCooldown = _definition.AttackInterval;
                 }
                 return;
@@ -442,6 +449,38 @@ namespace GnorpWar
                 }
             }
             return best;
+        }
+
+        // 화염방사 — 입(무기 자리)에서 앞으로 뻗은 띠 안의 적 전부에게 피해
+        private void BreatheFire()
+        {
+            Vector2 mouth = _weapon.position;
+            float length = _definition.AttackRange;
+            Vector2 center = mouth + new Vector2(Forward * length * 0.5f, 0f);
+            Physics2D.OverlapBox(center, new Vector2(length, _definition.FlameThickness), 0f, SolidOnly, _overlaps);
+            foreach (Collider2D col in _overlaps)
+            {
+                if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
+                    damageable.TakeDamage(_definition.AttackDamage, new Vector2(Forward, 0f), _definition.PushPower, null);
+            }
+            if (FxDirector.Instance != null)
+                FxDirector.Instance.Flame(mouth, Forward, length);
+        }
+
+        // 피해 없이 밀어낸다(보스 등장 충격파 등). 그동안 조종 불능
+        public void Shove(Vector2 velocity, float stunSeconds)
+        {
+            if (!IsAlive || _swapping)
+                return;
+            _knockbackTimer = stunSeconds;
+            _rb.linearVelocity = velocity;
+        }
+
+        public static void ShockwaveAll(Team team, Vector2 velocity, float stunSeconds)
+        {
+            foreach (Unit unit in FindObjectsByType<Unit>(FindObjectsSortMode.None))
+                if (unit._team == team)
+                    unit.Shove(velocity, stunSeconds);
         }
 
         public void Heal(float amount)

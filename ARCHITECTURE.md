@@ -55,7 +55,8 @@
 | `IncomeUpgradeButton` | 획득 레벨 강화 버튼. 레벨·다음 비용(만렙이면 MAX) 표시 | `PlayerWallet.TryUpgradeIncome` |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `SummonButton` | 소환 버튼 하나. 쿨다운·자원 확인 후 소환 지점에 유닛 프리팹 생성 | `PlayerWallet.TrySpend` |
-| `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig.EnemySpawnIntervalAt(경과 시간)` 간격마다 `_unitPrefabs` 중 무작위 생성 — 간격은 시작→끝 값으로 점점 짧아짐 | — |
+| `EnemySpawner` | 적 AI(단순 시간표). `BattleConfig.EnemySpawnIntervalAt(경과 시간)` 간격마다 `_unitPrefabs` 중 무작위 생성 — 간격은 시작→끝 값으로 점점 짧아짐. 별도 타이머로 **보스**(`_bossPrefab`, `BossSpawnPoint`) 소환 + 등장 충격파 | `Unit.Spawn` · `Unit.ShockwaveAll` · `FxDirector.Shake` |
+| `FlameBit` | 화염방사 그림 한 조각(충돌 없음). 피해는 `Unit.BreatheFire`가 띠 판정으로 준다 | — |
 | `BaseHealthBar` | 기지 체력 비율을 채움 게이지로 표시 | `Base.Hp01` |
 | `FxDirector` | 타격감 창구(씬의 `Fx` 오브젝트, `Instance`로 접근). 파편·사망 먼지(파티클 프리팹 `Assets/Fx/`) · 화면 흔들림 · 히트스톱 | `CameraShake.Add` |
 | `CameraShake` | 메인 카메라에 붙음. 충격이 쌓였다 잦아드는 흔들림(실제 시간 기준) | — |
@@ -99,6 +100,8 @@
 - 🔴 **유닛 키는 가변이다 — `BoxCollider2D` 높이에서 읽는다**(`Unit._halfHeight`). 머리 위 칸·발밑 칸·소환 공간·찌그러짐 발 고정·점프 가능 높이가 전부 이 값 기준.
   키 큰 유닛(기사)의 그림은 `Visual` 아래 칸별 자식(`Horse`·`Rider`)으로 두고 `Visual` 자체엔 SpriteRenderer를 두지 않는다. 층 교환은 키가 같을 때만.
 - 🔴 **업그레이드는 아군에게만** — 유닛 정의(`Unit_*.asset`)를 적과 같이 쓰므로 정의만 보면 적도 강해진다. 효과 검사는 반드시 `UpgradeState.IsActive`(진영 포함)로.
+- **피해 없이 밀기는 `Unit.Shove`**(보스 충격파 = `Unit.ShockwaveAll`). `TakeDamage(0, …)`로 밀면 파편·번쩍·경직 규칙까지 따라온다.
+- **화염(`AttackType.Flame`)은 무기 자리(`Visual/Weapon`)를 입으로 쓴다** — 그래서 화염 유닛은 찌르기 동작을 하지 않는다(입이 움직이면 불이 따라 흔들림).
 - **`TakeDamage`의 `attacker`**는 근접으로 때린 유닛만 넘긴다(투사체는 null). Shield 반사처럼 "누가 때렸나"가 필요한 효과만 쓴다.
 - 🔴 **유닛은 `Unit.Spawn(prefab, 바닥 지점)`으로만 만든다**(소환 버튼·적 스포너 모두). 소환 칸이 차 있으면 한 층씩 올라가 빈 가장 낮은 층에 만든다 — `Instantiate`로 바로 만들면 1층에 끼인다.
 - **피격 경직 = 0.15초 × 밀치는 힘(최소 1)** — 그동안 `Unit.FixedUpdate`가 속도를 안 덮어써서 끝까지 날아간다. 돌격(`Charge*`)·방패·돌의 "날아감"은 전부 이 규칙에 기댄다.

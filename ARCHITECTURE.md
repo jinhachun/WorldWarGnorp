@@ -50,6 +50,8 @@
 | `Unit` | 유닛 한 마리. 사거리 안에 적(`IDamageable`)이 있으면 멈춰서 공격 + 칼 찌르기(점프보다 우선). 없으면 전진, 앞 아군이 멈춰 있고 머리 위가 비고 기지 위가 아니면 점프. 피격 시 맞은 방향으로 밀림·찌그러짐·번쩍. 죽으면 콜라이더 끄고 뒤집혀 맨 앞 레이어로 튀어 떨어진 뒤 3초 후 파괴. 수치는 `UnitDefinition` SO, 연출 상수는 `Unit.cs` 상단 | 사거리 안 `IDamageable.TakeDamage(피해, 맞은 방향)` · 접촉한 `Unit`의 `IsStopped`·`IsHeadFree`·`_onBase` |
 | `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
 | `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(`UnitDefinition.KillReward`), 최대치에서 멈춤. **획득 레벨**(`IncomeLevel`, 0부터)이 초당 획득량·최대치를 정한다 — 레벨 표는 `BattleConfig._incomeLevels` | `Unit.Died`(static 이벤트) 구독 |
+| `UpgradeState` | 이번 판에 산 유닛 업그레이드(`Battle`에 붙음, `Instance`). `IsActive(unit, kind)` = 아군 && 그 정의의 업그레이드를 샀나. Sword 호위 소환도 여기서(`OnPlayerSummon`) | `Unit.Spawn` |
+| `UpgradeButton` | 소환 버튼 아래 UP 버튼. 자원으로 한 번 구매 | `UpgradeState.Buy` |
 | `IncomeUpgradeButton` | 획득 레벨 강화 버튼. 레벨·다음 비용(만렙이면 MAX) 표시 | `PlayerWallet.TryUpgradeIncome` |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `SummonButton` | 소환 버튼 하나. 쿨다운·자원 확인 후 소환 지점에 유닛 프리팹 생성 | `PlayerWallet.TrySpend` |
@@ -74,6 +76,7 @@
 | 변경하고 싶은 것 | 손대야 할 파일 |
 |---|---|
 | **새 유닛 종류** | `Assets/Data/Unit_*.asset` 하나(수치·공격 방식·밀치는 힘·화살) + `Ally_*`/`Enemy_*` 프리팹 두 개(`*_Melee` 복제 → `_definition`·`Visual/Weapon` 그림 교체) + 위쪽 줄에 소환 버튼 복제 + `EnemySpawner._unitPrefabs`에 추가. 코드 X |
+| **새 유닛 업그레이드** | `UpgradeKind` enum(**맨 뒤에만**) + 효과 분기(`Unit`의 해당 동작에서 `UpgradeState.IsActive(this, kind)`) + `Unit_*.asset`의 Upgrade·비용·수치 + (새 유닛이면) UP 버튼 |
 | **새 공격 방식** | `AttackType` enum(**맨 뒤에만**) + `Unit.FixedUpdate`의 공격 분기 |
 | 전투 수치 | `Unit_*.asset` · `BattleConfig.asset` · `Base_Test.asset` (코드 X) |
 
@@ -95,6 +98,8 @@
 - 🔴 **카메라 위치를 코드로 옮기면 `CameraShake`가 흔들릴 때 원래 위치로 되돌린다**(Awake에서 기준 위치를 기억). 카메라 이동 기능을 넣으면 흔들림 기준도 같이 옮길 것.
 - 🔴 **유닛 키는 가변이다 — `BoxCollider2D` 높이에서 읽는다**(`Unit._halfHeight`). 머리 위 칸·발밑 칸·소환 공간·찌그러짐 발 고정·점프 가능 높이가 전부 이 값 기준.
   키 큰 유닛(기사)의 그림은 `Visual` 아래 칸별 자식(`Horse`·`Rider`)으로 두고 `Visual` 자체엔 SpriteRenderer를 두지 않는다. 층 교환은 키가 같을 때만.
+- 🔴 **업그레이드는 아군에게만** — 유닛 정의(`Unit_*.asset`)를 적과 같이 쓰므로 정의만 보면 적도 강해진다. 효과 검사는 반드시 `UpgradeState.IsActive`(진영 포함)로.
+- **`TakeDamage`의 `attacker`**는 근접으로 때린 유닛만 넘긴다(투사체는 null). Shield 반사처럼 "누가 때렸나"가 필요한 효과만 쓴다.
 - 🔴 **유닛은 `Unit.Spawn(prefab, 바닥 지점)`으로만 만든다**(소환 버튼·적 스포너 모두). 소환 칸이 차 있으면 한 층씩 올라가 빈 가장 낮은 층에 만든다 — `Instantiate`로 바로 만들면 1층에 끼인다.
 - **피격 경직 = 0.15초 × 밀치는 힘(최소 1)** — 그동안 `Unit.FixedUpdate`가 속도를 안 덮어써서 끝까지 날아간다. 돌격(`Charge*`)·방패·돌의 "날아감"은 전부 이 규칙에 기댄다.
 - 🔴 **`Unit.Died`는 static 이벤트다 — 구독자는 `OnEnable`에서 걸고 `OnDisable`에서 반드시 푼다.** 안 풀면 씬을 다시 시작할 때 파괴된 구독자가 남는다.

@@ -148,6 +148,7 @@ namespace GnorpWar
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
             bool canClimb = false;
+            bool blockedByEnemy = false;
             Unit allyBelow = null;
             _onBase = false;
             int count = _rb.GetContacts(_contacts);
@@ -170,6 +171,9 @@ namespace GnorpWar
                          && !other._onBase
                          && other.Top - Feet <= _definition.JumpHeight)   // 닿지도 않는 높이(키 큰 기사)에 계속 뛰지 않게
                     canClimb = true;
+                if (contact.normal.x * Forward < -0.5f
+                    && contact.collider.TryGetComponent(out Unit blocker) && blocker._team != _team)
+                    blockedByEnemy = true;
             }
 
             if (_knockbackTimer > 0f)
@@ -191,12 +195,18 @@ namespace GnorpWar
             if (_definition.AttackType == AttackType.Heal)
             {
                 bool enemyNear = FindTarget(out _, out _);
-                Unit patient = FindHealTarget();
+                Unit patient = FindHealTarget(null);
                 if (patient != null && _attackCooldown <= 0f)
                 {
                     Vector2 toPatient = patient._rb.position - _rb.position;
-                    Projectile orb = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
-                    orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
+                    ThrowHeal(patient);
+                    // Priest 업그레이드: 두 번째로 많이 다친 아군에게도
+                    if (UpgradeState.IsActive(this, UpgradeKind.PriestDoubleHeal))
+                    {
+                        Unit second = FindHealTarget(patient);
+                        if (second != null)
+                            ThrowHeal(second);
+                    }
                     StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
                     _attackCooldown = _definition.AttackInterval;
                 }
@@ -207,8 +217,11 @@ namespace GnorpWar
                     return;
                 }
             }
-            // 싸움이 점프·전진보다 우선
-            else if (FindTarget(out IDamageable target, out Vector2 targetPoint))
+            // Knight 업그레이드: 앞쪽에 원거리 적이 있으면 원거리가 아닌 적은 상대하지 않고 뛰어넘는다
+            bool hunting = UpgradeState.IsActive(this, UpgradeKind.KnightVaultToArchers) && HasRangedEnemyAhead();
+
+            // 싸움이 점프·전진보다 우선 (프리스트는 위에서 처리 — 회복할 대상도 적도 없으면 여기로 내려와 전진)
+            if (_definition.AttackType != AttackType.Heal && FindTarget(out IDamageable target, out Vector2 targetPoint, null, hunting))
             {
                 velocity.x = 0f;
                 _rb.linearVelocity = velocity;
@@ -218,8 +231,11 @@ namespace GnorpWar
                     Vector2 hitDirection = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
                     if (_definition.AttackType == AttackType.Ranged)
                     {
-                        Projectile arrow = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
-                        arrow.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius);
+                        FireProjectile(targetPoint);
+                        // Bow 업그레이드: 서로 다른 적에게 한 발 더 (적이 하나뿐이면 한 발)
+                        if (UpgradeState.IsActive(this, UpgradeKind.BowDoubleShot)
+                            && FindTarget(out _, out Vector2 secondPoint, target, false))
+                            FireProjectile(secondPoint);
                     }
                     else
                     {
@@ -227,7 +243,7 @@ namespace GnorpWar
                         bool charge = _runTime >= _definition.ChargeReadySeconds;
                         float damage = _definition.AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f);
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
-                        target.TakeDamage(damage, hitDirection, push);
+                        target.TakeDamage(damage, hitDirection, push, this);
                     }
                     _runTime = 0f;
                     StartThrust(hitDirection);
@@ -243,10 +259,13 @@ namespace GnorpWar
             // 못 올라탈 땐 뛰지 않고 서 있어야 뒤 유닛의 발판이 된다 — 계속 뛰면 계단(산)이 안 생긴다
             if (grounded && canClimb)
                 velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * _definition.JumpHeight);
+            // Knight 업그레이드: 원거리가 아닌 적에게 막히면 높이 뛰어 넘는다(적 머리 위로 착지해 계속 전진)
+            else if (grounded && hunting && blockedByEnemy)
+                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * _definition.UpgradeValue);
             _rb.linearVelocity = velocity;
         }
 
-        public void TakeDamage(float amount, Vector2 hitDirection, float push)
+        public void TakeDamage(float amount, Vector2 hitDirection, float push, Unit attacker)
         {
             if (!IsAlive)
                 return;
@@ -263,6 +282,14 @@ namespace GnorpWar
 
             _squashTime = 0f;
             _flashTimer = FlashDuration;
+
+            // Shield 업그레이드: 돌격형(기사)에게 맞으면 방패는 버티고 공격한 쪽이 튕겨난다
+            if (attacker != null && attacker.IsAlive && attacker._definition.ChargeDamageMultiplier > 1f
+                && UpgradeState.IsActive(this, UpgradeKind.ShieldReflectCharge))
+            {
+                attacker.TakeDamage(0f, -hitDirection, push, null);
+                return;
+            }
 
             // 냥코식 큰 넉백 — 생명당 한 번, 맞은 방향과 상관없이 후방으로 튕겨 오른다
             if (!_bigKnockbackUsed && _hp <= _definition.MaxHp * _definition.BigKnockbackAt)
@@ -340,7 +367,8 @@ namespace GnorpWar
             _weapon.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
 
-        private bool FindTarget(out IDamageable target, out Vector2 targetPoint)
+        // exclude: 이미 고른 대상(두 번째 대상을 찾을 때) · rangedOnly: 원거리 유닛만(기사 업그레이드)
+        private bool FindTarget(out IDamageable target, out Vector2 targetPoint, IDamageable exclude = null, bool rangedOnly = false)
         {
             // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게
             Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
@@ -349,7 +377,9 @@ namespace GnorpWar
             float best = float.MaxValue;
             foreach (Collider2D col in _overlaps)
             {
-                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive)
+                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive || damageable == exclude)
+                    continue;
+                if (rangedOnly && !(damageable is Unit unit && unit._definition.AttackType == AttackType.Ranged))
                     continue;
 
                 Vector2 point = col.ClosestPoint(_rb.position);
@@ -364,15 +394,44 @@ namespace GnorpWar
             return target != null;
         }
 
-        // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기 제외)
-        private Unit FindHealTarget()
+        // 원거리 무기(화살·돌) 발사
+        private void FireProjectile(Vector2 targetPoint)
+        {
+            Projectile shot = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
+            shot.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius);
+        }
+
+        private void ThrowHeal(Unit patient)
+        {
+            Projectile orb = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
+            orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
+        }
+
+        // 기사 업그레이드 — 앞쪽 일정 거리 안에 적 원거리 유닛이 있나
+        private const float HuntSearchRange = 15f;
+
+        private bool HasRangedEnemyAhead()
+        {
+            Physics2D.OverlapCircle(_rb.position, HuntSearchRange, SolidOnly, _overlaps);
+            foreach (Collider2D col in _overlaps)
+            {
+                if (col.TryGetComponent(out Unit enemy) && enemy._team != _team && enemy.IsAlive
+                    && enemy._definition.AttackType == AttackType.Ranged
+                    && (enemy._rb.position.x - _rb.position.x) * Forward > 0f)
+                    return true;
+            }
+            return false;
+        }
+
+        // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기·exclude 제외)
+        private Unit FindHealTarget(Unit exclude)
         {
             Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
             Unit best = null;
             float bestRatio = 1f;
             foreach (Collider2D col in _overlaps)
             {
-                if (!col.TryGetComponent(out Unit ally) || ally == this || ally._team != _team || !ally.IsAlive || ally._swapping)
+                if (!col.TryGetComponent(out Unit ally) || ally == this || ally == exclude || ally._team != _team || !ally.IsAlive || ally._swapping)
                     continue;
 
                 float ratio = ally._hp / ally._definition.MaxHp;

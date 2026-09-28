@@ -19,3 +19,21 @@ MonoBehaviour:
   _attackInterval: 1
   _attackRange: 0.8
   _hitKnockback: 2
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 6
+  _stackRank: 1
+  _attackType: 0
+  _pushPower: 1
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
+  _projectile: {fileID: 0}
+  _projectileArcHeight: 2.5
+  _projectileSplashRadius: 0
+  _healAmount: 0
+  _upgrade: 1
+  _upgradeCost: 100
+  _upgradeValue: 0.25
+  _cost: 50
+  _killReward: 20
+  _summonCooldown: 1.5

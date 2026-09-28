@@ -29,21 +29,24 @@ Base_Ally        ← SpriteRenderer · BoxCollider2D · Base(Team=Ally)    x=-34
  └─ BackStop     ← BoxCollider2D   (보이지 않음) 기지 뒤쪽 끝 ~ 화면 위
 Base_Enemy       ← SpriteRenderer · BoxCollider2D · Base(Team=Enemy)   x=+34.5
  └─ BackStop     ← BoxCollider2D
-Battle           ← PlayerWallet · BattleManager      (전투 로직 허브)
+Battle           ← PlayerWallet · BattleManager · UpgradeState   (전투 로직 허브)
 AllySpawnPoint   ← (Transform만) 소환 버튼이 아군을 내는 자리
 EnemySpawner     ← EnemySpawner                      (적 AI: `BattleConfig` 간격마다 `Enemy_Tank/Melee/Ranged/Knight/Catapult` 중 무작위)
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
  ├─ ResourceLabel        ← Text · ResourceLabel        (위쪽 줄 맨 왼쪽 "현재 / 최대")
  ├─ SummonButton_Shield · _Sword · _Bow · _Knight · _Priest   ← Image · Button · SummonButton   (위쪽 줄, 자원 표시 오른쪽부터 180px 간격) → Name · Cost · CooldownFill(Filled)
- ├─ IncomeUpgradeButton  ← Image · Button · IncomeUpgradeButton   (위쪽 줄, Bow 오른쪽, 노란색) → Name(레벨) · Cost
- ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (위쪽 줄 오른쪽 끝, 폭 300) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준)
+ ├─ UpgradeButton_Shield · _Sword · _Bow · _Knight · _Priest   ← Image · Button · UpgradeButton   (각 소환 버튼 바로 아래, 보라색) → Label
+ ├─ IncomeUpgradeButton  ← Image · Button · IncomeUpgradeButton   (소환 줄, Priest 오른쪽, 노란색) → Name(레벨) · Cost
+ ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (맨 윗줄 좌·우, 각 폭 900) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준)
  └─ ResultPanel          [실행 시 꺼짐] ← Image          → ResultText · RetryButton
 ```
 
 - UI는 **임시 모양**(단색 사각형 + 레거시 Text)이다. 아트가 오면 CLAUDE.md §5-1 규칙대로 바꾼다.
 - 🔴 **전투 UI는 전부 화면 위쪽 줄에 둔다**(사용자 결정 9/27 — 전장이 화면 아래쪽이라 겹치지 않게). 새 버튼도 위쪽 줄 오른쪽으로 이어 붙인다.
-  현재 가로 구간(기준 1920): 자원 40~440 · 소환 480~1360 · 강화 1400~1560 · 기지 바 1580~1880(각 폭 140). **버튼을 더 넣을 자리가 거의 없다** — 다음엔 줄을 나누거나 버튼을 줄일 것. **새 요소를 넣기 전에 이 구간과 겹치는지 계산할 것.**
+  현재 **세 줄**(기준 1920×1080, 위에서부터 y): ① 기지 체력바 -20~-50 (아군 x 40~940 · 적 980~1880)
+  ② 자원 40~440 · 소환 480~1360 · 획득량 강화 1400~1560 (y -70~-230) ③ UP 버튼 = 각 소환 버튼과 같은 x (y -240~-300).
+  소환 줄 오른쪽 1560~1880이 비어 있다. **새 요소를 넣기 전에 이 구간과 겹치는지 계산할 것.**
 
 **핵심 배선:**
 - **`BackStop`은 기지 스케일(1.5×3)의 자식이라 localScale·localPosition이 그 역수로 보정돼 있다.** 기지 크기를 바꾸면 BackStop도 다시 맞출 것.

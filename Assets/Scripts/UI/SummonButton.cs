@@ -38,6 +38,8 @@ namespace GnorpWar
                 return;
 
             Unit.Spawn(_unitPrefab, _spawnPoint.position);
+            if (UpgradeState.Instance != null)
+                UpgradeState.Instance.OnPlayerSummon(Definition, _spawnPoint.position);
             _cooldown = Definition.SummonCooldown;
         }
     }

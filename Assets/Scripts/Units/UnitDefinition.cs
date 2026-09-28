@@ -37,6 +37,11 @@ namespace GnorpWar
         [SerializeField] private float _projectileSplashRadius = 0f;
         [Tooltip("회복 전용(AttackType.Heal) — 회복 투사체 한 번에 채우는 체력")]
         [SerializeField] private float _healAmount = 0f;
+        [Tooltip("이 유닛의 업그레이드 (아군에게만 적용)")]
+        [SerializeField] private UpgradeKind _upgrade = UpgradeKind.None;
+        [SerializeField] private float _upgradeCost = 100f;
+        [Tooltip("업그레이드 수치 — SwordEscort: 함께 소환될 확률(0~1) · KnightVaultToArchers: 뛰어넘는 높이")]
+        [SerializeField] private float _upgradeValue = 0f;
         [SerializeField] private float _cost = 50f;
         [Tooltip("이 유닛이 적으로 나와 죽었을 때 플레이어가 받는 자원")]
         [SerializeField] private float _killReward = 20f;
@@ -61,6 +66,9 @@ namespace GnorpWar
         public float ProjectileArcHeight => _projectileArcHeight;
         public float ProjectileSplashRadius => _projectileSplashRadius;
         public float HealAmount => _healAmount;
+        public UpgradeKind Upgrade => _upgrade;
+        public float UpgradeCost => _upgradeCost;
+        public float UpgradeValue => _upgradeValue;
         public float Cost => _cost;
         public float KillReward => _killReward;
         public float SummonCooldown => _summonCooldown;

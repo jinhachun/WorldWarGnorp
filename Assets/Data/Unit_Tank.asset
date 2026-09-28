@@ -24,8 +24,16 @@ MonoBehaviour:
   _stackRank: 0
   _attackType: 0
   _pushPower: 2.5
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
   _projectile: {fileID: 0}
   _projectileArcHeight: 2.5
+  _projectileSplashRadius: 0
+  _healAmount: 0
+  _upgrade: 3
+  _upgradeCost: 120
+  _upgradeValue: 0
   _cost: 80
   _killReward: 30
   _summonCooldown: 3

@@ -87,7 +87,7 @@ namespace GnorpWar
                 if (damageable.Team == _team || !damageable.IsAlive)
                     return;
                 if (_splashRadius <= 0f)
-                    damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push);
+                    damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, null);
             }
 
             if (_splashRadius > 0f)
@@ -108,7 +108,7 @@ namespace GnorpWar
 
                 Vector2 away = (Vector2)col.bounds.center - center;
                 Vector2 direction = (away.normalized + Vector2.up * SplashLiftBias).normalized;
-                damageable.TakeDamage(_damage, direction, _push);
+                damageable.TakeDamage(_damage, direction, _push, null);
             }
         }
     }

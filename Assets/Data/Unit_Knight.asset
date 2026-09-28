@@ -30,6 +30,10 @@ MonoBehaviour:
   _projectile: {fileID: 0}
   _projectileArcHeight: 2.5
   _projectileSplashRadius: 0
+  _healAmount: 0
+  _upgrade: 4
+  _upgradeCost: 150
+  _upgradeValue: 2.5
   _cost: 120
   _killReward: 40
   _summonCooldown: 4

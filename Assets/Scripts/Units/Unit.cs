@@ -76,6 +76,7 @@ namespace GnorpWar
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
+        public bool IsDamaged => IsAlive && _hp < _definition.MaxHp;
         public UnitDefinition Definition => _definition;
 
         // 소환 — 소환 지점 칸이 (적이든 아군이든) 차 있으면 한 층씩 올라가 비어 있는 가장 낮은 층에 만든다.
@@ -186,8 +187,28 @@ namespace GnorpWar
 
             Vector2 velocity = _rb.linearVelocity;
 
+            // 프리스트 — 적은 공격하지 않는다. 다친 아군을 회복하고, 적이 사거리에 들면 뒤에 멈춰 선다(앞으로 걸어가 죽지 않게)
+            if (_definition.AttackType == AttackType.Heal)
+            {
+                bool enemyNear = FindTarget(out _, out _);
+                Unit patient = FindHealTarget();
+                if (patient != null && _attackCooldown <= 0f)
+                {
+                    Vector2 toPatient = patient._rb.position - _rb.position;
+                    Projectile orb = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
+                    orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
+                    StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
+                    _attackCooldown = _definition.AttackInterval;
+                }
+                if (enemyNear || patient != null)
+                {
+                    velocity.x = 0f;
+                    _rb.linearVelocity = velocity;
+                    return;
+                }
+            }
             // 싸움이 점프·전진보다 우선
-            if (FindTarget(out IDamageable target, out Vector2 targetPoint))
+            else if (FindTarget(out IDamageable target, out Vector2 targetPoint))
             {
                 velocity.x = 0f;
                 _rb.linearVelocity = velocity;
@@ -341,6 +362,34 @@ namespace GnorpWar
                 }
             }
             return target != null;
+        }
+
+        // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기 제외)
+        private Unit FindHealTarget()
+        {
+            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
+            Unit best = null;
+            float bestRatio = 1f;
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out Unit ally) || ally == this || ally._team != _team || !ally.IsAlive || ally._swapping)
+                    continue;
+
+                float ratio = ally._hp / ally._definition.MaxHp;
+                if (ratio < bestRatio)
+                {
+                    bestRatio = ratio;
+                    best = ally;
+                }
+            }
+            return best;
+        }
+
+        public void Heal(float amount)
+        {
+            if (!IsAlive)
+                return;
+            _hp = Mathf.Min(_hp + amount, _definition.MaxHp);
         }
 
         private bool IsAheadOnBaseUnit()

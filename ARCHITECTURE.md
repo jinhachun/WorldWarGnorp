@@ -58,7 +58,7 @@
 | `FxDirector` | 타격감 창구(씬의 `Fx` 오브젝트, `Instance`로 접근). 파편·사망 먼지(파티클 프리팹 `Assets/Fx/`) · 화면 흔들림 · 히트스톱 | `CameraShake.Add` |
 | `CameraShake` | 메인 카메라에 붙음. 충격이 쌓였다 잦아드는 흔들림(실제 시간 기준) | — |
 | `AutoPlayer` | **측정 전용.** 누를 수 있는 소환 버튼을 무작위로 계속 누름. 씬에 두지 않고 플레이 중에 `Battle`에 붙여 쓴다(HANDOFF 「밸런스」) | `Button.onClick` |
-| `Projectile` | 화살·돌. 착탄 범위(`UnitDefinition.ProjectileSplashRadius`)가 0보다 크면 닿은 자리 반경 안 적 전부에게 피해 + 바깥·위로 날림(투석). 목표 지점에 떨어지도록 발사 속도를 역산(수평 속도 고정) → 중력 포물선. 트리거 — 아군 통과, 적에게 피해 후 소멸, 바닥·벽에 닿아도 소멸 | `IDamageable.TakeDamage` |
+| `Projectile` | 화살·돌·회복 구슬. 회복 모드(`LaunchHeal`)는 적·던진 본인·체력 가득 찬 아군을 통과하고 처음 닿은 다친 아군에게 `Unit.Heal`. 착탄 범위(`UnitDefinition.ProjectileSplashRadius`)가 0보다 크면 닿은 자리 반경 안 적 전부에게 피해 + 바깥·위로 날림(투석). 목표 지점에 떨어지도록 발사 속도를 역산(수평 속도 고정) → 중력 포물선. 트리거 — 아군 통과, 적에게 피해 후 소멸, 바닥·벽에 닿아도 소멸 | `IDamageable.TakeDamage` |
 | `BattleManager` | 승패. 어느 기지든 `Destroyed` 이벤트가 오면 결과 패널 + `timeScale=0`, 다시하기 = 씬 재로드 | `Base.Destroyed` 구독 |
 
 ---

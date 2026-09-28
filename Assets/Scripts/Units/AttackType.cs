@@ -5,5 +5,6 @@ namespace GnorpWar
     {
         Melee,
         Ranged,
+        Heal,   // 적을 공격하지 않고, 다친 아군에게 회복 투사체를 던진다(프리스트)
     }
 }

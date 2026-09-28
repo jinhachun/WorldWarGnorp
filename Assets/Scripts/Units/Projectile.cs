@@ -17,6 +17,9 @@ namespace GnorpWar
         private float _damage;
         private float _push;
         private float _splashRadius;
+        // 0보다 크면 회복 투사체 — 적·던진 본인·체력이 가득 찬 아군은 통과하고, 처음 닿은 다친 아군을 회복
+        private float _heal;
+        private Unit _owner;
         private bool _spent;
         private readonly System.Collections.Generic.List<Collider2D> _splashHits = new System.Collections.Generic.List<Collider2D>();
 
@@ -43,6 +46,14 @@ namespace GnorpWar
             Destroy(gameObject, Lifetime);
         }
 
+        public void LaunchHeal(Unit owner, float amount, Vector2 targetPoint, float arcHeight)
+        {
+            Team team = owner.Team;
+            _owner = owner;
+            _heal = amount;
+            Launch(team, 0f, 0f, targetPoint, arcHeight, 0f);
+        }
+
         private void FixedUpdate()
         {
             // 그림은 오른쪽을 향해 그려져 있다 — 날아가는 방향으로 머리를 돌린다
@@ -55,6 +66,21 @@ namespace GnorpWar
         {
             if (_spent || other.isTrigger)
                 return;
+
+            if (_heal > 0f)
+            {
+                if (other.TryGetComponent(out IDamageable anyone) && anyone.Team != _team)
+                    return;   // 적은 통과
+                if (other.TryGetComponent(out Unit ally))
+                {
+                    if (ally == _owner || !ally.IsDamaged)
+                        return;   // 던진 본인·멀쩡한 아군은 통과
+                    ally.Heal(_heal);
+                }
+                _spent = true;
+                Destroy(gameObject);
+                return;
+            }
 
             if (other.TryGetComponent(out IDamageable damageable))
             {

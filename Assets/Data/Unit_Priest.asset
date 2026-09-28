@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_Priest
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _moveSpeed: 2
+  _jumpHeight: 1.2
+  _maxHp: 60
+  _attackDamage: 0
+  _attackInterval: 1.5
+  _attackRange: 6
+  _hitKnockback: 2
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 6
+  _stackRank: 2
+  _attackType: 2
+  _pushPower: 0
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
+  _projectile: {fileID: 5840658882024782479, guid: 6e5191662824f54489b1089301fb543f, type: 3}
+  _projectileArcHeight: 1.5
+  _projectileSplashRadius: 0
+  _healAmount: 20
+  _cost: 60
+  _killReward: 25
+  _summonCooldown: 2

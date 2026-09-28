@@ -342,7 +342,7 @@ namespace GnorpWar
             {
                 _flashTimer -= Time.deltaTime;
                 for (int i = 0; i < _bodyRenderers.Length; i++)
-                    _bodyRenderers[i].color = _flashTimer > 0f ? Color.white : _bodyColors[i];
+                    _bodyRenderers[i].color = _flashTimer > 0f ? SparkColor : _bodyColors[i]; // 몸이 흰색이라 흰 번쩍임은 안 보인다
             }
 
             UpdateThrust();

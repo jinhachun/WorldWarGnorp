@@ -36,6 +36,8 @@ namespace GnorpWar
         [SerializeField] private float _bossShockwaveSpeed = 8f;
         [SerializeField] private float _bossShockwaveLift = 4f;
         [SerializeField] private float _bossShockwaveStun = 0.6f;
+        [Tooltip("아웃게임 코인 — 적(유닛·기지)에게 준 피해 1당 튀어나오는 코인 수. 소수점은 다음 타격으로 넘어간다")]
+        [SerializeField] private float _coinsPerDamage = 0.1f;
 
         public float KillRewardPerHp => _killRewardPerHp;
         public float BossFirstSeconds => _bossFirstSeconds;
@@ -43,6 +45,7 @@ namespace GnorpWar
         public float BossShockwaveSpeed => _bossShockwaveSpeed;
         public float BossShockwaveLift => _bossShockwaveLift;
         public float BossShockwaveStun => _bossShockwaveStun;
+        public float CoinsPerDamage => _coinsPerDamage;
 
         public float StartResource => _startResource;
         public int IncomeLevelCount => _incomeLevels.Length;

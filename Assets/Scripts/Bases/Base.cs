@@ -25,6 +25,9 @@ namespace GnorpWar
             if (!IsAlive)
                 return;
 
+            // 기지 앞면에서 튀어나온다
+            if (CoinField.Instance != null)
+                CoinField.Instance.OnDamaged(_team, transform.position - (Vector3)(hitDirection * 0.75f), Mathf.Min(amount, _hp));
             _hp -= amount;
             if (!IsAlive)
             {

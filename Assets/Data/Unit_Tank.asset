@@ -35,5 +35,12 @@ MonoBehaviour:
   _upgrade: 3
   _upgradeCost: 400
   _upgradeValue: 0
+  _upgradeDescription: "\uAE30\uC0AC(\uB3CC\uACA9)\uC5D0\uAC8C \uB9DE\uC73C\uBA74
+    \uBC29\uD328\uB294 \uBC84\uD2F0\uACE0 \uAE30\uC0AC\uAC00 \uD295\uACA8\uB09C\uB2E4"
+  _upgrade2: 6
+  _upgrade2Cost: 400
+  _upgrade2Value: 0.3
+  _upgrade2Projectile: {fileID: 0}
+  _upgrade2Description: "\uC774\uB3D9 \uC18D\uB3C4 30% \uC99D\uAC00"
   _cost: 80
   _summonCooldown: 2

@@ -35,5 +35,14 @@ MonoBehaviour:
   _upgrade: 1
   _upgradeCost: 400
   _upgradeValue: 0.25
+  _upgradeDescription: "\uB2E4\uB978 \uC720\uB2DB\uC744 \uC18C\uD658\uD558\uBA74
+    25% \uD655\uB960\uB85C Sword\uAC00 \uD568\uAED8 \uB098\uC628\uB2E4"
+  _upgrade2: 7
+  _upgrade2Cost: 400
+  _upgrade2Value: 3
+  _upgrade2Projectile: {fileID: 1966056168359300910, guid: 61a663ebfe2e942458a810097addc8b2, type: 3}
+  _upgrade2Description: "3\uCD08\uB9C8\uB2E4 \uC55E\uCABD\uC73C\uB85C \uCE7C\uC744
+    \uACE7\uAC8C \uB358\uC9C4\uB2E4 (\uCC98\uC74C \uB9DE\uC740 \uC801\uC5D0\uAC8C
+    \uACF5\uACA9\uB825\uB9CC\uD07C \uD53C\uD574)"
   _cost: 50
   _summonCooldown: 1

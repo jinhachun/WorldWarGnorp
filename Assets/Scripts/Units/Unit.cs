@@ -38,6 +38,12 @@ namespace GnorpWar
         private const float SwapClimbArc = 0.7f;
         private const float SwapSlideArc = 0.3f;
         private const float SwapMaxOffsetX = 0.5f;
+        // Sword 업그레이드(칼 던지기) — 앞쪽 이 거리 안, 내 높이의 띠에 적이 있으면 수평으로 던진다
+        private const float KnifeRange = 8f;
+        private const float KnifeLaneHeight = 0.8f;
+        private const float KnifeSpeed = 14f;
+        // Priest 업그레이드(공격력 버프) 유지 시간
+        private const float BuffSeconds = 5f;
 
         [SerializeField] private UnitDefinition _definition;
         [SerializeField] private Team _team;
@@ -70,6 +76,14 @@ namespace GnorpWar
         private bool _bigKnockbackUsed;
         // 돌격 충전 — 적 없이 실제로 달린 시간. 막혀 서 있으면 0으로
         private float _runTime;
+        private float _knifeCooldown;
+        // 프리스트가 준 공격력 버프 — 남은 시간 동안 피해 × (1 + 증가율)
+        private float _buffTimer;
+        private float _buffBonus;
+        // Priest 업그레이드: 회복·버프 대상이 둘 다 있을 때 번갈아 던진다
+        private bool _nextSupportIsBuff;
+        // Knight 업그레이드: 지금 밟고 서 있는 적 — 새로 내려앉은 적에게만 피해
+        private Unit _stompedOn;
 
         // 유닛이 죽는 순간 (처치 보상 등). static이라 구독자는 OnDisable에서 반드시 해제할 것
         public static event System.Action<Unit> Died;
@@ -104,7 +118,14 @@ namespace GnorpWar
         private float Forward => _team == Team.Ally ? 1f : -1f;
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정
-        private bool IsStopped => _advanceSpeed < _definition.MoveSpeed * 0.5f;
+        private bool IsStopped => _advanceSpeed < MoveSpeed * 0.5f;
+        // Shield 업그레이드: 이동 속도 증가
+        private float MoveSpeed => _definition.MoveSpeed
+                                   * (UpgradeState.IsActive(this, UpgradeKind.ShieldSpeedBoost) ? 1f + _definition.Upgrade2Value : 1f);
+        // Bow 업그레이드: 사거리·포물선 높이 배율
+        private float LongRangeScale => UpgradeState.IsActive(this, UpgradeKind.BowLongRange) ? _definition.Upgrade2Value : 1f;
+        private float AttackRange => _definition.AttackRange * LongRangeScale;
+        private float DamageScale => _buffTimer > 0f ? 1f + _buffBonus : 1f;
         private float Feet => _rb.position.y - _halfHeight;
         private float Top => _rb.position.y + _halfHeight;
         private bool IsHeadFree
@@ -146,12 +167,15 @@ namespace GnorpWar
             _advanceSpeed = (_rb.position.x - _lastX) * Forward / Time.fixedDeltaTime;
             _lastX = _rb.position.x;
             _attackCooldown -= Time.fixedDeltaTime;
+            _knifeCooldown -= Time.fixedDeltaTime;
+            _buffTimer -= Time.fixedDeltaTime;
 
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
             bool canClimb = false;
             bool blockedByEnemy = false;
             Unit allyBelow = null;
+            Unit enemyBelow = null;
             _onBase = false;
             int count = _rb.GetContacts(_contacts);
             for (int i = 0; i < count; i++)
@@ -162,8 +186,13 @@ namespace GnorpWar
                     grounded = true;
                     if (contact.collider.TryGetComponent(out Base _))
                         _onBase = true;
-                    else if (contact.collider.TryGetComponent(out Unit below) && below._team == _team)
-                        allyBelow = below;
+                    else if (contact.collider.TryGetComponent(out Unit below))
+                    {
+                        if (below._team == _team)
+                            allyBelow = below;
+                        else
+                            enemyBelow = below;
+                    }
                 }
                 else if (contact.normal.x * Forward < -0.5f
                          && contact.collider.TryGetComponent(out Unit other)
@@ -178,10 +207,23 @@ namespace GnorpWar
                     blockedByEnemy = true;
             }
 
+            // Knight 업그레이드: 적 머리 위에 새로 내려앉으면 그 적에게 피해 (계속 서 있는 동안은 다시 안 준다)
+            if (enemyBelow != null && enemyBelow != _stompedOn && enemyBelow.IsAlive
+                && UpgradeState.IsActive(this, UpgradeKind.KnightStomp))
+                enemyBelow.TakeDamage(_definition.Upgrade2Value * DamageScale, Vector2.down, 1f, this);
+            _stompedOn = enemyBelow;
+
             if (_knockbackTimer > 0f)
             {
                 _knockbackTimer -= Time.fixedDeltaTime;
                 return;
+            }
+
+            // Sword 업그레이드: 근접 공격과 별개로, 앞쪽 수평 띠에 적이 있으면 가끔 칼을 던진다
+            if (_knifeCooldown <= 0f && UpgradeState.IsActive(this, UpgradeKind.SwordKnifeThrow) && HasEnemyInKnifeLane())
+            {
+                ThrowKnife();
+                _knifeCooldown = _definition.Upgrade2Value;
             }
 
             // 층 정렬: 내가 바로 아래 아군보다 아래층 역할이면(예: 원딜 위의 탱커) 자리를 바꾼다
@@ -198,18 +240,30 @@ namespace GnorpWar
             {
                 bool enemyNear = FindTarget(out _, out _);
                 Unit patient = FindHealTarget(null);
-                if (patient != null && _attackCooldown <= 0f)
+                Unit buffTarget = UpgradeState.IsActive(this, UpgradeKind.PriestAttackBuff) ? FindBuffTarget() : null;
+                if ((patient != null || buffTarget != null) && _attackCooldown <= 0f)
                 {
-                    Vector2 toPatient = patient._rb.position - _rb.position;
-                    ThrowHeal(patient);
-                    // Priest 업그레이드: 두 번째로 많이 다친 아군에게도
-                    if (UpgradeState.IsActive(this, UpgradeKind.PriestDoubleHeal))
+                    // Priest 업그레이드: 회복할 대상·버프할 대상이 둘 다 있으면 번갈아, 한쪽만 있으면 그쪽
+                    bool buff = buffTarget != null && (patient == null || _nextSupportIsBuff);
+                    Unit receiver = buff ? buffTarget : patient;
+                    Vector2 toReceiver = receiver._rb.position - _rb.position;
+                    if (buff)
                     {
-                        Unit second = FindHealTarget(patient);
-                        if (second != null)
-                            ThrowHeal(second);
+                        ThrowBuff(buffTarget);
                     }
-                    StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
+                    else
+                    {
+                        ThrowHeal(patient);
+                        // Priest 업그레이드: 두 번째로 많이 다친 아군에게도
+                        if (UpgradeState.IsActive(this, UpgradeKind.PriestDoubleHeal))
+                        {
+                            Unit second = FindHealTarget(patient);
+                            if (second != null)
+                                ThrowHeal(second);
+                        }
+                    }
+                    _nextSupportIsBuff = !buff;
+                    StartThrust(toReceiver.sqrMagnitude > 0.0001f ? toReceiver.normalized : new Vector2(Forward, 0f));
                     _attackCooldown = _definition.AttackInterval;
                 }
                 if (enemyNear || patient != null)
@@ -247,7 +301,7 @@ namespace GnorpWar
                     {
                         // 달려와서 치는 첫 타격은 돌격 — 피해·밀치기에 배율
                         bool charge = _runTime >= _definition.ChargeReadySeconds;
-                        float damage = _definition.AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f);
+                        float damage = _definition.AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f) * DamageScale;
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
                         target.TakeDamage(damage, hitDirection, push, this);
                     }
@@ -262,7 +316,7 @@ namespace GnorpWar
             _runTime = IsStopped ? 0f : _runTime + Time.fixedDeltaTime;
 
             // 기지 위는 한 층만 — 기지 위 유닛 머리로 걸어 올라가지도 않는다
-            velocity.x = IsAheadOnBaseUnit() ? 0f : Forward * _definition.MoveSpeed;
+            velocity.x = IsAheadOnBaseUnit() ? 0f : Forward * MoveSpeed;
             // 못 올라탈 땐 뛰지 않고 서 있어야 뒤 유닛의 발판이 된다 — 계속 뛰면 계단(산)이 안 생긴다
             if (grounded && canClimb)
                 velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * _definition.JumpHeight);
@@ -277,6 +331,8 @@ namespace GnorpWar
             if (!IsAlive)
                 return;
 
+            if (CoinField.Instance != null)
+                CoinField.Instance.OnDamaged(_team, _rb.position, Mathf.Min(amount, _hp));
             _hp -= amount;
             // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다
             if (FxDirector.Instance != null)
@@ -381,7 +437,7 @@ namespace GnorpWar
         private bool FindTarget(out IDamageable target, out Vector2 targetPoint, IDamageable exclude = null, bool rangedOnly = false)
         {
             // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게
-            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
+            Physics2D.OverlapCircle(_rb.position, AttackRange, SolidOnly, _overlaps);
             target = null;
             targetPoint = default;
             float best = float.MaxValue;
@@ -408,13 +464,69 @@ namespace GnorpWar
         private void FireProjectile(Vector2 targetPoint)
         {
             Projectile shot = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
-            shot.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius);
+            shot.Launch(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, targetPoint,
+                        _definition.ProjectileArcHeight * LongRangeScale, _definition.ProjectileSplashRadius);
         }
 
         private void ThrowHeal(Unit patient)
         {
             Projectile orb = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
             orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
+        }
+
+        private void ThrowBuff(Unit target)
+        {
+            Projectile cross = Instantiate(_definition.Upgrade2Projectile, _weapon.position, Quaternion.identity);
+            cross.LaunchBuff(this, _definition.Upgrade2Value, BuffSeconds, target._rb.position, target._rb.linearVelocity, _definition.ProjectileArcHeight);
+        }
+
+        public void Buff(float bonus, float seconds)
+        {
+            if (!IsAlive)
+                return;
+            _buffBonus = bonus;
+            _buffTimer = seconds;
+        }
+
+        // 사거리 안에서 버프가 없는 아군 중 가장 앞에 선 공격 유닛(자기·프리스트 제외)
+        private Unit FindBuffTarget()
+        {
+            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
+            Unit best = null;
+            float bestAhead = float.MinValue;
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out Unit ally) || ally == this || ally._team != _team || !ally.IsAlive || ally._swapping
+                    || ally._buffTimer > 0f || ally._definition.AttackType == AttackType.Heal)
+                    continue;
+
+                float ahead = ally._rb.position.x * Forward;
+                if (ahead > bestAhead)
+                {
+                    bestAhead = ahead;
+                    best = ally;
+                }
+            }
+            return best;
+        }
+
+        private bool HasEnemyInKnifeLane()
+        {
+            Vector2 center = _rb.position + new Vector2(Forward * KnifeRange * 0.5f, 0f);
+            Physics2D.OverlapBox(center, new Vector2(KnifeRange, KnifeLaneHeight), 0f, SolidOnly, _overlaps);
+            foreach (Collider2D col in _overlaps)
+            {
+                if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
+                    return true;
+            }
+            return false;
+        }
+
+        private void ThrowKnife()
+        {
+            Vector2 origin = _rb.position + new Vector2(Forward * 0.5f, 0f);
+            Projectile knife = Instantiate(_definition.Upgrade2Projectile, origin, Quaternion.identity);
+            knife.LaunchStraight(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, new Vector2(Forward * KnifeSpeed, 0f));
         }
 
         // 기사 업그레이드 — 앞쪽 일정 거리 안에 적 원거리 유닛이 있나

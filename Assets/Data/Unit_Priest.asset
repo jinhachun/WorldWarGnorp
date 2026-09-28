@@ -35,5 +35,12 @@ MonoBehaviour:
   _upgrade: 5
   _upgradeCost: 400
   _upgradeValue: 0
+  _upgradeDescription: "\uD55C \uBC88\uC5D0 \uB450 \uBA85\uC744 \uD68C\uBCF5\uD55C\uB2E4"
+  _upgrade2: 10
+  _upgrade2Cost: 400
+  _upgrade2Value: 0.5
+  _upgrade2Projectile: {fileID: 5840658882024782479, guid: e4d48019334997b43b85ce040c3bd1a2, type: 3}
+  _upgrade2Description: "\uD68C\uBCF5\uACFC \uBC88\uAC08\uC544 \uB178\uB780 \uC2ED\uC790\uAC00\uB97C
+    \uB358\uC838 \uB9DE\uC740 \uC544\uAD70\uC758 \uACF5\uACA9\uB825 +50% (5\uCD08)"
   _cost: 60
   _summonCooldown: 1.3333334

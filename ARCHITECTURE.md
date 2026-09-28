@@ -50,8 +50,9 @@
 | `Unit` | 유닛 한 마리. 사거리 안에 적(`IDamageable`)이 있으면 멈춰서 공격 + 칼 찌르기(점프보다 우선). 없으면 전진, 앞 아군이 멈춰 있고 머리 위가 비고 기지 위가 아니면 점프. 피격 시 맞은 방향으로 밀림·찌그러짐·번쩍. 죽으면 콜라이더 끄고 뒤집혀 맨 앞 레이어로 튀어 떨어진 뒤 3초 후 파괴. 수치는 `UnitDefinition` SO, 연출 상수는 `Unit.cs` 상단 | 사거리 안 `IDamageable.TakeDamage(피해, 맞은 방향)` · 접촉한 `Unit`의 `IsStopped`·`IsHeadFree`·`_onBase` |
 | `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
 | `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(= 적 최대 체력 × `BattleConfig.KillRewardPerHp`), 최대치에서 멈춤(보상도 잘림). **획득 레벨**(`IncomeLevel`, 0부터)이 초당 획득량·최대치를 정한다 — 레벨 표는 `BattleConfig._incomeLevels` | `Unit.Died`(static 이벤트) 구독 |
-| `UpgradeState` | 이번 판에 산 유닛 업그레이드(`Battle`에 붙음, `Instance`). `IsActive(unit, kind)` = 아군 && 그 정의의 업그레이드를 샀나. Sword 호위 소환도 여기서(`OnPlayerSummon`) | `Unit.Spawn` |
-| `UpgradeButton` | 소환 버튼 아래 UP 버튼. 자원으로 한 번 구매 | `UpgradeState.Buy` |
+| `CoinField` | 아웃게임 코인(`Battle`에 붙음, `Instance`). 적 유닛·적 기지가 맞으면 피해량 × `BattleConfig.CoinsPerDamage`개가 튀어나와 바닥에 멈추고, 바닥 띠에 닿은 아군 몸이 줍는다. 누적은 `PlayerPrefs("Coins")` → `CoinField.Total`. 🔴 **코인은 물리 몸체가 아니다** — 이동·착지·줍기를 이 컴포넌트가 직접 한다(풀 · 가로 칸마다 누운 코인 1개, 같은 칸에 떨어지면 값을 합침) | `Unit.TakeDamage`·`Base.TakeDamage`가 `OnDamaged` 호출 |
+| `UpgradeState` | 이번 판에 산 유닛 업그레이드(`Battle`에 붙음, `Instance`). 유닛마다 두 칸(`Upgrade`·`Upgrade2`), 산 것은 **종류(`UpgradeKind`)로** 기억한다(한 종류 = 한 유닛의 한 칸). `IsActive(unit, kind)` = 아군 && 그 정의의 두 칸 중 하나가 kind && 샀나. Sword 호위 소환도 여기서(`OnPlayerSummon`) | `Unit.Spawn` |
+| `UpgradeButton` | 소환 버튼 아래 UP(1번 칸)·UP2(`_second`, 2번 칸) 버튼. 자원으로 한 번 구매. 마우스를 올리면 그 칸의 설명(`Unit_*.asset`의 Description)을 툴팁으로 | `UpgradeState.Buy` · `UpgradeTooltip.Show` |
 | `IncomeUpgradeButton` | 획득 레벨 강화 버튼. 레벨·다음 비용(만렙이면 MAX) 표시 | `PlayerWallet.TryUpgradeIncome` |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `SummonButton` | 소환 버튼 하나. 쿨다운·자원 확인 후 소환 지점에 유닛 프리팹 생성 | `PlayerWallet.TrySpend` |
@@ -78,7 +79,7 @@
 | 변경하고 싶은 것 | 손대야 할 파일 |
 |---|---|
 | **새 유닛 종류** | `Assets/Data/Unit_*.asset` 하나(수치·공격 방식·밀치는 힘·화살) + `Ally_*`/`Enemy_*` 프리팹 두 개(`*_Melee` 복제 → `_definition`·`Visual/Weapon` 그림 교체) + 위쪽 줄에 소환 버튼 복제 + `EnemySpawner._unitPrefabs`에 추가. 코드 X |
-| **새 유닛 업그레이드** | `UpgradeKind` enum(**맨 뒤에만**) + 효과 분기(`Unit`의 해당 동작에서 `UpgradeState.IsActive(this, kind)`) + `Unit_*.asset`의 Upgrade·비용·수치 + (새 유닛이면) UP 버튼 |
+| **새 유닛 업그레이드** | `UpgradeKind` enum(**맨 뒤에만**) + 효과 분기(`Unit`의 해당 동작에서 `UpgradeState.IsActive(this, kind)`) + `Unit_*.asset`의 Upgrade(또는 Upgrade2)·비용·수치·설명 + (새 유닛이면) UP·UP2 버튼 |
 | **새 공격 방식** | `AttackType` enum(**맨 뒤에만**) + `Unit.FixedUpdate`의 공격 분기 |
 | 전투 수치 | `Unit_*.asset` · `BattleConfig.asset` · `Base_Test.asset` (코드 X) |
 

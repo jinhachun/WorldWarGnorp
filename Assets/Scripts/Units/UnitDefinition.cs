@@ -44,6 +44,16 @@ namespace GnorpWar
         [SerializeField] private float _upgradeCost = 100f;
         [Tooltip("업그레이드 수치 — SwordEscort: 함께 소환될 확률(0~1) · KnightVaultToArchers: 뛰어넘는 높이")]
         [SerializeField] private float _upgradeValue = 0f;
+        [Tooltip("UP 버튼에 마우스를 올리면 뜨는 설명")]
+        [SerializeField] private string _upgradeDescription = "";
+        [Tooltip("두 번째 업그레이드 (UP2 버튼, 아군에게만 적용)")]
+        [SerializeField] private UpgradeKind _upgrade2 = UpgradeKind.None;
+        [SerializeField] private float _upgrade2Cost = 100f;
+        [Tooltip("두 번째 업그레이드 수치 — ShieldSpeedBoost: 이동 속도 증가율 · SwordKnifeThrow: 던지는 간격(초) · BowLongRange: 사거리·포물선 높이 배율 · KnightStomp: 밟기 피해 · PriestAttackBuff: 공격력 증가율")]
+        [SerializeField] private float _upgrade2Value = 0f;
+        [Tooltip("두 번째 업그레이드가 던지는 것 — SwordKnifeThrow: 칼 · PriestAttackBuff: 버프 십자가")]
+        [SerializeField] private Projectile _upgrade2Projectile;
+        [SerializeField] private string _upgrade2Description = "";
         [SerializeField] private float _cost = 50f;
         [SerializeField] private float _summonCooldown = 1.5f;
 
@@ -70,6 +80,12 @@ namespace GnorpWar
         public UpgradeKind Upgrade => _upgrade;
         public float UpgradeCost => _upgradeCost;
         public float UpgradeValue => _upgradeValue;
+        public string UpgradeDescription => _upgradeDescription;
+        public UpgradeKind Upgrade2 => _upgrade2;
+        public float Upgrade2Cost => _upgrade2Cost;
+        public float Upgrade2Value => _upgrade2Value;
+        public Projectile Upgrade2Projectile => _upgrade2Projectile;
+        public string Upgrade2Description => _upgrade2Description;
         public float Cost => _cost;
         public float SummonCooldown => _summonCooldown;
     }

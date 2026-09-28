@@ -112,7 +112,7 @@ For multi-step tasks, state a brief plan:
 - ⚠️ 새 PNG는 임포트 기본값(PPU 100 · Bilinear · 압축 · **NPOT 크기 보정**)으로 들어온다. 크기 보정 때문에 5×3 같은 그림이 **4×4로 늘어난 채 들어온다.**
   → Sprite · Single · PPU 8 · Point · 압축 없음 · `npotScale = None` · 밉맵 끔으로 바꾼다. 동종 스프라이트의 `.meta`와 대조할 것.
 - 그림은 **오른쪽(아군 전방)을 보고** 그린다. 적은 `Unit`이 진영에서 방향을 읽어 좌우를 뒤집는다.
-- 🎨 **아트 톤(Gnorp Apologue풍): 검은 배경 · 유닛·건물·땅·투사체는 흰색, 색은 이펙트(불꽃·힐·피격)에만.** 아군·적은 색이 아니라 그림(아군 `gnorp.png` · 적 `enemy.png`)과 방향으로 구분한다.
+- 🎨 **아트 톤(Gnorp Apologue풍): 검은 배경 · 유닛·건물·땅·투사체는 흰색, 색은 이펙트(불꽃·힐·피격)에만.** 예외: 기사의 말은 갈색(사용자 결정). 아군·적은 색이 아니라 그림(아군 `gnorp.png` · 적 `enemy.png`)과 방향으로 구분한다.
 
 ### 코드 컨벤션
 - 네임스페이스 `GnorpWar`. 클래스/메서드/프로퍼티 PascalCase, private 필드 `_camelCase`, 인스펙터 노출은 `[SerializeField] private`.

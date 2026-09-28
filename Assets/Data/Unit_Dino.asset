@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
   _moveSpeed: 0.6
   _jumpHeight: 1.2
-  _maxHp: 2500
+  _maxHp: 1500
   _attackDamage: 6
   _attackInterval: 0.25
   _attackRange: 5

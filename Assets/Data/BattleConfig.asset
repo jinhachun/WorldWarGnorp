@@ -41,3 +41,8 @@ MonoBehaviour:
   _enemySpawnIntervalStart: 2.2
   _enemySpawnIntervalEnd: 1
   _enemySpawnRampSeconds: 240
+  _bossFirstSeconds: 60
+  _bossIntervalSeconds: 90
+  _bossShockwaveSpeed: 8
+  _bossShockwaveLift: 4
+  _bossShockwaveStun: 0.6

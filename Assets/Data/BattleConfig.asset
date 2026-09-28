@@ -38,6 +38,7 @@ MonoBehaviour:
   - _perSecond: 85
     _max: 1200
     _upgradeCost: 0
+  _killRewardPerHp: 0.25
   _enemySpawnIntervalStart: 2.2
   _enemySpawnIntervalEnd: 1
   _enemySpawnRampSeconds: 240

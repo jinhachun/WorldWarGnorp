@@ -54,11 +54,11 @@ namespace GnorpWar
             return true;
         }
 
-        // 냥코대전쟁처럼 적을 처치하면 자원을 받는다
+        // 냥코대전쟁처럼 적을 처치하면 자원을 받는다 — 튼튼한 적일수록 많이(체력 비례). 최대치에서 잘린다
         private void OnUnitDied(Unit unit)
         {
             if (unit.Team == Team.Enemy)
-                Current = Mathf.Min(Current + unit.Definition.KillReward, Max);
+                Current = Mathf.Min(Current + unit.Definition.MaxHp * _config.KillRewardPerHp, Max);
         }
     }
 }

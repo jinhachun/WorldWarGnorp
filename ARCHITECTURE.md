@@ -49,7 +49,7 @@
 |---|---|---|
 | `Unit` | 유닛 한 마리. 사거리 안에 적(`IDamageable`)이 있으면 멈춰서 공격 + 칼 찌르기(점프보다 우선). 없으면 전진, 앞 아군이 멈춰 있고 머리 위가 비고 기지 위가 아니면 점프. 피격 시 맞은 방향으로 밀림·찌그러짐·번쩍. 죽으면 콜라이더 끄고 뒤집혀 맨 앞 레이어로 튀어 떨어진 뒤 3초 후 파괴. 수치는 `UnitDefinition` SO, 연출 상수는 `Unit.cs` 상단 | 사거리 안 `IDamageable.TakeDamage(피해, 맞은 방향)` · 접촉한 `Unit`의 `IsStopped`·`IsHeadFree`·`_onBase` |
 | `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
-| `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(`UnitDefinition.KillReward`), 최대치에서 멈춤. **획득 레벨**(`IncomeLevel`, 0부터)이 초당 획득량·최대치를 정한다 — 레벨 표는 `BattleConfig._incomeLevels` | `Unit.Died`(static 이벤트) 구독 |
+| `PlayerWallet` | 플레이어 자원. 초당 증가 + 적 처치 보상(= 적 최대 체력 × `BattleConfig.KillRewardPerHp`), 최대치에서 멈춤(보상도 잘림). **획득 레벨**(`IncomeLevel`, 0부터)이 초당 획득량·최대치를 정한다 — 레벨 표는 `BattleConfig._incomeLevels` | `Unit.Died`(static 이벤트) 구독 |
 | `UpgradeState` | 이번 판에 산 유닛 업그레이드(`Battle`에 붙음, `Instance`). `IsActive(unit, kind)` = 아군 && 그 정의의 업그레이드를 샀나. Sword 호위 소환도 여기서(`OnPlayerSummon`) | `Unit.Spawn` |
 | `UpgradeButton` | 소환 버튼 아래 UP 버튼. 자원으로 한 번 구매 | `UpgradeState.Buy` |
 | `IncomeUpgradeButton` | 획득 레벨 강화 버튼. 레벨·다음 비용(만렙이면 MAX) 표시 | `PlayerWallet.TryUpgradeIncome` |
@@ -60,6 +60,7 @@
 | `BaseHealthBar` | 기지 체력 비율을 채움 게이지로 표시 | `Base.Hp01` |
 | `FxDirector` | 타격감 창구(씬의 `Fx` 오브젝트, `Instance`로 접근). 파편·사망 먼지(파티클 프리팹 `Assets/Fx/`) · 화면 흔들림 · 히트스톱 | `CameraShake.Add` |
 | `CameraShake` | 메인 카메라에 붙음. 충격이 쌓였다 잦아드는 흔들림(실제 시간 기준) | — |
+| `BattleRecorder` | **측정 전용.** 콘솔 `[Rec]`에 처치 보상(잘림 표시)·보스 등장·10초 요약. 씬에 두지 않고 플레이 중 `Battle`에 붙임 | `Unit.Died` 구독 |
 | `AutoPlayer` | **측정 전용.** 누를 수 있는 소환 버튼을 무작위로 계속 누름. 씬에 두지 않고 플레이 중에 `Battle`에 붙여 쓴다(HANDOFF 「밸런스」) | `Button.onClick` |
 | `Projectile` | 화살·돌·회복 구슬. 회복 모드(`LaunchHeal`)는 적·던진 본인·체력 가득 찬 아군을 통과하고 처음 닿은 다친 아군에게 `Unit.Heal`. 착탄 범위(`UnitDefinition.ProjectileSplashRadius`)가 0보다 크면 닿은 자리 반경 안 적 전부에게 피해 + 바깥·위로 날림(투석). 목표 지점에 떨어지도록 발사 속도를 역산(수평 속도 고정) → 중력 포물선. 트리거 — 아군 통과, 적에게 피해 후 소멸, 바닥·벽에 닿아도 소멸 | `IDamageable.TakeDamage` |
 | `BattleManager` | 승패. 어느 기지든 `Destroyed` 이벤트가 오면 결과 패널 + `timeScale=0`, 다시하기 = 씬 재로드 | `Base.Destroyed` 구독 |

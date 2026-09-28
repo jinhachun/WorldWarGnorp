@@ -23,6 +23,8 @@ namespace GnorpWar
         [SerializeField] private float _startResource = 100f;
         [Tooltip("0번이 시작 레벨. 강화 버튼으로 한 칸씩 올라간다")]
         [SerializeField] private IncomeLevel[] _incomeLevels;
+        [Tooltip("적 처치 보상 = 그 적의 최대 체력 × 이 값. 강한(튼튼한) 적일수록 자원이 확 뛴다(냥코대전쟁식)")]
+        [SerializeField] private float _killRewardPerHp = 0.25f;
         [Tooltip("적 소환 간격 — 시작 값에서 끝 값까지 Ramp 시간 동안 줄어든다. 교착이 길어지면 적이 강해져 판이 반드시 끝난다")]
         [SerializeField] private float _enemySpawnIntervalStart = 2.2f;
         [SerializeField] private float _enemySpawnIntervalEnd = 1.2f;
@@ -35,6 +37,7 @@ namespace GnorpWar
         [SerializeField] private float _bossShockwaveLift = 4f;
         [SerializeField] private float _bossShockwaveStun = 0.6f;
 
+        public float KillRewardPerHp => _killRewardPerHp;
         public float BossFirstSeconds => _bossFirstSeconds;
         public float BossIntervalSeconds => _bossIntervalSeconds;
         public float BossShockwaveSpeed => _bossShockwaveSpeed;

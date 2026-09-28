@@ -316,9 +316,12 @@ namespace GnorpWar
 
             // 맞은 방향으로 밀리고, 맞은 축으로 찌그러진다 (위에서 맞으면 납작, 옆에서 맞으면 홀쭉).
             // 세게 맞을수록 오래 조종 불능 — 짧으면 다음 스텝에 걷기가 속도를 덮어써 날아가다 끊긴다
+            _squashVertical = Mathf.Abs(hitDirection.y) > Mathf.Abs(hitDirection.x);
+            // 밀치는 힘이 0인 공격(화염)은 밀림·경직 없음 — 연속으로 맞아도 반격할 수 있어야 한다
+            if (push <= 0f)
+                return;
             _knockbackTimer = KnockbackDuration * Mathf.Max(1f, push);
             _rb.linearVelocity = hitDirection * (_definition.HitKnockback * push);
-            _squashVertical = Mathf.Abs(hitDirection.y) > Mathf.Abs(hitDirection.x);
         }
 
         private void Update()

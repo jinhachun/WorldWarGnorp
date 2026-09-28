@@ -23,7 +23,7 @@ MonoBehaviour:
   _bigKnockbackSpeed: 0
   _stackRank: 0
   _attackType: 3
-  _pushPower: 0.5
+  _pushPower: 0
   _chargeReadySeconds: 1
   _chargeDamageMultiplier: 1
   _chargePushMultiplier: 1
@@ -36,5 +36,4 @@ MonoBehaviour:
   _upgradeCost: 0
   _upgradeValue: 0
   _cost: 0
-  _killReward: 300
   _summonCooldown: 0

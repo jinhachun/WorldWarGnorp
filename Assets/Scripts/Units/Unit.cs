@@ -29,7 +29,6 @@ namespace GnorpWar
         // 칼 찌르기 — 몸 중심 근처에서 타겟 방향으로 뻗었다가 돌아온다
         private const float ThrustDuration = 0.2f;
         private const float ThrustDistance = 0.3f;
-        private static readonly Vector2 WeaponAnchor = new Vector2(0f, -0.1f);
         private const float WeaponReach = 0.45f;
         // 칸 검사는 몸(고체)만 본다 — 날아가는 화살(트리거) 때문에 칸이 막힌 걸로 보이면 안 된다
         private static readonly ContactFilter2D SolidOnly = new ContactFilter2D { useTriggers = false };
@@ -54,9 +53,12 @@ namespace GnorpWar
         private float _hp;
         private float _attackCooldown;
         private bool _onBase;
-        private SpriteRenderer _bodyRenderer;
+        // 몸통 그림들(무기 제외) — 보통 1장, 기사는 말 + 탄 gnorp 2장
+        private SpriteRenderer[] _bodyRenderers;
+        private Color[] _bodyColors;
         private SpriteRenderer _weaponRenderer;
-        private Color _bodyColor;
+        // 키의 절반 — 충돌 박스 높이에서 읽는다(보통 0.5, 기사 1). 칸 검사·발 고정이 이 값을 쓴다
+        private float _halfHeight;
         private Vector3 _weaponRestPosition;
         private float _knockbackTimer;
         private float _squashTime = SquashDuration;
@@ -83,11 +85,15 @@ namespace GnorpWar
 
         public static Unit Spawn(Unit prefab, Vector2 groundPoint)
         {
-            Vector2 position = groundPoint;
+            // groundPoint는 1층 칸의 중심. 키가 큰 유닛은 발을 같은 높이에 맞추도록 중심을 올리고, 키만큼 빈 공간을 찾는다
+            float height = prefab.GetComponent<BoxCollider2D>().size.y;
+            Vector2 probe = new Vector2(SpawnCellProbe.x, height - (1f - SpawnCellProbe.y));
+            Vector2 baseCenter = groundPoint + Vector2.up * ((height - 1f) * 0.5f);
+            Vector2 position = baseCenter;
             for (int floor = 0; floor < SpawnMaxFloors; floor++)
             {
-                position = groundPoint + Vector2.up * floor;
-                if (Physics2D.OverlapBox(position, SpawnCellProbe, 0f, SolidOnly, CellProbe) == 0)
+                position = baseCenter + Vector2.up * floor;
+                if (Physics2D.OverlapBox(position, probe, 0f, SolidOnly, CellProbe) == 0)
                     break;
             }
             return Instantiate(prefab, position, Quaternion.identity);
@@ -96,11 +102,14 @@ namespace GnorpWar
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정
         private bool IsStopped => _advanceSpeed < _definition.MoveSpeed * 0.5f;
+        private float Feet => _rb.position.y - _halfHeight;
+        private float Top => _rb.position.y + _halfHeight;
         private bool IsHeadFree
         {
             get
             {
-                Vector2 above = (Vector2)transform.position + Vector2.up;
+                // 머리 바로 위 한 칸
+                Vector2 above = new Vector2(_rb.position.x, Top + 0.5f);
                 return Physics2D.OverlapBox(above, new Vector2(0.8f, 0.8f), 0f, SolidOnly, CellProbe) == 0;
             }
         }
@@ -110,9 +119,16 @@ namespace GnorpWar
             _rb = GetComponent<Rigidbody2D>();
             _lastX = _rb.position.x;
             _hp = _definition.MaxHp;
-            _bodyRenderer = _visual.GetComponent<SpriteRenderer>();
             _weaponRenderer = _weapon.GetComponent<SpriteRenderer>();
-            _bodyColor = _bodyRenderer.color;
+            var bodies = new List<SpriteRenderer>();
+            foreach (SpriteRenderer sr in _visual.GetComponentsInChildren<SpriteRenderer>())
+                if (sr != _weaponRenderer)
+                    bodies.Add(sr);
+            _bodyRenderers = bodies.ToArray();
+            _bodyColors = new Color[_bodyRenderers.Length];
+            for (int i = 0; i < _bodyRenderers.Length; i++)
+                _bodyColors[i] = _bodyRenderers[i].color;
+            _halfHeight = GetComponent<BoxCollider2D>().size.y * 0.5f;
             _weaponRestPosition = _weapon.localPosition;
             // 그림은 오른쪽(아군 전방)을 보고 그려져 있다 — 전방이 -x면 자식(무기)까지 통째로 뒤집는다
             if (Forward < 0f)
@@ -150,7 +166,8 @@ namespace GnorpWar
                          && other._team == _team
                          && other.IsStopped
                          && other.IsHeadFree
-                         && !other._onBase)
+                         && !other._onBase
+                         && other.Top - Feet <= _definition.JumpHeight)   // 닿지도 않는 높이(키 큰 기사)에 계속 뛰지 않게
                     canClimb = true;
             }
 
@@ -260,13 +277,14 @@ namespace GnorpWar
             float scaleX = _squashVertical ? 1f + wobble : 1f - wobble;
             float scaleY = _squashVertical ? 1f - wobble : 1f + wobble;
             _visual.localScale = new Vector3(scaleX, scaleY, 1f);
-            _visual.localPosition = new Vector3(0f, (scaleY - 1f) * 0.5f, 0f);
+            _visual.localPosition = new Vector3(0f, (scaleY - 1f) * _halfHeight, 0f);
             _squashTime += Time.deltaTime;
 
             if (_flashTimer > 0f)
             {
                 _flashTimer -= Time.deltaTime;
-                _bodyRenderer.color = _flashTimer > 0f ? Color.white : _bodyColor;
+                for (int i = 0; i < _bodyRenderers.Length; i++)
+                    _bodyRenderers[i].color = _flashTimer > 0f ? Color.white : _bodyColors[i];
             }
 
             UpdateThrust();
@@ -294,7 +312,9 @@ namespace GnorpWar
             }
 
             float lunge = Mathf.Sin(_thrustTime / ThrustDuration * Mathf.PI) * ThrustDistance;
-            _weapon.localPosition = WeaponAnchor + _thrustDirection * (WeaponReach + lunge);
+            // 찌르기 기준점 = 무기를 든 손(쉬는 위치에서 팔 길이만큼 몸 쪽) — 기사는 말 위, 보통은 몸 가운데
+            Vector2 anchor = (Vector2)_weaponRestPosition - new Vector2(WeaponReach, 0f);
+            _weapon.localPosition = anchor + _thrustDirection * (WeaponReach + lunge);
             float angle = Mathf.Atan2(_thrustDirection.y, _thrustDirection.x) * Mathf.Rad2Deg;
             _weapon.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
@@ -326,7 +346,7 @@ namespace GnorpWar
         private bool IsAheadOnBaseUnit()
         {
             // 한 칸 앞, 발밑 높이에 기지 위 유닛이 있으면 그 머리로 걸어 들어가게 된다
-            Vector2 aheadBelow = _rb.position + new Vector2(Forward, -1f);
+            Vector2 aheadBelow = new Vector2(_rb.position.x + Forward, Feet - 0.5f);
             Physics2D.OverlapBox(aheadBelow, new Vector2(0.8f, 0.8f), 0f, SolidOnly, CellProbe);
             foreach (Collider2D col in CellProbe)
             {
@@ -338,7 +358,9 @@ namespace GnorpWar
 
         private bool CanSwapDownWith(Unit below)
         {
+            // 키가 다르면 자리를 맞바꿀 때 발 높이가 어긋난다 — 같은 키끼리만
             return _definition.StackRank < below._definition.StackRank
+                   && Mathf.Approximately(_halfHeight, below._halfHeight)
                    && below.IsAlive && !below._swapping && below._knockbackTimer <= 0f
                    && Mathf.Abs(below._rb.position.x - _rb.position.x) <= SwapMaxOffsetX;
         }
@@ -404,8 +426,11 @@ namespace GnorpWar
             _rb.linearVelocity = new Vector2(-Forward * DeathPop.x, DeathPop.y);
 
             // 마리오처럼 뒤집힌 채 맨 앞에 그려지며 퇴장
-            _bodyRenderer.color = _bodyColor;
-            _bodyRenderer.sortingOrder = DeathSortingOrder;
+            for (int i = 0; i < _bodyRenderers.Length; i++)
+            {
+                _bodyRenderers[i].color = _bodyColors[i];
+                _bodyRenderers[i].sortingOrder = DeathSortingOrder;
+            }
             _weaponRenderer.sortingOrder = DeathSortingOrder + 1;
             _weapon.localPosition = _weaponRestPosition;
             _weapon.localRotation = Quaternion.identity;

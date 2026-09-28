@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Catapult
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
-  _moveSpeed: 1.2
+  _moveSpeed: 1.8000001
   _jumpHeight: 1.2
   _maxHp: 80
   _attackDamage: 15
-  _attackInterval: 3.5
+  _attackInterval: 2.3333333
   _attackRange: 10
   _hitKnockback: 2
   _bigKnockbackAt: 0.5
@@ -30,10 +30,10 @@ MonoBehaviour:
   _projectile: {fileID: 5840658882024782479, guid: 1dbe067fa1dd696418590937fdb06100, type: 3}
   _projectileArcHeight: 5
   _projectileSplashRadius: 1.5
+  _flameThickness: 2
   _healAmount: 0
   _upgrade: 0
   _upgradeCost: 0
   _upgradeValue: 0
   _cost: 150
-  _killReward: 50
-  _summonCooldown: 5
+  _summonCooldown: 3.3333333

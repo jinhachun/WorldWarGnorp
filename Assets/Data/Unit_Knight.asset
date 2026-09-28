@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Knight
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
-  _moveSpeed: 4
+  _moveSpeed: 6
   _jumpHeight: 2.4
   _maxHp: 150
   _attackDamage: 12
-  _attackInterval: 1.2
+  _attackInterval: 0.8
   _attackRange: 0.8
   _hitKnockback: 1.5
   _bigKnockbackAt: 0.5
@@ -30,10 +30,10 @@ MonoBehaviour:
   _projectile: {fileID: 0}
   _projectileArcHeight: 2.5
   _projectileSplashRadius: 0
+  _flameThickness: 2
   _healAmount: 0
   _upgrade: 4
   _upgradeCost: 400
   _upgradeValue: 2.5
   _cost: 120
-  _killReward: 40
-  _summonCooldown: 4
+  _summonCooldown: 2.6666667

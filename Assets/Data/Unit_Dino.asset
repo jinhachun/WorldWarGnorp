@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Dino
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
-  _moveSpeed: 0.6
+  _moveSpeed: 0.90000004
   _jumpHeight: 1.2
   _maxHp: 1500
   _attackDamage: 6
-  _attackInterval: 0.25
+  _attackInterval: 0.16666667
   _attackRange: 5
   _hitKnockback: 0.2
   _bigKnockbackAt: 0

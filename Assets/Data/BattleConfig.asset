@@ -14,28 +14,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BattleConfig
   _startResource: 100
   _incomeLevels:
-  - _perSecond: 25
+  - _perSecond: 37.5
     _max: 500
     _upgradeCost: 100
-  - _perSecond: 32
+  - _perSecond: 48
     _max: 600
     _upgradeCost: 150
-  - _perSecond: 40
+  - _perSecond: 60
     _max: 700
     _upgradeCost: 200
-  - _perSecond: 48
+  - _perSecond: 72
     _max: 800
     _upgradeCost: 250
-  - _perSecond: 57
+  - _perSecond: 85.5
     _max: 900
     _upgradeCost: 300
-  - _perSecond: 66
+  - _perSecond: 99
     _max: 1000
     _upgradeCost: 350
-  - _perSecond: 75
+  - _perSecond: 112.5
     _max: 1100
     _upgradeCost: 400
-  - _perSecond: 85
+  - _perSecond: 127.5
     _max: 1200
     _upgradeCost: 0
   _killRewardPerHp: 0.25

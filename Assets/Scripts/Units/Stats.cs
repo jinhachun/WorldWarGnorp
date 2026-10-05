@@ -36,6 +36,30 @@ namespace GnorpWar
         bool AppliesTo(UnitDefinition unit);
     }
 
+    // "A는 B에게 적용되는 효과를 함께 받는다"(조립 라인: 톱니거인 → 톱니병사). 전투 시작마다 비우고(BattleManager) 패시브가 건다.
+    // 🔴 효과·스탯이 유닛에게 적용되는지는 AppliesTo가 아니라 AppliesFor(진영 포함)로 본다
+    public static class UnitAliases
+    {
+        private static readonly Dictionary<UnitDefinition, UnitDefinition>[] ByTeam =
+            { new Dictionary<UnitDefinition, UnitDefinition>(), new Dictionary<UnitDefinition, UnitDefinition>() };
+
+        public static void Clear()
+        {
+            foreach (Dictionary<UnitDefinition, UnitDefinition> aliases in ByTeam)
+                aliases.Clear();
+            StatBook.MarkChanged();
+        }
+
+        public static void Add(Team team, UnitDefinition unit, UnitDefinition alsoAs)
+        {
+            ByTeam[(int)team][unit] = alsoAs;
+            StatBook.MarkChanged();
+        }
+
+        public static bool AppliesFor(this IUnitFilter filter, Team team, UnitDefinition unit)
+            => filter.AppliesTo(unit) || (ByTeam[(int)team].TryGetValue(unit, out UnitDefinition alias) && filter.AppliesTo(alias));
+    }
+
     // 스탯 하나에 걸린 값을 모아 기획서 §6 순서로 계산 — (기본 + 고정 합) × (1 + % 합) × 곱들
     public struct StatSum
     {
@@ -89,6 +113,9 @@ namespace GnorpWar
             Version++;
         }
 
+        // 스탯 계산에 쓰는 다른 것(별칭 등)이 바뀌었다 — 유닛이 다시 계산하게
+        public static void MarkChanged() => Version++;
+
         // 같은 효과·스탯·방식은 한 줄로 합친다 — 발동마다 쌓는 효과(허수아비 등)로 목록이 길어지지 않게
         private static void Add(List<Entry> entries, IUnitFilter source, StatModifier modifier)
         {
@@ -107,15 +134,15 @@ namespace GnorpWar
 
         public static void Accumulate(Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum)
         {
-            Accumulate(Battle[(int)team], unit, stat, ref sum);
+            Accumulate(Battle[(int)team], team, unit, stat, ref sum);
             if (team == Team.Ally)
-                Accumulate(Run, unit, stat, ref sum);
+                Accumulate(Run, team, unit, stat, ref sum);
         }
 
-        private static void Accumulate(List<Entry> entries, UnitDefinition unit, UnitStat stat, ref StatSum sum)
+        private static void Accumulate(List<Entry> entries, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum)
         {
             foreach (Entry e in entries)
-                if (e.Modifier.Stat == stat && e.Source.AppliesTo(unit))
+                if (e.Modifier.Stat == stat && e.Source.AppliesFor(team, unit))
                     sum.Add(e.Modifier.Op, e.Modifier.Value);
         }
     }

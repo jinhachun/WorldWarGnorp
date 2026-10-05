@@ -130,10 +130,10 @@ namespace GnorpWar
         public void Summon(UnitDefinition unit, int count, int sourceSlot, Vector2? at = null)
         {
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesTo(unit))
+                if (e.Effect.AppliesFor(_team, unit))
                     count += e.Effect.ExtraSummons(unit, count, sourceSlot, e.Stacks);
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesTo(unit))
+                if (e.Effect.AppliesFor(_team, unit))
                     unit = e.Effect.ConvertSummon(unit, sourceSlot, e.Stacks);
 
             Unit prefab = unit.PrefabFor(_team);

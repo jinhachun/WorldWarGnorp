@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_AssemblyLine
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC870\uB9BD \uB77C\uC778"
+  _icon: {fileID: 21300000, guid: 98eb6367e4f5f664199cfb9f826aff83, type: 3}
+  _description: 
+  _rarity: 3
+  _nation: 2
+  _faction: 4
+  _cooldown: 10
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions:
+  - {fileID: 11400000, guid: 7c0f25a519dfd444c90edc3c72cb0720, type: 2}
+  _effects: []
+  _passives:
+  - {fileID: 11400000, guid: d9e80731a83b43648a1c05463493f6c7, type: 2}

@@ -112,6 +112,35 @@ namespace GnorpWar
         // 생애 번호 — 풀에서 다시 꺼낼 때마다 오른다. 날아가는 투사체가 쏜 유닛이 아직 그 생애인지 가린다
         public int Life { get; private set; }
 
+        // 효과별 이 유닛의 다음 사용 시각(톱니거인의 주기 소환 등) — 생애마다 비운다
+        private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
+
+        // 처음 묻는 순간부터 firstDelay 뒤에 준비된다
+        public bool EffectReady(UnitEffect effect, float firstDelay)
+        {
+            if (!_effectReadyAt.TryGetValue(effect, out float at))
+            {
+                _effectReadyAt[effect] = Time.fixedTime + firstDelay;
+                return false;
+            }
+            return Time.fixedTime >= at;
+        }
+
+        public void SetEffectCooldown(UnitEffect effect, float seconds) => _effectReadyAt[effect] = Time.fixedTime + seconds;
+
+        // 소모 — 죽음이 아니다(사망 효과 없음). 연기만 남기고 사라진다(조립 라인)
+        public void Consume()
+        {
+            if (!IsAlive)
+                return;
+            _hp = 0f;
+            if (FxDirector.Instance != null)
+                FxDirector.Instance.DeathPuff(_rb.position);
+            gameObject.SetActive(false);
+        }
+
+        public Vector2 Position => _rb.position;
+
         public void AddModifier(StatModifier modifier)
         {
             _ownModifiers.Add(modifier);
@@ -248,7 +277,7 @@ namespace GnorpWar
         {
             SourceSlot = sourceSlot;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesTo(_definition))
+                if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.OnSummoned(this, sourceSlot, e.Stacks);
         }
         private float Feet => _rb.position.y - _halfHeight;
@@ -322,6 +351,7 @@ namespace GnorpWar
         {
             Life++;
             _ownModifiers.Clear();
+            _effectReadyAt.Clear();
             _stats[(int)UnitStat.MaxHp] = 0f;   // 지난 생애의 최대 체력으로 비율을 맞추지 않게
             _hp = 0f;
             RefreshStats();
@@ -427,7 +457,7 @@ namespace GnorpWar
             if (enemyBelow != null && enemyBelow != _stompedOn && enemyBelow.IsAlive)
             {
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                    if (e.Effect.AppliesTo(_definition))
+                    if (e.Effect.AppliesFor(_team, _definition))
                         e.Effect.OnLandedOnEnemy(this, enemyBelow, e.Stacks);
             }
             _stompedOn = enemyBelow;
@@ -458,7 +488,7 @@ namespace GnorpWar
 
             // 공격·이동과 별개로 매 스텝 도는 효과(칼 던지기 등)
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesTo(_definition))
+                if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.Tick(this, e.Stacks);
 
             // 점프 착지 충격: 간격마다 제자리에서 뛴다. 이번 스텝의 등반 점프 등이 덮어쓰지 않게 땅에서 떨어진 것으로 친다
@@ -509,7 +539,7 @@ namespace GnorpWar
                     Vector2 toPatient = patient._rb.position - _rb.position;
                     ThrowHeal(patient);
                     foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                        if (e.Effect.AppliesTo(_definition))
+                        if (e.Effect.AppliesFor(_team, _definition))
                             e.Effect.OnHealed(this, patient, e.Stacks);
                     StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
                     _attackCooldown = AttackInterval;
@@ -542,7 +572,7 @@ namespace GnorpWar
                     {
                         FireProjectile(targetPoint);
                         foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                            if (e.Effect.AppliesTo(_definition))
+                            if (e.Effect.AppliesFor(_team, _definition))
                                 e.Effect.OnRangedShot(this, target, e.Stacks);
                     }
                     else
@@ -593,7 +623,7 @@ namespace GnorpWar
                 Die();
                 if (attacker is Unit killer && killer.IsAlive)
                     foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
-                        if (e.Effect.AppliesTo(killer._definition))
+                        if (e.Effect.AppliesFor(killer._team, killer._definition))
                             e.Effect.OnKill(killer, this, e.Stacks);
                 return;
             }
@@ -603,7 +633,7 @@ namespace GnorpWar
 
             // 피격 효과(돌격 반사 등) — 하나라도 true면 이번 피격에 밀리지 않는다
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesTo(_definition) && e.Effect.OnHit(this, attacker, hitDirection, push, e.Stacks))
+                if (e.Effect.AppliesFor(_team, _definition) && e.Effect.OnHit(this, attacker, hitDirection, push, e.Stacks))
                     return;
 
             // 냥코식 큰 넉백 — 생명당 한 번, 맞은 방향과 상관없이 후방으로 튕겨 오른다

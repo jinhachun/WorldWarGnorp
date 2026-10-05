@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_AimCog
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC870\uC900\uC5F0\uC0B0\uCF54\uADF8"
+  _icon: {fileID: 21300000, guid: 31806353f4ce1a04b8f700b0c5c0a645, type: 3}
+  _description: 
+  _rarity: 3
+  _nation: 2
+  _faction: 3
+  _cooldown: 0
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions: []
+  _effects: []
+  _passives:
+  - {fileID: 11400000, guid: 77b8437e76534a241812803793a8d68e, type: 2}

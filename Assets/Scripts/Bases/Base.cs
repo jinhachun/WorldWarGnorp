@@ -32,6 +32,14 @@ namespace GnorpWar
         public float MaxHp => Stat(TowerStat.MaxHp);
         public float Hp01 => Mathf.Clamp01(_hp / MaxHp);
 
+        public static Base For(Team team)
+        {
+            foreach (Base b in All)
+                if (b._team == team)
+                    return b;
+            return null;
+        }
+
         // 새 유닛이 같은 진영 성을 몸으로 통과하게 한다 — 성문 안에서 나와 걸어 나간다. 성 뒤쪽 BackStop과는 그대로 부딪힌다
         public static void IgnoreOwnBase(Team team, Collider2D unitCollider)
         {

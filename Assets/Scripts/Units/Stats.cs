@@ -61,16 +61,23 @@ namespace GnorpWar
 
         public static int Version { get; private set; }
 
-        public static void AddForBattle(Team team, TowerModifier modifier)
-        {
-            Battle[(int)team].Add(modifier);
-            Version++;
-        }
+        public static void AddForBattle(Team team, TowerModifier modifier) => Add(Battle[(int)team], modifier);
+        public static void AddForRun(TowerModifier modifier) => Add(Run, modifier);
 
-        public static void AddForRun(TowerModifier modifier)
+        // 같은 스탯·방식은 한 줄로 합친다(+는 더하고 ×는 곱한다 — 계산 결과는 같다). 처치마다 쌓는 기물로 목록이 길어지지 않게
+        private static void Add(List<TowerModifier> list, TowerModifier modifier)
         {
-            Run.Add(modifier);
             Version++;
+            for (int i = 0; i < list.Count; i++)
+            {
+                TowerModifier m = list[i];
+                if (m.Stat != modifier.Stat || m.Op != modifier.Op)
+                    continue;
+                m.Value = m.Op == StatOp.Multiply ? m.Value * modifier.Value : m.Value + modifier.Value;
+                list[i] = m;
+                return;
+            }
+            list.Add(modifier);
         }
 
         public static void ClearBattle()

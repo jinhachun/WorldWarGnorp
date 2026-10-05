@@ -10,11 +10,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 28c5939d8549dfd449234b2e5b2bb9ea, type: 3}
-  m_Name: Category_Infantry
+  m_Name: Category_LightCavalry
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
-  _displayName: "\uBCF4\uBCD1"
-  _upgradePool:
-  - {fileID: 11400000, guid: dc342f5ab65fdbe4e881340375d0c307, type: 2}
-  - {fileID: 11400000, guid: bc5d8582c965e324db97af7443474099, type: 2}
-  - {fileID: 11400000, guid: e51574634bd6d3d49b2a385f9027c791, type: 2}
-  - {fileID: 11400000, guid: 7718a618bdcdd5f429c3f38b83a43471, type: 2}
+  _displayName: "\uACBD\uAE30\uBCD1"

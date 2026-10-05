@@ -94,7 +94,7 @@
 | **새 유닛 효과** | `Units/Effects/`에 `UnitEffect` 상속 클래스 하나(있는 훅만 쓰면 `Unit` 수정 X, 수치는 필드로) + `Assets/Data/Effects/` 에셋. 새 훅이 필요하면 `UnitEffect`에 가상 메서드 + `Unit`의 해당 지점에서 `TeamEffects.For(_team)`을 돌며 부른다 |
 | **새 건물 발동 효과(유틸)** | `Buildings/`에 `BuildingAction` 상속 클래스 하나(`Execute(board, slot, level)`, 이웃은 slot±1) + 에셋 + 건물의 `Actions`에 추가. 보드를 바꾸는 동작이 더 필요하면 `BoardRunner`에 공개 메서드 |
 | **새 공격 방식** | `AttackType` enum(**맨 뒤에만**) + `Unit.FixedUpdate`의 공격 분기 |
-| **새 보스** | `Unit_*.asset`(분류 괴수) + `Ally_*`·`Enemy_*` 프리팹(`*_Dino` 복제) + 생산 건물. 점프 착지 충격은 `UnitDefinition`의 Slam 항목(간격 0이면 없음) |
+| **새 보스** | `Unit_*.asset`(태그 중기병) + `Ally_*`·`Enemy_*` 프리팹(`*_Dino` 복제) + 생산 건물. 점프 착지 충격은 `UnitDefinition`의 Slam 항목(간격 0이면 없음) |
 | 전투·상점 수치 | `Unit_*.asset` · `Building_*.asset` · `BattleConfig.asset`(골드·목숨·가속·적 라운드) · `Base_Test.asset` (코드 X) |
 
 ---

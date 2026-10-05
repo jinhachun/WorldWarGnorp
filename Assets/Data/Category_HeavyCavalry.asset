@@ -10,9 +10,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 28c5939d8549dfd449234b2e5b2bb9ea, type: 3}
-  m_Name: Category_Cavalry
+  m_Name: Category_HeavyCavalry
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
-  _displayName: "\uAE30\uBCD1"
-  _upgradePool:
-  - {fileID: 11400000, guid: 85e86bc8d4b7fa54ab6c0f219537fc98, type: 2}
-  - {fileID: 11400000, guid: bb3ffcfd1559704488c6d7db8962c49e, type: 2}
+  _displayName: "\uC911\uAE30\uBCD1"

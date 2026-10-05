@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Unit_Tank
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
   _displayName: "\uBC29\uD328\uC218"
-  _category: {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _category: {fileID: 11400000, guid: 3a39e5b8cf800ec4a90e5827c089bfe9, type: 2}
   _allyPrefab: {fileID: 638779955689807151, guid: 8598aafe34f21de4ca1df5b46e59b433, type: 3}
   _enemyPrefab: {fileID: 6082175181310963690, guid: 26acea8d77c33ac4bb6bbba17054d692, type: 3}
   _moveSpeed: 2.6999998

@@ -13,6 +13,3 @@ MonoBehaviour:
   m_Name: Category_Archer
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
   _displayName: "\uAD81\uBCD1"
-  _upgradePool:
-  - {fileID: 11400000, guid: b4f4c73435840a746bb65aab53813bd0, type: 2}
-  - {fileID: 11400000, guid: 3a0c2663c0bd72e42b277a6d318de0e8, type: 2}

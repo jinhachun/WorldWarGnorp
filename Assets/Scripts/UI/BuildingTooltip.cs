@@ -53,7 +53,7 @@ namespace GnorpWar
 
         public static string Title(BuildingDefinition building, bool enemy, BuildingRarity rarity)
         {
-            string title = $"{building.DisplayName}  {rarity.DisplayName()}";
+            string title = $"{building.DisplayName}  {rarity.DisplayName()}  {building.Nation.DisplayName()} {building.Faction.DisplayName()}".TrimEnd();
             return enemy ? $"<color={EnemyColor}>{title} (적)</color>" : title;
         }
 

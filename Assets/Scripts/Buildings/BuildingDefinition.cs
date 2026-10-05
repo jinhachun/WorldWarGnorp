@@ -15,6 +15,9 @@ namespace GnorpWar
         [SerializeField] private string _description = "";
         [Tooltip("가격·상점 출현 확률은 등급에서 나온다 — BattleConfig")]
         [SerializeField] private BuildingRarity _rarity;
+        [SerializeField] private BuildingNation _nation;
+        [Tooltip("공용은 None")]
+        [SerializeField] private BuildingFaction _faction;
         [Tooltip("발동 간격(초) — 전투 시작 후 이 시간이 지나 첫 발동")]
         [SerializeField] private float _cooldown = 5f;
 
@@ -33,6 +36,8 @@ namespace GnorpWar
         public Sprite Icon => _icon;
         public string Description => _description;
         public BuildingRarity Rarity => _rarity;
+        public BuildingNation Nation => _nation;
+        public BuildingFaction Faction => _faction;
         public float Cooldown => _cooldown;
         public UnitDefinition Unit => _unit;
         public int UnitCount => _unitCount;

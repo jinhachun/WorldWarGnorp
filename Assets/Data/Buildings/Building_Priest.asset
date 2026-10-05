@@ -16,6 +16,8 @@ MonoBehaviour:
   _icon: {fileID: 21300000, guid: 33cf2a116358d0c40b8295c7b7603678, type: 3}
   _description: 
   _rarity: 1
+  _nation: 1
+  _faction: 1
   _cooldown: 5
   _unit: {fileID: 11400000, guid: 2db8a66f89f8778458884185910698a5, type: 2}
   _unitCount: 1

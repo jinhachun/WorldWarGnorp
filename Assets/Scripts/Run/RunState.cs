@@ -237,9 +237,25 @@ namespace GnorpWar
             OwnedBuilding[] row = storage ? Storage : Field;
             if (OwnedBuilding.IsEmpty(row[index]))
                 return;
-            int value = SellValue(row[index]);
+            OwnedBuilding sold = row[index];
+            int value = SellValue(sold);
             row[index] = null;   // 판 기물은 자기 골드 훅을 받지 않는다 · 스택도 같이 사라진다
             GainGold(value);
+            foreach (BuildingPassive passive in sold.Definition.Passives)
+                passive.OnSell(sold);
+        }
+
+        // 이번 판에 등장하는 기물(상점 풀)
+        public static BuildingDefinition[] Pool => _config.ShopPool;
+
+        // 산 게 아니라 얻는다(판도라의 상자) — 「구매할 때마다,」·합치기 없이 필드 → 보관함 빈 칸에. 자리가 없으면 못 얻는다
+        public static void Acquire(BuildingDefinition definition)
+        {
+            int slot = FirstEmpty(Field);
+            if (slot >= 0)
+                Field[slot] = new OwnedBuilding(definition);
+            else if ((slot = FirstEmpty(Storage)) >= 0)
+                Storage[slot] = new OwnedBuilding(definition);
         }
 
         // 두 칸을 맞바꾼다 — 필드↔보관함도, 빈 칸과도

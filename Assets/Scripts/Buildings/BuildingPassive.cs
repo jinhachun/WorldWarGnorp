@@ -22,6 +22,8 @@ namespace GnorpWar
         // 상점 — 내가 기물을 산 직후(주식시장) · 리롤 · 골드를 얻을 때. 필드의 기물만(RunState)
         public virtual void OnAnyBought(OwnedBuilding self, OwnedBuilding bought) { }
         public virtual void OnReroll(OwnedBuilding self) { }
+        // 「판매 시,」 — 이 기물을 판 직후(칸은 이미 비었다)
+        public virtual void OnSell(OwnedBuilding self) { }
         public virtual void OnGoldGained(OwnedBuilding self) { }
 
         // 툴팁의 완결 문장 — 지금 등급 값으로 (CLAUDE.md §5-2)

@@ -570,7 +570,7 @@ namespace GnorpWar
                     }
                     else if (_definition.AttackType == AttackType.Ranged)
                     {
-                        FireProjectile(targetPoint);
+                        FireProjectile(targetPoint, HighGroundScale(target));
                         foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                             if (e.Effect.AppliesFor(_team, _definition))
                                 e.Effect.OnRangedShot(this, target, e.Stacks);
@@ -581,7 +581,7 @@ namespace GnorpWar
                         bool charge = _runTime >= _definition.ChargeReadySeconds;
                         float damage = AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f) * DamageScale;
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
-                        target.TakeDamage(damage, hitDirection, push, this);
+                        target.TakeDamage(damage * HighGroundScale(target), hitDirection, push, this);
                     }
                     _runTime = 0f;
                     if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
@@ -792,12 +792,32 @@ namespace GnorpWar
             return found;
         }
 
-        // 원거리 무기(화살·돌) 발사
-        public void FireProjectile(Vector2 targetPoint)
+        // 원거리 무기(화살·돌) 발사 — damageScale = 쏘는 순간의 고도 보너스
+        public void FireProjectile(Vector2 targetPoint, float damageScale)
         {
             Projectile shot = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
-            shot.Launch(_team, AttackDamage * DamageScale, _definition.PushPower, targetPoint,
+            shot.Launch(_team, AttackDamage * DamageScale * damageScale, _definition.PushPower, targetPoint,
                         _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.ProjectilesPierce && e.Effect.AppliesFor(_team, _definition))
+                {
+                    shot.Pierce();
+                    break;
+                }
+        }
+
+        // 기름투하대 — 내 발이 상대 유닛 발보다 높으면 주는 피해 +비율. 상대가 본진이면 본진이 늘 높은 고도라 해당 없음
+        private const float HighGroundMargin = 0.25f;
+
+        private float HighGroundScale(IDamageable target)
+        {
+            if (!(target is Unit enemy) || Feet <= enemy.Feet + HighGroundMargin)
+                return 1f;
+            float bonus = 0f;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    bonus += e.Effect.HighGroundDamageBonus;
+            return 1f + bonus;
         }
 
         public void ThrowHeal(Unit patient)
@@ -837,7 +857,7 @@ namespace GnorpWar
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                    damageable.TakeDamage(AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower, this);
+                    damageable.TakeDamage(AttackDamage * DamageScale * HighGroundScale(damageable), new Vector2(Forward, 0f), _definition.PushPower, this);
             }
             if (FxDirector.Instance != null)
                 FxDirector.Instance.Flame(mouth, Forward, length);
@@ -856,7 +876,7 @@ namespace GnorpWar
                     continue;
                 Vector2 toTarget = point - _rb.position;
                 Vector2 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
-                damageable.TakeDamage(AttackDamage * DamageScale, direction, _definition.PushPower, this);
+                damageable.TakeDamage(AttackDamage * DamageScale * HighGroundScale(damageable), direction, _definition.PushPower, this);
             }
         }
 
@@ -869,7 +889,7 @@ namespace GnorpWar
             {
                 if (!col.TryGetComponent(out Unit enemy) || enemy._team == _team || !enemy.IsAlive)
                     continue;
-                enemy.TakeDamage(_definition.SlamDamage * DamageScale, Vector2.up, 0f, this);
+                enemy.TakeDamage(_definition.SlamDamage * DamageScale * HighGroundScale(enemy), Vector2.up, 0f, this);
                 enemy.Shove(new Vector2(0f, JumpSpeed(_definition.SlamLiftHeight, enemy._rb)), _definition.SlamStun);
             }
         }

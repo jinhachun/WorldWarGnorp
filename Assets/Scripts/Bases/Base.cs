@@ -17,7 +17,7 @@ namespace GnorpWar
         private static readonly List<Base> All = new List<Base>();
 
         private readonly List<Collider2D> _overlaps = new List<Collider2D>();
-        private readonly List<(float distance, Vector2 point)> _targets = new List<(float, Vector2)>();
+        private readonly List<(float distance, Vector2 point, bool isUnit)> _targets = new List<(float, Vector2, bool)>();
         private float _hp;
         private float _attackCooldown;
         private Collider2D _collider;
@@ -87,10 +87,21 @@ namespace GnorpWar
 
             int arrows = Mathf.Max(1, Mathf.RoundToInt(Stat(TowerStat.ArrowCount)));
             float damage = Stat(TowerStat.Attack);
+            // 타워는 늘 높은 고도 — 적 유닛에게 기름투하대 보너스(적 본진엔 없음) · 관통탄
+            float highGround = 1f;
+            bool pierce = false;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+            {
+                highGround += e.Effect.HighGroundDamageBonus;
+                pierce |= e.Effect.TowerArrowsPierce;
+            }
             for (int i = 0; i < arrows; i++)
             {
+                var target = _targets[i % _targets.Count];
                 Projectile shot = Pooled.Get(_definition.Projectile, _muzzle.position, Quaternion.identity);
-                shot.Launch(_team, damage, _definition.PushPower, _targets[i % _targets.Count].point, _definition.ProjectileArcHeight, 0f, this);
+                shot.Launch(_team, damage * (target.isUnit ? highGround : 1f), _definition.PushPower, target.point, _definition.ProjectileArcHeight, 0f, this);
+                if (pierce)
+                    shot.Pierce();
             }
             _attackCooldown = _definition.AttackInterval / Stat(TowerStat.AttackSpeed);
         }
@@ -105,11 +116,11 @@ namespace GnorpWar
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out Unit unit) && unit.Team != _team && unit.IsAlive)
-                    _targets.Add((((Vector2)col.bounds.center - center).sqrMagnitude, col.bounds.center));
+                    _targets.Add((((Vector2)col.bounds.center - center).sqrMagnitude, col.bounds.center, true));
                 else if (col.TryGetComponent(out Base enemyBase) && enemyBase._team != _team && enemyBase.IsAlive)
                 {
                     Vector2 point = col.ClosestPoint(center);
-                    _targets.Add(((point - center).sqrMagnitude, point));
+                    _targets.Add(((point - center).sqrMagnitude, point, false));
                 }
             }
             _targets.Sort((a, b) => a.distance.CompareTo(b.distance));

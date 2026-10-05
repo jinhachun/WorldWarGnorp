@@ -36,6 +36,11 @@ namespace GnorpWar
         public virtual bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks) => false;
         // 이 유닛이 적 유닛을 처치한 직후(근접·투사체·화염 모두)
         public virtual void OnKill(Unit killer, Unit victim, int stacks) { }
+        // 관통 — 적용 대상 유닛의 화살 · 이 진영 타워의 화살이 적을 맞혀도 멈추지 않는다(관통탄 특허국)
+        public virtual bool ProjectilesPierce => false;
+        public virtual bool TowerArrowsPierce => false;
+        // 상대보다 높은 고도에서 주는 피해 +비율(기름투하대) — 타워는 늘 높은 고도
+        public virtual float HighGroundDamageBonus => 0f;
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
         // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)

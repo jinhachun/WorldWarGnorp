@@ -24,6 +24,9 @@ namespace GnorpWar
         private IDamageable _shooter;
         private int _shooterLife;
         private bool _spent;
+        // 관통 — 적을 맞혀도 멈추지 않고 땅·벽에 닿을 때까지. 한 적은 한 번만
+        private bool _pierce;
+        private readonly System.Collections.Generic.HashSet<IDamageable> _pierced = new System.Collections.Generic.HashSet<IDamageable>();
         private float _lifeTimer;
         private readonly System.Collections.Generic.List<Collider2D> _splashHits = new System.Collections.Generic.List<Collider2D>();
 
@@ -39,6 +42,8 @@ namespace GnorpWar
             _heal = 0f;
             _owner = null;
             _shooter = null;
+            _pierce = false;
+            _pierced.Clear();
             _splashRadius = 0f;
             _lifeTimer = Lifetime;
             _rb.linearVelocity = Vector2.zero;
@@ -63,6 +68,9 @@ namespace GnorpWar
             _rb.linearVelocity = new Vector2((targetPoint.x - origin.x) / FlightTime(targetPoint, arcHeight), riseSpeed);
             _lifeTimer = Lifetime;
         }
+
+        // Launch 뒤에 — 이번 비행은 적을 관통한다(관통탄 특허국)
+        public void Pierce() => _pierce = true;
 
         // 쏜 유닛이 그사이 죽어 풀에서 다른 유닛으로 다시 쓰였으면 처치자 없음
         private IDamageable Shooter => _shooter is Unit unit && unit.Life != _shooterLife ? null : _shooter;
@@ -121,6 +129,12 @@ namespace GnorpWar
             {
                 if (damageable.Team == _team || !damageable.IsAlive)
                     return;
+                if (_pierce)
+                {
+                    if (_pierced.Add(damageable))
+                        damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, Shooter);
+                    return;
+                }
                 if (_splashRadius <= 0f)
                     damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, Shooter);
             }

@@ -12,8 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Knight
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
-  _moveSpeed: 6
-  _jumpHeight: 2.4
+  _displayName: "\uAE30\uC0AC"
+  _category: {fileID: 11400000, guid: 85153d7df66545344b8f09cebb62a3f9, type: 2}
+  _allyPrefab: {fileID: 638779955689807151, guid: d77728917d78f8e4b95e5a1ff4877af8, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 459e28fcc379e3e44b989919d544fd28, type: 3}
+  _moveSpeed: 8
+  _jumpHeight: 3.2
   _maxHp: 150
   _attackDamage: 12
   _attackInterval: 0.8
@@ -32,17 +36,9 @@ MonoBehaviour:
   _projectileSplashRadius: 0
   _flameThickness: 2
   _healAmount: 0
-  _upgrade: 4
-  _upgradeCost: 400
-  _upgradeValue: 2.5
-  _upgradeDescription: "\uC55E\uC5D0 \uC6D0\uAC70\uB9AC \uC801\uC774 \uC788\uC73C\uBA74
-    \uB2E4\uB978 \uC801\uC744 \uB6F0\uC5B4\uB118\uC5B4 \uC6D0\uAC70\uB9AC \uC801\uBD80\uD130
-    \uCE5C\uB2E4"
-  _upgrade2: 9
-  _upgrade2Cost: 400
-  _upgrade2Value: 24
-  _upgrade2Projectile: {fileID: 0}
-  _upgrade2Description: "\uC801 \uBA38\uB9AC \uC704\uC5D0 \uB0B4\uB824\uC549\uC73C\uBA74
-    \uADF8 \uC801\uC5D0\uAC8C 24 \uD53C\uD574"
-  _cost: 120
-  _summonCooldown: 2.6666667
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

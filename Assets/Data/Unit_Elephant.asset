@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_Elephant
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uCF54\uB07C\uB9AC"
+  _category: {fileID: 11400000, guid: e9fd260e0fdfa214f96601ed00f1f26d, type: 2}
+  _allyPrefab: {fileID: 6082175181310963690, guid: 71ffe38bce351fb4a8e52a6a1d66e61b, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: a93c51da6f4af40409078de99adad933, type: 3}
+  _moveSpeed: 0.90000004
+  _jumpHeight: 1.2
+  _maxHp: 2000
+  _attackDamage: 50
+  _attackInterval: 1.5
+  _attackRange: 3
+  _hitKnockback: 0.2
+  _bigKnockbackAt: 0
+  _bigKnockbackSpeed: 0
+  _stackRank: 0
+  _attackType: 4
+  _pushPower: 1
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
+  _projectile: {fileID: 0}
+  _projectileArcHeight: 2.5
+  _projectileSplashRadius: 0
+  _flameThickness: 2
+  _healAmount: 0
+  _slamInterval: 8
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

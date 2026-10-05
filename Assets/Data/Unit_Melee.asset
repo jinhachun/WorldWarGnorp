@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Melee
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uAC80\uBCD1"
+  _category: {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _allyPrefab: {fileID: 638779955689807151, guid: b838db89a6232ac4b83353c7698f886e, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: bac31f16af74abd4d98e2598ef98f75c, type: 3}
   _moveSpeed: 3.375
   _jumpHeight: 1.2
   _maxHp: 100
@@ -32,17 +36,9 @@ MonoBehaviour:
   _projectileSplashRadius: 0
   _flameThickness: 2
   _healAmount: 0
-  _upgrade: 1
-  _upgradeCost: 400
-  _upgradeValue: 0.25
-  _upgradeDescription: "\uB2E4\uB978 \uC720\uB2DB\uC744 \uC18C\uD658\uD558\uBA74
-    25% \uD655\uB960\uB85C Sword\uAC00 \uD568\uAED8 \uB098\uC628\uB2E4"
-  _upgrade2: 7
-  _upgrade2Cost: 400
-  _upgrade2Value: 3
-  _upgrade2Projectile: {fileID: 1966056168359300910, guid: 61a663ebfe2e942458a810097addc8b2, type: 3}
-  _upgrade2Description: "3\uCD08\uB9C8\uB2E4 \uC55E\uCABD\uC73C\uB85C \uCE7C\uC744
-    \uACE7\uAC8C \uB358\uC9C4\uB2E4 (\uCC98\uC74C \uB9DE\uC740 \uC801\uC5D0\uAC8C
-    \uACF5\uACA9\uB825\uB9CC\uD07C \uD53C\uD574)"
-  _cost: 50
-  _summonCooldown: 1
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

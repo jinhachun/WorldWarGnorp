@@ -24,11 +24,28 @@ namespace GnorpWar
         private float _buffSeconds;
         private Unit _owner;
         private bool _spent;
+        private float _lifeTimer;
+        private float _gravityScale;
         private readonly System.Collections.Generic.List<Collider2D> _splashHits = new System.Collections.Generic.List<Collider2D>();
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            _gravityScale = _rb.gravityScale;
+        }
+
+        // 풀에서 다시 꺼낼 때마다 — 지난번 비행의 흔적(회복·버프 종류, 던진 칼의 무중력)을 지운다
+        private void OnEnable()
+        {
+            _spent = false;
+            _heal = 0f;
+            _buffBonus = 0f;
+            _owner = null;
+            _splashRadius = 0f;
+            _lifeTimer = Lifetime;
+            _rb.gravityScale = _gravityScale;
+            _rb.linearVelocity = Vector2.zero;
+            _rb.angularVelocity = 0f;
         }
 
         // 꼭짓점 높이를 고정(발사 지점·목표 중 높은 쪽 + arcHeight)하고 거기서 속도를 역산한다.
@@ -45,7 +62,7 @@ namespace GnorpWar
             float apex = Mathf.Max(origin.y, targetPoint.y) + arcHeight;
             float riseSpeed = Mathf.Sqrt(2f * gravity * (apex - origin.y));
             _rb.linearVelocity = new Vector2((targetPoint.x - origin.x) / FlightTime(targetPoint, arcHeight), riseSpeed);
-            Destroy(gameObject, Lifetime);
+            _lifeTimer = Lifetime;
         }
 
         private float FlightTime(Vector2 targetPoint, float arcHeight)
@@ -81,11 +98,18 @@ namespace GnorpWar
             _push = push;
             _rb.gravityScale = 0f;
             _rb.linearVelocity = velocity;
-            Destroy(gameObject, Lifetime);
+            _lifeTimer = Lifetime;
         }
 
         private void FixedUpdate()
         {
+            _lifeTimer -= Time.fixedDeltaTime;
+            if (_lifeTimer <= 0f)
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+
             // 그림은 오른쪽을 향해 그려져 있다 — 날아가는 방향으로 머리를 돌린다
             Vector2 v = _rb.linearVelocity;
             if (v.sqrMagnitude > 0.0001f)
@@ -111,7 +135,7 @@ namespace GnorpWar
                         ally.Buff(_buffBonus, _buffSeconds);
                 }
                 _spent = true;
-                Destroy(gameObject);
+                gameObject.SetActive(false);
                 return;
             }
 
@@ -128,7 +152,7 @@ namespace GnorpWar
 
             // 적이든 바닥·벽이든 닿으면 끝 (같은 스텝에 여러 번 불려도 한 번만)
             _spent = true;
-            Destroy(gameObject);
+            gameObject.SetActive(false);
         }
 
         private void Splash(Vector2 center)

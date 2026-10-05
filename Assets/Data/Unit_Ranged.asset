@@ -12,9 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Ranged
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uAD81\uC218"
+  _category: {fileID: 11400000, guid: 728ccb888483bab4cabe8181bd3e2725, type: 2}
+  _allyPrefab: {fileID: 638779955689807151, guid: b3e95c825ef5a42488a67b4e689c1175, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 46904454deb51a54bb8c8fbf3098e4be, type: 3}
   _moveSpeed: 3.375
   _jumpHeight: 1.2
-  _maxHp: 60
+  _maxHp: 30
   _attackDamage: 8
   _attackInterval: 1
   _attackRange: 7
@@ -32,16 +36,9 @@ MonoBehaviour:
   _projectileSplashRadius: 0
   _flameThickness: 2
   _healAmount: 0
-  _upgrade: 2
-  _upgradeCost: 400
-  _upgradeValue: 0
-  _upgradeDescription: "\uD55C \uBC88\uC5D0 \uD654\uC0B4 \uB450 \uBC1C \u2014 \uC11C\uB85C
-    \uB2E4\uB978 \uC801\uC5D0\uAC8C"
-  _upgrade2: 8
-  _upgrade2Cost: 400
-  _upgrade2Value: 2
-  _upgrade2Projectile: {fileID: 0}
-  _upgrade2Description: "\uC0AC\uAC70\uB9AC 2\uBC30 \xB7 \uD654\uC0B4 \uD3EC\uBB3C\uC120
-    \uB192\uC774 2\uBC30"
-  _cost: 70
-  _summonCooldown: 1.3333334
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

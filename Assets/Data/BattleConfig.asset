@@ -12,39 +12,152 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51532fc22289b7f47a229e744c7c9379, type: 3}
   m_Name: BattleConfig
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BattleConfig
-  _startResource: 100
-  _incomeLevels:
-  - _perSecond: 37.5
-    _max: 500
-    _upgradeCost: 100
-  - _perSecond: 48
-    _max: 600
-    _upgradeCost: 150
-  - _perSecond: 60
-    _max: 700
-    _upgradeCost: 200
-  - _perSecond: 72
-    _max: 800
-    _upgradeCost: 250
-  - _perSecond: 85.5
-    _max: 900
-    _upgradeCost: 300
-  - _perSecond: 99
-    _max: 1000
-    _upgradeCost: 350
-  - _perSecond: 112.5
-    _max: 1100
-    _upgradeCost: 400
-  - _perSecond: 127.5
-    _max: 1200
-    _upgradeCost: 0
-  _killRewardPerHp: 0.25
-  _enemySpawnIntervalStart: 1.4666667
-  _enemySpawnIntervalEnd: 0.6666667
-  _enemySpawnRampSeconds: 160
-  _bossFirstSeconds: 60
-  _bossIntervalSeconds: 90
-  _bossShockwaveSpeed: 8
-  _bossShockwaveLift: 4
-  _bossShockwaveStun: 0.6
-  _coinsPerDamage: 0.1
+  _fieldSlots: 6
+  _storageSlots: 6
+  _minCooldown: 0.1
+  _lives: 3
+  _winsToClear: 10
+  _roundGold: 10
+  _winBonus: 3
+  _rerollCost: 1
+  _sellRatio: 0.5
+  _offerCount: 5
+  _shopPool:
+  - {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+  - {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+  - {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+  - {fileID: 11400000, guid: 28f49e51e1ee38c47975e335df4b4a07, type: 2}
+  - {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
+  - {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
+  - {fileID: 11400000, guid: 5969da521a02c2b47b69c8afe63919d9, type: 2}
+  - {fileID: 11400000, guid: 8d302b1db638b2141a3176558c949008, type: 2}
+  - {fileID: 11400000, guid: c20eb264cb8d1374ea3f2684e0eeeda5, type: 2}
+  - {fileID: 11400000, guid: 4be7bfee248a14c48bd85a507a1efc4e, type: 2}
+  _rarityPrices: 0300000004000000050000000a0000000c000000
+  _rarityWeightsFirst:
+  - 60
+  - 30
+  - 10
+  - 0
+  - 0
+  _rarityWeightsLast:
+  - 15
+  - 25
+  - 30
+  - 20
+  - 10
+  _enemyRounds:
+  - _field:
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
+      _exp: 0
+    - _definition: {fileID: 0}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: 7ec550d59573fcc4e98b257565304c75, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: 8d302b1db638b2141a3176558c949008, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: 7ec550d59573fcc4e98b257565304c75, type: 2}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 5
+    - _definition: {fileID: 11400000, guid: 8d302b1db638b2141a3176558c949008, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 2
+  - _field:
+    - _definition: {fileID: 11400000, guid: 28f49e51e1ee38c47975e335df4b4a07, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 5
+    - _definition: {fileID: 11400000, guid: 8d302b1db638b2141a3176558c949008, type: 2}
+      _exp: 0
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: 5969da521a02c2b47b69c8afe63919d9, type: 2}
+      _exp: 0
+  - _field:
+    - _definition: {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 5
+    - _definition: {fileID: 11400000, guid: c20eb264cb8d1374ea3f2684e0eeeda5, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 5
+    - _definition: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
+      _exp: 2
+  - _field:
+    - _definition: {fileID: 11400000, guid: 5969da521a02c2b47b69c8afe63919d9, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+      _exp: 9
+    - _definition: {fileID: 11400000, guid: 8d302b1db638b2141a3176558c949008, type: 2}
+      _exp: 2
+    - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+      _exp: 5
+    - _definition: {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
+      _exp: 2
+  _rampStartSeconds: 60
+  _rampStepSeconds: 10
+  _rampPerStep: 1
+  _rampUnitsPerStep: 0

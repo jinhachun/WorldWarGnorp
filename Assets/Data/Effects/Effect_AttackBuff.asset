@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b1c978b0f8f7d945911007a6fc6421e, type: 3}
+  m_Name: Effect_AttackBuff
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.AttackBuffEffect
+  _categories:
+  - {fileID: 11400000, guid: 8b75f5bc086812749a153b9608130200, type: 2}
+  _description: "\uD68C\uBCF5\uACFC \uBC88\uAC08\uC544 \uC2ED\uC790\uAC00\uB97C \uB358\uC838
+    \uB9DE\uC740 \uC544\uAD70 \uACF5\uACA9\uB825 +50% (5\uCD08)"
+  _bonus: 0.5
+  _duration: 5
+  _cross: {fileID: 5840658882024782479, guid: e4d48019334997b43b85ce040c3bd1a2, type: 3}

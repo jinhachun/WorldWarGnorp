@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -33,17 +32,13 @@ namespace GnorpWar
         // 칸 검사는 몸(고체)만 본다 — 날아가는 화살(트리거) 때문에 칸이 막힌 걸로 보이면 안 된다
         private static readonly ContactFilter2D SolidOnly = new ContactFilter2D { useTriggers = false };
         private static readonly List<Collider2D> CellProbe = new List<Collider2D>();
-        // 층 정렬 — 아래 유닛이 뒤쪽으로 호를 그리며 타고 올라가고, 위 유닛은 앞쪽으로 미끄러져 내려온다
-        private const float SwapDuration = 0.35f;
-        private const float SwapClimbArc = 0.7f;
-        private const float SwapSlideArc = 0.3f;
-        private const float SwapMaxOffsetX = 0.5f;
-        // Sword 업그레이드(칼 던지기) — 앞쪽 이 거리 안, 내 높이의 띠에 적이 있으면 수평으로 던진다
-        private const float KnifeRange = 8f;
-        private const float KnifeLaneHeight = 0.8f;
-        private const float KnifeSpeed = 14f;
-        // Priest 업그레이드(공격력 버프) 유지 시간
-        private const float BuffSeconds = 5f;
+        // 등반 — 앞 아군이 내 속도의 이 비율보다 느리면 넘는다(더 빠르면 공중에 있는 동안 다시 걸어가 버려 헛점프) · 앞 기둥은 이만큼까지만 위로 훑는다
+        private const float ClimbSlowerThan = 0.5f;
+        private const int ClimbMaxColumn = 4;
+        // 기둥 꼭대기가 점프 높이에 딱 걸리면 꼭짓점에서 못 넘어가 떨어진다 — 이만큼 여유가 있어야 노린다
+        private const float ClimbReachMargin = 0.2f;
+        // 넘쳐흐르기 — 근접은 머리가 내 발 높이(+이만큼) 아래인 적을 치지 않고 밟고 넘어간다
+        private const float StandOnMargin = 0.1f;
 
         [SerializeField] private UnitDefinition _definition;
         [SerializeField] private Team _team;
@@ -52,6 +47,29 @@ namespace GnorpWar
         [SerializeField] private Transform _weapon;
 
         private Rigidbody2D _rb;
+        private BoxCollider2D _body;
+        // 검색 필터 — 적 쪽(내 진영 유닛 레이어 제외: 적 유닛·기지·탑)과 아군 쪽(내 진영 유닛 레이어만)
+        private ContactFilter2D _enemyFilter;
+        private ContactFilter2D _allyFilter;
+        private int[] _bodySortingOrders;
+        private int _weaponSortingOrder;
+        // 죽은 뒤 화면 밖으로 떨어지는 동안 남은 시간 — 0이 되면 풀로 돌아간다
+        private float _despawnTimer;
+        // 적 찾기 캐시(FindTargetCached) — 다음 새 검색까지 남은 시간과 그때 찾은 적
+        private float _targetScanTimer;
+        private IDamageable _cachedTarget;
+        private Collider2D _cachedTargetCollider;
+        private VaultEffect _cachedHunt;
+        private Collider2D _foundCollider;
+        private float _huntScanTimer;
+        private bool _huntAhead;
+        // 프리스트의 회복·버프 대상 캐시 — 같은 간격으로만 새로 찾는다
+        private float _supportScanTimer;
+        private Unit _cachedPatient;
+        private Unit _cachedBuffTarget;
+        // 기지 위 유닛 검사 캐시(걷기) — 같은 간격으로만 새로 본다
+        private float _walkScanTimer;
+        private bool _aheadOnBaseUnit;
         private readonly ContactPoint2D[] _contacts = new ContactPoint2D[16];
         private readonly List<Collider2D> _overlaps = new List<Collider2D>();
         private float _lastX;
@@ -72,21 +90,22 @@ namespace GnorpWar
         private float _flashTimer;
         private float _thrustTime = ThrustDuration;
         private Vector2 _thrustDirection;
-        private bool _swapping;
         private bool _bigKnockbackUsed;
         // 돌격 충전 — 적 없이 실제로 달린 시간. 막혀 서 있으면 0으로
         private float _runTime;
-        private float _knifeCooldown;
+        // 효과별 쿨다운(칼 던지기 등) — 다시 쓸 수 있는 시각(Time.fixedTime)
+        private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
         // 프리스트가 준 공격력 버프 — 남은 시간 동안 피해 × (1 + 증가율)
         private float _buffTimer;
         private float _buffBonus;
-        // Priest 업그레이드: 회복·버프 대상이 둘 다 있을 때 번갈아 던진다
+        // 공격력 버프 효과: 회복·버프 대상이 둘 다 있을 때 번갈아 던진다
         private bool _nextSupportIsBuff;
-        // Knight 업그레이드: 지금 밟고 서 있는 적 — 새로 내려앉은 적에게만 피해
+        // 밟기 효과: 지금 밟고 서 있는 적 — 새로 내려앉은 적에게만 피해
         private Unit _stompedOn;
-
-        // 유닛이 죽는 순간 (처치 보상 등). static이라 구독자는 OnDisable에서 반드시 해제할 것
-        public static event System.Action<Unit> Died;
+        // 점프 착지 충격(코끼리) — 다음 점프까지 남은 시간 · 뛰어오른 뒤 착지 전인가 · 그 사이 발이 땅에서 떨어진 적이 있나
+        private float _slamTimer;
+        private bool _slamJumping;
+        private bool _slamLeftGround;
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
@@ -98,6 +117,18 @@ namespace GnorpWar
         private const int SpawnMaxFloors = 30;
         private static readonly Vector2 SpawnCellProbe = new Vector2(0.9f, 0.9f);
 
+        // 한꺼번에 여러 마리가 나올 때 — 소환 지점부터 앞쪽으로 이만큼의 칸을 먼저 채우고, 다 차면 위층으로
+        private const int SpawnSpreadSlots = 5;
+        // 주변 검색(적 찾기·사냥·칼 던질 띠) 간격 — 매 물리 스텝(0.02초)마다 하면 유닛이 수백일 때 프레임이 무너진다
+        private const float TargetScanInterval = 0.1f;
+        // 프로파일러 구간 — Dev/PerfProbe가 이 이름으로 시간을 읽는다
+        private static readonly Unity.Profiling.ProfilerMarker ContactsMarker = new Unity.Profiling.ProfilerMarker("Unit.Contacts");
+        private static readonly Unity.Profiling.ProfilerMarker ScanMarker = new Unity.Profiling.ProfilerMarker("Unit.Scan");
+        private static readonly Unity.Profiling.ProfilerMarker SupportMarker = new Unity.Profiling.ProfilerMarker("Unit.Support");
+        private static readonly Unity.Profiling.ProfilerMarker WalkMarker = new Unity.Profiling.ProfilerMarker("Unit.Walk");
+        // 땅에 박혀 나오지 않게 발을 땅보다 살짝 위에
+        private const float SpawnGroundGap = 0.02f;
+
         public static Unit Spawn(Unit prefab, Vector2 groundPoint)
         {
             // groundPoint는 1층 칸의 중심. 키가 큰 유닛은 발을 같은 높이에 맞추도록 중심을 올리고, 키만큼 빈 공간을 찾는다
@@ -105,69 +136,249 @@ namespace GnorpWar
             float height = box.y;
             // 폭이 큰 유닛(공룡)도 몸 전체가 들어갈 공간을 찾는다
             Vector2 probe = new Vector2(box.x - (1f - SpawnCellProbe.x), height - (1f - SpawnCellProbe.y));
-            Vector2 baseCenter = groundPoint + Vector2.up * ((height - 1f) * 0.5f);
-            Vector2 position = baseCenter;
-            for (int floor = 0; floor < SpawnMaxFloors; floor++)
+            float forward = prefab._team == Team.Ally ? 1f : -1f;
+            float slotWidth = Mathf.Max(1f, box.x);
+            // 칸마다 땅 높이가 다를 수 있다 — groundPoint는 가로 위치만 쓰고, 각 칸의 땅 위에 발이 닿게 세운다
+            float lift = height * 0.5f + SpawnGroundGap;
+            // 층 정렬을 지키는 칸을 먼저 찾고(위층은 나보다 아래·같은 역할 위에만), 없으면 그냥 첫 빈칸
+            Vector2 position = groundPoint;
+            for (int pass = 0; pass < 2; pass++)
             {
-                position = baseCenter + Vector2.up * floor;
-                if (Physics2D.OverlapBox(position, probe, 0f, SolidOnly, CellProbe) == 0)
-                    break;
+                for (int floor = 0; floor < SpawnMaxFloors; floor++)
+                {
+                    for (int slot = 0; slot < SpawnSpreadSlots; slot++)
+                    {
+                        float x = groundPoint.x + forward * slot * slotWidth;
+                        position = new Vector2(x, Ground.Instance.HeightAt(x) + lift + floor);
+                        if (IsSpawnCellFree(position, probe, prefab._team)
+                            && (pass == 1 || floor == 0 || CanStackOn(position, height, prefab)))
+                            return Pooled.Get(prefab, position, Quaternion.identity);
+                    }
+                }
             }
-            return Instantiate(prefab, position, Quaternion.identity);
+            return Pooled.Get(prefab, position, Quaternion.identity);
         }
-        private float Forward => _team == Team.Ally ? 1f : -1f;
+
+        // 층 정렬: 소환 칸 바로 아래가 나보다 아래·같은 역할의 아군으로 차 있어야 그 위에 낸다.
+        // 비어 있으면 떨어져서 결국 더 아래 아무 유닛 위에나 앉으므로 쓰지 않는다
+        private static bool CanStackOn(Vector2 position, float height, Unit prefab)
+        {
+            Vector2 below = position + Vector2.down * (height * 0.5f + 0.5f);
+            Physics2D.OverlapBox(below, SpawnCellProbe, 0f, SolidOnly, CellProbe);
+            bool supported = false;
+            foreach (Collider2D col in CellProbe)
+            {
+                if (!col.TryGetComponent(out Unit unit) || unit._team != prefab._team)
+                    continue;
+                if (prefab._definition.StackRank < unit._definition.StackRank)
+                    return false;
+                supported = true;
+            }
+            return supported;
+        }
+
+        // 같은 진영 기지·탑은 몸이 통과하므로 빈칸 검사에서 뺀다 — 안 빼면 성문 안 소환 칸이 늘 막힌 걸로 보인다.
+        // 땅도 뺀다 — 굽은 땅에서는 1층 칸 아래쪽이 경사에 걸려 늘 막힌 걸로 보인다
+        private static bool IsSpawnCellFree(Vector2 position, Vector2 probe, Team team)
+        {
+            Physics2D.OverlapBox(position, probe, 0f, SolidOnly, CellProbe);
+            foreach (Collider2D col in CellProbe)
+            {
+                if (col.TryGetComponent(out Ground _))
+                    continue;
+                if (col.TryGetComponent(out Base b) && b.Team == team)
+                    continue;
+                if (col.TryGetComponent(out Tower t) && t.Team == team)
+                    continue;
+                return false;
+            }
+            return true;
+        }
+        public float Forward => _team == Team.Ally ? 1f : -1f;
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정
         private bool IsStopped => _advanceSpeed < MoveSpeed * 0.5f;
-        // Shield 업그레이드: 이동 속도 증가
-        private float MoveSpeed => _definition.MoveSpeed
-                                   * (UpgradeState.IsActive(this, UpgradeKind.ShieldSpeedBoost) ? 1f + _definition.Upgrade2Value : 1f);
-        // Bow 업그레이드: 사거리·포물선 높이 배율
-        private float LongRangeScale => UpgradeState.IsActive(this, UpgradeKind.BowLongRange) ? _definition.Upgrade2Value : 1f;
-        private float AttackRange => _definition.AttackRange * LongRangeScale;
-        private float DamageScale => _buffTimer > 0f ? 1f + _buffBonus : 1f;
-        private float Feet => _rb.position.y - _halfHeight;
-        private float Top => _rb.position.y + _halfHeight;
-        private bool IsHeadFree
+        private float MoveSpeed
         {
             get
             {
-                // 머리 바로 위 한 칸
-                Vector2 above = new Vector2(_rb.position.x, Top + 0.5f);
-                return Physics2D.OverlapBox(above, new Vector2(0.8f, 0.8f), 0f, SolidOnly, CellProbe) == 0;
+                float scale = 1f;
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesTo(_definition))
+                        scale *= e.Effect.MoveSpeedScale(e.Stacks);
+                return _definition.MoveSpeed * scale;
             }
+        }
+        // 사거리·포물선 높이 배율
+        private float LongRangeScale
+        {
+            get
+            {
+                float scale = 1f;
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesTo(_definition))
+                        scale *= e.Effect.RangeScale(e.Stacks);
+                return scale;
+            }
+        }
+        private float AttackRange => _definition.AttackRange * LongRangeScale;
+        // 버프 × 전투 공격력 가속
+        public float DamageScale => (_buffTimer > 0f ? 1f + _buffBonus : 1f) * BattleManager.DamageMultiplier;
+        public bool IsBuffed => _buffTimer > 0f;
+
+        // 이 진영에 켜진 효과 중 이 유닛에게 적용되는 첫 T (사냥·버프처럼 Unit이 직접 읽는 효과)
+        private T ActiveEffect<T>() where T : UnitEffect
+        {
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect is T found && found.AppliesTo(_definition))
+                    return found;
+            return null;
+        }
+
+        public bool EffectReady(UnitEffect effect) => !_effectReadyAt.TryGetValue(effect, out float at) || Time.fixedTime >= at;
+        public void SetEffectCooldown(UnitEffect effect, float seconds) => _effectReadyAt[effect] = Time.fixedTime + seconds;
+
+        // 건물이 이 유닛을 생산했다 — 생산 훅(호위 등)
+        public void NotifyProduced()
+        {
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesTo(_definition))
+                    e.Effect.OnProduced(this, e.Stacks);
+        }
+        private float Feet => _rb.position.y - _halfHeight;
+        private float Top => _rb.position.y + _halfHeight;
+        // 점프 높이(발이 올라가는 높이) = 내 키 + 1칸 — 모든 유닛 공통
+        private float JumpHeight => _halfHeight * 2f + 1f;
+
+        // 머리 바로 위 한 칸 — 거기 선 유닛(없으면 null), 칸이 완전히 비었나
+        private Unit OnHead(out bool free)
+        {
+            Vector2 above = new Vector2(_rb.position.x, Top + 0.5f);
+            free = Physics2D.OverlapBox(above, new Vector2(0.8f, 0.8f), 0f, SolidOnly, CellProbe) == 0;
+            foreach (Collider2D col in CellProbe)
+                if (col.TryGetComponent(out Unit unit) && unit != this)
+                    return unit;
+            return null;
+        }
+
+        // 앞 아군 위로 쌓인 기둥의 꼭대기 — 점프로 닿고, 그 위가 비었고, 층 정렬상 그 위에 서도 되면 그 유닛. 아니면 null
+        private Unit ClimbTarget(Unit front)
+        {
+            Unit top = front;
+            for (int i = 0; i < ClimbMaxColumn; i++)
+            {
+                if (top.Top - Feet > JumpHeight - ClimbReachMargin)
+                    return null;   // 닿지도 않는 높이에 계속 뛰지 않게
+                Unit above = top.OnHead(out bool free);
+                if (free)
+                    // 층 정렬: 나보다 위층 역할(예: 탱커 앞의 원딜) 위에는 오르지 않고 뒤에서 기다린다
+                    return BelongsBelow(top) ? null : top;
+                if (above == null || above._team != _team || !above.IsAlive)
+                    return null;   // 유닛 아닌 것(기지 등)·적이 막고 있다
+                top = above;
+            }
+            return null;
         }
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
-            _lastX = _rb.position.x;
-            _hp = _definition.MaxHp;
+            _body = GetComponent<BoxCollider2D>();
             _weaponRenderer = _weapon.GetComponent<SpriteRenderer>();
+            _weaponSortingOrder = _weaponRenderer.sortingOrder;
             var bodies = new List<SpriteRenderer>();
             foreach (SpriteRenderer sr in _visual.GetComponentsInChildren<SpriteRenderer>())
                 if (sr != _weaponRenderer)
                     bodies.Add(sr);
             _bodyRenderers = bodies.ToArray();
             _bodyColors = new Color[_bodyRenderers.Length];
+            _bodySortingOrders = new int[_bodyRenderers.Length];
             for (int i = 0; i < _bodyRenderers.Length; i++)
+            {
                 _bodyColors[i] = _bodyRenderers[i].color;
-            _halfHeight = GetComponent<BoxCollider2D>().size.y * 0.5f;
+                _bodySortingOrders[i] = _bodyRenderers[i].sortingOrder;
+            }
+            _halfHeight = _body.size.y * 0.5f;
             _weaponRestPosition = _weapon.localPosition;
+            // 진영별 유닛 레이어 — 충돌 규칙은 그대로 두고 검색에서만 거른다. 적 찾기가 산 속 아군 수백 마리를 훑지 않게
+            int ownLayer = LayerMask.NameToLayer(_team == Team.Ally ? "AllyUnit" : "EnemyUnit");
+            gameObject.layer = ownLayer;
+            _enemyFilter = new ContactFilter2D { useTriggers = false, useLayerMask = true, layerMask = ~(1 << ownLayer) };
+            _allyFilter = new ContactFilter2D { useTriggers = false, useLayerMask = true, layerMask = 1 << ownLayer };
             // 그림은 오른쪽(아군 전방)을 보고 그려져 있다 — 전방이 -x면 자식(무기)까지 통째로 뒤집는다
             if (Forward < 0f)
                 transform.localScale = Vector3.Scale(transform.localScale, new Vector3(-1f, 1f, 1f));
         }
 
+        // 한 생애의 시작 — 처음 만들 때도, 풀에서 다시 꺼낼 때도(Pooled) 여기서 지난 생애의 흔적을 모두 지운다
+        private void OnEnable()
+        {
+            _hp = _definition.MaxHp;
+            _lastX = transform.position.x;
+            _advanceSpeed = 0f;
+            _attackCooldown = 0f;
+            _effectReadyAt.Clear();
+            _knockbackTimer = 0f;
+            _runTime = 0f;
+            _buffTimer = 0f;
+            _buffBonus = 0f;
+            _bigKnockbackUsed = false;
+            _nextSupportIsBuff = false;
+            _stompedOn = null;
+            _slamTimer = _definition.SlamInterval;
+            _slamJumping = false;
+            _slamLeftGround = false;
+            _onBase = false;
+            _despawnTimer = 0f;
+            // 검색 시점을 유닛마다 흩어 한 스텝에 몰리지 않게
+            _targetScanTimer = Random.Range(0f, TargetScanInterval);
+            _huntScanTimer = Random.Range(0f, TargetScanInterval);
+            _cachedTarget = null;
+            _cachedTargetCollider = null;
+            _cachedHunt = null;
+            _huntAhead = false;
+            _supportScanTimer = Random.Range(0f, TargetScanInterval);
+            _walkScanTimer = Random.Range(0f, TargetScanInterval);
+            _cachedPatient = null;
+            _cachedBuffTarget = null;
+            _aheadOnBaseUnit = false;
+
+            // 죽을 때 바꾼 물리·그림을 되돌린다(Die)
+            foreach (Collider2D col in GetComponents<Collider2D>())
+                col.enabled = true;
+            _rb.bodyType = RigidbodyType2D.Dynamic;
+            _rb.linearVelocity = Vector2.zero;
+            for (int i = 0; i < _bodyRenderers.Length; i++)
+            {
+                _bodyRenderers[i].color = _bodyColors[i];
+                _bodyRenderers[i].sortingOrder = _bodySortingOrders[i];
+            }
+            _weaponRenderer.sortingOrder = _weaponSortingOrder;
+            _weapon.localPosition = _weaponRestPosition;
+            _weapon.localRotation = Quaternion.identity;
+            _visual.localPosition = Vector3.zero;
+            _visual.localScale = Vector3.one;
+            _squashTime = SquashDuration;
+            _flashTimer = 0f;
+            _thrustTime = ThrustDuration;
+
+            // 같은 진영 기지·탑 통과 — 콜라이더를 껐다 켜면 무시 설정이 풀릴 수 있어 생애마다 다시 건다
+            Tower.IgnoreOwnTowers(_team, _body);
+            Base.IgnoreOwnBase(_team, _body);
+        }
+
         private void FixedUpdate()
         {
-            if (!IsAlive || _swapping)
+            if (!IsAlive)
                 return;
 
             _advanceSpeed = (_rb.position.x - _lastX) * Forward / Time.fixedDeltaTime;
             _lastX = _rb.position.x;
             _attackCooldown -= Time.fixedDeltaTime;
-            _knifeCooldown -= Time.fixedDeltaTime;
+            _targetScanTimer -= Time.fixedDeltaTime;
+            _huntScanTimer -= Time.fixedDeltaTime;
+            _supportScanTimer -= Time.fixedDeltaTime;
+            _walkScanTimer -= Time.fixedDeltaTime;
             _buffTimer -= Time.fixedDeltaTime;
 
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
@@ -175,43 +386,68 @@ namespace GnorpWar
             bool canClimb = false;
             bool blockedByEnemy = false;
             Unit allyBelow = null;
+            Unit allyAbove = null;
             Unit enemyBelow = null;
             _onBase = false;
+            ContactsMarker.Begin();
             int count = _rb.GetContacts(_contacts);
             for (int i = 0; i < count; i++)
             {
                 ContactPoint2D contact = _contacts[i];
+                // 컴포넌트 조회는 접촉 하나에 한 번만 — 산 속 유닛은 접촉이 많아 여기가 제일 자주 돈다
+                contact.collider.TryGetComponent(out Unit touched);
+                if (contact.normal.y < -0.5f && touched != null && touched._team == _team)
+                    allyAbove = touched;
                 if (contact.normal.y > 0.5f)
                 {
                     grounded = true;
-                    if (contact.collider.TryGetComponent(out Base _))
-                        _onBase = true;
-                    else if (contact.collider.TryGetComponent(out Unit below))
+                    if (touched != null)
                     {
-                        if (below._team == _team)
-                            allyBelow = below;
+                        if (touched._team == _team)
+                            allyBelow = touched;
                         else
-                            enemyBelow = below;
+                            enemyBelow = touched;
                     }
+                    else if (contact.collider.TryGetComponent(out Base _))
+                        _onBase = true;
                 }
-                else if (contact.normal.x * Forward < -0.5f
-                         && contact.collider.TryGetComponent(out Unit other)
-                         && other._team == _team
-                         && other.IsStopped
-                         && other.IsHeadFree
-                         && !other._onBase
-                         && other.Top - Feet <= _definition.JumpHeight)   // 닿지도 않는 높이(키 큰 기사)에 계속 뛰지 않게
+                if (contact.normal.x * Forward < -0.5f && touched != null && touched._team != _team)
+                    blockedByEnemy = true;   // 발밑 판정과 별개 — 대각선 접촉(발밑이면서 앞)도 막힌 것
+                else if (contact.normal.y <= 0.5f && contact.normal.x * Forward < -0.5f && touched != null   // 앞의 아군
+                         && !canClimb
+                         && touched._advanceSpeed < MoveSpeed * ClimbSlowerThan   // 나보다 느리면(멈추지 않았어도) 넘는다 — 같은 속도로 같이 걷는 줄은 안 넘는다
+                         && !touched._onBase
+                         && ClimbTarget(touched) != null)   // 물리 검사라 비싸다 — 싼 조건을 다 통과한 뒤 마지막에
                     canClimb = true;
-                if (contact.normal.x * Forward < -0.5f
-                    && contact.collider.TryGetComponent(out Unit blocker) && blocker._team != _team)
-                    blockedByEnemy = true;
             }
+            ContactsMarker.End();
 
-            // Knight 업그레이드: 적 머리 위에 새로 내려앉으면 그 적에게 피해 (계속 서 있는 동안은 다시 안 준다)
-            if (enemyBelow != null && enemyBelow != _stompedOn && enemyBelow.IsAlive
-                && UpgradeState.IsActive(this, UpgradeKind.KnightStomp))
-                enemyBelow.TakeDamage(_definition.Upgrade2Value * DamageScale, Vector2.down, 1f, this);
+            // 적 머리 위에 새로 내려앉은 순간 (계속 서 있는 동안은 다시 안 부른다)
+            if (enemyBelow != null && enemyBelow != _stompedOn && enemyBelow.IsAlive)
+            {
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesTo(_definition))
+                        e.Effect.OnLandedOnEnemy(this, enemyBelow, e.Stacks);
+            }
             _stompedOn = enemyBelow;
+
+            // 점프 착지 충격: 뛰어오른 뒤 한 번이라도 땅에서 떨어졌다가 다시 발이 닿는 순간 (넉백 중이어도 착지는 착지)
+            if (_slamJumping)
+            {
+                if (!grounded)
+                    _slamLeftGround = true;
+                else if (_slamLeftGround)
+                {
+                    _slamJumping = false;
+                    Slam();
+                }
+                else
+                {
+                    // 아직 발을 못 뗐다 — 뛴 스텝에 맞으면 넉백 속도가 점프 속도를 덮어쓴다. 뜰 때까지 다시 준다
+                    _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, JumpSpeed(_definition.SlamJumpHeight, _rb));
+                    grounded = false;
+                }
+            }
 
             if (_knockbackTimer > 0f)
             {
@@ -219,48 +455,75 @@ namespace GnorpWar
                 return;
             }
 
-            // Sword 업그레이드: 근접 공격과 별개로, 앞쪽 수평 띠에 적이 있으면 가끔 칼을 던진다
-            if (_knifeCooldown <= 0f && UpgradeState.IsActive(this, UpgradeKind.SwordKnifeThrow) && HasEnemyInKnifeLane())
-            {
-                ThrowKnife();
-                _knifeCooldown = _definition.Upgrade2Value;
-            }
+            // 공격·이동과 별개로 매 스텝 도는 효과(칼 던지기 등)
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesTo(_definition))
+                    e.Effect.Tick(this, e.Stacks);
 
-            // 층 정렬: 내가 바로 아래 아군보다 아래층 역할이면(예: 원딜 위의 탱커) 자리를 바꾼다
-            if (allyBelow != null && CanSwapDownWith(allyBelow))
+            // 점프 착지 충격: 간격마다 제자리에서 뛴다. 이번 스텝의 등반 점프 등이 덮어쓰지 않게 땅에서 떨어진 것으로 친다
+            if (_definition.SlamInterval > 0f && !_slamJumping)
             {
-                StartCoroutine(SwapDownWith(allyBelow));
-                return;
+                _slamTimer -= Time.fixedDeltaTime;
+                if (_slamTimer <= 0f && grounded)
+                {
+                    _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, JumpSpeed(_definition.SlamJumpHeight, _rb));
+                    _slamTimer = _definition.SlamInterval;
+                    _slamJumping = true;
+                    _slamLeftGround = false;
+                    grounded = false;
+                }
             }
 
             Vector2 velocity = _rb.linearVelocity;
 
+            // 층 정렬은 등반 조건(BelongsBelow)으로 애초에 뒤집혀 오르지 않게 한다. 넉백·착지 등으로 이미 뒤집혀 올라탔으면
+            // 내가 바로 아래 아군보다 아래층 역할일 때(예: 원딜 위의 탱커) 싸움보다 먼저 앞으로 걸어 내려간다.
+            // 밑의 아군은 그동안 멈춰 선다(BelongsBelow) — 내가 앞쪽 땅에 떨어지면 그 아군이 뒤에서 내 위로 올라탄다(보통 등반 점프).
+            // 앞이 적 몸으로 막혔으면 내려갈 곳이 없으니 그 자리에서 싸운다
+            if (allyBelow != null && BelongsBelow(allyBelow) && !blockedByEnemy)
+            {
+                velocity.x = Forward * MoveSpeed;
+                _rb.linearVelocity = velocity;
+                return;
+            }
+            bool holdForAbove = allyAbove != null && allyAbove.BelongsBelow(this);
+
             // 프리스트 — 적은 공격하지 않는다. 다친 아군을 회복하고, 적이 사거리에 들면 뒤에 멈춰 선다(앞으로 걸어가 죽지 않게)
             if (_definition.AttackType == AttackType.Heal)
             {
-                bool enemyNear = FindTarget(out _, out _);
-                Unit patient = FindHealTarget(null);
-                Unit buffTarget = UpgradeState.IsActive(this, UpgradeKind.PriestAttackBuff) ? FindBuffTarget() : null;
+                bool enemyNear = FindTargetCached(out _, out _, null);
+                // 회복·버프 대상 찾기도 아군 전부를 훑어 비싸다 — 적 찾기와 같은 간격으로만 새로 찾고, 그 사이엔 찾아 둔 대상이 아직 유효한지만 본다
+                SupportMarker.Begin();
+                AttackBuffEffect attackBuff = ActiveEffect<AttackBuffEffect>();
+                if (_supportScanTimer <= 0f)
+                {
+                    _cachedPatient = FindHealTarget(null);
+                    _cachedBuffTarget = attackBuff != null ? attackBuff.FindTarget(this) : null;
+                    _supportScanTimer = TargetScanInterval;
+                }
+                if (_cachedPatient != null && !_cachedPatient.IsDamaged)
+                    _cachedPatient = null;
+                if (_cachedBuffTarget != null && (!_cachedBuffTarget.IsAlive || _cachedBuffTarget._buffTimer > 0f || attackBuff == null))
+                    _cachedBuffTarget = null;
+                Unit patient = _cachedPatient;
+                Unit buffTarget = _cachedBuffTarget;
+                SupportMarker.End();
                 if ((patient != null || buffTarget != null) && _attackCooldown <= 0f)
                 {
-                    // Priest 업그레이드: 회복할 대상·버프할 대상이 둘 다 있으면 번갈아, 한쪽만 있으면 그쪽
+                    // 공격력 버프 효과: 회복할 대상·버프할 대상이 둘 다 있으면 번갈아, 한쪽만 있으면 그쪽
                     bool buff = buffTarget != null && (patient == null || _nextSupportIsBuff);
                     Unit receiver = buff ? buffTarget : patient;
                     Vector2 toReceiver = receiver._rb.position - _rb.position;
                     if (buff)
                     {
-                        ThrowBuff(buffTarget);
+                        attackBuff.Throw(this, buffTarget);
                     }
                     else
                     {
                         ThrowHeal(patient);
-                        // Priest 업그레이드: 두 번째로 많이 다친 아군에게도
-                        if (UpgradeState.IsActive(this, UpgradeKind.PriestDoubleHeal))
-                        {
-                            Unit second = FindHealTarget(patient);
-                            if (second != null)
-                                ThrowHeal(second);
-                        }
+                        foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                            if (e.Effect.AppliesTo(_definition))
+                                e.Effect.OnHealed(this, patient, e.Stacks);
                     }
                     _nextSupportIsBuff = !buff;
                     StartThrust(toReceiver.sqrMagnitude > 0.0001f ? toReceiver.normalized : new Vector2(Forward, 0f));
@@ -273,11 +536,18 @@ namespace GnorpWar
                     return;
                 }
             }
-            // Knight 업그레이드: 앞쪽에 원거리 적이 있으면 원거리가 아닌 적은 상대하지 않고 뛰어넘는다
-            bool hunting = UpgradeState.IsActive(this, UpgradeKind.KnightVaultToArchers) && HasRangedEnemyAhead();
+            // 사냥 효과: 앞쪽에 노리는 분류의 적이 있으면 그 밖의 적은 상대하지 않고 뛰어넘는다
+            VaultEffect vault = ActiveEffect<VaultEffect>();
+            // 사냥 검색도 원이 커서(효과 Range) 적 찾기와 같은 간격으로만 새로 본다
+            if (vault != null && _huntScanTimer <= 0f)
+            {
+                _huntAhead = HasHuntTargetAhead(vault);
+                _huntScanTimer = TargetScanInterval;
+            }
+            bool hunting = vault != null && _huntAhead;
 
             // 싸움이 점프·전진보다 우선 (프리스트는 위에서 처리 — 회복할 대상도 적도 없으면 여기로 내려와 전진)
-            if (_definition.AttackType != AttackType.Heal && FindTarget(out IDamageable target, out Vector2 targetPoint, null, hunting))
+            if (_definition.AttackType != AttackType.Heal && FindTargetCached(out IDamageable target, out Vector2 targetPoint, hunting ? vault : null))
             {
                 velocity.x = 0f;
                 _rb.linearVelocity = velocity;
@@ -289,13 +559,16 @@ namespace GnorpWar
                     {
                         BreatheFire();
                     }
+                    else if (_definition.AttackType == AttackType.Sweep)
+                    {
+                        Sweep();
+                    }
                     else if (_definition.AttackType == AttackType.Ranged)
                     {
                         FireProjectile(targetPoint);
-                        // Bow 업그레이드: 서로 다른 적에게 한 발 더 (적이 하나뿐이면 한 발)
-                        if (UpgradeState.IsActive(this, UpgradeKind.BowDoubleShot)
-                            && FindTarget(out _, out Vector2 secondPoint, target, false))
-                            FireProjectile(secondPoint);
+                        foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                            if (e.Effect.AppliesTo(_definition))
+                                e.Effect.OnRangedShot(this, target, e.Stacks);
                     }
                     else
                     {
@@ -316,13 +589,20 @@ namespace GnorpWar
             _runTime = IsStopped ? 0f : _runTime + Time.fixedDeltaTime;
 
             // 기지 위는 한 층만 — 기지 위 유닛 머리로 걸어 올라가지도 않는다
-            velocity.x = IsAheadOnBaseUnit() ? 0f : Forward * MoveSpeed;
+            WalkMarker.Begin();
+            if (_walkScanTimer <= 0f)
+            {
+                _aheadOnBaseUnit = IsAheadOnBaseUnit();
+                _walkScanTimer = TargetScanInterval;
+            }
+            velocity.x = _aheadOnBaseUnit || holdForAbove ? 0f : Forward * MoveSpeed;
+            WalkMarker.End();
             // 못 올라탈 땐 뛰지 않고 서 있어야 뒤 유닛의 발판이 된다 — 계속 뛰면 계단(산)이 안 생긴다
             if (grounded && canClimb)
-                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * _definition.JumpHeight);
-            // Knight 업그레이드: 원거리가 아닌 적에게 막히면 높이 뛰어 넘는다(적 머리 위로 착지해 계속 전진)
+                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * JumpHeight);
+            // 사냥 효과: 노리지 않는 적에게 막히면 높이 뛰어 넘는다(적 머리 위로 착지해 계속 전진)
             else if (grounded && hunting && blockedByEnemy)
-                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * _definition.UpgradeValue);
+                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * vault.JumpHeight);
             _rb.linearVelocity = velocity;
         }
 
@@ -331,9 +611,8 @@ namespace GnorpWar
             if (!IsAlive)
                 return;
 
-            if (CoinField.Instance != null)
-                CoinField.Instance.OnDamaged(_team, _rb.position, Mathf.Min(amount, _hp));
             _hp -= amount;
+            DamageNumbers.Damage(this, _team, new Vector2(_rb.position.x, Top), amount);
             // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다
             if (FxDirector.Instance != null)
                 FxDirector.Instance.HitSpark(_rb.position - hitDirection * SparkSurfaceOffset, hitDirection, SparkColor);
@@ -346,13 +625,10 @@ namespace GnorpWar
             _squashTime = 0f;
             _flashTimer = FlashDuration;
 
-            // Shield 업그레이드: 돌격형(기사)에게 맞으면 방패는 버티고 공격한 쪽이 튕겨난다
-            if (attacker != null && attacker.IsAlive && attacker._definition.ChargeDamageMultiplier > 1f
-                && UpgradeState.IsActive(this, UpgradeKind.ShieldReflectCharge))
-            {
-                attacker.TakeDamage(0f, -hitDirection, push, null);
-                return;
-            }
+            // 피격 효과(돌격 반사 등) — 하나라도 true면 이번 피격에 밀리지 않는다
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesTo(_definition) && e.Effect.OnHit(this, attacker, hitDirection, push, e.Stacks))
+                    return;
 
             // 냥코식 큰 넉백 — 생명당 한 번, 맞은 방향과 상관없이 후방으로 튕겨 오른다
             if (!_bigKnockbackUsed && _hp <= _definition.MaxHp * _definition.BigKnockbackAt)
@@ -383,7 +659,13 @@ namespace GnorpWar
         private void Update()
         {
             if (!IsAlive)
+            {
+                // 뒤집혀 화면 밖으로 떨어지는 중 — 다 떨어지면 풀로 돌아간다
+                _despawnTimer -= Time.deltaTime;
+                if (_despawnTimer <= 0f)
+                    gameObject.SetActive(false);
                 return;
+            }
 
             // 맞은 축으로 눌렸다가 출렁이며 원래 모양으로. 발바닥 높이는 고정
             float t = Mathf.Min(_squashTime / SquashDuration, 1f);
@@ -433,11 +715,11 @@ namespace GnorpWar
             _weapon.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
 
-        // exclude: 이미 고른 대상(두 번째 대상을 찾을 때) · rangedOnly: 원거리 유닛만(기사 업그레이드)
-        private bool FindTarget(out IDamageable target, out Vector2 targetPoint, IDamageable exclude = null, bool rangedOnly = false)
+        // exclude: 이미 고른 대상(두 번째 대상을 찾을 때) · huntOnly: 이 사냥 효과가 노리는 분류의 유닛만
+        private bool FindTarget(out IDamageable target, out Vector2 targetPoint, IDamageable exclude = null, VaultEffect huntOnly = null)
         {
             // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게
-            Physics2D.OverlapCircle(_rb.position, AttackRange, SolidOnly, _overlaps);
+            Physics2D.OverlapCircle(_rb.position, AttackRange, _enemyFilter, _overlaps);
             target = null;
             targetPoint = default;
             float best = float.MaxValue;
@@ -445,7 +727,9 @@ namespace GnorpWar
             {
                 if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive || damageable == exclude)
                     continue;
-                if (rangedOnly && !(damageable is Unit unit && unit._definition.AttackType == AttackType.Ranged))
+                if (huntOnly != null && !(damageable is Unit unit && huntOnly.Targets(unit._definition.Category)))
+                    continue;
+                if (IsUnderfoot(damageable))
                     continue;
 
                 Vector2 point = col.ClosestPoint(_rb.position);
@@ -455,29 +739,74 @@ namespace GnorpWar
                     best = distance;
                     target = damageable;
                     targetPoint = point;
+                    _foundCollider = col;
                 }
             }
             return target != null;
         }
 
-        // 원거리 무기(화살·돌) 발사
-        private void FireProjectile(Vector2 targetPoint)
+        // 산이 넘쳐흐르게 — 적 머리 위에 선 근접은 발밑 적을 치느라 멈추지 않고 머리를 밟고 계속 걷는다.
+        // 같은 높이의 적을 만나거나 적 줄 끝에서 떨어지면 다시 싸운다. 원거리·보스·기지·탑은 그대로
+        private bool IsUnderfoot(IDamageable damageable)
+            => _definition.AttackType == AttackType.Melee && damageable is Unit unit && unit.Top <= Feet + StandOnMargin;
+
+        // 적 찾기는 비싸다(사거리 원 안의 콜라이더를 전부 본다 — 산 속 원딜은 수백 개). 그래서 TargetScanInterval마다만 새로 찾고,
+        // 그 사이엔 찾아 둔 적이 아직 살아 있고 사거리 안인지만 본다. 못 찾았으면 다음 검색까지 없는 것으로 친다
+        private bool FindTargetCached(out IDamageable target, out Vector2 targetPoint, VaultEffect huntOnly)
         {
-            Projectile shot = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
+            using (ScanMarker.Auto())
+                return FindTargetCachedCore(out target, out targetPoint, huntOnly);
+        }
+
+        // 사거리 안, exclude가 아닌 가장 가까운 적 (이중 사격 등)
+        public bool FindOtherTarget(IDamageable exclude, out Vector2 targetPoint) => FindTarget(out _, out targetPoint, exclude);
+
+        private bool FindTargetCachedCore(out IDamageable target, out Vector2 targetPoint, VaultEffect huntOnly)
+        {
+            if (_targetScanTimer > 0f && huntOnly == _cachedHunt)
+            {
+                target = null;
+                targetPoint = default;
+                if (_cachedTarget == null)
+                    return false;
+                if (_cachedTarget.IsAlive && _cachedTargetCollider.enabled && !IsUnderfoot(_cachedTarget))
+                {
+                    targetPoint = _cachedTargetCollider.ClosestPoint(_rb.position);
+                    float range = AttackRange;
+                    if ((targetPoint - _rb.position).sqrMagnitude <= range * range)
+                    {
+                        target = _cachedTarget;
+                        return true;
+                    }
+                }
+            }
+
+            _targetScanTimer = TargetScanInterval;
+            _cachedHunt = huntOnly;
+            bool found = FindTarget(out target, out targetPoint, null, huntOnly);
+            _cachedTarget = found ? target : null;
+            _cachedTargetCollider = found ? _foundCollider : null;
+            return found;
+        }
+
+        // 원거리 무기(화살·돌) 발사
+        public void FireProjectile(Vector2 targetPoint)
+        {
+            Projectile shot = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
             shot.Launch(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, targetPoint,
                         _definition.ProjectileArcHeight * LongRangeScale, _definition.ProjectileSplashRadius);
         }
 
-        private void ThrowHeal(Unit patient)
+        public void ThrowHeal(Unit patient)
         {
-            Projectile orb = Instantiate(_definition.Projectile, _weapon.position, Quaternion.identity);
+            Projectile orb = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
             orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
         }
 
-        private void ThrowBuff(Unit target)
+        public void ThrowBuff(Projectile cross, float bonus, float seconds, Unit target)
         {
-            Projectile cross = Instantiate(_definition.Upgrade2Projectile, _weapon.position, Quaternion.identity);
-            cross.LaunchBuff(this, _definition.Upgrade2Value, BuffSeconds, target._rb.position, target._rb.linearVelocity, _definition.ProjectileArcHeight);
+            Projectile shot = Pooled.Get(cross, _weapon.position, Quaternion.identity);
+            shot.LaunchBuff(this, bonus, seconds, target._rb.position, target._rb.linearVelocity, _definition.ProjectileArcHeight);
         }
 
         public void Buff(float bonus, float seconds)
@@ -488,32 +817,18 @@ namespace GnorpWar
             _buffTimer = seconds;
         }
 
-        // 사거리 안에서 버프가 없는 아군 중 가장 앞에 선 공격 유닛(자기·프리스트 제외)
-        private Unit FindBuffTarget()
+        // 반경 안의 같은 진영 유닛 콜라이더 — 돌려주는 목록은 이 유닛이 다른 검색에 다시 쓰므로 바로 훑고 버릴 것
+        public List<Collider2D> AlliesInRange(float radius)
         {
-            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
-            Unit best = null;
-            float bestAhead = float.MinValue;
-            foreach (Collider2D col in _overlaps)
-            {
-                if (!col.TryGetComponent(out Unit ally) || ally == this || ally._team != _team || !ally.IsAlive || ally._swapping
-                    || ally._buffTimer > 0f || ally._definition.AttackType == AttackType.Heal)
-                    continue;
-
-                float ahead = ally._rb.position.x * Forward;
-                if (ahead > bestAhead)
-                {
-                    bestAhead = ahead;
-                    best = ally;
-                }
-            }
-            return best;
+            Physics2D.OverlapCircle(_rb.position, radius, _allyFilter, _overlaps);
+            return _overlaps;
         }
 
-        private bool HasEnemyInKnifeLane()
+        // 앞쪽으로 range만큼, 내 높이를 중심으로 height 두께의 띠에 살아 있는 적이 있나
+        public bool HasEnemyInLane(float range, float height)
         {
-            Vector2 center = _rb.position + new Vector2(Forward * KnifeRange * 0.5f, 0f);
-            Physics2D.OverlapBox(center, new Vector2(KnifeRange, KnifeLaneHeight), 0f, SolidOnly, _overlaps);
+            Vector2 center = _rb.position + new Vector2(Forward * range * 0.5f, 0f);
+            Physics2D.OverlapBox(center, new Vector2(range, height), 0f, _enemyFilter, _overlaps);
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
@@ -522,23 +837,22 @@ namespace GnorpWar
             return false;
         }
 
-        private void ThrowKnife()
+        // 앞쪽 수평으로 곧게 던진다 — 피해는 내 공격력
+        public void ThrowStraight(Projectile prefab, float speed)
         {
             Vector2 origin = _rb.position + new Vector2(Forward * 0.5f, 0f);
-            Projectile knife = Instantiate(_definition.Upgrade2Projectile, origin, Quaternion.identity);
-            knife.LaunchStraight(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, new Vector2(Forward * KnifeSpeed, 0f));
+            Projectile shot = Pooled.Get(prefab, origin, Quaternion.identity);
+            shot.LaunchStraight(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, new Vector2(Forward * speed, 0f));
         }
 
-        // 기사 업그레이드 — 앞쪽 일정 거리 안에 적 원거리 유닛이 있나
-        private const float HuntSearchRange = 15f;
-
-        private bool HasRangedEnemyAhead()
+        // 사냥 효과 — 앞쪽 (효과 Range) 안에 노리는 분류의 적이 있나
+        private bool HasHuntTargetAhead(VaultEffect vault)
         {
-            Physics2D.OverlapCircle(_rb.position, HuntSearchRange, SolidOnly, _overlaps);
+            Physics2D.OverlapCircle(_rb.position, vault.Range, _enemyFilter, _overlaps);
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out Unit enemy) && enemy._team != _team && enemy.IsAlive
-                    && enemy._definition.AttackType == AttackType.Ranged
+                    && vault.Targets(enemy._definition.Category)
                     && (enemy._rb.position.x - _rb.position.x) * Forward > 0f)
                     return true;
             }
@@ -546,14 +860,14 @@ namespace GnorpWar
         }
 
         // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기·exclude 제외)
-        private Unit FindHealTarget(Unit exclude)
+        public Unit FindHealTarget(Unit exclude)
         {
-            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, SolidOnly, _overlaps);
+            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, _allyFilter, _overlaps);
             Unit best = null;
             float bestRatio = 1f;
             foreach (Collider2D col in _overlaps)
             {
-                if (!col.TryGetComponent(out Unit ally) || ally == this || ally == exclude || ally._team != _team || !ally.IsAlive || ally._swapping)
+                if (!col.TryGetComponent(out Unit ally) || ally == this || ally == exclude || ally._team != _team || !ally.IsAlive)
                     continue;
 
                 float ratio = ally._hp / ally._definition.MaxHp;
@@ -572,37 +886,69 @@ namespace GnorpWar
             Vector2 mouth = _weapon.position;
             float length = _definition.AttackRange;
             Vector2 center = mouth + new Vector2(Forward * length * 0.5f, 0f);
-            Physics2D.OverlapBox(center, new Vector2(length, _definition.FlameThickness), 0f, SolidOnly, _overlaps);
+            Physics2D.OverlapBox(center, new Vector2(length, _definition.FlameThickness), 0f, _enemyFilter, _overlaps);
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                    damageable.TakeDamage(_definition.AttackDamage, new Vector2(Forward, 0f), _definition.PushPower, null);
+                    damageable.TakeDamage(_definition.AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower, null);
             }
             if (FxDirector.Instance != null)
                 FxDirector.Instance.Flame(mouth, Forward, length);
         }
 
+        // 휩쓸기 — 사거리 안, 몸 중심보다 앞쪽(가장 가까운 점 기준)에 있는 적 전부(탑·기지 포함)
+        private void Sweep()
+        {
+            Physics2D.OverlapCircle(_rb.position, AttackRange, _enemyFilter, _overlaps);
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive)
+                    continue;
+                Vector2 point = col.ClosestPoint(_rb.position);
+                if ((point.x - _rb.position.x) * Forward < 0f)
+                    continue;
+                Vector2 toTarget = point - _rb.position;
+                Vector2 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
+                damageable.TakeDamage(_definition.AttackDamage * DamageScale, direction, _definition.PushPower, this);
+            }
+        }
+
+        // 점프 착지 충격 — 발밑 반경 안의 적 유닛(탑·기지 제외)에게 피해를 주고 위로 띄운다
+        private void Slam()
+        {
+            Vector2 feet = new Vector2(_rb.position.x, Feet);
+            Physics2D.OverlapCircle(feet, _definition.SlamRadius, _enemyFilter, _overlaps);
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out Unit enemy) || enemy._team == _team || !enemy.IsAlive)
+                    continue;
+                enemy.TakeDamage(_definition.SlamDamage * DamageScale, Vector2.up, 0f, this);
+                enemy.Shove(new Vector2(0f, JumpSpeed(_definition.SlamLiftHeight, enemy._rb)), _definition.SlamStun);
+            }
+        }
+
+        // 이 높이까지 솟는 위쪽 속도
+        private static float JumpSpeed(float height, Rigidbody2D body)
+        {
+            return Mathf.Sqrt(2f * -Physics2D.gravity.y * body.gravityScale * height);
+        }
+
         // 피해 없이 밀어낸다(보스 등장 충격파 등). 그동안 조종 불능
         public void Shove(Vector2 velocity, float stunSeconds)
         {
-            if (!IsAlive || _swapping)
+            if (!IsAlive)
                 return;
             _knockbackTimer = stunSeconds;
             _rb.linearVelocity = velocity;
-        }
-
-        public static void ShockwaveAll(Team team, Vector2 velocity, float stunSeconds)
-        {
-            foreach (Unit unit in FindObjectsByType<Unit>(FindObjectsSortMode.None))
-                if (unit._team == team)
-                    unit.Shove(velocity, stunSeconds);
         }
 
         public void Heal(float amount)
         {
             if (!IsAlive)
                 return;
+            float before = _hp;
             _hp = Mathf.Min(_hp + amount, _definition.MaxHp);
+            DamageNumbers.Heal(this, new Vector2(_rb.position.x, Top), _hp - before);
         }
 
         private bool IsAheadOnBaseUnit()
@@ -618,70 +964,14 @@ namespace GnorpWar
             return false;
         }
 
-        private bool CanSwapDownWith(Unit below)
+        // 나는 other보다 아래층 역할인가(예: 원딜 위의 탱커) — 층 정렬에서 위에 탄 쪽이 내려갈지 정한다
+        private bool BelongsBelow(Unit other)
         {
-            // 키가 다르면 자리를 맞바꿀 때 발 높이가 어긋난다 — 같은 키끼리만
-            return _definition.StackRank < below._definition.StackRank
-                   && Mathf.Approximately(_halfHeight, below._halfHeight)
-                   && below.IsAlive && !below._swapping && below._knockbackTimer <= 0f
-                   && Mathf.Abs(below._rb.position.x - _rb.position.x) <= SwapMaxOffsetX;
-        }
-
-        // 교환 동안 두 칸 자리에 보이지 않는 받침대를 세워 위의 산을 받친다(ARCHITECTURE 「위치 교환」)
-        private IEnumerator SwapDownWith(Unit below)
-        {
-            Vector2 upperStart = _rb.position;
-            Vector2 lowerStart = below._rb.position;
-
-            var support = new GameObject("SwapSupport");
-            support.transform.position = (upperStart + lowerStart) * 0.5f;
-            support.AddComponent<BoxCollider2D>().size = new Vector2(1f, upperStart.y - lowerStart.y + 1f);
-
-            BeginSwap();
-            below.BeginSwap();
-            for (float t = 0f; t < SwapDuration; t += Time.fixedDeltaTime)
-            {
-                if (!IsAlive || !below.IsAlive)
-                    break;
-
-                float k = t / SwapDuration;
-                float arc = Mathf.Sin(k * Mathf.PI);
-                below._rb.MovePosition(Vector2.Lerp(lowerStart, upperStart, k) + new Vector2(-Forward * SwapClimbArc * arc, 0f));
-                _rb.MovePosition(Vector2.Lerp(upperStart, lowerStart, k) + new Vector2(Forward * SwapSlideArc * arc, 0f));
-                yield return new WaitForFixedUpdate();
-            }
-
-            Destroy(support);
-            if (IsAlive)
-                EndSwap(lowerStart);
-            if (below.IsAlive)
-                below.EndSwap(upperStart);
-        }
-
-        private void BeginSwap()
-        {
-            _swapping = true;
-            foreach (Collider2D col in GetComponents<Collider2D>())
-                col.enabled = false;
-            _rb.linearVelocity = Vector2.zero;
-            _rb.bodyType = RigidbodyType2D.Kinematic;
-        }
-
-        private void EndSwap(Vector2 position)
-        {
-            _rb.position = position;
-            _rb.bodyType = RigidbodyType2D.Dynamic;
-            _rb.linearVelocity = Vector2.zero;
-            foreach (Collider2D col in GetComponents<Collider2D>())
-                col.enabled = true;
-            _lastX = position.x;
-            _swapping = false;
+            return _definition.StackRank < other._definition.StackRank;
         }
 
         private void Die()
         {
-            // 교환 중이었다면 운동학 상태 — 중력을 받게 되돌려야 떨어진다
-            _rb.bodyType = RigidbodyType2D.Dynamic;
             // 물리 제거 — 콜라이더가 꺼지면 위에 서 있던 유닛들이 빈자리로 내려앉는다
             foreach (Collider2D col in GetComponents<Collider2D>())
                 col.enabled = false;
@@ -705,8 +995,7 @@ namespace GnorpWar
                 FxDirector.Instance.Shake(DeathShake);
             }
 
-            Destroy(gameObject, DeathDestroyDelay);
-            Died?.Invoke(this);
+            _despawnTimer = DeathDestroyDelay;
         }
     }
 }

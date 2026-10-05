@@ -33,7 +33,7 @@ namespace GnorpWar
         public void HitSpark(Vector2 position, Vector2 direction, Color color)
         {
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - _hitSpark.shape.arc * 0.5f;
-            ParticleSystem spark = Instantiate(_hitSpark, position, Quaternion.Euler(0f, 0f, angle));
+            ParticleSystem spark = GetParticle(_hitSpark, position, Quaternion.Euler(0f, 0f, angle));
             ParticleSystem.MainModule main = spark.main;
             main.startColor = color;
             spark.Play();
@@ -41,7 +41,16 @@ namespace GnorpWar
 
         public void DeathPuff(Vector2 position)
         {
-            Instantiate(_deathPuff, position, Quaternion.identity).Play();
+            GetParticle(_deathPuff, position, Quaternion.identity).Play();
+        }
+
+        // 풀에서 꺼낸다(Pooled). 재생이 끝나면 파괴 대신 꺼져서 풀로 돌아가게 한다 — 프리팹은 끝나면 파괴(Destroy)로 돼 있다
+        private static ParticleSystem GetParticle(ParticleSystem prefab, Vector2 position, Quaternion rotation)
+        {
+            ParticleSystem particle = Pooled.Get(prefab, position, rotation);
+            ParticleSystem.MainModule main = particle.main;
+            main.stopAction = ParticleSystemStopAction.Disable;
+            return particle;
         }
 
         // 화염방사 — 입에서 앞으로 불꽃 조각을 뿜는다(한 번 부를 때 두 조각)
@@ -55,7 +64,7 @@ namespace GnorpWar
         {
             for (int i = 0; i < FlameBitsPerPuff; i++)
             {
-                FlameBit bit = Instantiate(_flameBit, mouth + new Vector2(0f, Random.Range(-FlameSpreadY, FlameSpreadY)), Quaternion.identity);
+                FlameBit bit = Pooled.Get(_flameBit, mouth + new Vector2(0f, Random.Range(-FlameSpreadY, FlameSpreadY)), Quaternion.identity);
                 bit.Launch(new Vector2(forward * FlameSpeed, Random.Range(-0.5f, 0.5f)), length / FlameSpeed, Color.Lerp(FlameHot, FlameCool, Random.value));
             }
         }

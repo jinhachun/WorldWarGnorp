@@ -25,10 +25,11 @@ namespace GnorpWar
         {
             _velocity = velocity;
             _life = life;
+            _age = 0f;   // 풀에서 다시 꺼낸 조각일 수 있다(Pooled)
             _color = color;
             _renderer.color = color;
-            if (velocity.x < 0f)
-                _renderer.flipX = true;   // 그림은 오른쪽으로 번지게 그려져 있다
+            _renderer.flipX = velocity.x < 0f;   // 그림은 오른쪽으로 번지게 그려져 있다
+            transform.localScale = _startScale;
         }
 
         private void Update()
@@ -37,7 +38,7 @@ namespace GnorpWar
             float t = _age / _life;
             if (t >= 1f)
             {
-                Destroy(gameObject);
+                gameObject.SetActive(false);
                 return;
             }
             transform.position += (Vector3)(_velocity * Time.deltaTime);

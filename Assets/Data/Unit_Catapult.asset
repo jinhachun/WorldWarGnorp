@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Catapult
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uD22C\uC11D\uAE30"
+  _category: {fileID: 11400000, guid: ca2455a173fad3b4e839267c10e84147, type: 2}
+  _allyPrefab: {fileID: 0}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 6c14885eb8ead3c41b89f9501582cd9e, type: 3}
   _moveSpeed: 1.8000001
   _jumpHeight: 1.2
   _maxHp: 80
@@ -32,14 +36,9 @@ MonoBehaviour:
   _projectileSplashRadius: 1.5
   _flameThickness: 2
   _healAmount: 0
-  _upgrade: 0
-  _upgradeCost: 0
-  _upgradeValue: 0
-  _upgradeDescription: 
-  _upgrade2: 0
-  _upgrade2Cost: 0
-  _upgrade2Value: 0
-  _upgrade2Projectile: {fileID: 0}
-  _upgrade2Description: 
-  _cost: 150
-  _summonCooldown: 3.3333333
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

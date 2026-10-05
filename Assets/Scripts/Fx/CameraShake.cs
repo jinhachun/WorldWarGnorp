@@ -7,6 +7,8 @@ namespace GnorpWar
     {
         private const float MaxOffset = 0.6f;
         private const float DecayPerSecond = 2.5f;
+        // 쌓일 수 있는 충격의 상한 — 긴 전투·배속에서 사망이 쉴 새 없이 쌓여도 이 이상 흔들리지 않는다(최대 흔들림 = 상한² × MaxOffset)
+        private const float MaxTrauma = 0.4f;
 
         private Vector3 _basePosition;
         private float _trauma;
@@ -18,7 +20,7 @@ namespace GnorpWar
 
         public void Add(float amount)
         {
-            _trauma = Mathf.Clamp01(_trauma + amount);
+            _trauma = Mathf.Min(_trauma + amount, MaxTrauma);
         }
 
         private void LateUpdate()

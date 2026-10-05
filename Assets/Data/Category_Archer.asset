@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28c5939d8549dfd449234b2e5b2bb9ea, type: 3}
+  m_Name: Category_Archer
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
+  _displayName: "\uAD81\uBCD1"
+  _upgradePool:
+  - {fileID: 11400000, guid: b4f4c73435840a746bb65aab53813bd0, type: 2}
+  - {fileID: 11400000, guid: 3a0c2663c0bd72e42b277a6d318de0e8, type: 2}

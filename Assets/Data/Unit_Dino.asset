@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Dino
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uACF5\uB8E1"
+  _category: {fileID: 11400000, guid: e9fd260e0fdfa214f96601ed00f1f26d, type: 2}
+  _allyPrefab: {fileID: 6082175181310963690, guid: 680746133bf8fd64eb54921cdec1a4df, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 7a2a04ab0a88dac4d998fe74cedd4e3d, type: 3}
   _moveSpeed: 0.90000004
   _jumpHeight: 1.2
   _maxHp: 1500
@@ -32,14 +36,9 @@ MonoBehaviour:
   _projectileSplashRadius: 0
   _flameThickness: 2
   _healAmount: 0
-  _upgrade: 0
-  _upgradeCost: 0
-  _upgradeValue: 0
-  _upgradeDescription: 
-  _upgrade2: 0
-  _upgrade2Cost: 0
-  _upgrade2Value: 0
-  _upgrade2Projectile: {fileID: 0}
-  _upgrade2Description: 
-  _cost: 0
-  _summonCooldown: 0
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

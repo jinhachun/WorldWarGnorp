@@ -5,9 +5,13 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Unit Definition")]
     public class UnitDefinition : ScriptableObject
     {
+        [Tooltip("버튼에 뜨는 이름")]
+        [SerializeField] private string _displayName = "";
+        [SerializeField] private UnitCategory _category;
+        [Tooltip("진영별 프리팹 — 건물이 생산할 때 진영에 맞는 쪽을 꺼낸다")]
+        [SerializeField] private Unit _allyPrefab;
+        [SerializeField] private Unit _enemyPrefab;
         [SerializeField] private float _moveSpeed = 1.5f;
-        [Tooltip("발바닥이 올라가는 높이(월드 유닛). 키 1짜리 유닛 머리 위에 올라서려면 1보다 조금 커야 한다.")]
-        [SerializeField] private float _jumpHeight = 1.2f;
         [SerializeField] private float _maxHp = 100f;
         [SerializeField] private float _attackDamage = 10f;
         [SerializeField] private float _attackInterval = 1f;
@@ -39,26 +43,22 @@ namespace GnorpWar
         [SerializeField] private float _flameThickness = 2f;
         [Tooltip("회복 전용(AttackType.Heal) — 회복 투사체 한 번에 채우는 체력")]
         [SerializeField] private float _healAmount = 0f;
-        [Tooltip("이 유닛의 업그레이드 (아군에게만 적용)")]
-        [SerializeField] private UpgradeKind _upgrade = UpgradeKind.None;
-        [SerializeField] private float _upgradeCost = 100f;
-        [Tooltip("업그레이드 수치 — SwordEscort: 함께 소환될 확률(0~1) · KnightVaultToArchers: 뛰어넘는 높이")]
-        [SerializeField] private float _upgradeValue = 0f;
-        [Tooltip("UP 버튼에 마우스를 올리면 뜨는 설명")]
-        [SerializeField] private string _upgradeDescription = "";
-        [Tooltip("두 번째 업그레이드 (UP2 버튼, 아군에게만 적용)")]
-        [SerializeField] private UpgradeKind _upgrade2 = UpgradeKind.None;
-        [SerializeField] private float _upgrade2Cost = 100f;
-        [Tooltip("두 번째 업그레이드 수치 — ShieldSpeedBoost: 이동 속도 증가율 · SwordKnifeThrow: 던지는 간격(초) · BowLongRange: 사거리·포물선 높이 배율 · KnightStomp: 밟기 피해 · PriestAttackBuff: 공격력 증가율")]
-        [SerializeField] private float _upgrade2Value = 0f;
-        [Tooltip("두 번째 업그레이드가 던지는 것 — SwordKnifeThrow: 칼 · PriestAttackBuff: 버프 십자가")]
-        [SerializeField] private Projectile _upgrade2Projectile;
-        [SerializeField] private string _upgrade2Description = "";
-        [SerializeField] private float _cost = 50f;
-        [SerializeField] private float _summonCooldown = 1.5f;
+        [Tooltip("점프 착지 충격(코끼리) — 이 간격(초)마다 제자리에서 뛰었다가, 땅에 닿으면 반경 안의 적 유닛(탑·기지 제외)을 띄우며 피해. 0이면 없음")]
+        [SerializeField] private float _slamInterval = 0f;
+        [Tooltip("점프 착지 충격 — 스스로 뛰는 높이")]
+        [SerializeField] private float _slamJumpHeight = 3f;
+        [Tooltip("점프 착지 충격 — 착지 지점(발밑)에서의 반경")]
+        [SerializeField] private float _slamRadius = 5f;
+        [SerializeField] private float _slamDamage = 20f;
+        [Tooltip("점프 착지 충격 — 맞은 적이 떠오르는 높이")]
+        [SerializeField] private float _slamLiftHeight = 3f;
+        [Tooltip("점프 착지 충격 — 맞은 적이 조종 불능인 시간(초)")]
+        [SerializeField] private float _slamStun = 0.8f;
 
+        public string DisplayName => _displayName;
+        public UnitCategory Category => _category;
+        public Unit PrefabFor(Team team) => team == Team.Ally ? _allyPrefab : _enemyPrefab;
         public float MoveSpeed => _moveSpeed;
-        public float JumpHeight => _jumpHeight;
         public float MaxHp => _maxHp;
         public float AttackDamage => _attackDamage;
         public float AttackInterval => _attackInterval;
@@ -77,16 +77,11 @@ namespace GnorpWar
         public float ProjectileSplashRadius => _projectileSplashRadius;
         public float FlameThickness => _flameThickness;
         public float HealAmount => _healAmount;
-        public UpgradeKind Upgrade => _upgrade;
-        public float UpgradeCost => _upgradeCost;
-        public float UpgradeValue => _upgradeValue;
-        public string UpgradeDescription => _upgradeDescription;
-        public UpgradeKind Upgrade2 => _upgrade2;
-        public float Upgrade2Cost => _upgrade2Cost;
-        public float Upgrade2Value => _upgrade2Value;
-        public Projectile Upgrade2Projectile => _upgrade2Projectile;
-        public string Upgrade2Description => _upgrade2Description;
-        public float Cost => _cost;
-        public float SummonCooldown => _summonCooldown;
+        public float SlamInterval => _slamInterval;
+        public float SlamJumpHeight => _slamJumpHeight;
+        public float SlamRadius => _slamRadius;
+        public float SlamDamage => _slamDamage;
+        public float SlamLiftHeight => _slamLiftHeight;
+        public float SlamStun => _slamStun;
     }
 }

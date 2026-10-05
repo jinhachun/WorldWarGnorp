@@ -12,9 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Priest
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uC0AC\uC81C"
+  _category: {fileID: 11400000, guid: 8b75f5bc086812749a153b9608130200, type: 2}
+  _allyPrefab: {fileID: 638779955689807151, guid: 920fdfdd4647ff34199942e80bbbf1f1, type: 3}
+  _enemyPrefab: {fileID: 638779955689807151, guid: 2623f1e166f9da146b2120d9630357e3, type: 3}
   _moveSpeed: 3
   _jumpHeight: 1.2
-  _maxHp: 60
+  _maxHp: 30
   _attackDamage: 0
   _attackInterval: 1
   _attackRange: 6
@@ -32,15 +36,9 @@ MonoBehaviour:
   _projectileSplashRadius: 0
   _flameThickness: 2
   _healAmount: 20
-  _upgrade: 5
-  _upgradeCost: 400
-  _upgradeValue: 0
-  _upgradeDescription: "\uD55C \uBC88\uC5D0 \uB450 \uBA85\uC744 \uD68C\uBCF5\uD55C\uB2E4"
-  _upgrade2: 10
-  _upgrade2Cost: 400
-  _upgrade2Value: 0.5
-  _upgrade2Projectile: {fileID: 5840658882024782479, guid: e4d48019334997b43b85ce040c3bd1a2, type: 3}
-  _upgrade2Description: "\uD68C\uBCF5\uACFC \uBC88\uAC08\uC544 \uB178\uB780 \uC2ED\uC790\uAC00\uB97C
-    \uB358\uC838 \uB9DE\uC740 \uC544\uAD70\uC758 \uACF5\uACA9\uB825 +50% (5\uCD08)"
-  _cost: 60
-  _summonCooldown: 1.3333334
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

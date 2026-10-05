@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_Dino
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uACF5\uB8E1 \uB465\uC9C0"
+  _icon: {fileID: 21300000, guid: fc1853433027431479d28285109bbb66, type: 3}
+  _description: 
+  _rarity: 3
+  _cooldown: 30
+  _unit: {fileID: 11400000, guid: 1d0ce246ce840da4599ee5304be57fa2, type: 2}
+  _unitCount: 1
+  _actions: []
+  _effects: []

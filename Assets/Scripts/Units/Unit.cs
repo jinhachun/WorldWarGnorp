@@ -82,6 +82,9 @@ namespace GnorpWar
         private Vector3 _weaponRestPosition;
         // 그림 크기 — 프리팹의 Visual 스케일(큰 유닛은 2). 찌그러짐이 매 프레임 덮으므로 거기에 곱한다
         private Vector3 _visualScale = Vector3.one;
+        // 크기(순례지·크루세이더) — 1 = 프리팹 그대로. 충돌 박스·그림·키가 같이 커진다(발은 그 자리)
+        private Vector2 _baseBodySize;
+        private Vector3 _baseVisualScale = Vector3.one;
         private float _knockbackTimer;
         private float _squashTime = SquashDuration;
         private bool _squashVertical = true;
@@ -309,7 +312,7 @@ namespace GnorpWar
         private bool IsStopped => _advanceSpeed < MoveSpeed * 0.5f;
         private float MoveSpeed => Stat(UnitStat.MoveSpeed);
         // 공격속도 +10% = 간격이 1.1로 나뉜다
-        private float AttackInterval => _definition.AttackInterval / Stat(UnitStat.AttackSpeed);
+        public float AttackInterval => _definition.AttackInterval / Stat(UnitStat.AttackSpeed);
         private float AttackRange => _definition.AttackRange;
         // 전투 공격력 가속
         public float DamageScale => BattleManager.DamageMultiplier;
@@ -378,8 +381,9 @@ namespace GnorpWar
                 _bodyColors[i] = _bodyRenderers[i].color;
                 _bodySortingOrders[i] = _bodyRenderers[i].sortingOrder;
             }
+            _baseBodySize = _body.size;
             _halfHeight = _body.size.y * 0.5f;
-            _visualScale = _visual.localScale;
+            _baseVisualScale = _visualScale = _visual.localScale;
             _weaponRestPosition = _weapon.localPosition;
             // 진영별 유닛 레이어 — 충돌 규칙은 그대로 두고 검색에서만 거른다. 적 찾기가 산 속 아군 수백 마리를 훑지 않게
             int ownLayer = LayerMask.NameToLayer(_team == Team.Ally ? "AllyUnit" : "EnemyUnit");
@@ -395,6 +399,8 @@ namespace GnorpWar
         private void OnEnable()
         {
             Life++;
+            if (Size != 1f)
+                SetSize(1f);
             _ownModifiers.Clear();
             _effectReadyAt.Clear();
             _invulnerableTimer = 0f;
@@ -1004,7 +1010,77 @@ namespace GnorpWar
                 return;
             float before = _hp;
             _hp = Mathf.Min(_hp + amount, MaxHp);
-            DamageNumbers.Heal(this, new Vector2(_rb.position.x, Top), _hp - before);
+            float healed = _hp - before;
+            DamageNumbers.Heal(this, new Vector2(_rb.position.x, Top), healed);
+            // 실제로 찬 만큼이 있을 때만 — 가득 찬 유닛은 회복받은 게 아니다(순례지)
+            if (healed > 0f)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        e.Effect.OnHealReceived(this, healed, e.Stacks);
+        }
+
+        // 크기 — 1 = 프리팹 그대로. 기준 크기의 amount만큼 더한다(+10% = 0.1). 발은 그 자리, 위로 커진다
+        public float Size { get; private set; } = 1f;
+
+        public void Grow(float amount) => SetSize(Size + amount);
+
+        private void SetSize(float size)
+        {
+            float oldHalf = _halfHeight;
+            Size = size;
+            _body.size = _baseBodySize * size;
+            _halfHeight = _body.size.y * 0.5f;
+            _visualScale = _baseVisualScale * size;
+            if (IsAlive)
+                _rb.position += Vector2.up * (_halfHeight - oldHalf);
+        }
+
+        // 지금 체력의 비율만큼 잃는다 — 피해가 아니다(죽지 않는다, 승천의 전당)
+        public void LoseHpRatio(float ratio)
+        {
+            if (IsAlive)
+                _hp = Mathf.Max(DoomedHp, _hp * (1f - ratio));
+        }
+
+        // 사거리 안 가장 가까운 적 유닛 주변 반경의 적 전부에게 피해(교황청 사제). 사거리 안에 적이 없으면 false
+        public bool AreaAttackNearest(float radius, float damage)
+        {
+            Physics2D.OverlapCircle(_rb.position, AttackRange, _enemyFilter, _overlaps);
+            Unit nearest = null;
+            float best = float.MaxValue;
+            foreach (Collider2D col in _overlaps)
+                if (col.TryGetComponent(out Unit enemy) && enemy._team != _team && enemy.IsAlive)
+                {
+                    float d = (enemy._rb.position - _rb.position).sqrMagnitude;
+                    if (d < best)
+                    {
+                        best = d;
+                        nearest = enemy;
+                    }
+                }
+            if (nearest == null)
+                return false;
+            Vector2 center = nearest._rb.position;
+            Physics2D.OverlapCircle(center, radius, _enemyFilter, _overlaps);
+            foreach (Collider2D col in _overlaps)
+                if (col.TryGetComponent(out IDamageable target) && target.Team != _team && target.IsAlive)
+                {
+                    Vector2 away = ((Vector2)col.bounds.center - center).sqrMagnitude > 0.0001f ? ((Vector2)col.bounds.center - center).normalized : new Vector2(Forward, 0f);
+                    target.TakeDamage(damage * DamageScale, away, 0f, this);
+                }
+            return true;
+        }
+
+        // 반경 안의 아군(나 포함) 전부 회복(크루세이더 길드)
+        public void HealAlliesAround(float radius, float amount)
+        {
+            Physics2D.OverlapCircle(_rb.position, radius, _allyFilter, _overlaps);
+            var allies = new List<Unit>();
+            foreach (Collider2D col in _overlaps)
+                if (col.TryGetComponent(out Unit ally) && ally._team == _team && ally.IsAlive)
+                    allies.Add(ally);
+            foreach (Unit ally in allies)
+                ally.Heal(amount);
         }
 
         private bool IsAheadOnBaseUnit()

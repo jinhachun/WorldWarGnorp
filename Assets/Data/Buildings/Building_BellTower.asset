@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_BellTower
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC885\uD0D1"
+  _icon: {fileID: 21300000, guid: f5feb532067bb614e827fd98cf974647, type: 3}
+  _description: 
+  _rarity: 2
+  _nation: 1
+  _faction: 1
+  _cooldown: 8
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions:
+  - {fileID: 11400000, guid: b0bd6c3ed7a190942901e9b5d7b70a46, type: 2}
+  _effects: []
+  _passives: []

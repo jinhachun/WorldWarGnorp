@@ -176,6 +176,24 @@ namespace GnorpWar
                 _slots[index].Cooldown *= factor;
         }
 
+        // 쿨다운이 있는 기물 중 무작위 하나를 가속(수도원 — 사용자 결정: 쿨다운 없는 기물은 고르지 않는다)
+        public void HasteRandom(float seconds)
+        {
+            int count = 0;
+            for (int i = 0; i < _slots.Length; i++)
+                if (HasBuilding(i) && _slots[i].Cooldown > 0f)
+                    count++;
+            if (count == 0)
+                return;
+            int pick = Random.Range(0, count);
+            for (int i = 0; i < _slots.Length; i++)
+                if (HasBuilding(i) && _slots[i].Cooldown > 0f && pick-- == 0)
+                {
+                    Haste(i, seconds);
+                    return;
+                }
+        }
+
         // 가속 — seconds 동안 게이지가 2배로 찬다. 이미 가속 중이면 더 긴 쪽
         public void Haste(int index, float seconds)
         {

@@ -36,6 +36,8 @@ namespace GnorpWar
         public virtual bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks) => false;
         // 이 유닛이 적 유닛을 처치한 직후(근접·투사체·화염 모두)
         public virtual void OnKill(Unit killer, Unit victim, int stacks) { }
+        // 이 유닛이 회복받은 직후 — 실제로 찬 양이 있을 때만(순례지)
+        public virtual void OnHealReceived(Unit unit, float amount, int stacks) { }
         // 이 유닛이 죽은 직후(처치 효과 뒤) — at = 죽은 자리
         public virtual void OnDied(Unit unit, Vector2 at, int stacks) { }
         // 이 유닛이 공격한 직후(근접·사격·화염·휩쓸기 — 주 대상 하나)

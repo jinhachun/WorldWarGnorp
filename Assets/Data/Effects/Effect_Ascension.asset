@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9871b3606463d8b4ca416703784d290f, type: 3}
+  m_Name: Effect_Ascension
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.AscensionEffect
+  _categories:
+  - {fileID: 11400000, guid: 8b75f5bc086812749a153b9608130200, type: 2}
+  _units: []
+  _description: "\uC0AC\uC81C\uAC00 3\uAE30 \uC8FD\uC744 \uB54C\uB9C8\uB2E4, \uC804\uC7A5\uC758
+    \uBAA8\uB4E0 \uC544\uAD70\uC774 \uD604\uC7AC \uCCB4\uB825\uC758 50%\uB97C \uC783\uACE0
+    \uACF5\uACA9\uB825 +100% (\uBC1C\uB3D9 \uC2DC\uC810\uC5D0 \uC804\uC7A5\uC5D0
+    \uC788\uB294 \uC720\uB2DB\uB9CC)"
+  _every: 3
+  _hpLoss: 0.5
+  _attack: 1

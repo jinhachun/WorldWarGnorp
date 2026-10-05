@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c5cda37d9fe9194d98ad597b2623ab8, type: 3}
+  m_Name: Effect_PilgrimGrowth
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HealGrowthEffect
+  _categories:
+  - {fileID: 11400000, guid: 3a39e5b8cf800ec4a90e5827c089bfe9, type: 2}
+  _units: []
+  _description: "\uB0B4 \uC911\uBCF4\uBCD1\uC774 \uD68C\uBCF5\uBC1B\uC744 \uB54C\uB9C8\uB2E4
+    \uD06C\uAE30, \uCCB4\uB825, \uACF5\uACA9\uB825 +5%"
+  _size: 0.05
+  _stats: 0.05

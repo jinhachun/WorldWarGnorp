@@ -23,3 +23,4 @@ MonoBehaviour:
   _unitCount: 1
   _actions: []
   _effects: []
+  _passives: []

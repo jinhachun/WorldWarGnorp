@@ -5,7 +5,7 @@ namespace GnorpWar
     // 유닛 효과 하나 — 전투 동안 한 진영에 켜지고(TeamEffects), 적용 분류에 드는 그 진영 유닛의 훅 지점에서 불린다.
     // 효과마다 파일 하나. 이미 있는 훅만 쓰는 새 효과는 Unit을 고치지 않고 클래스·에셋만 추가하면 된다.
     // stacks = 켜 준 건물이 이번 전투에서 발동한 횟수(켜진 직후 0) — 쓰는 효과만 쓴다
-    public abstract class UnitEffect : ScriptableObject
+    public abstract class UnitEffect : ScriptableObject, IUnitFilter
     {
         [Tooltip("이 병종 태그의 유닛에게 — 유닛 칸과 함께 비우면 전부")]
         [SerializeField] private UnitCategory[] _categories = new UnitCategory[0];

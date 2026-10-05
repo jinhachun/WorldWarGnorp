@@ -31,6 +31,8 @@ namespace GnorpWar
         [SerializeField] private BuildingAction[] _actions = new BuildingAction[0];
         [Tooltip("전투 시작부터 이 진영에 켜지는 유닛 효과 — 발동마다 스택 +1")]
         [SerializeField] private UnitEffect[] _effects = new UnitEffect[0];
+        [Tooltip("늘 켜진 기물 능력 — 전투 시작·인접 기물 소환 등")]
+        [SerializeField] private BuildingPassive[] _passives = new BuildingPassive[0];
 
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
@@ -43,5 +45,6 @@ namespace GnorpWar
         public int UnitCount => _unitCount;
         public BuildingAction[] Actions => _actions;
         public UnitEffect[] Effects => _effects;
+        public BuildingPassive[] Passives => _passives;
     }
 }

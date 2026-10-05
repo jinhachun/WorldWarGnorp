@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
-  m_Name: Building_Elephant
+  m_Name: Building_Banner
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
-  _displayName: "\uCF54\uB07C\uB9AC \uC6B0\uB9AC"
-  _icon: {fileID: 21300000, guid: 5b8326bcd88ca1246a334c3bea9465f5, type: 3}
+  _displayName: "\uAD70\uAE30"
+  _icon: {fileID: 21300000, guid: abe3d570d16d8814fab61a1acad2a7e3, type: 3}
   _description: 
-  _rarity: 4
+  _rarity: 2
   _nation: 0
   _faction: 0
-  _cooldown: 35
-  _unit: {fileID: 11400000, guid: dbafb1b2660fec1478a471bd2d54eaba, type: 2}
+  _cooldown: 0
+  _unit: {fileID: 0}
   _unitCount: 1
   _actions: []
   _effects: []
-  _passives: []
+  _passives:
+  - {fileID: 11400000, guid: 156e38b2fcb3ccf4e992fb069de64fdf, type: 2}

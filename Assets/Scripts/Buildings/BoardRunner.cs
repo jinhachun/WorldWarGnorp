@@ -14,9 +14,14 @@ namespace GnorpWar
             public OwnedBuilding Building;
             public float Cooldown;
             public float Timer;
-            // 이번 프레임에 이미 발동했나 — 차지로 서로 당기는 건물끼리 한 프레임에 끝없이 발동하지 않게
+            // 가속이 남은 시간 — 그동안 게이지가 2배로 찬다
+            public float Haste;
+            // 이번 프레임에 이미 발동했나 — 서로 발동시키는 기물끼리 한 프레임에 끝없이 발동하지 않게
             public bool FiredThisFrame;
         }
+
+        // 기획서 §5 "가속" — 쿨다운이 2배 속도로 돈다
+        private const float HasteRate = 2f;
 
         private static readonly BoardRunner[] ByTeam = new BoardRunner[2];
 
@@ -64,6 +69,10 @@ namespace GnorpWar
                 if (slot.Building != null)
                     foreach (UnitEffect effect in slot.Building.Definition.Effects)
                         TeamEffects.Enable(_team, effect);
+            for (int i = 0; i < _slots.Length; i++)
+                if (_slots[i].Building != null)
+                    foreach (BuildingPassive passive in _slots[i].Building.Definition.Passives)
+                        passive.OnBattleStart(this, i, _slots[i].Building.Level);
             _running = true;
         }
 
@@ -81,7 +90,8 @@ namespace GnorpWar
                 Slot slot = _slots[i];
                 if (slot.Building == null)
                     continue;
-                slot.Timer += Time.deltaTime;
+                slot.Timer += Time.deltaTime * (slot.Haste > 0f ? HasteRate : 1f);
+                slot.Haste -= Time.deltaTime;
                 TryFire(i);
             }
         }
@@ -129,7 +139,40 @@ namespace GnorpWar
             Unit prefab = unit.PrefabFor(_team);
             Vector2 point = at ?? (Vector2)(prefab.GetComponent<BoxCollider2D>().size.x > LargeUnitWidth ? _largeSpawnPoint : _spawnPoint).position;
             for (int i = 0; i < count; i++)
-                Unit.Spawn(prefab, point).NotifySummoned(sourceSlot);
+            {
+                Unit spawned = Unit.Spawn(prefab, point);
+                spawned.NotifySummoned(sourceSlot);
+                // 인접 기물이 ~를 소환할 때마다 (군기 등)
+                if (sourceSlot >= 0)
+                    foreach (int neighbor in new[] { sourceSlot - 1, sourceSlot + 1 })
+                        if (HasBuilding(neighbor))
+                            foreach (BuildingPassive passive in _slots[neighbor].Building.Definition.Passives)
+                                passive.OnNeighborSummoned(this, neighbor, spawned);
+            }
+        }
+
+        private bool HasBuilding(int index) => index >= 0 && index < _slots.Length && _slots[index].Building != null;
+
+        // 즉시 1회 발동 — 게이지는 그대로(징집 포고문). 쿨다운 없는 기물은 발동하지 않는다
+        public void FireNow(int index)
+        {
+            if (!HasBuilding(index) || _slots[index].Cooldown <= 0f)
+                return;
+            Fire(index);
+        }
+
+        // 쿨다운에 곱한다(풍차 ×0.8)
+        public void ScaleCooldown(int index, float factor)
+        {
+            if (HasBuilding(index))
+                _slots[index].Cooldown *= factor;
+        }
+
+        // 가속 — seconds 동안 게이지가 2배로 찬다. 이미 가속 중이면 더 긴 쪽
+        public void Haste(int index, float seconds)
+        {
+            if (HasBuilding(index))
+                _slots[index].Haste = Mathf.Max(_slots[index].Haste, seconds);
         }
     }
 }

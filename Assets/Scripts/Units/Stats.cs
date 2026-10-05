@@ -21,6 +21,25 @@ namespace GnorpWar
             Op = op;
             Value = value;
         }
+
+        private static readonly string[] Names = { "공격력", "체력", "이동속도", "공격속도" };
+
+        // 기획서 §6 표기 그대로 — "공격력 +5" · "공격력 +5%" · "공격력 ×1.1"
+        public string Describe()
+        {
+            string name = Names[(int)Stat];
+            if (Op == StatOp.Flat)
+                return $"{name} +{Value:0.##}";
+            if (Op == StatOp.Percent)
+                return $"{name} +{Value * 100f:0.##}%";
+            return $"{name} ×{Value:0.##}";
+        }
+    }
+
+    // 스탯 변경을 받을 유닛을 고른다 — 유닛 효과(UnitEffect)와 스탯을 거는 기물 능력이 쓴다
+    public interface IUnitFilter
+    {
+        bool AppliesTo(UnitDefinition unit);
     }
 
     // 스탯 하나에 걸린 값을 모아 기획서 §6 순서로 계산 — (기본 + 고정 합) × (1 + % 합) × 곱들
@@ -46,12 +65,12 @@ namespace GnorpWar
     }
 
     // 진영 단위로 걸린 스탯 변경. 전투 동안 = 전투 시작마다 비움 · 영구히 = 런 동안(아군만, 기물을 팔아도 남는다).
-    // 적용 대상은 걸어 준 효과의 AppliesTo(병종 태그·유닛 이름). 바뀔 때마다 Version이 올라 유닛이 다시 계산한다
+    // 적용 대상은 걸어 준 쪽(효과·기물 능력)의 AppliesTo(병종 태그·유닛 이름). 바뀔 때마다 Version이 올라 유닛이 다시 계산한다
     public static class StatBook
     {
         private struct Entry
         {
-            public UnitEffect Source;
+            public IUnitFilter Source;
             public StatModifier Modifier;
         }
 
@@ -60,8 +79,8 @@ namespace GnorpWar
 
         public static int Version { get; private set; }
 
-        public static void AddForBattle(Team team, UnitEffect source, StatModifier modifier) => Add(Battle[(int)team], source, modifier);
-        public static void AddForRun(UnitEffect source, StatModifier modifier) => Add(Run, source, modifier);
+        public static void AddForBattle(Team team, IUnitFilter source, StatModifier modifier) => Add(Battle[(int)team], source, modifier);
+        public static void AddForRun(IUnitFilter source, StatModifier modifier) => Add(Run, source, modifier);
 
         public static void ClearBattle()
         {
@@ -77,7 +96,7 @@ namespace GnorpWar
         }
 
         // 같은 효과·스탯·방식은 한 줄로 합친다 — 발동마다 쌓는 효과(허수아비 등)로 목록이 길어지지 않게
-        private static void Add(List<Entry> entries, UnitEffect source, StatModifier modifier)
+        private static void Add(List<Entry> entries, IUnitFilter source, StatModifier modifier)
         {
             Version++;
             for (int i = 0; i < entries.Count; i++)

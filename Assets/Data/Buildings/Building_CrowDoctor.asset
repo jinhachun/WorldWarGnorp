@@ -24,3 +24,4 @@ MonoBehaviour:
   _actions: []
   _effects:
   - {fileID: 11400000, guid: 7e536ece2981a38499e08354c5dadebc, type: 2}
+  _passives: []

@@ -42,6 +42,8 @@ namespace GnorpWar
                 lines.Add(every + action.Describe(level));
             if (!string.IsNullOrEmpty(building.Description))
                 lines.Add(every + building.Description);
+            foreach (BuildingPassive passive in building.Passives)
+                lines.Add(passive.Describe(level));
             foreach (UnitEffect effect in building.Effects)
                 if (!string.IsNullOrEmpty(effect.Description))
                     lines.Add(effect.Description);

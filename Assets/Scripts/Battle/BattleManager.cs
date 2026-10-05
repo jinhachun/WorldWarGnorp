@@ -65,6 +65,7 @@ namespace GnorpWar
             _allyBoard.Load(RunState.Field);
             TeamEffects.Clear();
             StatBook.ClearBattle();
+            TowerBook.ClearBattle();
             UnitAliases.Clear();
             _allyBoard.Begin();
             _enemyBoard.Begin();

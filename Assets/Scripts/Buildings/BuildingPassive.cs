@@ -10,6 +10,8 @@ namespace GnorpWar
         public virtual void OnBattleStart(BoardRunner board, int slot, int level) { }
         // 인접 기물이 유닛을 소환한 직후(한 마리마다, 소환 이벤트 뒤)
         public virtual void OnNeighborSummoned(BoardRunner board, int slot, Unit unit) { }
+        // 내 타워(본진)의 화살이 적 유닛을 처치한 직후
+        public virtual void OnTowerKill(BoardRunner board, int slot, Unit victim) { }
         // 상점 — 「구매할 때마다,」(이 기물을 샀을 때, 합쳐졌으면 합쳐진 결과에서) · 리롤 · 골드를 얻을 때. 리롤·골드는 필드의 기물만(RunState)
         public virtual void OnBuy(OwnedBuilding self) { }
         public virtual void OnReroll(OwnedBuilding self) { }

@@ -30,6 +30,76 @@ namespace GnorpWar
         public string ValueText => Op == StatOp.Flat ? $"+{Value:0.##}" : Op == StatOp.Percent ? $"+{Value * 100f:0.##}%" : $"×{Value:0.##}";
     }
 
+    // 타워(본진) 스탯. 직렬화되므로 맨 뒤에만 추가할 것
+    public enum TowerStat { Attack, AttackSpeed, Range, ArrowCount, MaxHp }
+
+    [System.Serializable]
+    public struct TowerModifier
+    {
+        public TowerStat Stat;
+        public StatOp Op;
+        public float Value;
+
+        public TowerModifier(TowerStat stat, StatOp op, float value)
+        {
+            Stat = stat;
+            Op = op;
+            Value = value;
+        }
+
+        private static readonly string[] Names = { "공격력", "공격속도", "사거리", "한 번에 발사하는 화살 수", "체력" };
+
+        public string Name => Names[(int)Stat];
+        public string ValueText => new StatModifier(UnitStat.Attack, Op, Value).ValueText;
+    }
+
+    // 진영 단위 타워 스탯 변경 — StatBook과 같은 규칙(전투 동안 · 영구히 아군만), 대상 고르기는 없다(내 타워 전부)
+    public static class TowerBook
+    {
+        private static readonly List<TowerModifier>[] Battle = { new List<TowerModifier>(), new List<TowerModifier>() };
+        private static readonly List<TowerModifier> Run = new List<TowerModifier>();
+
+        public static int Version { get; private set; }
+
+        public static void AddForBattle(Team team, TowerModifier modifier)
+        {
+            Battle[(int)team].Add(modifier);
+            Version++;
+        }
+
+        public static void AddForRun(TowerModifier modifier)
+        {
+            Run.Add(modifier);
+            Version++;
+        }
+
+        public static void ClearBattle()
+        {
+            foreach (List<TowerModifier> list in Battle)
+                list.Clear();
+            Version++;
+        }
+
+        public static void ClearRun()
+        {
+            Run.Clear();
+            Version++;
+        }
+
+        public static float Compute(Team team, TowerStat stat, float baseValue)
+        {
+            StatSum sum = StatSum.Identity;
+            foreach (TowerModifier m in Battle[(int)team])
+                if (m.Stat == stat)
+                    sum.Add(m.Op, m.Value);
+            if (team == Team.Ally)
+                foreach (TowerModifier m in Run)
+                    if (m.Stat == stat)
+                        sum.Add(m.Op, m.Value);
+            return sum.Apply(baseValue);
+        }
+    }
+
     // 스탯 변경을 받을 유닛을 고른다 — 유닛 효과(UnitEffect)와 스탯을 거는 기물 능력이 쓴다
     public interface IUnitFilter
     {

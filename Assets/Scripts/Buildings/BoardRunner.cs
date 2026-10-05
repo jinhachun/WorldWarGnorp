@@ -151,6 +151,14 @@ namespace GnorpWar
             }
         }
 
+        public void NotifyTowerKill(Unit victim)
+        {
+            for (int i = 0; i < _slots.Length; i++)
+                if (_slots[i].Building != null)
+                    foreach (BuildingPassive passive in _slots[i].Building.Definition.Passives)
+                        passive.OnTowerKill(this, i, victim);
+        }
+
         private bool HasBuilding(int index) => index >= 0 && index < _slots.Length && _slots[index].Building != null;
 
         // 즉시 1회 발동 — 게이지는 그대로(징집 포고문). 쿨다운 없는 기물은 발동하지 않는다

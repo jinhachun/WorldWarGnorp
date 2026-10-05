@@ -622,9 +622,13 @@ namespace GnorpWar
             {
                 Die();
                 if (attacker is Unit killer && killer.IsAlive)
+                {
                     foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
                         if (e.Effect.AppliesFor(killer._team, killer._definition))
                             e.Effect.OnKill(killer, this, e.Stacks);
+                }
+                else if (attacker is Base tower)
+                    tower.NotifyKill(this);
                 return;
             }
 

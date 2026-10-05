@@ -49,7 +49,7 @@ namespace GnorpWar
             _icon.enabled = !empty;
             if (!empty)
                 _icon.sprite = building.Definition.Icon;
-            _level.text = empty ? "" : $"Lv{building.Level}";
+            _level.text = empty ? "" : building.Rarity.DisplayName();
             if (_gauge != null)
             {
                 // 바 전체(바탕 = 채움 층의 부모)를 전투 중에만 보인다
@@ -70,9 +70,9 @@ namespace GnorpWar
                 float cooldown = running != null ? running.Cooldown : building.Definition.Cooldown;
                 string body = BuildingTooltip.Describe(building.Definition, building.Level, cooldown);
                 if (!enemy && !BattleManager.Fighting)
-                    body += BuildingTooltip.LevelNote(building) + BuildingTooltip.Note($"팔면 {RunState.SellValue(building)}G");
+                    body += BuildingTooltip.UpgradeNote(building) + BuildingTooltip.Note($"팔면 {RunState.SellValue(building)}G");
                 OwnedBuilding[] board = enemy ? System.Array.ConvertAll(BoardRunner.For(Team.Enemy).Slots, s => s.Building) : RunState.Field;
-                BuildingTooltip.Show(this, BuildingTooltip.Title(building.Definition, enemy, building.Level), body,
+                BuildingTooltip.Show(this, BuildingTooltip.Title(building.Definition, enemy, building.Rarity), body,
                     BuildingTooltip.UnitInfo(building.Definition, board));
             }
         }

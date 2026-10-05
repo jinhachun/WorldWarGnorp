@@ -51,11 +51,9 @@ namespace GnorpWar
         // 효과가 아닌 상태 줄(경험치·판매가) — 회색, 맨 아래
         public static string Note(string text) => $"\n<color={NoteColor}>{text}</color>";
 
-        public static string Title(BuildingDefinition building, bool enemy, int level)
+        public static string Title(BuildingDefinition building, bool enemy, BuildingRarity rarity)
         {
-            string title = $"{building.DisplayName}  {building.Rarity.DisplayName()}";
-            if (level > 0)
-                title += $"  레벨 {level}";
+            string title = $"{building.DisplayName}  {rarity.DisplayName()}";
             return enemy ? $"<color={EnemyColor}>{title} (적)</color>" : title;
         }
 
@@ -110,11 +108,12 @@ namespace GnorpWar
         private static string SpeedWord(float speed)
             => speed < 1.5f ? "아주 느림" : speed < 2.5f ? "느림" : speed < 4.5f ? "보통" : speed < 6f ? "빠름" : "아주 빠름";
 
-        // 다음 레벨까지 — 같은 건물을 몇 개 더 사야 하나
-        public static string LevelNote(OwnedBuilding building)
+        // 다음 등급 — 같은 기물·같은 등급 하나와 합치면 오른다
+        public static string UpgradeNote(OwnedBuilding building)
         {
-            (int have, int need) = building.Progress();
-            return Note($"{need - have}개 더 사면 레벨 {building.Level + 1}");
+            if (!building.CanUpgrade)
+                return "";
+            return Note($"같은 등급 하나를 더 모으면 {(building.Rarity + 1).DisplayName()} 등급");
         }
 
         private void Awake()

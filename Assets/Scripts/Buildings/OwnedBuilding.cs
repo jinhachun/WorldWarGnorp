@@ -2,13 +2,14 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 가진 건물 한 채 — 건물 종류와 경험치만 담는 순수 데이터(나중에 비동기 상대 보드로 저장·전송할 단위).
-    // 같은 건물을 또 사면 경험치 +1. 레벨업에 필요한 경험치는 2부터 1씩 늘어난다(2 → 3 → 4 …), 최대 레벨 없음
+    // 가진 기물 한 채 — 기물 종류와 시작 등급에서 몇 번 올랐나만 담는 순수 데이터(나중에 비동기 상대 보드로 저장·전송할 단위).
+    // 같은 기물·같은 등급 둘이 모이면 위 등급 하나가 된다(RunState). 전설이 끝
     [System.Serializable]
     public class OwnedBuilding
     {
         [SerializeField] private BuildingDefinition _definition;
-        [SerializeField] private int _exp;
+        [Tooltip("시작 등급에서 오른 횟수 — 0 = 시작 등급")]
+        [SerializeField] private int _upgrades;
 
         public OwnedBuilding(BuildingDefinition definition)
         {
@@ -16,32 +17,16 @@ namespace GnorpWar
         }
 
         public BuildingDefinition Definition => _definition;
-        public int Exp => _exp;
-        public int Level => LevelFor(_exp);
+        public int Upgrades => _upgrades;
+        public BuildingRarity Rarity => (BuildingRarity)((int)_definition.Rarity + _upgrades);
+        // 생산 수 배율 — 등급업 효과를 기물마다 정하기 전까지의 임시 규칙
+        public int Level => _upgrades + 1;
+        // 이 한 채에 합쳐진 시작 등급 기물 수
+        public int Copies => 1 << _upgrades;
+        public bool CanUpgrade => Rarity < BuildingRarity.Legendary;
 
-        public void AddExp() => _exp++;
+        public void Upgrade() => _upgrades++;
 
         public static bool IsEmpty(OwnedBuilding building) => building == null || building._definition == null;
-
-        public static int LevelFor(int exp)
-        {
-            int level = 1;
-            for (int need = 2; exp >= need; need++)
-            {
-                exp -= need;
-                level++;
-            }
-            return level;
-        }
-
-        // 다음 레벨까지 (지금 칸에서 쌓은 경험치, 그 칸의 필요 경험치)
-        public (int have, int need) Progress()
-        {
-            int exp = _exp;
-            int need = 2;
-            for (; exp >= need; need++)
-                exp -= need;
-            return (exp, need);
-        }
     }
 }

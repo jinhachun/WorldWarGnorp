@@ -43,114 +43,114 @@ MonoBehaviour:
   _enemyRounds:
   - _field:
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: 7ec550d59573fcc4e98b257565304c75, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: 7ec550d59573fcc4e98b257565304c75, type: 2}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 5
+      _upgrades: 2
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 2
+      _upgrades: 1
   - _field:
     - _definition: {fileID: 11400000, guid: 28f49e51e1ee38c47975e335df4b4a07, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 5
+      _upgrades: 2
     - _definition: {fileID: 0}
-      _exp: 0
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: 5969da521a02c2b47b69c8afe63919d9, type: 2}
-      _exp: 0
+      _upgrades: 0
   - _field:
     - _definition: {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 5
+      _upgrades: 2
     - _definition: {fileID: 0}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 5
+      _upgrades: 2
     - _definition: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
-      _exp: 2
+      _upgrades: 1
   - _field:
     - _definition: {fileID: 11400000, guid: 5969da521a02c2b47b69c8afe63919d9, type: 2}
-      _exp: 2
+      _upgrades: 0
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
-      _exp: 9
+      _upgrades: 3
     - _definition: {fileID: 0}
-      _exp: 2
+      _upgrades: 1
     - _definition: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
-      _exp: 5
+      _upgrades: 2
     - _definition: {fileID: 11400000, guid: 13ac483dedb7b76499bc0201b92bfa7d, type: 2}
-      _exp: 2
+      _upgrades: 1
   _rampStartSeconds: 60
   _rampStepSeconds: 10
   _rampPerStep: 1

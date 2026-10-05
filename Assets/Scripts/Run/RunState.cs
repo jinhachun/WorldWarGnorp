@@ -109,14 +109,36 @@ namespace GnorpWar
             return count;
         }
 
-        // 이미 가진 건물(필드·보관함)이면 경험치 +1 — 칸이 필요 없다
-        public static OwnedBuilding FindOwned(BuildingDefinition definition)
+        // 가진 것(필드·보관함) 중 같은 기물·같은 등급이면서 더 오를 수 있는 것 — 새로 산 시작 등급 기물이 여기에 합쳐진다
+        public static OwnedBuilding FindMergeTarget(BuildingDefinition definition, int upgrades, OwnedBuilding exclude = null)
         {
             foreach (OwnedBuilding[] row in new[] { Field, Storage })
                 foreach (OwnedBuilding b in row)
-                    if (!OwnedBuilding.IsEmpty(b) && b.Definition == definition)
+                    if (!OwnedBuilding.IsEmpty(b) && b != exclude && b.Definition == definition && b.Upgrades == upgrades && b.CanUpgrade)
                         return b;
             return null;
+        }
+
+        // 합쳐서 오른 결과가 또 같은 등급 짝을 만나면 계속 합친다 — 결과는 먼저 있던 짝의 칸에 남는다(플레이어가 놓은 자리)
+        private static void MergeInto(OwnedBuilding target)
+        {
+            target.Upgrade();
+            OwnedBuilding pair = FindMergeTarget(target.Definition, target.Upgrades, target);
+            while (pair != null && target.CanUpgrade)
+            {
+                Remove(target);
+                pair.Upgrade();
+                target = pair;
+                pair = FindMergeTarget(target.Definition, target.Upgrades, target);
+            }
+        }
+
+        private static void Remove(OwnedBuilding building)
+        {
+            foreach (OwnedBuilding[] row in new[] { Field, Storage })
+                for (int i = 0; i < row.Length; i++)
+                    if (row[i] == building)
+                        row[i] = null;
         }
 
         public static bool CanBuy(int offer)
@@ -124,7 +146,7 @@ namespace GnorpWar
             BuildingDefinition definition = Offers[offer];
             if (definition == null || Gold < PriceOf(definition))
                 return false;
-            return FindOwned(definition) != null || FirstEmpty(Field) >= 0 || FirstEmpty(Storage) >= 0;
+            return FindMergeTarget(definition, 0) != null || FirstEmpty(Field) >= 0 || FirstEmpty(Storage) >= 0;
         }
 
         public static void Buy(int offer)
@@ -135,10 +157,10 @@ namespace GnorpWar
             Gold -= PriceOf(definition);
             Offers[offer] = null;
 
-            OwnedBuilding owned = FindOwned(definition);
-            if (owned != null)
+            OwnedBuilding target = FindMergeTarget(definition, 0);
+            if (target != null)
             {
-                owned.AddExp();
+                MergeInto(target);
                 return;
             }
             int slot = FirstEmpty(Field);
@@ -148,13 +170,13 @@ namespace GnorpWar
                 Storage[FirstEmpty(Storage)] = new OwnedBuilding(definition);
         }
 
-        // 진열을 끌어다 칸에 놓아 산다 — 가진 건물이면 어느 칸에 놓든 경험치 +1, 아니면 빈 칸에만
+        // 진열을 끌어다 칸에 놓아 산다 — 합쳐질 짝이 있으면 어느 칸에 놓든 합쳐지고, 아니면 빈 칸에만
         public static bool CanBuyInto(int offer, bool storage, int index)
         {
             BuildingDefinition definition = Offers[offer];
             if (definition == null || Gold < PriceOf(definition))
                 return false;
-            return FindOwned(definition) != null || OwnedBuilding.IsEmpty((storage ? Storage : Field)[index]);
+            return FindMergeTarget(definition, 0) != null || OwnedBuilding.IsEmpty((storage ? Storage : Field)[index]);
         }
 
         public static void BuyInto(int offer, bool storage, int index)
@@ -165,16 +187,16 @@ namespace GnorpWar
             Gold -= PriceOf(definition);
             Offers[offer] = null;
 
-            OwnedBuilding owned = FindOwned(definition);
-            if (owned != null)
-                owned.AddExp();
+            OwnedBuilding target = FindMergeTarget(definition, 0);
+            if (target != null)
+                MergeInto(target);
             else
                 (storage ? Storage : Field)[index] = new OwnedBuilding(definition);
         }
 
         public static int SellValue(OwnedBuilding building)
         {
-            return Mathf.Max(1, Mathf.FloorToInt(PriceOf(building.Definition) * (building.Exp + 1) * _config.SellRatio));
+            return Mathf.Max(1, Mathf.FloorToInt(PriceOf(building.Definition) * building.Copies * _config.SellRatio));
         }
 
         public static void Sell(bool storage, int index)

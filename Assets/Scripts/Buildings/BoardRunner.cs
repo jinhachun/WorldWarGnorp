@@ -105,19 +105,30 @@ namespace GnorpWar
             int level = building.Level;
 
             if (definition.Unit != null)
-            {
-                Unit prefab = definition.Unit.PrefabFor(_team);
-                Transform point = prefab.GetComponent<BoxCollider2D>().size.x > LargeUnitWidth ? _largeSpawnPoint : _spawnPoint;
-                int count = definition.UnitCount * level + BattleManager.ExtraUnits;
-                for (int i = 0; i < count; i++)
-                    Unit.Spawn(prefab, point.position).NotifyProduced();
-            }
+                Summon(definition.Unit, definition.UnitCount * level + BattleManager.ExtraUnits, index);
             foreach (BuildingAction action in definition.Actions)
                 action.Execute(this, index, level);
             foreach (UnitEffect effect in definition.Effects)
                 TeamEffects.AddStack(_team, effect);
 
             Triggered?.Invoke(index);
+        }
+
+        // 이 진영의 모든 소환이 거치는 곳 — 기획서 §5 처리 순서: ① 추가 소환 ② 변환. 그다음 한 마리씩 소환 이벤트.
+        // sourceSlot = 소환한 기물의 칸(기물이 아니면 -1) · at = 소환 자리(없으면 성문 — 넓은 유닛은 큰 유닛 소환 지점)
+        public void Summon(UnitDefinition unit, int count, int sourceSlot, Vector2? at = null)
+        {
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesTo(unit))
+                    count += e.Effect.ExtraSummons(unit, count, sourceSlot, e.Stacks);
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesTo(unit))
+                    unit = e.Effect.ConvertSummon(unit, sourceSlot, e.Stacks);
+
+            Unit prefab = unit.PrefabFor(_team);
+            Vector2 point = at ?? (Vector2)(prefab.GetComponent<BoxCollider2D>().size.x > LargeUnitWidth ? _largeSpawnPoint : _spawnPoint).position;
+            for (int i = 0; i < count; i++)
+                Unit.Spawn(prefab, point).NotifySummoned(sourceSlot);
         }
     }
 }

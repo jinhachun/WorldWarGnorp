@@ -7,14 +7,24 @@ namespace GnorpWar
     // stacks = 켜 준 건물이 이번 전투에서 발동한 횟수(켜진 직후 0) — 쓰는 효과만 쓴다
     public abstract class UnitEffect : ScriptableObject
     {
-        [Tooltip("이 분류의 유닛에게만 — 비우면 전부")]
+        [Tooltip("이 병종 태그의 유닛에게 — 유닛 칸과 함께 비우면 전부")]
         [SerializeField] private UnitCategory[] _categories = new UnitCategory[0];
+        [Tooltip("이 유닛에게(기획서가 유닛 이름을 지칭할 때) — 병종 칸과 함께 비우면 전부")]
+        [SerializeField] private UnitDefinition[] _units = new UnitDefinition[0];
         [TextArea]
         [SerializeField] private string _description = "";
 
         public string Description => _description;
 
-        public bool AppliesTo(UnitDefinition unit) => _categories.Length == 0 || System.Array.IndexOf(_categories, unit.Category) >= 0;
+        public bool AppliesTo(UnitDefinition unit)
+            => (_categories.Length == 0 && _units.Length == 0)
+               || System.Array.IndexOf(_categories, unit.Category) >= 0
+               || System.Array.IndexOf(_units, unit) >= 0;
+
+        // 소환 처리 ① — 이 유닛을 count기 소환할 때 더 소환할 수(BoardRunner.Summon). sourceSlot = 소환한 기물 칸(아니면 -1)
+        public virtual int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks) => 0;
+        // 소환 처리 ② — 대신 소환할 유닛(그대로면 unit)
+        public virtual UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks) => unit;
 
         public virtual float MoveSpeedScale(int stacks) => 1f;
         // 사거리·포물선 높이 배율
@@ -29,7 +39,7 @@ namespace GnorpWar
         public virtual bool OnHit(Unit unit, Unit attacker, Vector2 hitDirection, float push, int stacks) => false;
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
-        // 건물이 이 유닛을 생산한 직후 (호위 등으로 따라 나온 유닛에는 안 불린다)
-        public virtual void OnProduced(Unit unit, int stacks) { }
+        // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)
+        public virtual void OnSummoned(Unit unit, int sourceSlot, int stacks) { }
     }
 }

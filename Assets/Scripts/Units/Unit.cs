@@ -212,12 +212,16 @@ namespace GnorpWar
         // 전투 공격력 가속
         public float DamageScale => BattleManager.DamageMultiplier;
 
-        // 건물이 이 유닛을 생산했다 — 생산 훅(호위 등)
-        public void NotifyProduced()
+        // 소환한 기물의 칸(기물이 아니면 -1) — 군기처럼 "인접 기물이 소환한 유닛"을 가리는 효과가 읽는다
+        public int SourceSlot { get; private set; }
+
+        // 소환됐다(BoardRunner.Summon) — 소환 이벤트
+        public void NotifySummoned(int sourceSlot)
         {
+            SourceSlot = sourceSlot;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesTo(_definition))
-                    e.Effect.OnProduced(this, e.Stacks);
+                    e.Effect.OnSummoned(this, sourceSlot, e.Stacks);
         }
         private float Feet => _rb.position.y - _halfHeight;
         private float Top => _rb.position.y + _halfHeight;

@@ -44,13 +44,13 @@ BossSpawnPoint   ← (Transform만) 적의 넓은 유닛(공룡·코끼리)이 �
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
  ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (맨 윗줄 좌·우, 각 폭 900) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준)
- ├─ AllyBoardView  ← BoardView(아군 필드, **전투 중에만**) → SlotTemplate [꺼짐] ← Image · Button · SlotView → Icon(80×80, 건물 에셋의 Icon) · Level · Gauge/Fill(Filled, 전투 중에만 보임)   (칸 x 110부터 130px 간격 → 오른쪽, y -130)
+ ├─ AllyBoardView  ← BoardView(아군 필드, **전투 중에만**) → SlotTemplate [꺼짐] ← Image · Button · SlotView → RarityFrame(`UI_SlotBorder` 120×120, 지금 등급 색) · Icon(80×80, 건물 에셋의 Icon) · Level · Gauge/Fill(Filled, 전투 중에만 보임)   (칸 x 110부터 130px 간격 → 오른쪽, y -130)
  ├─ EnemyBoardView ← BoardView(적 필드)   → SlotTemplate [꺼짐]   (오른쪽 기준 x -630부터 130px → 오른쪽. 칸 0이 왼쪽)
  ├─ RampLabel      ← Text · RampLabel   (위 가운데 y -110, 전투 중에만: 시간 + 가속(공격력·생산 수), 글자 30 · 폭 540)
  ├─ SpeedButton    ← Image · Button · SpeedButton → Label   (위 가운데 y -190, 전투 중에만 — BattleManager가 켜고 끈다. ×1 → ×2 → ×4)
  ├─ ShopPanel      ← Image(반투명 전체) · ShopPanel   (상점 단계에만 켜짐)
  │   ├─ Status   ← Text
- │   ├─ OfferTemplate [꺼짐] ← Image · Button · OfferCard → Icon · Price   (x 460부터 250px 간격, y -440, 진열 수만큼 복제)
+ │   ├─ OfferTemplate [꺼짐] ← Image · Button · OfferCard → RarityFrame(`UI_CardBorder` 230×260, 시작 등급 색) · Icon · Price   (x 460부터 250px 간격, y -440, 진열 수만큼 복제)
  │   ├─ FieldLabel · FieldView ← BoardView(아군 필드) → SlotTemplate [꺼짐]   (가운데 x 700부터, y -680)
  │   ├─ StorageLabel · StorageView ← BoardView(보관함) → SlotTemplate [꺼짐]   (x 700부터, y -860)
  │   ├─ RerollButton · SellButton(+ SellDropZone: 칸을 끌어 놓으면 판매) · StartButton   ← Image · Button → Label   (y -1010)

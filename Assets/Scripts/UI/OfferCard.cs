@@ -9,6 +9,8 @@ namespace GnorpWar
     public class OfferCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
     {
         [SerializeField] private Image _icon;
+        [Tooltip("등급 색 테두리(시작 등급) — 빈 칸이면 숨김")]
+        [SerializeField] private Image _rarityFrame;
         [SerializeField] private Text _price;
         [SerializeField] private Button _button;
 
@@ -34,8 +36,12 @@ namespace GnorpWar
         {
             bool empty = building == null;
             _icon.enabled = !empty;
+            _rarityFrame.enabled = !empty;
             if (!empty)
+            {
                 _icon.sprite = building.Icon;
+                _rarityFrame.color = building.Rarity.FrameColor();
+            }
             _price.text = empty ? "" : $"{RunState.PriceOf(building)}G";
             _button.interactable = canBuy;
 

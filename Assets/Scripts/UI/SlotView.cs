@@ -13,6 +13,8 @@ namespace GnorpWar
         private const float DraggedAlpha = 0.35f;
 
         [SerializeField] private Image _frame;
+        [Tooltip("등급 색 테두리(지금 등급) — 빈 칸이면 숨김")]
+        [SerializeField] private Image _rarityFrame;
         [SerializeField] private Image _icon;
         [SerializeField] private Text _level;
         [Tooltip("전투 줄에만 — 다음 생산까지 채워지는 층. Image Type이 Filled여야 fillAmount가 먹는다. 상점 칸은 비워 둔다")]
@@ -50,6 +52,9 @@ namespace GnorpWar
             if (!empty)
                 _icon.sprite = building.Definition.Icon;
             _level.text = empty ? "" : building.Rarity.DisplayName();
+            _rarityFrame.enabled = !empty;
+            if (!empty)
+                _rarityFrame.color = building.Rarity.FrameColor();
             if (_gauge != null)
             {
                 // 바 전체(바탕 = 채움 층의 부모)를 전투 중에만 보인다

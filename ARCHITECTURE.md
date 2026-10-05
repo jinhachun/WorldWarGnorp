@@ -119,7 +119,9 @@
 - 🔴 **유닛 키는 가변이다 — `BoxCollider2D` 높이에서 읽는다**(`Unit._halfHeight`). 머리 위 칸·발밑 칸·소환 공간·찌그러짐 발 고정·**점프 높이(= 키 + 1, 유닛 정의에 값 없음)**가 전부 이 값 기준.
   키 큰 유닛(기사)의 그림은 `Visual` 아래 칸별 자식(`Horse`·`Rider`)으로 두고 `Visual` 자체엔 SpriteRenderer를 두지 않는다. 층 교환은 키가 같을 때만.
 - 🔴 **효과는 진영 단위로 켜진다**(`TeamEffects.For(team)`) — 유닛 정의(`Unit_*.asset`)는 양 진영이 같이 쓰므로 효과를 정의에 달지 말 것.
-- 🔴 **유닛 공격 피해는 `Unit.DamageScale`을 곱한다**(전투 공격력 가속). 새 공격을 만들 때 빠뜨리면 가속이 안 먹어 판이 안 끝날 수 있다. 본진 화살은 가속 대상이 아니다.
+- 🔴 **유닛 공격 피해는 `Unit.AttackDamage × Unit.DamageScale`이다**(스탯 계산 × 전투 공격력 가속). 새 공격을 만들 때 빠뜨리면 기물 강화·가속이 안 먹어 판이 안 끝날 수 있다. 본진 화살은 가속 대상이 아니다.
+- 🔴 **유닛 스탯(공격력·최대 체력·이동속도·공격속도)은 `_definition`에서 바로 읽지 말고 `Unit`의 계산값(`AttackDamage`·`MaxHp`·`MoveSpeed`·`AttackInterval`)을 읽는다.** 계산 = 기획서 §6 `(기본 + 고정 합) × (1 + % 합) × 곱들`(`StatSum`).
+  변경을 거는 곳은 셋: 진영 단위 전투 동안 `StatBook.AddForBattle` · 영구히(아군만, 런 동안) `StatBook.AddForRun` · 한 유닛만 `Unit.AddModifier`. 대상은 건 효과의 `AppliesTo`. 유닛은 `StatBook.Version`이 바뀔 때만 다시 계산한다. 최대 체력이 바뀌면 지금 체력도 같은 비율로.
 - **피해 없이 밀기는 `Unit.Shove`**. `TakeDamage(0, …)`로 밀면 파편·번쩍·경직 규칙까지 따라온다.
 - **화염(`AttackType.Flame`)은 무기 자리(`Visual/Weapon`)를 입으로 쓴다** — 그래서 화염 유닛은 찌르기 동작을 하지 않는다(입이 움직이면 불이 따라 흔들림).
 - **`TakeDamage`의 `attacker`**는 근접으로 때린 유닛만 넘긴다(투사체는 null). Shield 반사처럼 "누가 때렸나"가 필요한 효과만 쓴다.

@@ -26,9 +26,6 @@ namespace GnorpWar
         // 소환 처리 ② — 대신 소환할 유닛(그대로면 unit)
         public virtual UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks) => unit;
 
-        public virtual float MoveSpeedScale(int stacks) => 1f;
-        // 사거리·포물선 높이 배율
-        public virtual float RangeScale(int stacks) => 1f;
         // 매 물리 스텝 — 경직 중이 아닐 때
         public virtual void Tick(Unit unit, int stacks) { }
         // 적 머리 위에 새로 내려앉은 순간

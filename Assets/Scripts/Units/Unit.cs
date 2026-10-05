@@ -95,11 +95,55 @@ namespace GnorpWar
         private float _slamTimer;
         private bool _slamJumping;
         private bool _slamLeftGround;
+        // 이 유닛에게만 걸린 스탯 변경(꼭두각시 왕·군기 등) · 계산해 둔 스탯(StatBook.Version이나 내 변경이 바뀔 때만 다시)
+        private readonly List<StatModifier> _ownModifiers = new List<StatModifier>();
+        private readonly float[] _stats = new float[4];
+        private int _statsVersion = -1;
+        private bool _ownModifiersChanged;
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
-        public bool IsDamaged => IsAlive && _hp < _definition.MaxHp;
+        public bool IsDamaged => IsAlive && _hp < MaxHp;
         public UnitDefinition Definition => _definition;
+        public float MaxHp => Stat(UnitStat.MaxHp);
+        public float AttackDamage => Stat(UnitStat.Attack);
+
+        public void AddModifier(StatModifier modifier)
+        {
+            _ownModifiers.Add(modifier);
+            _ownModifiersChanged = true;
+        }
+
+        private float Stat(UnitStat stat)
+        {
+            if (_statsVersion != StatBook.Version || _ownModifiersChanged)
+                RefreshStats();
+            return _stats[(int)stat];
+        }
+
+        // 최대 체력이 바뀌면 지금 체력도 같은 비율로 — 가득 찬 유닛은 계속 가득
+        private void RefreshStats()
+        {
+            float oldMaxHp = _stats[(int)UnitStat.MaxHp];
+            _stats[(int)UnitStat.Attack] = Compute(UnitStat.Attack, _definition.AttackDamage);
+            _stats[(int)UnitStat.MaxHp] = Compute(UnitStat.MaxHp, _definition.MaxHp);
+            _stats[(int)UnitStat.MoveSpeed] = Compute(UnitStat.MoveSpeed, _definition.MoveSpeed);
+            _stats[(int)UnitStat.AttackSpeed] = Compute(UnitStat.AttackSpeed, 1f);
+            _statsVersion = StatBook.Version;
+            _ownModifiersChanged = false;
+            if (oldMaxHp > 0f && IsAlive)
+                _hp *= _stats[(int)UnitStat.MaxHp] / oldMaxHp;
+        }
+
+        private float Compute(UnitStat stat, float baseValue)
+        {
+            StatSum sum = StatSum.Identity;
+            StatBook.Accumulate(_team, _definition, stat, ref sum);
+            foreach (StatModifier m in _ownModifiers)
+                if (m.Stat == stat)
+                    sum.Add(m.Op, m.Value);
+            return sum.Apply(baseValue);
+        }
 
         // 소환 — 소환 지점 칸이 (적이든 아군이든) 차 있으면 한 층씩 올라가 비어 있는 가장 낮은 층에 만든다.
         // 그냥 겹쳐 만들면 1층에 끼인 채 쌓인다
@@ -185,30 +229,10 @@ namespace GnorpWar
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정
         private bool IsStopped => _advanceSpeed < MoveSpeed * 0.5f;
-        private float MoveSpeed
-        {
-            get
-            {
-                float scale = 1f;
-                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                    if (e.Effect.AppliesTo(_definition))
-                        scale *= e.Effect.MoveSpeedScale(e.Stacks);
-                return _definition.MoveSpeed * scale;
-            }
-        }
-        // 사거리·포물선 높이 배율
-        private float LongRangeScale
-        {
-            get
-            {
-                float scale = 1f;
-                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                    if (e.Effect.AppliesTo(_definition))
-                        scale *= e.Effect.RangeScale(e.Stacks);
-                return scale;
-            }
-        }
-        private float AttackRange => _definition.AttackRange * LongRangeScale;
+        private float MoveSpeed => Stat(UnitStat.MoveSpeed);
+        // 공격속도 +10% = 간격이 1.1로 나뉜다
+        private float AttackInterval => _definition.AttackInterval / Stat(UnitStat.AttackSpeed);
+        private float AttackRange => _definition.AttackRange;
         // 전투 공격력 가속
         public float DamageScale => BattleManager.DamageMultiplier;
 
@@ -291,7 +315,11 @@ namespace GnorpWar
         // 한 생애의 시작 — 처음 만들 때도, 풀에서 다시 꺼낼 때도(Pooled) 여기서 지난 생애의 흔적을 모두 지운다
         private void OnEnable()
         {
-            _hp = _definition.MaxHp;
+            _ownModifiers.Clear();
+            _stats[(int)UnitStat.MaxHp] = 0f;   // 지난 생애의 최대 체력으로 비율을 맞추지 않게
+            _hp = 0f;
+            RefreshStats();
+            _hp = MaxHp;
             _lastX = transform.position.x;
             _advanceSpeed = 0f;
             _attackCooldown = 0f;
@@ -478,7 +506,7 @@ namespace GnorpWar
                         if (e.Effect.AppliesTo(_definition))
                             e.Effect.OnHealed(this, patient, e.Stacks);
                     StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
-                    _attackCooldown = _definition.AttackInterval;
+                    _attackCooldown = AttackInterval;
                 }
                 if (enemyNear || patient != null)
                 {
@@ -515,14 +543,14 @@ namespace GnorpWar
                     {
                         // 달려와서 치는 첫 타격은 돌격 — 피해·밀치기에 배율
                         bool charge = _runTime >= _definition.ChargeReadySeconds;
-                        float damage = _definition.AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f) * DamageScale;
+                        float damage = AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f) * DamageScale;
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
                         target.TakeDamage(damage, hitDirection, push, this);
                     }
                     _runTime = 0f;
                     if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
                         StartThrust(hitDirection);
-                    _attackCooldown = _definition.AttackInterval;
+                    _attackCooldown = AttackInterval;
                 }
                 return;
             }
@@ -569,7 +597,7 @@ namespace GnorpWar
                     return;
 
             // 냥코식 큰 넉백 — 생명당 한 번, 맞은 방향과 상관없이 후방으로 튕겨 오른다
-            if (!_bigKnockbackUsed && _hp <= _definition.MaxHp * _definition.BigKnockbackAt)
+            if (!_bigKnockbackUsed && _hp <= MaxHp * _definition.BigKnockbackAt)
             {
                 _bigKnockbackUsed = true;
                 _knockbackTimer = BigKnockbackDuration;
@@ -724,8 +752,8 @@ namespace GnorpWar
         public void FireProjectile(Vector2 targetPoint)
         {
             Projectile shot = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
-            shot.Launch(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, targetPoint,
-                        _definition.ProjectileArcHeight * LongRangeScale, _definition.ProjectileSplashRadius);
+            shot.Launch(_team, AttackDamage * DamageScale, _definition.PushPower, targetPoint,
+                        _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius);
         }
 
         public void ThrowHeal(Unit patient)
@@ -745,7 +773,7 @@ namespace GnorpWar
                 if (!col.TryGetComponent(out Unit ally) || ally == this || ally == exclude || ally._team != _team || !ally.IsAlive)
                     continue;
 
-                float ratio = ally._hp / ally._definition.MaxHp;
+                float ratio = ally._hp / ally.MaxHp;
                 if (ratio < bestRatio)
                 {
                     bestRatio = ratio;
@@ -765,7 +793,7 @@ namespace GnorpWar
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                    damageable.TakeDamage(_definition.AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower, null);
+                    damageable.TakeDamage(AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower, null);
             }
             if (FxDirector.Instance != null)
                 FxDirector.Instance.Flame(mouth, Forward, length);
@@ -784,7 +812,7 @@ namespace GnorpWar
                     continue;
                 Vector2 toTarget = point - _rb.position;
                 Vector2 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
-                damageable.TakeDamage(_definition.AttackDamage * DamageScale, direction, _definition.PushPower, this);
+                damageable.TakeDamage(AttackDamage * DamageScale, direction, _definition.PushPower, this);
             }
         }
 
@@ -822,7 +850,7 @@ namespace GnorpWar
             if (!IsAlive)
                 return;
             float before = _hp;
-            _hp = Mathf.Min(_hp + amount, _definition.MaxHp);
+            _hp = Mathf.Min(_hp + amount, MaxHp);
             DamageNumbers.Heal(this, new Vector2(_rb.position.x, Top), _hp - before);
         }
 

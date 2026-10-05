@@ -64,6 +64,7 @@ namespace GnorpWar
             _shopPanel.SetActive(false);
             _allyBoard.Load(RunState.Field);
             TeamEffects.Clear();
+            StatBook.ClearBattle();
             _allyBoard.Begin();
             _enemyBoard.Begin();
             _battleStart = Time.time;

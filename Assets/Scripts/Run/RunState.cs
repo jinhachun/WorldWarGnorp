@@ -43,6 +43,7 @@ namespace GnorpWar
             Storage = new OwnedBuilding[config.StorageSlots];
             Offers = new BuildingDefinition[config.OfferCount];
             _shopEnteredRound = -1;
+            StatBook.ClearRun();
         }
 
         // 상점 단계에 들어설 때 — 골드 지급 + 무료로 새 진열 (라운드당 한 번)

@@ -49,7 +49,7 @@ namespace GnorpWar
                 return;
 
             Projectile shot = Pooled.Get(_definition.Projectile, _muzzle.position, Quaternion.identity);
-            shot.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, 0f);
+            shot.Launch(_team, _definition.AttackDamage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, 0f, this);
             _attackCooldown = _definition.AttackInterval;
         }
 
@@ -74,7 +74,7 @@ namespace GnorpWar
             return best < float.MaxValue;
         }
 
-        public void TakeDamage(float amount, Vector2 hitDirection, float push, Unit attacker)
+        public void TakeDamage(float amount, Vector2 hitDirection, float push, IDamageable attacker)
         {
             if (!IsAlive)
                 return;

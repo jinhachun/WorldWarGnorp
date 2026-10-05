@@ -20,6 +20,9 @@ namespace GnorpWar
         // 0보다 크면 회복 투사체 — 적·던진 본인·체력이 가득 찬 아군은 통과하고, 처음 닿은 다친 아군을 회복
         private float _heal;
         private Unit _owner;
+        // 쏜 쪽(처치자 판정) — 유닛은 풀에서 다시 쓰이므로 쏠 때의 생애 번호가 맞을 때만 그 유닛으로 친다
+        private IDamageable _shooter;
+        private int _shooterLife;
         private bool _spent;
         private float _lifeTimer;
         private readonly System.Collections.Generic.List<Collider2D> _splashHits = new System.Collections.Generic.List<Collider2D>();
@@ -35,6 +38,7 @@ namespace GnorpWar
             _spent = false;
             _heal = 0f;
             _owner = null;
+            _shooter = null;
             _splashRadius = 0f;
             _lifeTimer = Lifetime;
             _rb.linearVelocity = Vector2.zero;
@@ -43,12 +47,14 @@ namespace GnorpWar
 
         // 꼭짓점 높이를 고정(발사 지점·목표 중 높은 쪽 + arcHeight)하고 거기서 속도를 역산한다.
         // 수평 속도를 고정하면 가깝거나 같은 높이의 적에게는 거의 직선이 되므로 쓰지 않는다
-        public void Launch(Team team, float damage, float push, Vector2 targetPoint, float arcHeight, float splashRadius)
+        public void Launch(Team team, float damage, float push, Vector2 targetPoint, float arcHeight, float splashRadius, IDamageable shooter)
         {
             _team = team;
             _damage = damage;
             _push = push;
             _splashRadius = splashRadius;
+            _shooter = shooter;
+            _shooterLife = shooter is Unit unit ? unit.Life : 0;
 
             Vector2 origin = _rb.position;
             float gravity = -Physics2D.gravity.y * _rb.gravityScale;
@@ -57,6 +63,9 @@ namespace GnorpWar
             _rb.linearVelocity = new Vector2((targetPoint.x - origin.x) / FlightTime(targetPoint, arcHeight), riseSpeed);
             _lifeTimer = Lifetime;
         }
+
+        // 쏜 유닛이 그사이 죽어 풀에서 다른 유닛으로 다시 쓰였으면 처치자 없음
+        private IDamageable Shooter => _shooter is Unit unit && unit.Life != _shooterLife ? null : _shooter;
 
         private float FlightTime(Vector2 targetPoint, float arcHeight)
         {
@@ -70,7 +79,7 @@ namespace GnorpWar
             Team team = owner.Team;
             _owner = owner;
             _heal = amount;
-            Launch(team, 0f, 0f, targetPoint, arcHeight, 0f);
+            Launch(team, 0f, 0f, targetPoint, arcHeight, 0f, null);
         }
 
         private void FixedUpdate()
@@ -113,7 +122,7 @@ namespace GnorpWar
                 if (damageable.Team == _team || !damageable.IsAlive)
                     return;
                 if (_splashRadius <= 0f)
-                    damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, null);
+                    damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, Shooter);
             }
 
             if (_splashRadius > 0f)
@@ -134,7 +143,7 @@ namespace GnorpWar
 
                 Vector2 away = (Vector2)col.bounds.center - center;
                 Vector2 direction = (away.normalized + Vector2.up * SplashLiftBias).normalized;
-                damageable.TakeDamage(_damage, direction, _push, null);
+                damageable.TakeDamage(_damage, direction, _push, Shooter);
             }
         }
     }

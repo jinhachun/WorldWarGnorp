@@ -33,7 +33,9 @@ namespace GnorpWar
         // 원거리 공격 한 발을 쏜 직후
         public virtual void OnRangedShot(Unit unit, IDamageable target, int stacks) { }
         // 맞은 직후(살아 있을 때). true면 이번 피격의 밀림·경직을 받지 않는다
-        public virtual bool OnHit(Unit unit, Unit attacker, Vector2 hitDirection, float push, int stacks) => false;
+        public virtual bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks) => false;
+        // 이 유닛이 적 유닛을 처치한 직후(근접·투사체·화염 모두)
+        public virtual void OnKill(Unit killer, Unit victim, int stacks) { }
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
         // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)

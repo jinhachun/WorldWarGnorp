@@ -107,6 +107,8 @@ namespace GnorpWar
         public UnitDefinition Definition => _definition;
         public float MaxHp => Stat(UnitStat.MaxHp);
         public float AttackDamage => Stat(UnitStat.Attack);
+        // 생애 번호 — 풀에서 다시 꺼낼 때마다 오른다. 날아가는 투사체가 쏜 유닛이 아직 그 생애인지 가린다
+        public int Life { get; private set; }
 
         public void AddModifier(StatModifier modifier)
         {
@@ -315,6 +317,7 @@ namespace GnorpWar
         // 한 생애의 시작 — 처음 만들 때도, 풀에서 다시 꺼낼 때도(Pooled) 여기서 지난 생애의 흔적을 모두 지운다
         private void OnEnable()
         {
+            Life++;
             _ownModifiers.Clear();
             _stats[(int)UnitStat.MaxHp] = 0f;   // 지난 생애의 최대 체력으로 비율을 맞추지 않게
             _hp = 0f;
@@ -572,7 +575,7 @@ namespace GnorpWar
             _rb.linearVelocity = velocity;
         }
 
-        public void TakeDamage(float amount, Vector2 hitDirection, float push, Unit attacker)
+        public void TakeDamage(float amount, Vector2 hitDirection, float push, IDamageable attacker)
         {
             if (!IsAlive)
                 return;
@@ -585,6 +588,10 @@ namespace GnorpWar
             if (!IsAlive)
             {
                 Die();
+                if (attacker is Unit killer && killer.IsAlive)
+                    foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
+                        if (e.Effect.AppliesTo(killer._definition))
+                            e.Effect.OnKill(killer, this, e.Stacks);
                 return;
             }
 
@@ -753,7 +760,7 @@ namespace GnorpWar
         {
             Projectile shot = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
             shot.Launch(_team, AttackDamage * DamageScale, _definition.PushPower, targetPoint,
-                        _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius);
+                        _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
         }
 
         public void ThrowHeal(Unit patient)
@@ -793,7 +800,7 @@ namespace GnorpWar
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                    damageable.TakeDamage(AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower, null);
+                    damageable.TakeDamage(AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower, this);
             }
             if (FxDirector.Instance != null)
                 FxDirector.Instance.Flame(mouth, Forward, length);

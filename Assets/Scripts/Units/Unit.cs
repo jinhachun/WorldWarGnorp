@@ -114,6 +114,12 @@ namespace GnorpWar
 
         // 효과별 이 유닛의 다음 사용 시각(톱니거인의 주기 소환 등) — 생애마다 비운다
         private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
+        // 무적 남은 시간 · 사망 유예(충정의 맹세) 남은 시간과 그때의 처치자 · 생애에 한 번만 쓰는 효과
+        private const float DoomedHp = 0.001f;
+        private float _invulnerableTimer;
+        private float _doomTimer;
+        private IDamageable _doomKiller;
+        private readonly HashSet<UnitEffect> _usedOnce = new HashSet<UnitEffect>();
 
         // 처음 묻는 순간부터 firstDelay 뒤에 준비된다
         public bool EffectReady(UnitEffect effect, float firstDelay)
@@ -127,6 +133,40 @@ namespace GnorpWar
         }
 
         public void SetEffectCooldown(UnitEffect effect, float seconds) => _effectReadyAt[effect] = Time.fixedTime + seconds;
+
+        // 무적(공주의 축복·루니카·충정의 맹세) — 이미 무적이면 더 긴 쪽. 무적 중 공격력 보너스가 있어 스탯을 다시 계산한다
+        public bool IsInvulnerable => _invulnerableTimer > 0f;
+        public float Hp => _hp;
+
+        public void GrantInvulnerable(float seconds)
+        {
+            if (!IsAlive)
+                return;
+            if (!IsInvulnerable)
+                _ownModifiersChanged = true;
+            _invulnerableTimer = Mathf.Max(_invulnerableTimer, seconds);
+        }
+
+        // 이 생애에 이 효과를 처음 쓰나 — 쓰면 표시한다(루니카 첫 피격 · 충정의 맹세 첫 죽음)
+        public bool UseOnce(UnitEffect effect) => _usedOnce.Add(effect);
+
+        // 죽는다 — 처치 효과(처치자 진영) → 사망 효과(내 진영, 하마 교련장 등)
+        private void Perish(IDamageable attacker)
+        {
+            Vector2 at = _rb.position;
+            Die();
+            if (attacker is Unit killer && killer.IsAlive)
+            {
+                foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
+                    if (e.Effect.AppliesFor(killer._team, killer._definition))
+                        e.Effect.OnKill(killer, this, e.Stacks);
+            }
+            else if (attacker is Base tower)
+                tower.NotifyKill(this);
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    e.Effect.OnDied(this, at, e.Stacks);
+        }
 
         // 소모 — 죽음이 아니다(사망 효과 없음). 연기만 남기고 사라진다(조립 라인)
         public void Consume()
@@ -175,6 +215,11 @@ namespace GnorpWar
             foreach (StatModifier m in _ownModifiers)
                 if (m.Stat == stat)
                     sum.Add(m.Op, m.Value);
+            // 공주 루니카 — 무적 상태인 내 아군의 공격력 +%(합연산)
+            if (stat == UnitStat.Attack && IsInvulnerable)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        sum.Add(StatOp.Percent, e.Effect.InvulnerableAttackBonus);
             return sum.Apply(baseValue);
         }
 
@@ -352,6 +397,10 @@ namespace GnorpWar
             Life++;
             _ownModifiers.Clear();
             _effectReadyAt.Clear();
+            _invulnerableTimer = 0f;
+            _doomTimer = 0f;
+            _doomKiller = null;
+            _usedOnce.Clear();
             _stats[(int)UnitStat.MaxHp] = 0f;   // 지난 생애의 최대 체력으로 비율을 맞추지 않게
             _hp = 0f;
             RefreshStats();
@@ -404,6 +453,25 @@ namespace GnorpWar
         {
             if (!IsAlive)
                 return;
+
+            if (_invulnerableTimer > 0f)
+            {
+                _invulnerableTimer -= Time.fixedDeltaTime;
+                if (_invulnerableTimer <= 0f)
+                    _ownModifiersChanged = true;   // 무적 중 공격력 보너스가 끝난다
+            }
+            // 충정의 맹세 — 유예가 끝나면 쓰러진다
+            if (_doomTimer > 0f)
+            {
+                _doomTimer -= Time.fixedDeltaTime;
+                if (_doomTimer <= 0f)
+                {
+                    _hp = 0f;
+                    _invulnerableTimer = 0f;
+                    Perish(_doomKiller);
+                    return;
+                }
+            }
 
             _advanceSpeed = (_rb.position.x - _lastX) * Forward / Time.fixedDeltaTime;
             _lastX = _rb.position.x;
@@ -583,6 +651,9 @@ namespace GnorpWar
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
                         target.TakeDamage(damage * HighGroundScale(target), hitDirection, push, this);
                     }
+                    foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                        if (e.Effect.AppliesFor(_team, _definition))
+                            e.Effect.OnAttack(this, target, e.Stacks);
                     _runTime = 0f;
                     if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
                         StartThrust(hitDirection);
@@ -610,7 +681,8 @@ namespace GnorpWar
 
         public void TakeDamage(float amount, Vector2 hitDirection, float push, IDamageable attacker)
         {
-            if (!IsAlive)
+            // 무적 — 피해도 밀림도 없다
+            if (!IsAlive || IsInvulnerable)
                 return;
 
             _hp -= amount;
@@ -620,15 +692,17 @@ namespace GnorpWar
                 FxDirector.Instance.HitSpark(_rb.position - hitDirection * SparkSurfaceOffset, hitDirection, SparkColor);
             if (!IsAlive)
             {
-                Die();
-                if (attacker is Unit killer && killer.IsAlive)
-                {
-                    foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
-                        if (e.Effect.AppliesFor(killer._team, killer._definition))
-                            e.Effect.OnKill(killer, this, e.Stacks);
-                }
-                else if (attacker is Base tower)
-                    tower.NotifyKill(this);
+                // 충정의 맹세 — 처음 죽을 때 대신 N초 무적, 그 뒤 쓰러진다(처치자는 그때 정해진 대로)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.FirstDeathDelay > 0f && e.Effect.AppliesFor(_team, _definition) && UseOnce(e.Effect))
+                    {
+                        _hp = DoomedHp;
+                        _doomTimer = e.Effect.FirstDeathDelay;
+                        _doomKiller = attacker;
+                        GrantInvulnerable(e.Effect.FirstDeathDelay);
+                        return;
+                    }
+                Perish(attacker);
                 return;
             }
 
@@ -727,11 +801,14 @@ namespace GnorpWar
 
         private bool FindTarget(out IDamageable target, out Vector2 targetPoint)
         {
-            // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게
+            // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게.
+            // 우선 공격 병종(꼭두각시 왕: 지원병)이 사거리 안에 있으면 그중 가장 가까운 적
             Physics2D.OverlapCircle(_rb.position, AttackRange, _enemyFilter, _overlaps);
+            UnitCategory preferred = PreferredTarget();
             target = null;
             targetPoint = default;
             float best = float.MaxValue;
+            bool bestPreferred = false;
             foreach (Collider2D col in _overlaps)
             {
                 if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive)
@@ -739,17 +816,29 @@ namespace GnorpWar
                 if (IsUnderfoot(damageable))
                     continue;
 
+                bool isPreferred = preferred != null && damageable is Unit u && u._definition.Category == preferred;
+                if (bestPreferred && !isPreferred)
+                    continue;
                 Vector2 point = col.ClosestPoint(_rb.position);
                 float distance = (point - _rb.position).sqrMagnitude;
-                if (distance < best)
+                if (distance < best || (isPreferred && !bestPreferred))
                 {
                     best = distance;
+                    bestPreferred = isPreferred;
                     target = damageable;
                     targetPoint = point;
                     _foundCollider = col;
                 }
             }
             return target != null;
+        }
+
+        private UnitCategory PreferredTarget()
+        {
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.PreferredTargetCategory != null && e.Effect.AppliesFor(_team, _definition))
+                    return e.Effect.PreferredTargetCategory;
+            return null;
         }
 
         // 산이 넘쳐흐르게 — 적 머리 위에 선 근접은 발밑 적을 치느라 멈추지 않고 머리를 밟고 계속 걷는다.

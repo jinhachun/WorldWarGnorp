@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf43c37b79b18ce4aa2c41ee1770bdb3, type: 3}
+  m_Name: Effect_Dismount
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathSummonEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: df36a7226be228e439c2dd7daf651e98, type: 2}
+  _description: "\uB0B4 \uAE30\uC0AC\uAC00 \uC8FD\uC73C\uBA74, \uADF8 \uC790\uB9AC\uC5D0
+    \uBCD1\uC0AC 1\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _summon: {fileID: 11400000, guid: fe3a908e4882e4549bcd0274d35653cf, type: 2}
+  _count: 1

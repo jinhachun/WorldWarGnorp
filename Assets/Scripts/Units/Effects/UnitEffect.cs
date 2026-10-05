@@ -36,6 +36,16 @@ namespace GnorpWar
         public virtual bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks) => false;
         // 이 유닛이 적 유닛을 처치한 직후(근접·투사체·화염 모두)
         public virtual void OnKill(Unit killer, Unit victim, int stacks) { }
+        // 이 유닛이 죽은 직후(처치 효과 뒤) — at = 죽은 자리
+        public virtual void OnDied(Unit unit, Vector2 at, int stacks) { }
+        // 이 유닛이 공격한 직후(근접·사격·화염·휩쓸기 — 주 대상 하나)
+        public virtual void OnAttack(Unit attacker, IDamageable target, int stacks) { }
+        // 사거리 안에 이 병종의 적이 있으면 그쪽을 먼저 노린다(꼭두각시 왕)
+        public virtual UnitCategory PreferredTargetCategory => null;
+        // 무적 상태인 동안 공격력 +비율(합연산, 공주 루니카)
+        public virtual float InvulnerableAttackBonus => 0f;
+        // 처음 죽을 때 대신 이 시간만큼 무적, 그 뒤 쓰러진다(충정의 맹세). 0이면 없음
+        public virtual float FirstDeathDelay => 0f;
         // 관통 — 적용 대상 유닛의 화살 · 이 진영 타워의 화살이 적을 맞혀도 멈추지 않는다(관통탄 특허국)
         public virtual bool ProjectilesPierce => false;
         public virtual bool TowerArrowsPierce => false;

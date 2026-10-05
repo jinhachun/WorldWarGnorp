@@ -53,7 +53,7 @@ namespace GnorpWar
             if (_gauge != null)
             {
                 // 바 전체(바탕 = 채움 층의 부모)를 전투 중에만 보인다
-                _gauge.transform.parent.gameObject.SetActive(!empty && running != null);
+                _gauge.transform.parent.gameObject.SetActive(!empty && running != null && running.Cooldown > 0f);
                 _gauge.fillAmount = running == null ? 0f : Mathf.Clamp01(running.Timer / running.Cooldown);
             }
             Color frame = selected ? SelectedColor : _frameColor;

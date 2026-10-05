@@ -18,7 +18,7 @@ namespace GnorpWar
         [SerializeField] private BuildingNation _nation;
         [Tooltip("공용은 None")]
         [SerializeField] private BuildingFaction _faction;
-        [Tooltip("발동 간격(초) — 전투 시작 후 이 시간이 지나 첫 발동")]
+        [Tooltip("발동 간격(초) — 전투 시작 후 이 시간이 지나 첫 발동. 0 = 쿨다운 없음(발동하지 않고 늘 켜진 효과만)")]
         [SerializeField] private float _cooldown = 5f;
 
         [Header("생산")]

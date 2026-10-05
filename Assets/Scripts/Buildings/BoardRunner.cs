@@ -89,7 +89,8 @@ namespace GnorpWar
         private void TryFire(int index)
         {
             Slot slot = _slots[index];
-            if (slot.FiredThisFrame || slot.Timer < slot.Cooldown)
+            // 쿨다운 0 = 쿨다운 없는 기물(늘 켜진 효과만) — 발동하지 않는다
+            if (slot.Cooldown <= 0f || slot.FiredThisFrame || slot.Timer < slot.Cooldown)
                 return;
 
             // 넘친 시간은 다음 게이지로 이월된다 — 한 프레임에 한 번만 발동하므로 더 넘치면 다음 프레임에

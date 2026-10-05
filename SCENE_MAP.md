@@ -21,16 +21,16 @@
 ## Battle.unity
 
 ```
-CameraRig        ← CameraDrag   (좌우 드래그·관성, 맵 끝 x -72~72에서 멈춤, 판은 아군 기지 쪽 화면에서 시작)
+CameraRig        ← CameraDrag   (좌우 드래그·관성, 맵 끝 x -54~54에서 멈춤, 판은 아군 기지 쪽 화면에서 시작)
  └─ Main Camera  ← Camera(Orthographic, size 20, 로컬 0 · 월드 y=14, 배경 검정) · UniversalAdditionalCameraData · CameraShake   [tag=MainCamera]
 Fx               ← FxDirector   (파편·먼지 프리팹 + CameraShake 참조)
 Global Light 2D  ← Light2D(Global)
-Ground           ← PolygonCollider2D · LineRenderer · Ground   (굽은 땅 x -72~72, 원점·스케일 1 고정. 모양은 판 시작 때 무작위로 만든다 — 에디터 메뉴 Build는 기본 물결만 보여 준다. `_flatAnchors` 비어 있음)
-Base_Ally        ← SpriteRenderer(`castle.png`, order -1 — 유닛이 성 앞에 그려짐) · BoxCollider2D · Base(Team=Ally)   (박스 x -72~-63.6 · 8.375×7.5 = 그림의 몸통, 성문 x -66.6. 같은 진영 유닛은 몸이 통과. 체력·화살 = `Base_Test.asset`)
+Ground           ← PolygonCollider2D · LineRenderer · Ground   (굽은 땅 x -54~54, 원점·스케일 1 고정. 모양은 판 시작 때 무작위로 만든다 — 에디터 메뉴 Build는 기본 물결만 보여 준다. `_flatAnchors` 비어 있음)
+Base_Ally        ← SpriteRenderer(`castle.png`, order -1 — 유닛이 성 앞에 그려짐) · BoxCollider2D · Base(Team=Ally)   (박스 x -54~-45.6 · 8.375×7.5 = 그림의 몸통, 성문 x -48.6. 같은 진영 유닛은 몸이 통과. 체력·화살 = `Base_Test.asset`)
  ├─ Muzzle       (꼭대기 가운데, 화살 나가는 자리)
- ├─ BackStop     ← BoxCollider2D   (보이지 않음) 성 뒤 x -72.5~-72, 땅 ~ y 36
+ ├─ BackStop     ← BoxCollider2D   (보이지 않음) 성 뒤 x -54.5~-54, 땅 ~ y 36
  └─ Flag         ← SpriteRenderer(`flag.png`, 진영색)   가운데 첨탑 끝
-Base_Enemy       ← (거울 대칭 — 루트 x스케일 -1, 박스 x 63.6~72, 성문 x 66.6)
+Base_Enemy       ← (거울 대칭 — 루트 x스케일 -1, 박스 x 45.6~54, 성문 x 48.6)
  ├─ Muzzle
  ├─ BackStop
  └─ Flag
@@ -38,8 +38,8 @@ DamageNumbers    ← MeshFilter · MeshRenderer · DamageNumbers   (원점 고�
 Battle           ← BattleManager   (라운드 흐름 허브: 상점 → 전투 → 결과)
 AllyBoard        ← BoardRunner(Team=Ally)    (아군 필드 보드 실행기 — 소환 지점 = AllySpawnPoint, 큰 유닛도 같은 자리)
 EnemyBoard       ← BoardRunner(Team=Enemy)   (적 보드 — 소환 = EnemySpawnPoint, 큰 유닛 = BossSpawnPoint)
-AllySpawnPoint   ← (Transform만) 아군 성문(x -66.6). `Unit.Spawn`이 여기부터 앞쪽 5칸에 퍼뜨린다
-EnemySpawnPoint  ← (Transform만) 적 성문(x 66.6)
+AllySpawnPoint   ← (Transform만) 아군 성문(x -48.6). `Unit.Spawn`이 여기부터 앞쪽 5칸에 퍼뜨린다
+EnemySpawnPoint  ← (Transform만) 적 성문(x 48.6)
 BossSpawnPoint   ← (Transform만) 적의 넓은 유닛(공룡·코끼리)이 나오는 자리(지금은 적 성문과 같은 x)
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster

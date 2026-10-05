@@ -31,7 +31,7 @@ namespace GnorpWar
             _lastMultiplier = multiplier;
 
             string time = $"{(int)elapsed / 60}:{(int)elapsed % 60:00}";
-            string extra = BattleManager.ExtraUnits > 0 ? $"   생산 +{BattleManager.ExtraUnits}마리" : "";
+            string extra = BattleManager.ExtraUnits > 0 ? $"   생산 +{BattleManager.ExtraUnits}기" : "";
             _text.text = multiplier > 1f
                 ? $"{time}   공격력 +{Mathf.RoundToInt((multiplier - 1f) * 100f)}%{extra}"
                 : time;

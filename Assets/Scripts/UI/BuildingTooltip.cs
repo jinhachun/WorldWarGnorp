@@ -31,20 +31,20 @@ namespace GnorpWar
         private const int UnitNameSize = 26;
         private const int UnitEffectSize = 16;
 
-        // 효과 줄 — 늘 켜진 것 먼저, 그다음 "N초마다 ~". cooldown = 지금 간격(전투 중엔 줄어든 값). 글 규칙은 CLAUDE.md §5-2
+        // 효과 줄 — "N초마다 ~" 먼저(기획서: 쿨다운 효과는 첫 줄), 그다음 늘 켜진 것. cooldown = 지금 간격(전투 중엔 줄어든 값). 글 규칙은 CLAUDE.md §5-2
         public static string Describe(BuildingDefinition building, int level, float cooldown)
         {
             var lines = new List<string>();
-            foreach (UnitEffect effect in building.Effects)
-                if (!string.IsNullOrEmpty(effect.Description))
-                    lines.Add(effect.Description);
             string every = $"{cooldown:0.#}초마다 ";
             if (building.Unit != null)
-                lines.Add(every + $"{building.Unit.DisplayName} {building.UnitCount * level + BattleManager.ExtraUnits}마리를 내보낸다.");
+                lines.Add(every + $"{building.Unit.DisplayName} {building.UnitCount * level + BattleManager.ExtraUnits}기를 소환합니다.");
             foreach (BuildingAction action in building.Actions)
                 lines.Add(every + action.Describe(level));
             if (!string.IsNullOrEmpty(building.Description))
                 lines.Add(every + building.Description);
+            foreach (UnitEffect effect in building.Effects)
+                if (!string.IsNullOrEmpty(effect.Description))
+                    lines.Add(effect.Description);
             return ColorNumbers(string.Join("\n", lines));
         }
 
@@ -85,15 +85,15 @@ namespace GnorpWar
             lines.Add("속도 " + SpeedWord(unit.MoveSpeed));
 
             if (unit.ChargeDamageMultiplier > 1f)
-                lines.Add(ColorNumbers($"달려와 처음 때릴 때 피해가 {unit.ChargeDamageMultiplier:0.#}배다."));
+                lines.Add(ColorNumbers($"달려와 처음 때리는 공격은 피해 ×{unit.ChargeDamageMultiplier:0.#}입니다."));
             if (unit.ProjectileSplashRadius > 0f)
-                lines.Add("맞은 자리 주변의 적도 피해를 입는다.");
+                lines.Add("맞은 자리 주변의 적도 피해를 입습니다.");
             if (unit.AttackType == AttackType.Flame)
-                lines.Add("앞에 있는 적을 한꺼번에 불태운다.");
+                lines.Add("앞에 있는 적을 한꺼번에 불태웁니다.");
             if (unit.AttackType == AttackType.Sweep)
-                lines.Add("앞에 있는 적을 한꺼번에 친다.");
+                lines.Add("앞에 있는 적을 한꺼번에 칩니다.");
             if (unit.SlamInterval > 0f)
-                lines.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄운다."));
+                lines.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄웁니다."));
             return string.Join("\n", lines);
         }
 
@@ -113,7 +113,7 @@ namespace GnorpWar
         {
             if (!building.CanUpgrade)
                 return "";
-            return Note($"같은 등급 하나를 더 모으면 {(building.Rarity + 1).DisplayName()} 등급");
+            return Note($"같은 등급 하나를 더 모으면 {(building.Rarity + 1).DisplayName()} 등급이 됩니다.");
         }
 
         private void Awake()

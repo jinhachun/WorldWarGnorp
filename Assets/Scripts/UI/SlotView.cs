@@ -70,7 +70,7 @@ namespace GnorpWar
                 float cooldown = running != null ? running.Cooldown : building.Definition.Cooldown;
                 string body = BuildingTooltip.Describe(building.Definition, building.Level, cooldown);
                 if (!enemy && !BattleManager.Fighting)
-                    body += BuildingTooltip.UpgradeNote(building) + BuildingTooltip.Note($"팔면 {RunState.SellValue(building)}G");
+                    body += BuildingTooltip.UpgradeNote(building) + BuildingTooltip.Note($"팔면 {RunState.SellValue(building)}골드를 얻습니다.");
                 OwnedBuilding[] board = enemy ? System.Array.ConvertAll(BoardRunner.For(Team.Enemy).Slots, s => s.Building) : RunState.Field;
                 BuildingTooltip.Show(this, BuildingTooltip.Title(building.Definition, enemy, building.Rarity), body,
                     BuildingTooltip.UnitInfo(building.Definition, board));

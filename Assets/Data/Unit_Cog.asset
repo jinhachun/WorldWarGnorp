@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_Cog
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uD1B1\uB2C8\uBCD1\uC0AC"
+  _category: {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _allyPrefab: {fileID: 638779955689807151, guid: 3bcf90b2e28e53d4ba67086081c7c6d2, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 02f4f28e62485a54eb91145e77c682a8, type: 3}
+  _moveSpeed: 3.375
+  _maxHp: 80
+  _attackDamage: 9
+  _attackInterval: 0.6666667
+  _attackRange: 0.8
+  _hitKnockback: 2
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 6
+  _stackRank: 1
+  _attackType: 0
+  _pushPower: 1
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
+  _projectile: {fileID: 0}
+  _projectileArcHeight: 2.5
+  _projectileSplashRadius: 0
+  _flameThickness: 2
+  _healAmount: 0
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8

@@ -80,6 +80,8 @@ namespace GnorpWar
         // 키의 절반 — 충돌 박스 높이에서 읽는다(보통 0.5, 기사 0.75). 칸 검사·발 고정이 이 값을 쓴다
         private float _halfHeight;
         private Vector3 _weaponRestPosition;
+        // 그림 크기 — 프리팹의 Visual 스케일(큰 유닛은 2). 찌그러짐이 매 프레임 덮으므로 거기에 곱한다
+        private Vector3 _visualScale = Vector3.one;
         private float _knockbackTimer;
         private float _squashTime = SquashDuration;
         private bool _squashVertical = true;
@@ -303,6 +305,7 @@ namespace GnorpWar
                 _bodySortingOrders[i] = _bodyRenderers[i].sortingOrder;
             }
             _halfHeight = _body.size.y * 0.5f;
+            _visualScale = _visual.localScale;
             _weaponRestPosition = _weapon.localPosition;
             // 진영별 유닛 레이어 — 충돌 규칙은 그대로 두고 검색에서만 거른다. 적 찾기가 산 속 아군 수백 마리를 훑지 않게
             int ownLayer = LayerMask.NameToLayer(_team == Team.Ally ? "AllyUnit" : "EnemyUnit");
@@ -358,7 +361,7 @@ namespace GnorpWar
             _weapon.localPosition = _weaponRestPosition;
             _weapon.localRotation = Quaternion.identity;
             _visual.localPosition = Vector3.zero;
-            _visual.localScale = Vector3.one;
+            _visual.localScale = _visualScale;
             _squashTime = SquashDuration;
             _flashTimer = 0f;
             _thrustTime = ThrustDuration;
@@ -645,7 +648,7 @@ namespace GnorpWar
             float wobble = SquashAmount * (1f - t) * Mathf.Cos(t * Mathf.PI * 3f);
             float scaleX = _squashVertical ? 1f + wobble : 1f - wobble;
             float scaleY = _squashVertical ? 1f - wobble : 1f + wobble;
-            _visual.localScale = new Vector3(scaleX, scaleY, 1f);
+            _visual.localScale = new Vector3(scaleX * _visualScale.x, scaleY * _visualScale.y, 1f);
             _visual.localPosition = new Vector3(0f, (scaleY - 1f) * _halfHeight, 0f);
             _squashTime += Time.deltaTime;
 
@@ -897,7 +900,7 @@ namespace GnorpWar
             _weapon.localPosition = _weaponRestPosition;
             _weapon.localRotation = Quaternion.identity;
             _visual.localPosition = Vector3.zero;
-            _visual.localScale = new Vector3(1f, -1f, 1f);
+            _visual.localScale = new Vector3(_visualScale.x, -_visualScale.y, 1f);
 
             if (FxDirector.Instance != null)
             {

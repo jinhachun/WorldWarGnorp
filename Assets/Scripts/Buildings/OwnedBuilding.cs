@@ -10,6 +10,8 @@ namespace GnorpWar
         [SerializeField] private BuildingDefinition _definition;
         [Tooltip("시작 등급에서 오른 횟수 — 0 = 시작 등급")]
         [SerializeField] private int _upgrades;
+        [Tooltip("이 기물이 모은 스택(스패너 등) — 팔면 같이 사라지고, 합쳐지면 더해진다")]
+        [SerializeField] private int _stacks;
 
         public OwnedBuilding(BuildingDefinition definition)
         {
@@ -25,7 +27,10 @@ namespace GnorpWar
         public int Copies => 1 << _upgrades;
         public bool CanUpgrade => Rarity < BuildingRarity.Legendary;
 
+        public int Stacks => _stacks;
+
         public void Upgrade() => _upgrades++;
+        public void AddStacks(int count) => _stacks += count;
 
         public static bool IsEmpty(OwnedBuilding building) => building == null || building._definition == null;
     }

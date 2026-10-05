@@ -52,8 +52,31 @@ namespace GnorpWar
             if (_shopEnteredRound == Round)
                 return;
             _shopEnteredRound = Round;
-            Gold += _config.RoundGold + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+            GainGold(_config.RoundGold + (LastOutcome == Outcome.Win ? _config.WinBonus : 0));
             RollOffers();
+        }
+
+        // 골드를 얻는다 — 얻을 때마다(금액과 상관없이 한 번) 필드 기물의 골드 훅
+        private static void GainGold(int amount)
+        {
+            Gold += amount;
+            ForEachFieldPassive((passive, owned) => passive.OnGoldGained(owned));
+        }
+
+        // 상점 훅은 필드의 기물만 — 보관함은 효과가 없다
+        private static void ForEachFieldPassive(System.Action<BuildingPassive, OwnedBuilding> call)
+        {
+            foreach (OwnedBuilding owned in Field)
+                if (!OwnedBuilding.IsEmpty(owned))
+                    foreach (BuildingPassive passive in owned.Definition.Passives)
+                        call(passive, owned);
+        }
+
+        // 「구매할 때마다,」 — 산 기물(합쳐졌으면 합쳐진 결과)에서 한 번
+        private static void OnBought(OwnedBuilding owned)
+        {
+            foreach (BuildingPassive passive in owned.Definition.Passives)
+                passive.OnBuy(owned);
         }
 
         public static void FinishBattle(bool won)
@@ -74,6 +97,7 @@ namespace GnorpWar
                 return;
             Gold -= _config.RerollCost;
             RollOffers();
+            ForEachFieldPassive((passive, owned) => passive.OnReroll(owned));
         }
 
         public static int PriceOf(BuildingDefinition definition) => _config.PriceOf(definition.Rarity);
@@ -120,8 +144,9 @@ namespace GnorpWar
             return null;
         }
 
-        // 합쳐서 오른 결과가 또 같은 등급 짝을 만나면 계속 합친다 — 결과는 먼저 있던 짝의 칸에 남는다(플레이어가 놓은 자리)
-        private static void MergeInto(OwnedBuilding target)
+        // 합쳐서 오른 결과가 또 같은 등급 짝을 만나면 계속 합친다 — 결과는 먼저 있던 짝의 칸에 남는다(플레이어가 놓은 자리).
+        // 스택은 합친다(사용자 결정: 등급이 오르면 스택 유지). 합쳐진 결과를 돌려준다
+        private static OwnedBuilding MergeInto(OwnedBuilding target)
         {
             target.Upgrade();
             OwnedBuilding pair = FindMergeTarget(target.Definition, target.Upgrades, target);
@@ -129,9 +154,11 @@ namespace GnorpWar
             {
                 Remove(target);
                 pair.Upgrade();
+                pair.AddStacks(target.Stacks);
                 target = pair;
                 pair = FindMergeTarget(target.Definition, target.Upgrades, target);
             }
+            return target;
         }
 
         private static void Remove(OwnedBuilding building)
@@ -161,14 +188,16 @@ namespace GnorpWar
             OwnedBuilding target = FindMergeTarget(definition, 0);
             if (target != null)
             {
-                MergeInto(target);
+                OnBought(MergeInto(target));
                 return;
             }
+            var bought = new OwnedBuilding(definition);
             int slot = FirstEmpty(Field);
             if (slot >= 0)
-                Field[slot] = new OwnedBuilding(definition);
+                Field[slot] = bought;
             else
-                Storage[FirstEmpty(Storage)] = new OwnedBuilding(definition);
+                Storage[FirstEmpty(Storage)] = bought;
+            OnBought(bought);
         }
 
         // 진열을 끌어다 칸에 놓아 산다 — 합쳐질 짝이 있으면 어느 칸에 놓든 합쳐지고, 아니면 빈 칸에만
@@ -189,10 +218,12 @@ namespace GnorpWar
             Offers[offer] = null;
 
             OwnedBuilding target = FindMergeTarget(definition, 0);
+            OwnedBuilding bought;
             if (target != null)
-                MergeInto(target);
+                bought = MergeInto(target);
             else
-                (storage ? Storage : Field)[index] = new OwnedBuilding(definition);
+                (storage ? Storage : Field)[index] = bought = new OwnedBuilding(definition);
+            OnBought(bought);
         }
 
         public static int SellValue(OwnedBuilding building)
@@ -205,8 +236,9 @@ namespace GnorpWar
             OwnedBuilding[] row = storage ? Storage : Field;
             if (OwnedBuilding.IsEmpty(row[index]))
                 return;
-            Gold += SellValue(row[index]);
-            row[index] = null;
+            int value = SellValue(row[index]);
+            row[index] = null;   // 판 기물은 자기 골드 훅을 받지 않는다 · 스택도 같이 사라진다
+            GainGold(value);
         }
 
         // 두 칸을 맞바꾼다 — 필드↔보관함도, 빈 칸과도

@@ -25,15 +25,9 @@ namespace GnorpWar
         private static readonly string[] Names = { "공격력", "체력", "이동속도", "공격속도" };
 
         // 기획서 §6 표기 그대로 — "공격력 +5" · "공격력 +5%" · "공격력 ×1.1"
-        public string Describe()
-        {
-            string name = Names[(int)Stat];
-            if (Op == StatOp.Flat)
-                return $"{name} +{Value:0.##}";
-            if (Op == StatOp.Percent)
-                return $"{name} +{Value * 100f:0.##}%";
-            return $"{name} ×{Value:0.##}";
-        }
+        public string Describe() => $"{Name} {ValueText}";
+        public string Name => Names[(int)Stat];
+        public string ValueText => Op == StatOp.Flat ? $"+{Value:0.##}" : Op == StatOp.Percent ? $"+{Value * 100f:0.##}%" : $"×{Value:0.##}";
     }
 
     // 스탯 변경을 받을 유닛을 고른다 — 유닛 효과(UnitEffect)와 스탯을 거는 기물 능력이 쓴다

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_Spanner
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uB178\uB3D9\uC6B4\uB3D9\uAC00 \uC2A4\uD328\uB108"
+  _icon: {fileID: 21300000, guid: 66eb13fd130cd4b4caef57e19b5a7b1b, type: 3}
+  _description: 
+  _rarity: 4
+  _nation: 2
+  _faction: 4
+  _cooldown: 0
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions: []
+  _effects: []
+  _passives:
+  - {fileID: 11400000, guid: 051d1eab47ea0f94e97525592408138f, type: 2}

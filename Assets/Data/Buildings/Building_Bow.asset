@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
   m_Name: Building_Bow
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
-  _displayName: "\uD65C \uB9C9\uC0AC"
+  _displayName: "\uAD81\uC220\uC218\uB828\uAD00"
   _icon: {fileID: 21300000, guid: e3a9a4fb3ea094e4f886aaae7c2dbc20, type: 3}
   _description: 
-  _rarity: 1
-  _cooldown: 5
+  _rarity: 0
+  _cooldown: 4
   _unit: {fileID: 11400000, guid: 4fbdc0f6f767397448cc30259fad91ca, type: 2}
   _unitCount: 1
   _actions: []

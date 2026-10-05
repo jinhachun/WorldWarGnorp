@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
   m_Name: Building_Sword
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
-  _displayName: "\uAC80 \uB9C9\uC0AC"
+  _displayName: "\uBCD1\uC601"
   _icon: {fileID: 21300000, guid: 12858822ca5490943b66e2a286a9d812, type: 3}
   _description: 
   _rarity: 0
-  _cooldown: 4
+  _cooldown: 3
   _unit: {fileID: 11400000, guid: fe3a908e4882e4549bcd0274d35653cf, type: 2}
   _unitCount: 1
   _actions: []

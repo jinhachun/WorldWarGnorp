@@ -12,12 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Tank
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
-  _displayName: "\uBC29\uD328\uBCD1"
+  _displayName: "\uBC29\uD328\uC218"
   _category: {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
   _allyPrefab: {fileID: 638779955689807151, guid: 8598aafe34f21de4ca1df5b46e59b433, type: 3}
   _enemyPrefab: {fileID: 6082175181310963690, guid: 26acea8d77c33ac4bb6bbba17054d692, type: 3}
   _moveSpeed: 2.6999998
-  _jumpHeight: 1.2
   _maxHp: 300
   _attackDamage: 4
   _attackInterval: 0.8

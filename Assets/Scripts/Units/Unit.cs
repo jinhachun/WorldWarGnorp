@@ -59,14 +59,10 @@ namespace GnorpWar
         private float _targetScanTimer;
         private IDamageable _cachedTarget;
         private Collider2D _cachedTargetCollider;
-        private VaultEffect _cachedHunt;
         private Collider2D _foundCollider;
-        private float _huntScanTimer;
-        private bool _huntAhead;
-        // 프리스트의 회복·버프 대상 캐시 — 같은 간격으로만 새로 찾는다
+        // 프리스트의 회복 대상 캐시 — 같은 간격으로만 새로 찾는다
         private float _supportScanTimer;
         private Unit _cachedPatient;
-        private Unit _cachedBuffTarget;
         // 기지 위 유닛 검사 캐시(걷기) — 같은 간격으로만 새로 본다
         private float _walkScanTimer;
         private bool _aheadOnBaseUnit;
@@ -93,13 +89,6 @@ namespace GnorpWar
         private bool _bigKnockbackUsed;
         // 돌격 충전 — 적 없이 실제로 달린 시간. 막혀 서 있으면 0으로
         private float _runTime;
-        // 효과별 쿨다운(칼 던지기 등) — 다시 쓸 수 있는 시각(Time.fixedTime)
-        private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
-        // 프리스트가 준 공격력 버프 — 남은 시간 동안 피해 × (1 + 증가율)
-        private float _buffTimer;
-        private float _buffBonus;
-        // 공격력 버프 효과: 회복·버프 대상이 둘 다 있을 때 번갈아 던진다
-        private bool _nextSupportIsBuff;
         // 밟기 효과: 지금 밟고 서 있는 적 — 새로 내려앉은 적에게만 피해
         private Unit _stompedOn;
         // 점프 착지 충격(코끼리) — 다음 점프까지 남은 시간 · 뛰어오른 뒤 착지 전인가 · 그 사이 발이 땅에서 떨어진 적이 있나
@@ -222,21 +211,8 @@ namespace GnorpWar
             }
         }
         private float AttackRange => _definition.AttackRange * LongRangeScale;
-        // 버프 × 전투 공격력 가속
-        public float DamageScale => (_buffTimer > 0f ? 1f + _buffBonus : 1f) * BattleManager.DamageMultiplier;
-        public bool IsBuffed => _buffTimer > 0f;
-
-        // 이 진영에 켜진 효과 중 이 유닛에게 적용되는 첫 T (사냥·버프처럼 Unit이 직접 읽는 효과)
-        private T ActiveEffect<T>() where T : UnitEffect
-        {
-            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect is T found && found.AppliesTo(_definition))
-                    return found;
-            return null;
-        }
-
-        public bool EffectReady(UnitEffect effect) => !_effectReadyAt.TryGetValue(effect, out float at) || Time.fixedTime >= at;
-        public void SetEffectCooldown(UnitEffect effect, float seconds) => _effectReadyAt[effect] = Time.fixedTime + seconds;
+        // 전투 공격력 가속
+        public float DamageScale => BattleManager.DamageMultiplier;
 
         // 건물이 이 유닛을 생산했다 — 생산 훅(호위 등)
         public void NotifyProduced()
@@ -317,13 +293,9 @@ namespace GnorpWar
             _lastX = transform.position.x;
             _advanceSpeed = 0f;
             _attackCooldown = 0f;
-            _effectReadyAt.Clear();
             _knockbackTimer = 0f;
             _runTime = 0f;
-            _buffTimer = 0f;
-            _buffBonus = 0f;
             _bigKnockbackUsed = false;
-            _nextSupportIsBuff = false;
             _stompedOn = null;
             _slamTimer = _definition.SlamInterval;
             _slamJumping = false;
@@ -332,15 +304,11 @@ namespace GnorpWar
             _despawnTimer = 0f;
             // 검색 시점을 유닛마다 흩어 한 스텝에 몰리지 않게
             _targetScanTimer = Random.Range(0f, TargetScanInterval);
-            _huntScanTimer = Random.Range(0f, TargetScanInterval);
             _cachedTarget = null;
             _cachedTargetCollider = null;
-            _cachedHunt = null;
-            _huntAhead = false;
             _supportScanTimer = Random.Range(0f, TargetScanInterval);
             _walkScanTimer = Random.Range(0f, TargetScanInterval);
             _cachedPatient = null;
-            _cachedBuffTarget = null;
             _aheadOnBaseUnit = false;
 
             // 죽을 때 바꾼 물리·그림을 되돌린다(Die)
@@ -376,10 +344,8 @@ namespace GnorpWar
             _lastX = _rb.position.x;
             _attackCooldown -= Time.fixedDeltaTime;
             _targetScanTimer -= Time.fixedDeltaTime;
-            _huntScanTimer -= Time.fixedDeltaTime;
             _supportScanTimer -= Time.fixedDeltaTime;
             _walkScanTimer -= Time.fixedDeltaTime;
-            _buffTimer -= Time.fixedDeltaTime;
 
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
@@ -491,42 +457,26 @@ namespace GnorpWar
             // 프리스트 — 적은 공격하지 않는다. 다친 아군을 회복하고, 적이 사거리에 들면 뒤에 멈춰 선다(앞으로 걸어가 죽지 않게)
             if (_definition.AttackType == AttackType.Heal)
             {
-                bool enemyNear = FindTargetCached(out _, out _, null);
-                // 회복·버프 대상 찾기도 아군 전부를 훑어 비싸다 — 적 찾기와 같은 간격으로만 새로 찾고, 그 사이엔 찾아 둔 대상이 아직 유효한지만 본다
+                bool enemyNear = FindTargetCached(out _, out _);
+                // 회복 대상 찾기도 아군 전부를 훑어 비싸다 — 적 찾기와 같은 간격으로만 새로 찾고, 그 사이엔 찾아 둔 대상이 아직 유효한지만 본다
                 SupportMarker.Begin();
-                AttackBuffEffect attackBuff = ActiveEffect<AttackBuffEffect>();
                 if (_supportScanTimer <= 0f)
                 {
                     _cachedPatient = FindHealTarget(null);
-                    _cachedBuffTarget = attackBuff != null ? attackBuff.FindTarget(this) : null;
                     _supportScanTimer = TargetScanInterval;
                 }
                 if (_cachedPatient != null && !_cachedPatient.IsDamaged)
                     _cachedPatient = null;
-                if (_cachedBuffTarget != null && (!_cachedBuffTarget.IsAlive || _cachedBuffTarget._buffTimer > 0f || attackBuff == null))
-                    _cachedBuffTarget = null;
                 Unit patient = _cachedPatient;
-                Unit buffTarget = _cachedBuffTarget;
                 SupportMarker.End();
-                if ((patient != null || buffTarget != null) && _attackCooldown <= 0f)
+                if (patient != null && _attackCooldown <= 0f)
                 {
-                    // 공격력 버프 효과: 회복할 대상·버프할 대상이 둘 다 있으면 번갈아, 한쪽만 있으면 그쪽
-                    bool buff = buffTarget != null && (patient == null || _nextSupportIsBuff);
-                    Unit receiver = buff ? buffTarget : patient;
-                    Vector2 toReceiver = receiver._rb.position - _rb.position;
-                    if (buff)
-                    {
-                        attackBuff.Throw(this, buffTarget);
-                    }
-                    else
-                    {
-                        ThrowHeal(patient);
-                        foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                            if (e.Effect.AppliesTo(_definition))
-                                e.Effect.OnHealed(this, patient, e.Stacks);
-                    }
-                    _nextSupportIsBuff = !buff;
-                    StartThrust(toReceiver.sqrMagnitude > 0.0001f ? toReceiver.normalized : new Vector2(Forward, 0f));
+                    Vector2 toPatient = patient._rb.position - _rb.position;
+                    ThrowHeal(patient);
+                    foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                        if (e.Effect.AppliesTo(_definition))
+                            e.Effect.OnHealed(this, patient, e.Stacks);
+                    StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
                     _attackCooldown = _definition.AttackInterval;
                 }
                 if (enemyNear || patient != null)
@@ -536,18 +486,8 @@ namespace GnorpWar
                     return;
                 }
             }
-            // 사냥 효과: 앞쪽에 노리는 분류의 적이 있으면 그 밖의 적은 상대하지 않고 뛰어넘는다
-            VaultEffect vault = ActiveEffect<VaultEffect>();
-            // 사냥 검색도 원이 커서(효과 Range) 적 찾기와 같은 간격으로만 새로 본다
-            if (vault != null && _huntScanTimer <= 0f)
-            {
-                _huntAhead = HasHuntTargetAhead(vault);
-                _huntScanTimer = TargetScanInterval;
-            }
-            bool hunting = vault != null && _huntAhead;
-
             // 싸움이 점프·전진보다 우선 (프리스트는 위에서 처리 — 회복할 대상도 적도 없으면 여기로 내려와 전진)
-            if (_definition.AttackType != AttackType.Heal && FindTargetCached(out IDamageable target, out Vector2 targetPoint, hunting ? vault : null))
+            if (_definition.AttackType != AttackType.Heal && FindTargetCached(out IDamageable target, out Vector2 targetPoint))
             {
                 velocity.x = 0f;
                 _rb.linearVelocity = velocity;
@@ -600,9 +540,6 @@ namespace GnorpWar
             // 못 올라탈 땐 뛰지 않고 서 있어야 뒤 유닛의 발판이 된다 — 계속 뛰면 계단(산)이 안 생긴다
             if (grounded && canClimb)
                 velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * JumpHeight);
-            // 사냥 효과: 노리지 않는 적에게 막히면 높이 뛰어 넘는다(적 머리 위로 착지해 계속 전진)
-            else if (grounded && hunting && blockedByEnemy)
-                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * vault.JumpHeight);
             _rb.linearVelocity = velocity;
         }
 
@@ -715,8 +652,7 @@ namespace GnorpWar
             _weapon.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
 
-        // exclude: 이미 고른 대상(두 번째 대상을 찾을 때) · huntOnly: 이 사냥 효과가 노리는 분류의 유닛만
-        private bool FindTarget(out IDamageable target, out Vector2 targetPoint, IDamageable exclude = null, VaultEffect huntOnly = null)
+        private bool FindTarget(out IDamageable target, out Vector2 targetPoint)
         {
             // 사거리 안에서 가장 가까운 적 — 사거리가 긴 원거리딜이 먼 적부터 쏘지 않게
             Physics2D.OverlapCircle(_rb.position, AttackRange, _enemyFilter, _overlaps);
@@ -725,9 +661,7 @@ namespace GnorpWar
             float best = float.MaxValue;
             foreach (Collider2D col in _overlaps)
             {
-                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive || damageable == exclude)
-                    continue;
-                if (huntOnly != null && !(damageable is Unit unit && huntOnly.Targets(unit._definition.Category)))
+                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive)
                     continue;
                 if (IsUnderfoot(damageable))
                     continue;
@@ -752,18 +686,15 @@ namespace GnorpWar
 
         // 적 찾기는 비싸다(사거리 원 안의 콜라이더를 전부 본다 — 산 속 원딜은 수백 개). 그래서 TargetScanInterval마다만 새로 찾고,
         // 그 사이엔 찾아 둔 적이 아직 살아 있고 사거리 안인지만 본다. 못 찾았으면 다음 검색까지 없는 것으로 친다
-        private bool FindTargetCached(out IDamageable target, out Vector2 targetPoint, VaultEffect huntOnly)
+        private bool FindTargetCached(out IDamageable target, out Vector2 targetPoint)
         {
             using (ScanMarker.Auto())
-                return FindTargetCachedCore(out target, out targetPoint, huntOnly);
+                return FindTargetCachedCore(out target, out targetPoint);
         }
 
-        // 사거리 안, exclude가 아닌 가장 가까운 적 (이중 사격 등)
-        public bool FindOtherTarget(IDamageable exclude, out Vector2 targetPoint) => FindTarget(out _, out targetPoint, exclude);
-
-        private bool FindTargetCachedCore(out IDamageable target, out Vector2 targetPoint, VaultEffect huntOnly)
+        private bool FindTargetCachedCore(out IDamageable target, out Vector2 targetPoint)
         {
-            if (_targetScanTimer > 0f && huntOnly == _cachedHunt)
+            if (_targetScanTimer > 0f)
             {
                 target = null;
                 targetPoint = default;
@@ -782,8 +713,7 @@ namespace GnorpWar
             }
 
             _targetScanTimer = TargetScanInterval;
-            _cachedHunt = huntOnly;
-            bool found = FindTarget(out target, out targetPoint, null, huntOnly);
+            bool found = FindTarget(out target, out targetPoint);
             _cachedTarget = found ? target : null;
             _cachedTargetCollider = found ? _foundCollider : null;
             return found;
@@ -801,62 +731,6 @@ namespace GnorpWar
         {
             Projectile orb = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
             orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
-        }
-
-        public void ThrowBuff(Projectile cross, float bonus, float seconds, Unit target)
-        {
-            Projectile shot = Pooled.Get(cross, _weapon.position, Quaternion.identity);
-            shot.LaunchBuff(this, bonus, seconds, target._rb.position, target._rb.linearVelocity, _definition.ProjectileArcHeight);
-        }
-
-        public void Buff(float bonus, float seconds)
-        {
-            if (!IsAlive)
-                return;
-            _buffBonus = bonus;
-            _buffTimer = seconds;
-        }
-
-        // 반경 안의 같은 진영 유닛 콜라이더 — 돌려주는 목록은 이 유닛이 다른 검색에 다시 쓰므로 바로 훑고 버릴 것
-        public List<Collider2D> AlliesInRange(float radius)
-        {
-            Physics2D.OverlapCircle(_rb.position, radius, _allyFilter, _overlaps);
-            return _overlaps;
-        }
-
-        // 앞쪽으로 range만큼, 내 높이를 중심으로 height 두께의 띠에 살아 있는 적이 있나
-        public bool HasEnemyInLane(float range, float height)
-        {
-            Vector2 center = _rb.position + new Vector2(Forward * range * 0.5f, 0f);
-            Physics2D.OverlapBox(center, new Vector2(range, height), 0f, _enemyFilter, _overlaps);
-            foreach (Collider2D col in _overlaps)
-            {
-                if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                    return true;
-            }
-            return false;
-        }
-
-        // 앞쪽 수평으로 곧게 던진다 — 피해는 내 공격력
-        public void ThrowStraight(Projectile prefab, float speed)
-        {
-            Vector2 origin = _rb.position + new Vector2(Forward * 0.5f, 0f);
-            Projectile shot = Pooled.Get(prefab, origin, Quaternion.identity);
-            shot.LaunchStraight(_team, _definition.AttackDamage * DamageScale, _definition.PushPower, new Vector2(Forward * speed, 0f));
-        }
-
-        // 사냥 효과 — 앞쪽 (효과 Range) 안에 노리는 분류의 적이 있나
-        private bool HasHuntTargetAhead(VaultEffect vault)
-        {
-            Physics2D.OverlapCircle(_rb.position, vault.Range, _enemyFilter, _overlaps);
-            foreach (Collider2D col in _overlaps)
-            {
-                if (col.TryGetComponent(out Unit enemy) && enemy._team != _team && enemy.IsAlive
-                    && vault.Targets(enemy._definition.Category)
-                    && (enemy._rb.position.x - _rb.position.x) * Forward > 0f)
-                    return true;
-            }
-            return false;
         }
 
         // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기·exclude 제외)

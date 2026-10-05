@@ -12,12 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
   m_Name: Unit_Melee
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
-  _displayName: "\uAC80\uBCD1"
+  _displayName: "\uBCD1\uC0AC"
   _category: {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
   _allyPrefab: {fileID: 638779955689807151, guid: b838db89a6232ac4b83353c7698f886e, type: 3}
   _enemyPrefab: {fileID: 6082175181310963690, guid: bac31f16af74abd4d98e2598ef98f75c, type: 3}
   _moveSpeed: 3.375
-  _jumpHeight: 1.2
   _maxHp: 100
   _attackDamage: 10
   _attackInterval: 0.6666667

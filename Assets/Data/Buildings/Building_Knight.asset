@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
   m_Name: Building_Knight
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
-  _displayName: "\uAE30\uC0AC \uB9C8\uAD6C\uAC04"
+  _displayName: "\uB9C8\uAD6C\uAC04"
   _icon: {fileID: 21300000, guid: 8995451d894038b418c03ced05ac84d3, type: 3}
   _description: 
-  _rarity: 2
-  _cooldown: 8
+  _rarity: 0
+  _cooldown: 6
   _unit: {fileID: 11400000, guid: df36a7226be228e439c2dd7daf651e98, type: 2}
   _unitCount: 1
   _actions: []

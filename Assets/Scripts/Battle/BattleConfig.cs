@@ -18,8 +18,6 @@ namespace GnorpWar
         [Header("보드")]
         [SerializeField] private int _fieldSlots = 5;
         [SerializeField] private int _storageSlots = 5;
-        [Tooltip("건물 쿨다운 최소값(초) — 쿨감이 쌓여도 이 아래로는 안 내려간다")]
-        [SerializeField] private float _minCooldown = 0.1f;
 
         [Header("런")]
         [SerializeField] private int _lives = 3;
@@ -60,7 +58,6 @@ namespace GnorpWar
 
         public int FieldSlots => _fieldSlots;
         public int StorageSlots => _storageSlots;
-        public float MinCooldown => _minCooldown;
         public int Lives => _lives;
         public int WinsToClear => _winsToClear;
         public int RoundGold => _roundGold;

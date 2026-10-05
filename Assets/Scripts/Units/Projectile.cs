@@ -19,31 +19,24 @@ namespace GnorpWar
         private float _splashRadius;
         // 0보다 크면 회복 투사체 — 적·던진 본인·체력이 가득 찬 아군은 통과하고, 처음 닿은 다친 아군을 회복
         private float _heal;
-        // 0보다 크면 버프 투사체 — 회복처럼 적·던진 본인은 통과하고, 처음 닿은 아군의 공격력을 올린다
-        private float _buffBonus;
-        private float _buffSeconds;
         private Unit _owner;
         private bool _spent;
         private float _lifeTimer;
-        private float _gravityScale;
         private readonly System.Collections.Generic.List<Collider2D> _splashHits = new System.Collections.Generic.List<Collider2D>();
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
-            _gravityScale = _rb.gravityScale;
         }
 
-        // 풀에서 다시 꺼낼 때마다 — 지난번 비행의 흔적(회복·버프 종류, 던진 칼의 무중력)을 지운다
+        // 풀에서 다시 꺼낼 때마다 — 지난번 비행의 흔적(회복 종류)을 지운다
         private void OnEnable()
         {
             _spent = false;
             _heal = 0f;
-            _buffBonus = 0f;
             _owner = null;
             _splashRadius = 0f;
             _lifeTimer = Lifetime;
-            _rb.gravityScale = _gravityScale;
             _rb.linearVelocity = Vector2.zero;
             _rb.angularVelocity = 0f;
         }
@@ -80,27 +73,6 @@ namespace GnorpWar
             Launch(team, 0f, 0f, targetPoint, arcHeight, 0f);
         }
 
-        // 버프는 걷고 있는 아군에게도 던진다 — 떨어질 때 그 아군이 가 있을 자리를 노린다
-        public void LaunchBuff(Unit owner, float bonus, float seconds, Vector2 targetPoint, Vector2 targetVelocity, float arcHeight)
-        {
-            _owner = owner;
-            _buffBonus = bonus;
-            _buffSeconds = seconds;
-            targetPoint.x += targetVelocity.x * FlightTime(targetPoint, arcHeight);
-            Launch(owner.Team, 0f, 0f, targetPoint, arcHeight, 0f);
-        }
-
-        // 중력 없이 곧게 날아간다(던진 칼)
-        public void LaunchStraight(Team team, float damage, float push, Vector2 velocity)
-        {
-            _team = team;
-            _damage = damage;
-            _push = push;
-            _rb.gravityScale = 0f;
-            _rb.linearVelocity = velocity;
-            _lifeTimer = Lifetime;
-        }
-
         private void FixedUpdate()
         {
             _lifeTimer -= Time.fixedDeltaTime;
@@ -121,18 +93,15 @@ namespace GnorpWar
             if (_spent || other.isTrigger)
                 return;
 
-            if (_heal > 0f || _buffBonus > 0f)
+            if (_heal > 0f)
             {
                 if (other.TryGetComponent(out IDamageable anyone) && anyone.Team != _team)
                     return;   // 적은 통과
                 if (other.TryGetComponent(out Unit ally))
                 {
-                    if (ally == _owner || (_heal > 0f && !ally.IsDamaged))
-                        return;   // 던진 본인·(회복이면) 멀쩡한 아군은 통과
-                    if (_heal > 0f)
-                        ally.Heal(_heal);
-                    else
-                        ally.Buff(_buffBonus, _buffSeconds);
+                    if (ally == _owner || !ally.IsDamaged)
+                        return;   // 던진 본인·멀쩡한 아군은 통과
+                    ally.Heal(_heal);
                 }
                 _spent = true;
                 gameObject.SetActive(false);

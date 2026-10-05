@@ -21,7 +21,6 @@ namespace GnorpWar
         private static readonly BoardRunner[] ByTeam = new BoardRunner[2];
 
         [SerializeField] private Team _team;
-        [SerializeField] private BattleConfig _config;
         [SerializeField] private Transform _spawnPoint;
         [SerializeField] private Transform _largeSpawnPoint;
 
@@ -119,24 +118,6 @@ namespace GnorpWar
                 TeamEffects.AddStack(_team, effect);
 
             Triggered?.Invoke(index);
-        }
-
-        // [차지] 칸의 게이지를 seconds만큼 채운다 — 차면 바로(이번 프레임에 아직 안 쐈으면) 발동
-        public void Charge(int index, float seconds)
-        {
-            if (index < 0 || index >= _slots.Length || _slots[index].Building == null)
-                return;
-            _slots[index].Timer += seconds;
-            TryFire(index);
-        }
-
-        // 칸의 쿨다운을 지금 값의 ratio만큼 줄인다(곱 — 쌓일수록 줄어드는 양도 줄어든다). 최소값 아래로는 안 감
-        public void ReduceCooldown(int index, float ratio)
-        {
-            if (index < 0 || index >= _slots.Length || _slots[index].Building == null)
-                return;
-            Slot slot = _slots[index];
-            slot.Cooldown = Mathf.Max(_config.MinCooldown, slot.Cooldown * (1f - ratio));
         }
     }
 }

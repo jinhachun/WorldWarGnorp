@@ -52,9 +52,9 @@
 | `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
 | `RunState` | 런 상태(static — 라운드마다 씬을 다시 불러와도 남는다): 골드·목숨·승수·라운드·필드/보관함(`OwnedBuilding[]`)·진열. 상점 규칙(구매 = 가진 건물이면 경험치 +1, 아니면 필드 → 보관함 빈 칸 · 판매 · 리롤 · 맞바꾸기)도 여기. 상점 골드는 라운드당 한 번(`EnterShop`) | — |
 | `BattleManager` | 라운드 흐름(`Battle`에 붙음). 씬 로드 = 상점(`RunState.EnterShop`, 두 보드 `Load`) → `StartBattle`(효과 비우고 두 보드 `Begin`) → 기지 `Destroyed` → `RunState.FinishBattle` + 결과 패널(`timeScale=0`) → 다음 라운드 = 씬 재로드. static `Fighting`·`Elapsed`·`DamageMultiplier`·`ExtraUnits`(가속 — 공격력 배율 · 생산 수 가산, `BattleConfig`) | `Base.Destroyed` 구독 · `BoardRunner` |
-| `BoardRunner` | 한 진영의 필드 보드를 전투 동안 돌린다(`AllyBoard`·`EnemyBoard`, `For(team)`). 칸마다 게이지가 0부터 차고, 차면 발동 = ① 생산(유닛 수 × 레벨, 넓은 유닛은 큰 유닛 소환 지점) ② `BuildingAction`들 ③ 건물 효과 스택 +1. `Charge`(게이지 채우기) · `ReduceCooldown`(지금 쿨다운 × (1 − 비율), 최소 `BattleConfig.MinCooldown`). 🔴 **칸당 한 프레임에 한 번만 발동**(차지로 서로 당겨도 무한 연쇄 없음 — 넘친 시간은 다음 프레임) | `Unit.Spawn` · `Unit.NotifyProduced` · `TeamEffects` |
+| `BoardRunner` | 한 진영의 필드 보드를 전투 동안 돌린다(`AllyBoard`·`EnemyBoard`, `For(team)`). 칸마다 게이지가 0부터 차고, 차면 발동 = ① 생산(유닛 수 × 레벨, 넓은 유닛은 큰 유닛 소환 지점) ② `BuildingAction`들 ③ 건물 효과 스택 +1. 🔴 **칸당 한 프레임에 한 번만 발동**(서로 발동시키는 기물끼리도 무한 연쇄 없음 — 넘친 시간은 다음 프레임) | `Unit.Spawn` · `Unit.NotifyProduced` · `TeamEffects` |
 | `BuildingDefinition` · `BuildingAction` · `OwnedBuilding` | SO / 데이터. 건물 = 이름·설명·등급(가격·출현 확률은 `BattleConfig`의 등급 표)·쿨다운·생산 유닛·유닛 수·액션들·효과들(`Assets/Data/Buildings/`). 액션 = 발동 때 하는 일 하나(레벨에 따라 무엇이 커지는지는 액션이 정한다). `OwnedBuilding` = (건물, 경험치)만 담는 순수 데이터 — 레벨업 필요 경험치 2, 3, 4 … (나중에 비동기 상대 보드로 저장·전송하는 단위) | — |
-| `UnitEffect` · `TeamEffects` | 유닛 효과(`Assets/Data/Effects/`). 적용 분류(비우면 전부) + 훅(이동 속도·사거리·매 스텝·적 머리 착지·원거리 사격·피격·회복·생산)을 가상 메서드로. 건물이 필드에 있으면 전투 시작부터 그 진영에 켜지고(`TeamEffects.Enable`), 발동마다 스택 +1. 사냥(`VaultEffect`)·버프(`AttackBuffEffect`)는 이동·지원 동작을 바꿔서 `Unit`이 직접 읽는다 | `Unit`의 공개 도우미(`ThrowStraight`·`FireProjectile`·`FindHealTarget` …) |
+| `UnitEffect` · `TeamEffects` | 유닛 효과(`Assets/Data/Effects/`). 적용 분류(비우면 전부) + 훅(이동 속도·사거리·매 스텝·적 머리 착지·원거리 사격·피격·회복·생산)을 가상 메서드로. 건물이 필드에 있으면 전투 시작부터 그 진영에 켜지고(`TeamEffects.Enable`), 발동마다 스택 +1. 지금 남은 효과는 이중 회복(`DoubleHealEffect`)뿐 | `Unit`의 공개 도우미(`FireProjectile`·`ThrowHeal`·`FindHealTarget` …) |
 | `Ground` | 굽은 땅(씬의 `Ground`, `Instance`). 사인 3개를 겹친 비대칭 언덕 높이 함수 `HeightAt(x)` 하나가 원본 — **씬을 불러올 때마다 위상·높이를 새로 뽑아** 충돌(PolygonCollider2D)·그림(LineRenderer)을 만든다. 양 끝(기지·소환 자리)은 평평, `_flatAnchors`(탑) 밑은 평평한 단을 만들고 탑 밑면을 그 위로 옮긴다 | — |
 | `BoardView` · `SlotView` · `ShopPanel` · `OfferCard` · `RampLabel` | UI. `BoardView` = 칸 한 줄(아군 필드·적 필드·보관함, 틀 칸 복제) — 아군 필드는 전투 전엔 `RunState`, 전투 중엔 `BoardRunner`를 본다. `ShopPanel` = The Bazaar식 상점(진열 · 가운데 필드 · 보관함) — **끌어서** 칸 이동/맞바꿈 · 진열을 칸에 놓아 구매(`RunState.BuyInto`) · 판매 버튼에 놓아 판매. 누르기는 선택(설명)·진열 빈 칸 구매. 끌기 이벤트는 `SlotView`·`OfferCard`·`SellDropZone`이 받아 `ShopPanel`로 넘긴다. `RampLabel` = 전투 시간 + 가속(공격력·생산 수) | `RunState` · `BattleManager.StartBattle` |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
@@ -91,7 +91,7 @@
 |---|---|
 | **새 유닛 종류** | `Assets/Data/Unit_*.asset` 하나(이름·**분류**·수치·공격 방식·밀치는 힘·화살·**진영별 프리팹 두 칸**) + `Ally_*`/`Enemy_*` 프리팹 두 개(`*_Melee` 복제 → `_definition`·`Visual/Weapon` 그림 교체) + 그 유닛을 만드는 건물. 코드 X |
 | **새 생산 건물** | `Assets/Data/Buildings/Building_*.asset`(등급·쿨다운·유닛·유닛 수) + 상점에 내려면 `BattleConfig`의 `Shop Pool`, 적이 쓰면 `Enemy Rounds`. 코드 X |
-| **기존 효과를 건물에** | 건물의 `Effects`에 `Effect_*.asset`을 넣는다(적용 분류는 효과 에셋이). 같은 효과를 다른 분류에 쓰려면 효과 에셋을 복제해 분류만 바꾼다. 코드 X — 단 효과마다 전제가 있다: DoubleShot·LongRange는 원거리 공격, DoubleHeal·AttackBuff는 회복 유닛에서만 동작 |
+| **기존 효과를 건물에** | 건물의 `Effects`에 `Effect_*.asset`을 넣는다(적용 분류는 효과 에셋이). 같은 효과를 다른 분류에 쓰려면 효과 에셋을 복제해 분류만 바꾼다. 코드 X — 단 효과마다 전제가 있다: DoubleHeal은 회복 유닛에서만 동작 |
 | **새 유닛 효과** | `Units/Effects/`에 `UnitEffect` 상속 클래스 하나(있는 훅만 쓰면 `Unit` 수정 X, 수치는 필드로) + `Assets/Data/Effects/` 에셋. 새 훅이 필요하면 `UnitEffect`에 가상 메서드 + `Unit`의 해당 지점에서 `TeamEffects.For(_team)`을 돌며 부른다 |
 | **새 건물 발동 효과(유틸)** | `Buildings/`에 `BuildingAction` 상속 클래스 하나(`Execute(board, slot, level)`, 이웃은 slot±1) + 에셋 + 건물의 `Actions`에 추가. 보드를 바꾸는 동작이 더 필요하면 `BoardRunner`에 공개 메서드 |
 | **새 공격 방식** | `AttackType` enum(**맨 뒤에만**) + `Unit.FixedUpdate`의 공격 분기 |
@@ -119,8 +119,8 @@
 - 🔴 **맵 길이를 바꾸면 씬 값을 같이 옮긴다** — `Ground._minX/_maxX`(·평평 구간 `_flatFrom`) · 두 기지 · `AllySpawnPoint`·`EnemySpawnPoint`·`BossSpawnPoint` · `CameraDrag._minX/_maxX`.
 - 🔴 **유닛 키는 가변이다 — `BoxCollider2D` 높이에서 읽는다**(`Unit._halfHeight`). 머리 위 칸·발밑 칸·소환 공간·찌그러짐 발 고정·**점프 높이(= 키 + 1, 유닛 정의에 값 없음)**가 전부 이 값 기준.
   키 큰 유닛(기사)의 그림은 `Visual` 아래 칸별 자식(`Horse`·`Rider`)으로 두고 `Visual` 자체엔 SpriteRenderer를 두지 않는다. 층 교환은 키가 같을 때만.
-- 🔴 **효과는 진영 단위로 켜진다**(`TeamEffects.For(team)`) — 유닛 정의(`Unit_*.asset`)는 양 진영이 같이 쓰므로 효과를 정의에 달지 말 것. 효과의 수치를 유닛마다 따로 기억해야 하면(쿨다운 등) `Unit.EffectReady`/`SetEffectCooldown`을 쓴다(생애마다 `OnEnable`에서 비워진다).
-- 🔴 **유닛 공격 피해는 `Unit.DamageScale`을 곱한다**(버프 × 전투 공격력 가속). 새 공격을 만들 때 빠뜨리면 가속이 안 먹어 판이 안 끝날 수 있다. 탑 화살은 가속 대상이 아니다.
+- 🔴 **효과는 진영 단위로 켜진다**(`TeamEffects.For(team)`) — 유닛 정의(`Unit_*.asset`)는 양 진영이 같이 쓰므로 효과를 정의에 달지 말 것.
+- 🔴 **유닛 공격 피해는 `Unit.DamageScale`을 곱한다**(전투 공격력 가속). 새 공격을 만들 때 빠뜨리면 가속이 안 먹어 판이 안 끝날 수 있다. 탑 화살은 가속 대상이 아니다.
 - **피해 없이 밀기는 `Unit.Shove`**. `TakeDamage(0, …)`로 밀면 파편·번쩍·경직 규칙까지 따라온다.
 - **화염(`AttackType.Flame`)은 무기 자리(`Visual/Weapon`)를 입으로 쓴다** — 그래서 화염 유닛은 찌르기 동작을 하지 않는다(입이 움직이면 불이 따라 흔들림).
 - **`TakeDamage`의 `attacker`**는 근접으로 때린 유닛만 넘긴다(투사체는 null). Shield 반사처럼 "누가 때렸나"가 필요한 효과만 쓴다.
@@ -130,7 +130,7 @@
 - 🔴 **유닛·투사체·이펙트는 풀(`Pooled`)에서 꺼낸다 — `Instantiate`/`Destroy` 대신 `Pooled.Get`/`SetActive(false)`.** 꺼지는 순간 스스로 풀로 돌아간다.
   재사용되므로 **한 생애의 상태는 `OnEnable`에서 처음 값으로 되돌린다**(`Unit.OnEnable` · `Projectile.OnEnable` · `FlameBit.Launch`). 새 상태 필드를 추가하면 거기에도 넣을 것. 죽은 유닛은 파괴되지 않으므로 **죽음은 `IsAlive`로 판단**(참조가 null인지로 보지 말 것).
 - 🔴 **유닛이 수백이 되는 게임이라 `Unit.FixedUpdate`가 병목이다**(9/29 측정: 프레임의 약 90%). 매 스텝 도는 코드에 물리 검색·컴포넌트 조회를 늘리지 말 것.
-  주변 검색(적·사냥·칼 띠·회복/버프 대상·기지 위 유닛)은 `TargetScanInterval`(0.1초)마다만 새로 하고 그 사이엔 캐시를 검증만 한다. 적 찾기는 진영 레이어(`AllyUnit`/`EnemyUnit`, `Unit.Awake`가 지정)로 거른 `_enemyFilter`, 아군 찾기는 `_allyFilter`. 충돌 규칙은 레이어와 무관하게 전부 켜져 있다.
+  주변 검색(적·회복 대상·기지 위 유닛)은 `TargetScanInterval`(0.1초)마다만 새로 하고 그 사이엔 캐시를 검증만 한다. 적 찾기는 진영 레이어(`AllyUnit`/`EnemyUnit`, `Unit.Awake`가 지정)로 거른 `_enemyFilter`, 아군 찾기는 `_allyFilter`. 충돌 규칙은 레이어와 무관하게 전부 켜져 있다.
   성능을 다시 볼 땐 `PerfProbe`(Dev)를 붙인다 — `Unit.Contacts/Scan/Support/Walk` 프로파일러 구간을 읽는다. 물리 몰아 돌리기 상한은 `Maximum Allowed Timestep` 0.1(프로젝트 설정).
 - 🔴 **static 상태는 씬 재로드(= 다음 라운드)에도 남는다** — `RunState`는 그걸 일부러 쓰고, `TeamEffects`는 전투 시작마다 비운다. 새 static을 만들면 라운드마다 비울지 먼저 정할 것.
 - 🔴 **층 정렬은 자리 맞바꾸기가 아니라 "애초에 뒤집혀 오르지 않기"로 한다**(사용자 결정 9/29). `Unit.BelongsBelow`(`StackRank`) 하나로 세 곳이 판정한다:

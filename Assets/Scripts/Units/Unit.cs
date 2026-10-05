@@ -166,7 +166,7 @@ namespace GnorpWar
             return supported;
         }
 
-        // 같은 진영 기지·탑은 몸이 통과하므로 빈칸 검사에서 뺀다 — 안 빼면 성문 안 소환 칸이 늘 막힌 걸로 보인다.
+        // 같은 진영 기지는 몸이 통과하므로 빈칸 검사에서 뺀다 — 안 빼면 성문 안 소환 칸이 늘 막힌 걸로 보인다.
         // 땅도 뺀다 — 굽은 땅에서는 1층 칸 아래쪽이 경사에 걸려 늘 막힌 걸로 보인다
         private static bool IsSpawnCellFree(Vector2 position, Vector2 probe, Team team)
         {
@@ -176,8 +176,6 @@ namespace GnorpWar
                 if (col.TryGetComponent(out Ground _))
                     continue;
                 if (col.TryGetComponent(out Base b) && b.Team == team)
-                    continue;
-                if (col.TryGetComponent(out Tower t) && t.Team == team)
                     continue;
                 return false;
             }
@@ -330,8 +328,7 @@ namespace GnorpWar
             _flashTimer = 0f;
             _thrustTime = ThrustDuration;
 
-            // 같은 진영 기지·탑 통과 — 콜라이더를 껐다 켜면 무시 설정이 풀릴 수 있어 생애마다 다시 건다
-            Tower.IgnoreOwnTowers(_team, _body);
+            // 같은 진영 기지 통과 — 콜라이더를 껐다 켜면 무시 설정이 풀릴 수 있어 생애마다 다시 건다
             Base.IgnoreOwnBase(_team, _body);
         }
 

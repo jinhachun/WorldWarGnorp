@@ -27,7 +27,7 @@
 | `Assets/Scripts/Units/Effects/` | 유닛 효과 — 효과마다 파일 하나(`UnitEffect` 상속) + 진영별 켜진 효과 `TeamEffects` | 새 유닛 효과 |
 | `Assets/Scripts/Buildings/` | 건물 (`BuildingDefinition` · `BuildingAction`과 액션들 · `OwnedBuilding` · `BoardRunner`) | 건물·발동 액션 |
 | `Assets/Scripts/Run/` | 런 상태·상점 규칙 (`RunState`) | 골드·목숨·구매/판매 규칙 |
-| `Assets/Scripts/Bases/` | 기지·탑 (`Base` · `BaseDefinition` · `Tower` · `TowerDefinition`) | 기지·탑 로직과 SO 정의 |
+| `Assets/Scripts/Bases/` | 본진 (`Base` · `BaseDefinition`) — 본진은 화살을 쏘는 타워 | 본진 로직과 SO 정의 |
 | `Assets/Scripts/Battle/` | 라운드 흐름·전장 (`BattleManager` · `BattleConfig` · `Ground`) | 라운드 단위 규칙 |
 | `Assets/Scripts/UI/` | HUD·상점 화면 (`BoardView` · `SlotView` · `ShopPanel` · `OfferCard` · `RampLabel` · `BaseHealthBar` · `CameraDrag`) | 화면 표시·버튼 |
 | `Assets/Scripts/Fx/` | 타격감 연출 (`FxDirector` · `CameraShake`) | 연출 |
@@ -49,18 +49,17 @@
 | 이름 | 책임 | 누구를 부르나 |
 |---|---|---|
 | `Unit` | 유닛 한 마리. 사거리 안에 적(`IDamageable`)이 있으면 멈춰서 공격 + 칼 찌르기(점프보다 우선). 없으면 전진, 앞 아군이 멈춰 있고 머리 위가 비고 기지 위가 아니면 점프. 피격 시 맞은 방향으로 밀림·찌그러짐·번쩍. 죽으면 콜라이더 끄고 뒤집혀 맨 앞 레이어로 튀어 떨어진 뒤 3초 후 파괴. 수치는 `UnitDefinition` SO, 연출 상수는 `Unit.cs` 상단 | 사거리 안 `IDamageable.TakeDamage(피해, 맞은 방향)` · 접촉한 `Unit`의 `IsStopped`·`IsHeadFree`·`_onBase` |
-| `Base` | 진영 기지. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력은 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | — |
+| `Base` | 진영 본진 = 타워. 사거리(본진 중심 기준) 안 가장 가까운 적 유닛에게 자식 `Muzzle`에서 화살. 체력 0이면 로그 + 비활성화 + `Destroyed` 이벤트. 체력·화살 수치는 `BaseDefinition` SO. 자식 `BackStop`(보이지 않는 높은 콜라이더)이 기지 뒤쪽 끝을 막는다 — 기지가 꺼지면 같이 꺼진다 | `Projectile.Launch` |
 | `RunState` | 런 상태(static — 라운드마다 씬을 다시 불러와도 남는다): 골드·목숨·승수·라운드·필드/보관함(`OwnedBuilding[]`)·진열. 상점 규칙(구매 = 가진 건물이면 경험치 +1, 아니면 필드 → 보관함 빈 칸 · 판매 · 리롤 · 맞바꾸기)도 여기. 상점 골드는 라운드당 한 번(`EnterShop`) | — |
 | `BattleManager` | 라운드 흐름(`Battle`에 붙음). 씬 로드 = 상점(`RunState.EnterShop`, 두 보드 `Load`) → `StartBattle`(효과 비우고 두 보드 `Begin`) → 기지 `Destroyed` → `RunState.FinishBattle` + 결과 패널(`timeScale=0`) → 다음 라운드 = 씬 재로드. static `Fighting`·`Elapsed`·`DamageMultiplier`·`ExtraUnits`(가속 — 공격력 배율 · 생산 수 가산, `BattleConfig`) | `Base.Destroyed` 구독 · `BoardRunner` |
 | `BoardRunner` | 한 진영의 필드 보드를 전투 동안 돌린다(`AllyBoard`·`EnemyBoard`, `For(team)`). 칸마다 게이지가 0부터 차고, 차면 발동 = ① 생산(유닛 수 × 레벨, 넓은 유닛은 큰 유닛 소환 지점) ② `BuildingAction`들 ③ 건물 효과 스택 +1. 🔴 **칸당 한 프레임에 한 번만 발동**(서로 발동시키는 기물끼리도 무한 연쇄 없음 — 넘친 시간은 다음 프레임) | `Unit.Spawn` · `Unit.NotifyProduced` · `TeamEffects` |
 | `BuildingDefinition` · `BuildingAction` · `OwnedBuilding` | SO / 데이터. 건물 = 이름·설명·등급(가격·출현 확률은 `BattleConfig`의 등급 표)·쿨다운·생산 유닛·유닛 수·액션들·효과들(`Assets/Data/Buildings/`). 액션 = 발동 때 하는 일 하나(레벨에 따라 무엇이 커지는지는 액션이 정한다). `OwnedBuilding` = (건물, 경험치)만 담는 순수 데이터 — 레벨업 필요 경험치 2, 3, 4 … (나중에 비동기 상대 보드로 저장·전송하는 단위) | — |
 | `UnitEffect` · `TeamEffects` | 유닛 효과(`Assets/Data/Effects/`). 적용 분류(비우면 전부) + 훅(이동 속도·사거리·매 스텝·적 머리 착지·원거리 사격·피격·회복·생산)을 가상 메서드로. 건물이 필드에 있으면 전투 시작부터 그 진영에 켜지고(`TeamEffects.Enable`), 발동마다 스택 +1. 지금 남은 효과는 이중 회복(`DoubleHealEffect`)뿐 | `Unit`의 공개 도우미(`FireProjectile`·`ThrowHeal`·`FindHealTarget` …) |
-| `Ground` | 굽은 땅(씬의 `Ground`, `Instance`). 사인 3개를 겹친 비대칭 언덕 높이 함수 `HeightAt(x)` 하나가 원본 — **씬을 불러올 때마다 위상·높이를 새로 뽑아** 충돌(PolygonCollider2D)·그림(LineRenderer)을 만든다. 양 끝(기지·소환 자리)은 평평, `_flatAnchors`(탑) 밑은 평평한 단을 만들고 탑 밑면을 그 위로 옮긴다 | — |
+| `Ground` | 굽은 땅(씬의 `Ground`, `Instance`). 사인 3개를 겹친 비대칭 언덕 높이 함수 `HeightAt(x)` 하나가 원본 — **씬을 불러올 때마다 위상·높이를 새로 뽑아** 충돌(PolygonCollider2D)·그림(LineRenderer)을 만든다. 양 끝(기지·소환 자리)은 평평, `_flatAnchors`(지금은 비어 있음) 밑은 평평한 단을 만들고 밑면을 그 위로 옮긴다 | — |
 | `BoardView` · `SlotView` · `ShopPanel` · `OfferCard` · `RampLabel` | UI. `BoardView` = 칸 한 줄(아군 필드·적 필드·보관함, 틀 칸 복제) — 아군 필드는 전투 전엔 `RunState`, 전투 중엔 `BoardRunner`를 본다. `ShopPanel` = The Bazaar식 상점(진열 · 가운데 필드 · 보관함) — **끌어서** 칸 이동/맞바꿈 · 진열을 칸에 놓아 구매(`RunState.BuyInto`) · 판매 버튼에 놓아 판매. 누르기는 선택(설명)·진열 빈 칸 구매. 끌기 이벤트는 `SlotView`·`OfferCard`·`SellDropZone`이 받아 `ShopPanel`로 넘긴다. `RampLabel` = 전투 시간 + 가속(공격력·생산 수) | `RunState` · `BattleManager.StartBattle` |
 | `RunInBackgroundInPlayMode` (Editor) | 에디터 플레이모드 진입 시 `Application.runInBackground = true` — 에디터가 뒤에 있어도 게임이 돌게(Claude의 MCP 플레이 검증용). 빌드 설정은 안 건드림 | — |
 | `FlameBit` | 화염방사 그림 한 조각(충돌 없음). 피해는 `Unit.BreatheFire`가 띠 판정으로 준다 | — |
 | `BaseHealthBar` | 기지 체력 비율을 채움 게이지로 표시 | `Base.Hp01` |
-| `Tower` | 진영별 탑(`IDamageable`). 같은 진영 유닛은 몸이 통과(`Unit.Awake`가 `IgnoreOwnTowers`), 적은 막혀 공격. 사거리 안 가장 가까운 적 유닛에게 화살. 부서지면 꺼질 뿐 승패와 무관. 수치는 `Tower_Inner/Outer.asset` | `Projectile.Launch` |
 | `FxDirector` | 타격감 창구(씬의 `Fx` 오브젝트, `Instance`로 접근). 파편·사망 먼지(파티클 프리팹 `Assets/Fx/`) · 화면 흔들림 · 히트스톱 | `CameraShake.Add` |
 | `DamageNumbers` | 씬 루트의 `DamageNumbers`(원점). 데미지·회복 숫자 전부를 **메시 하나**로 그린다(드로우콜 1 · 프레임 할당 0 · 최대 512개, 넘치면 버림). 같은 대상이 0.2초 안에 또 맞으면 떠 있는 숫자에 더한다. 글꼴은 코드가 만든 3×5 픽셀 숫자, 재질은 `FX_Pixel` 복제 | — (`Unit`·`Base`·`Tower`의 `TakeDamage`, `Unit.Heal`이 부른다) |
 | `CameraShake` | 메인 카메라에 붙음. 충격이 쌓였다 잦아드는 흔들림(실제 시간 기준) | — |
@@ -115,12 +114,12 @@
 - 🔴 **`Time.timeScale`을 쓰는 곳이 넷이다** — 결과 화면(0) · 상점(1, `BattleManager.Awake`) · 전투 배속(`SpeedButton.Current` ×1/2/4 — 전투 시작·버튼 누를 때) · 히트스톱(현재값×0.02). 측정용 배속(8)은 손으로 걸 때만. 히트스톱은 끝날 때 **자기가 건 값일 때만** 되돌린다.
   새로 timeScale을 만지는 코드를 넣으면 이 셋과 부딪히지 않는지 본다.
 - 🔴 **카메라를 옮길 땐 부모 `CameraRig`를 움직인다**(`CameraDrag`). `CameraShake`는 자식 카메라의 localPosition을 Awake 때 값으로 되돌리므로, 카메라 자체를 옮기면 흔들릴 때 원래 자리로 튄다.
-- 🔴 **땅은 평평하지 않고 전투마다 바뀐다 — 땅 높이가 필요하면 `Ground.Instance.HeightAt(x)`를 쓴다.** y를 상수로 박지 말 것. 밑이 평평해야 하는 새 구조물은 `Ground._flatAnchors`에 넣는다(탑 y는 `Ground`가 판 시작 때 맞춘다 — 씬의 y는 의미 없음).
+- 🔴 **땅은 평평하지 않고 전투마다 바뀐다 — 땅 높이가 필요하면 `Ground.Instance.HeightAt(x)`를 쓴다.** y를 상수로 박지 말 것. 밑이 평평해야 하는 새 구조물은 `Ground._flatAnchors`에 넣는다(그 구조물의 y는 `Ground`가 판 시작 때 맞춘다 — 씬의 y는 의미 없음).
 - 🔴 **맵 길이를 바꾸면 씬 값을 같이 옮긴다** — `Ground._minX/_maxX`(·평평 구간 `_flatFrom`) · 두 기지 · `AllySpawnPoint`·`EnemySpawnPoint`·`BossSpawnPoint` · `CameraDrag._minX/_maxX`.
 - 🔴 **유닛 키는 가변이다 — `BoxCollider2D` 높이에서 읽는다**(`Unit._halfHeight`). 머리 위 칸·발밑 칸·소환 공간·찌그러짐 발 고정·**점프 높이(= 키 + 1, 유닛 정의에 값 없음)**가 전부 이 값 기준.
   키 큰 유닛(기사)의 그림은 `Visual` 아래 칸별 자식(`Horse`·`Rider`)으로 두고 `Visual` 자체엔 SpriteRenderer를 두지 않는다. 층 교환은 키가 같을 때만.
 - 🔴 **효과는 진영 단위로 켜진다**(`TeamEffects.For(team)`) — 유닛 정의(`Unit_*.asset`)는 양 진영이 같이 쓰므로 효과를 정의에 달지 말 것.
-- 🔴 **유닛 공격 피해는 `Unit.DamageScale`을 곱한다**(전투 공격력 가속). 새 공격을 만들 때 빠뜨리면 가속이 안 먹어 판이 안 끝날 수 있다. 탑 화살은 가속 대상이 아니다.
+- 🔴 **유닛 공격 피해는 `Unit.DamageScale`을 곱한다**(전투 공격력 가속). 새 공격을 만들 때 빠뜨리면 가속이 안 먹어 판이 안 끝날 수 있다. 본진 화살은 가속 대상이 아니다.
 - **피해 없이 밀기는 `Unit.Shove`**. `TakeDamage(0, …)`로 밀면 파편·번쩍·경직 규칙까지 따라온다.
 - **화염(`AttackType.Flame`)은 무기 자리(`Visual/Weapon`)를 입으로 쓴다** — 그래서 화염 유닛은 찌르기 동작을 하지 않는다(입이 움직이면 불이 따라 흔들림).
 - **`TakeDamage`의 `attacker`**는 근접으로 때린 유닛만 넘긴다(투사체는 null). Shield 반사처럼 "누가 때렸나"가 필요한 효과만 쓴다.

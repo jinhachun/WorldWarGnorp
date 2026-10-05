@@ -25,16 +25,16 @@ CameraRig        ← CameraDrag   (좌우 드래그·관성, 맵 끝 x -72~72에
  └─ Main Camera  ← Camera(Orthographic, size 20, 로컬 0 · 월드 y=14, 배경 검정) · UniversalAdditionalCameraData · CameraShake   [tag=MainCamera]
 Fx               ← FxDirector   (파편·먼지 프리팹 + CameraShake 참조)
 Global Light 2D  ← Light2D(Global)
-Ground           ← PolygonCollider2D · LineRenderer · Ground   (굽은 땅 x -72~72, 원점·스케일 1 고정. 모양은 판 시작 때 무작위로 만든다 — 에디터 메뉴 Build는 기본 물결만 보여 준다. `_flatAnchors` = 탑 4개)
-Base_Ally        ← SpriteRenderer(`castle.png`, order -1 — 유닛이 성 앞에 그려짐) · BoxCollider2D · Base(Team=Ally)   (박스 x -72~-63.6 · 8.375×7.5 = 그림의 몸통, 성문 x -66.6. 같은 진영 유닛은 몸이 통과)
+Ground           ← PolygonCollider2D · LineRenderer · Ground   (굽은 땅 x -72~72, 원점·스케일 1 고정. 모양은 판 시작 때 무작위로 만든다 — 에디터 메뉴 Build는 기본 물결만 보여 준다. `_flatAnchors` 비어 있음)
+Base_Ally        ← SpriteRenderer(`castle.png`, order -1 — 유닛이 성 앞에 그려짐) · BoxCollider2D · Base(Team=Ally)   (박스 x -72~-63.6 · 8.375×7.5 = 그림의 몸통, 성문 x -66.6. 같은 진영 유닛은 몸이 통과. 체력·화살 = `Base_Test.asset`)
+ ├─ Muzzle       (꼭대기 가운데, 화살 나가는 자리)
  ├─ BackStop     ← BoxCollider2D   (보이지 않음) 성 뒤 x -72.5~-72, 땅 ~ y 36
  └─ Flag         ← SpriteRenderer(`flag.png`, 진영색)   가운데 첨탑 끝
 Base_Enemy       ← (거울 대칭 — 루트 x스케일 -1, 박스 x 63.6~72, 성문 x 66.6)
+ ├─ Muzzle
  ├─ BackStop
  └─ Flag
-Tower_Ally_Inner · _Outer · Tower_Enemy_Inner · _Outer   ← SpriteRenderer(`tower.png`) · BoxCollider2D · Tower   (x ∓58 · ∓38, 박스 3×7.25 = 그림의 실제 픽셀 범위, y는 판 시작 때 `Ground`가 평평한 단 위로 옮긴다, 적은 루트 x스케일 -1)
- ├─ Muzzle       (꼭대기, 화살 나가는 자리)
- └─ Flag         ← SpriteRenderer(`flag.png`, 진영색)   깃대가 가운데 톱니 위
+DamageNumbers    ← MeshFilter · MeshRenderer · DamageNumbers   (원점 고정 — 데미지·회복 숫자를 메시 하나로, 재질 `FX_Pixel` 복제)
 Battle           ← BattleManager   (라운드 흐름 허브: 상점 → 전투 → 결과)
 AllyBoard        ← BoardRunner(Team=Ally)    (아군 필드 보드 실행기 — 소환 지점 = AllySpawnPoint, 큰 유닛도 같은 자리)
 EnemyBoard       ← BoardRunner(Team=Enemy)   (적 보드 — 소환 = EnemySpawnPoint, 큰 유닛 = BossSpawnPoint)

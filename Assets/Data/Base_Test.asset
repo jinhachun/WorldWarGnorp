@@ -13,3 +13,9 @@ MonoBehaviour:
   m_Name: Base_Test
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BaseDefinition
   _maxHp: 700
+  _attackDamage: 160
+  _attackInterval: 1
+  _attackRange: 10
+  _pushPower: 0.5
+  _projectile: {fileID: 1966056168359300910, guid: 7d5976cf7a47a034787cb29b3e71f9cb, type: 3}
+  _projectileArcHeight: 2.5

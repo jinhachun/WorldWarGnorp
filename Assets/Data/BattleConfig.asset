@@ -45,6 +45,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3aa2623e9d67b284a9916b88bb173b06, type: 2}
   - {fileID: 11400000, guid: 131f45eb6411ccc4095b2ba5f07caf13, type: 2}
   - {fileID: 11400000, guid: 8599043724103aa4f9f9dcd4b5b2841a, type: 2}
+  - {fileID: 11400000, guid: 23a6b96e745c18146913f7f52e19cecf, type: 2}
+  - {fileID: 11400000, guid: 47fbfceea9179404aa37e8c8caf15397, type: 2}
+  - {fileID: 11400000, guid: c9e9844df012bfe4e877d91271931b5c, type: 2}
   _rarityPrices: 0300000004000000050000000a0000000c000000
   _rarityWeightsFirst:
   - 60

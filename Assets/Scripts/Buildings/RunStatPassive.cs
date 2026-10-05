@@ -16,10 +16,17 @@ namespace GnorpWar
 
         public bool AppliesTo(UnitDefinition unit) => _units.Length == 0 || System.Array.IndexOf(_units, unit) >= 0;
 
-        public override void OnBuy(OwnedBuilding self)
+        public override bool HasBuyEffect => _trigger == Trigger.Buy;
+
+        // 적 보드(영악한 투자가)엔 런이 없으므로 그 전투 동안으로
+        public override void OnBuy(OwnedBuilding self, Team team)
         {
-            if (_trigger == Trigger.Buy)
+            if (_trigger != Trigger.Buy)
+                return;
+            if (team == Team.Ally)
                 StatBook.AddForRun(this, _modifier);
+            else
+                StatBook.AddForBattle(team, this, _modifier);
         }
 
         public override void OnGoldGained(OwnedBuilding self)

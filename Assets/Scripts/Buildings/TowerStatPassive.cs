@@ -20,10 +20,12 @@ namespace GnorpWar
                 Apply(board.Team);
         }
 
-        public override void OnBuy(OwnedBuilding self)
+        public override bool HasBuyEffect => _trigger == Trigger.Buy;
+
+        public override void OnBuy(OwnedBuilding self, Team team)
         {
             if (_trigger == Trigger.Buy)
-                Apply(Team.Ally);
+                Apply(team);
         }
 
         public override void OnTowerKill(BoardRunner board, int slot, Unit victim)
@@ -32,9 +34,10 @@ namespace GnorpWar
                 Apply(board.Team);
         }
 
+        // 영구히는 아군만(런) — 적 보드는 그 전투 동안으로
         private void Apply(Team team)
         {
-            if (_permanent)
+            if (_permanent && team == Team.Ally)
                 TowerBook.AddForRun(_modifier);
             else
                 TowerBook.AddForBattle(team, _modifier);

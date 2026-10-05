@@ -57,8 +57,8 @@ namespace GnorpWar
             RollOffers();
         }
 
-        // 골드를 얻는다 — 얻을 때마다(금액과 상관없이 한 번) 필드 기물의 골드 훅
-        private static void GainGold(int amount)
+        // 골드를 얻는다 — 얻을 때마다(금액과 상관없이 한 번) 필드 기물의 골드 훅. 기물 효과(주식시장)도 이걸로 준다
+        public static void GainGold(int amount)
         {
             Gold += amount;
             ForEachFieldPassive((passive, owned) => passive.OnGoldGained(owned));
@@ -73,11 +73,11 @@ namespace GnorpWar
                         call(passive, owned);
         }
 
-        // 「구매할 때마다,」 — 산 기물(합쳐졌으면 합쳐진 결과)에서 한 번
+        // 「구매할 때마다,」 — 산 기물(합쳐졌으면 합쳐진 결과)에서, 필드의 스팀바론이 있으면 2번. 그다음 필드 기물의 "기물을 샀다" 훅(주식시장)
         private static void OnBought(OwnedBuilding owned)
         {
-            foreach (BuildingPassive passive in owned.Definition.Passives)
-                passive.OnBuy(owned);
+            BuildingPassive.TriggerBuyEffects(owned, Team.Ally, BuildingPassive.BuyRepeats(Field));
+            ForEachFieldPassive((passive, self) => passive.OnAnyBought(self, owned));
         }
 
         public static void FinishBattle(bool won)

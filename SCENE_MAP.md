@@ -46,7 +46,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
  ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (맨 윗줄 좌·우, 각 폭 900) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준)
  ├─ AllyBoardView  ← BoardView(아군 필드, **전투 중에만**) → SlotTemplate [꺼짐] ← Image · Button · SlotView → RarityFrame(`UI_SlotBorder` 120×120, 지금 등급 색) · Icon(80×80, 건물 에셋의 Icon) · Level · Gauge/Fill(Filled, 전투 중에만 보임)   (칸 x 110부터 130px 간격 → 오른쪽, y -130)
  ├─ EnemyBoardView ← BoardView(적 필드)   → SlotTemplate [꺼짐]   (오른쪽 기준 x -630부터 130px → 오른쪽. 칸 0이 왼쪽)
- ├─ RampLabel      ← Text · RampLabel   (위 가운데 y -110, 전투 중에만: 시간 + 가속(공격력·생산 수), 글자 30 · 폭 540)
+ ├─ RampLabel      ← Text · RampLabel   (위 가운데 (65, -110) — 두 보드 사이 빈 곳 가운데라 배속 버튼보다 오른쪽, 전투 중에만: 시간 + 데스매치 단계, 글자 30 · 폭 540)
  ├─ SpeedButton    ← Image · Button · SpeedButton → Label   (위 가운데 y -190, 전투 중에만 — BattleManager가 켜고 끈다. ×1 → ×2 → ×4)
  ├─ ShopPanel      ← Image(반투명 전체) · ShopPanel   (상점 단계에만 켜짐)
  │   ├─ Status   ← Text

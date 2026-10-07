@@ -28,6 +28,8 @@ namespace GnorpWar
 
         // 툴팁의 완결 문장 — 지금 등급 값으로 (CLAUDE.md §5-2)
         public abstract string Describe(int level);
+        // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null
+        public virtual string Headline(int level) => null;
 
         public static bool HasBuyEffects(BuildingDefinition building)
         {

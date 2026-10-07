@@ -9,13 +9,17 @@ namespace GnorpWar
         [SerializeField] private UnitDefinition _when;
         [SerializeField] private UnitDefinition _summon;
         [SerializeField] private int _count = 1;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private int _countPerTier = 1;
+
+        private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
 
         public override void OnNeighborSummoned(BoardRunner board, int slot, Unit unit)
         {
             if (unit.Definition == _when)
-                board.Summon(_summon, _count, slot);
+                board.Summon(_summon, Count(board.Slots[slot].Building.Level), slot);
         }
 
-        public override string Describe(int level) => $"인접 기물이 {_when.DisplayName}를 소환할 때마다 {_summon.DisplayName} {_count}기를 소환합니다.";
+        public override string Describe(int level) => $"인접 기물이 {_when.DisplayName}를 소환할 때마다 {_summon.DisplayName} {Count(level)}기를 소환합니다.";
     }
 }

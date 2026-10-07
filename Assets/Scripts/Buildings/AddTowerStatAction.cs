@@ -7,9 +7,12 @@ namespace GnorpWar
     public class AddTowerStatAction : BuildingAction
     {
         [SerializeField] private TowerModifier _modifier = new TowerModifier(TowerStat.Attack, StatOp.Percent, 0.05f);
+        [Tooltip("등급이 오를 때마다 _modifier 값에 더한다")]
+        [SerializeField] private float _perTier = 0.05f;
 
-        public override void Execute(BoardRunner board, int slot, int level) => TowerBook.AddForBattle(board.Team, _modifier);
+        public override void Execute(BoardRunner board, int slot, int level) => TowerBook.AddForBattle(board.Team, _modifier.Scaled(_perTier, level));
 
-        public override string Describe(int level) => $"전투 동안 내 타워의 {_modifier.Name} {_modifier.ValueText}";
+        public override string Describe(int level) => $"전투 동안 내 타워의 {_modifier.Name} {_modifier.Scaled(_perTier, level).ValueText}";
+        public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
     }
 }

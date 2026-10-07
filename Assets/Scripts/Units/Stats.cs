@@ -28,6 +28,9 @@ namespace GnorpWar
         public string Describe() => $"{Name} {ValueText}";
         public string Name => Names[(int)Stat];
         public string ValueText => Op == StatOp.Flat ? $"+{Value:0.##}" : Op == StatOp.Percent ? $"+{Value * 100f:0.##}%" : $"×{Value:0.##}";
+
+        // 등급 값 — Value에 등급마다 perTier를 더한 사본
+        public StatModifier Scaled(float perTier, int level) => new StatModifier(Stat, Op, OwnedBuilding.Scaled(Value, perTier, level));
     }
 
     // 타워(본진) 스탯. 직렬화되므로 맨 뒤에만 추가할 것
@@ -51,6 +54,9 @@ namespace GnorpWar
 
         public string Name => Names[(int)Stat];
         public string ValueText => new StatModifier(UnitStat.Attack, Op, Value).ValueText;
+
+        // 등급 값 — Value에 등급마다 perTier를 더한 사본
+        public TowerModifier Scaled(float perTier, int level) => new TowerModifier(Stat, Op, OwnedBuilding.Scaled(Value, perTier, level));
     }
 
     // 진영 단위 타워 스탯 변경 — StatBook과 같은 규칙(전투 동안 · 영구히 아군만), 대상 고르기는 없다(내 타워 전부)

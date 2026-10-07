@@ -8,7 +8,12 @@ namespace GnorpWar
     {
         [Tooltip("0.5 = +50%")]
         [SerializeField] private float _bonus = 0.5f;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private float _bonusPerTier = 0.25f;
 
-        public override float HighGroundDamageBonus => _bonus;
+        public override float HighGroundDamageBonus(int level) => OwnedBuilding.Scaled(_bonus, _bonusPerTier, level);
+
+        public override string Describe(int level) => string.Format(Description, $"{HighGroundDamageBonus(level) * 100f:0.#}");
+        public override string Headline(int level) => $"+{HighGroundDamageBonus(level) * 100f:0.#}%";
     }
 }

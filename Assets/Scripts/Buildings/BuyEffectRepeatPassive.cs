@@ -11,5 +11,6 @@ namespace GnorpWar
         public override int BuyEffectRepeat => _repeat;
 
         public override string Describe(int level) => $"내 「구매할 때마다,」 효과가 {_repeat}번 발동합니다.";
+        public override string Headline(int level) => $"{_repeat}번";
     }
 }

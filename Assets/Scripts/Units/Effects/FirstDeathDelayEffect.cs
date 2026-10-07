@@ -9,5 +9,6 @@ namespace GnorpWar
         [SerializeField] private float _seconds = 3f;
 
         public override float FirstDeathDelay => _seconds;
+        public override string Headline(int level) => $"{_seconds:0.#}초";
     }
 }

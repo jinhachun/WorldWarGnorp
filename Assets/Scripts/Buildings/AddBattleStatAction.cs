@@ -10,15 +10,18 @@ namespace GnorpWar
         [SerializeField] private UnitCategory[] _categories = new UnitCategory[0];
         [SerializeField] private UnitDefinition[] _units = new UnitDefinition[0];
         [SerializeField] private StatModifier _modifier = new StatModifier(UnitStat.Attack, StatOp.Percent, 0.05f);
+        [Tooltip("등급이 오를 때마다 _modifier 값에 더한다")]
+        [SerializeField] private float _perTier = 0.05f;
 
         public bool AppliesTo(UnitDefinition unit)
             => (_categories.Length == 0 && _units.Length == 0)
                || System.Array.IndexOf(_categories, unit.Category) >= 0
                || System.Array.IndexOf(_units, unit) >= 0;
 
-        public override void Execute(BoardRunner board, int slot, int level) => StatBook.AddForBattle(board.Team, this, _modifier);
+        public override void Execute(BoardRunner board, int slot, int level) => StatBook.AddForBattle(board.Team, this, _modifier.Scaled(_perTier, level));
 
-        public override string Describe(int level) => $"전투 동안 {TargetName()} {_modifier.Describe()}";
+        public override string Describe(int level) => $"전투 동안 {TargetName()} {_modifier.Scaled(_perTier, level).Describe()}";
+        public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
 
         private string TargetName()
         {

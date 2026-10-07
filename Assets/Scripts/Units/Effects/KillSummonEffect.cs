@@ -8,7 +8,14 @@ namespace GnorpWar
     {
         [SerializeField] private UnitDefinition _summon;
         [SerializeField] private int _count = 1;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private int _countPerTier = 1;
 
-        public override void OnKill(Unit killer, Unit victim, int stacks) => BoardRunner.For(killer.Team).Summon(_summon, _count, -1);
+        private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
+
+        public override void OnKill(Unit killer, Unit victim, int stacks) => BoardRunner.For(killer.Team).Summon(_summon, Count(Level(killer.Team)), -1);
+
+        public override string Describe(int level) => string.Format(Description, Count(level));
+        public override string Headline(int level) => $"{Count(level)}기";
     }
 }

@@ -8,9 +8,14 @@ namespace GnorpWar
     {
         [Tooltip("최대 체력 대비 — 0.1 = 10%")]
         [SerializeField] private float _ratio = 0.1f;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private float _ratioPerTier = 0.05f;
 
-        public override void Execute(BoardRunner board, int slot, int level) => Base.For(board.Team)?.HealRatio(_ratio);
+        private float Ratio(int level) => OwnedBuilding.Scaled(_ratio, _ratioPerTier, level);
 
-        public override string Describe(int level) => $"내 타워가 최대 체력의 {_ratio * 100f:0.#}%를 회복합니다.";
+        public override void Execute(BoardRunner board, int slot, int level) => Base.For(board.Team)?.HealRatio(Ratio(level));
+
+        public override string Describe(int level) => $"내 타워가 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";
+        public override string Headline(int level) => $"{Ratio(level) * 100f:0.#}%";
     }
 }

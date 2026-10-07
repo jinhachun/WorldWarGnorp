@@ -56,7 +56,23 @@ namespace GnorpWar
         [Tooltip("한 번에 모든 건물의 한 번 생산 수에 더하는 마리 수 (양 진영)")]
         [SerializeField] private int _rampUnitsPerStep = 1;
 
+        [Header("데스매치 — 오래 끄는 전투를 남은 유닛으로 끝낸다")]
+        [Tooltip("이 시각(초)에 양쪽 본진이 화살을 멈춘다")]
+        [SerializeField] private float _deathmatchSeconds = 180f;
+        [Tooltip("본진이 멈춘 뒤 기물이 이만큼(초) 더 발동하고 멈춘다(생산 포함)")]
+        [SerializeField] private float _boardGraceSeconds = 10f;
+
+        [Header("유닛")]
+        [Tooltip("유닛 크기 상한 — 1 = 기본 크기, 3 = 기본의 3배(+200%). 넘치는 성장은 버린다")]
+        [SerializeField] private float _maxUnitSize = 3f;
+        [Tooltip("밟기 — 적 머리 위에 서 있는 동안 그 적에게 초당 내 공격력의 이 비율만큼 피해 (모든 유닛)")]
+        [SerializeField] private float _stompDamagePerSecond = 0.5f;
+
         public int FieldSlots => _fieldSlots;
+        public float MaxUnitSize => _maxUnitSize;
+        public float StompDamagePerSecond => _stompDamagePerSecond;
+        public float DeathmatchSeconds => _deathmatchSeconds;
+        public float BoardStopSeconds => _deathmatchSeconds + _boardGraceSeconds;
         public int StorageSlots => _storageSlots;
         public int Lives => _lives;
         public int WinsToClear => _winsToClear;

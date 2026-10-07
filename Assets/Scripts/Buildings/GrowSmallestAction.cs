@@ -9,6 +9,10 @@ namespace GnorpWar
         [SerializeField] private UnitCategory _category;
         [Tooltip("기준 크기 대비 — 0.1 = +10%")]
         [SerializeField] private float _amount = 0.1f;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private float _amountPerTier = 0.1f;
+
+        private float Amount(int level) => OwnedBuilding.Scaled(_amount, _amountPerTier, level);
 
         public override void Execute(BoardRunner board, int slot, int level)
         {
@@ -17,9 +21,10 @@ namespace GnorpWar
                 if (unit.IsAlive && unit.Team == board.Team && unit.Definition.Category == _category && (smallest == null || unit.Size < smallest.Size))
                     smallest = unit;
             if (smallest != null)
-                smallest.Grow(_amount);
+                smallest.Grow(Amount(level));
         }
 
-        public override string Describe(int level) => $"가장 작은 {_category.DisplayName}의 크기 +{_amount * 100f:0.#}%";
+        public override string Describe(int level) => $"가장 작은 {_category.DisplayName}의 크기 +{Amount(level) * 100f:0.#}%";
+        public override string Headline(int level) => $"+{Amount(level) * 100f:0.#}%";
     }
 }

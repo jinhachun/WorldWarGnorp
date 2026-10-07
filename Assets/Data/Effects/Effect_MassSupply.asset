@@ -17,5 +17,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fe3a908e4882e4549bcd0274d35653cf, type: 2}
   - {fileID: 11400000, guid: 4fbdc0f6f767397448cc30259fad91ca, type: 2}
   _description: "\uB0B4\uAC00 \uBCD1\uC0AC \uD639\uC740 \uAD81\uC218\uB97C \uC18C\uD658\uD560
-    \uB54C\uB9C8\uB2E4, 1\uAE30\uB97C \uCD94\uAC00\uB85C \uC18C\uD658\uD569\uB2C8\uB2E4."
+    \uB54C\uB9C8\uB2E4, {0}\uAE30\uB97C \uCD94\uAC00\uB85C \uC18C\uD658\uD569\uB2C8\uB2E4."
   _extra: 1

@@ -8,13 +8,20 @@ namespace GnorpWar
     {
         [SerializeField] private UnitCategory _prey;
         [SerializeField] private float _factor = 1.2f;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private float _factorPerTier = 0.2f;
+
+        private float Factor(int level) => OwnedBuilding.Scaled(_factor, _factorPerTier, level);
 
         public override UnitCategory PreferredTargetCategory => _prey;
 
         public override void OnAttack(Unit attacker, IDamageable target, int stacks)
         {
             if (target is Unit enemy && enemy.Definition.Category == _prey)
-                attacker.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Multiply, _factor));
+                attacker.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Multiply, Factor(Level(attacker.Team))));
         }
+
+        public override string Describe(int level) => string.Format(Description, $"{Factor(level):0.##}");
+        public override string Headline(int level) => $"×{Factor(level):0.##}";
     }
 }

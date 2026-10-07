@@ -21,7 +21,7 @@ namespace GnorpWar
         public BuildingDefinition Definition => _definition;
         public int Upgrades => _upgrades;
         public BuildingRarity Rarity => (BuildingRarity)((int)_definition.Rarity + _upgrades);
-        // 생산 수 배율 — 등급업 효과를 기물마다 정하기 전까지의 임시 규칙
+        // 1 = 시작 등급. 생산 수는 × Level, 다른 수치는 Scaled로 등급마다 증가량을 더한다
         public int Level => _upgrades + 1;
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
@@ -31,6 +31,10 @@ namespace GnorpWar
 
         public void Upgrade() => _upgrades++;
         public void AddStacks(int count) => _stacks += count;
+
+        // 등급이 오를 때마다 perTier씩 — level 1(시작 등급)이면 value 그대로
+        public static float Scaled(float value, float perTier, int level) => value + perTier * (level - 1);
+        public static int Scaled(int value, int perTier, int level) => value + perTier * (level - 1);
 
         public static bool IsEmpty(OwnedBuilding building) => building == null || building._definition == null;
     }

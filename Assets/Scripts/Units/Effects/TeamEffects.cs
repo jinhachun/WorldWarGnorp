@@ -9,6 +9,8 @@ namespace GnorpWar
         {
             public UnitEffect Effect;
             public int Stacks;
+            // 켜 준 기물의 등급(OwnedBuilding.Level) — 여럿이면 가장 높은 것
+            public int Level = 1;
         }
 
         private static readonly List<Entry>[] ByTeam = { new List<Entry>(), new List<Entry>() };
@@ -21,17 +23,28 @@ namespace GnorpWar
                 entries.Clear();
         }
 
-        // 켠다 — 이미 켜져 있으면 그대로
-        public static Entry Enable(Team team, UnitEffect effect)
+        // 켠다 — 이미 켜져 있으면 등급만 높은 쪽으로
+        public static Entry Enable(Team team, UnitEffect effect, int level)
         {
             foreach (Entry entry in For(team))
                 if (entry.Effect == effect)
+                {
+                    entry.Level = System.Math.Max(entry.Level, level);
                     return entry;
-            var added = new Entry { Effect = effect };
+                }
+            var added = new Entry { Effect = effect, Level = level };
             For(team).Add(added);
             return added;
         }
 
-        public static void AddStack(Team team, UnitEffect effect) => Enable(team, effect).Stacks++;
+        public static void AddStack(Team team, UnitEffect effect) => Enable(team, effect, 1).Stacks++;
+
+        public static int LevelOf(Team team, UnitEffect effect)
+        {
+            foreach (Entry entry in For(team))
+                if (entry.Effect == effect)
+                    return entry.Level;
+            return 1;
+        }
     }
 }

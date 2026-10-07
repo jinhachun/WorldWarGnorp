@@ -8,6 +8,8 @@ namespace GnorpWar
     {
         // 히트스톱 동안의 시간 배율. 0이 아닌 값이라야 "누가 멈췄나"를 구분할 수 있다
         private const float HitStopFactor = 0.02f;
+        // 히트스톱이 끝난 뒤 이만큼(실제 시간 초) 안에는 새 히트스톱을 건너뛴다 — 유닛이 많으면 연달아 걸려 게임 시간이 계속 멈춘다(사용자 10/6)
+        private const float HitStopMinGap = 1f;
 
         [SerializeField] private ParticleSystem _hitSpark;
         [SerializeField] private ParticleSystem _deathPuff;
@@ -15,6 +17,7 @@ namespace GnorpWar
         [SerializeField] private FlameBit _flameBit;
 
         private bool _hitStopping;
+        private float _hitStopEndedAt = float.NegativeInfinity;
 
         public static FxDirector Instance { get; private set; }
 
@@ -77,7 +80,7 @@ namespace GnorpWar
         public void HitStop(float seconds)
         {
             // 판이 끝나 멈춘 상태(timeScale 0)는 건드리지 않는다
-            if (_hitStopping || Time.timeScale <= 0f)
+            if (_hitStopping || Time.timeScale <= 0f || Time.realtimeSinceStartup - _hitStopEndedAt < HitStopMinGap)
                 return;
             StartCoroutine(HitStopRoutine(seconds));
         }
@@ -93,6 +96,7 @@ namespace GnorpWar
             if (Mathf.Approximately(Time.timeScale, frozen))
                 Time.timeScale = saved;
             _hitStopping = false;
+            _hitStopEndedAt = Time.realtimeSinceStartup;
         }
     }
 }

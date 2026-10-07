@@ -13,11 +13,13 @@ namespace GnorpWar
         [Tooltip("켜면 영구히(런 동안, 팔아도 남는다) — 끄면 전투 동안")]
         [SerializeField] private bool _permanent;
         [SerializeField] private TowerModifier _modifier;
+        [Tooltip("등급이 오를 때마다 _modifier 값에 더한다")]
+        [SerializeField] private float _perTier;
 
         public override void OnBattleStart(BoardRunner board, int slot, int level)
         {
             if (_trigger == Trigger.BattleStart)
-                Apply(board.Team);
+                Apply(board.Team, level);
         }
 
         public override bool HasBuyEffect => _trigger == Trigger.Buy;
@@ -25,23 +27,26 @@ namespace GnorpWar
         public override void OnBuy(OwnedBuilding self, Team team)
         {
             if (_trigger == Trigger.Buy)
-                Apply(team);
+                Apply(team, self.Level);
         }
 
         public override void OnTowerKill(BoardRunner board, int slot, Unit victim)
         {
             if (_trigger == Trigger.TowerKill)
-                Apply(board.Team);
+                Apply(board.Team, board.Slots[slot].Building.Level);
         }
 
         // 영구히는 아군만(런) — 적 보드는 그 전투 동안으로
-        private void Apply(Team team)
+        private void Apply(Team team, int level)
         {
+            TowerModifier modifier = _modifier.Scaled(_perTier, level);
             if (_permanent && team == Team.Ally)
-                TowerBook.AddForRun(_modifier);
+                TowerBook.AddForRun(modifier);
             else
-                TowerBook.AddForBattle(team, _modifier);
+                TowerBook.AddForBattle(team, modifier);
         }
+
+        public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
 
         public override string Describe(int level)
         {
@@ -49,7 +54,7 @@ namespace GnorpWar
             // 전투 시작에 거는 건 늘 켜진 것처럼 읽히므로 "전투 동안"을 붙이지 않는다(성채 "내 타워의 체력 +50%")
             string battle = !_permanent && _trigger != Trigger.BattleStart ? "전투 동안 " : "";
             string permanent = _permanent ? " 영구히" : "";
-            return $"{when}{battle}내 타워의 {_modifier.Name}{permanent} {_modifier.ValueText}";
+            return $"{when}{battle}내 타워의 {_modifier.Name}{permanent} {_modifier.Scaled(_perTier, level).ValueText}";
         }
     }
 }

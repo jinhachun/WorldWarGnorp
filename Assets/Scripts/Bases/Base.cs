@@ -81,6 +81,8 @@ namespace GnorpWar
 
         private void FixedUpdate()
         {
+            if (BattleManager.TowersStopped)
+                return;
             _attackCooldown -= Time.fixedDeltaTime;
             if (_attackCooldown > 0f || !FindTargets())
                 return;
@@ -92,7 +94,7 @@ namespace GnorpWar
             bool pierce = false;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
             {
-                highGround += e.Effect.HighGroundDamageBonus;
+                highGround += e.Effect.HighGroundDamageBonus(e.Level);
                 pierce |= e.Effect.TowerArrowsPierce;
             }
             for (int i = 0; i < arrows; i++)
@@ -103,7 +105,7 @@ namespace GnorpWar
                 if (pierce)
                     shot.Pierce();
             }
-            _attackCooldown = _definition.AttackInterval / Stat(TowerStat.AttackSpeed);
+            _attackCooldown = Unit.NextCooldown(_attackCooldown, _definition.AttackInterval / Stat(TowerStat.AttackSpeed));
         }
 
         // 사거리 안의 적(유닛 · 적 본진)을 가까운 순으로 _targets에

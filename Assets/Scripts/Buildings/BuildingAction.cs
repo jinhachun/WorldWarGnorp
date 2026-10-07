@@ -8,5 +8,7 @@ namespace GnorpWar
         public abstract void Execute(BoardRunner board, int slot, int level);
         // 툴팁에서 "N초마다" 뒤에 붙는 구절 — 지금 레벨 값으로, 기호 없이, 마침표로 끝낸다 (CLAUDE.md §5-2)
         public abstract string Describe(int level);
+        // 칸 아래에 보이는 대표 숫자(지금 등급 값, "1초"·"10%") — 없으면 null
+        public virtual string Headline(int level) => null;
     }
 }

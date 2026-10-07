@@ -7,13 +7,18 @@ namespace GnorpWar
     public class GoldOnBuyEffectPassive : BuildingPassive
     {
         [SerializeField] private int _gold = 1;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private int _goldPerTier = 1;
+
+        private int Gold(int level) => OwnedBuilding.Scaled(_gold, _goldPerTier, level);
 
         public override void OnAnyBought(OwnedBuilding self, OwnedBuilding bought)
         {
             if (HasBuyEffects(bought.Definition))
-                RunState.GainGold(_gold);
+                RunState.GainGold(Gold(self.Level));
         }
 
-        public override string Describe(int level) => $"「구매할 때마다,」 효과가 있는 기물을 구매하면, 골드를 {_gold} 얻습니다.";
+        public override string Describe(int level) => $"「구매할 때마다,」 효과가 있는 기물을 구매하면, 골드를 {Gold(level)} 얻습니다.";
+        public override string Headline(int level) => $"{Gold(level)}골드";
     }
 }

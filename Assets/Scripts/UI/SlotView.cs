@@ -51,7 +51,8 @@ namespace GnorpWar
             _icon.enabled = !empty;
             if (!empty)
                 _icon.sprite = building.Definition.Icon;
-            _level.text = empty ? "" : building.Rarity.DisplayName();
+            // 등급은 테두리 색이 보여 주므로 글자는 대표 숫자(지금 등급 값)
+            _level.text = empty ? "" : BuildingTooltip.Headline(building.Definition, building.Level);
             _rarityFrame.enabled = !empty;
             if (!empty)
                 _rarityFrame.color = building.Rarity.FrameColor();
@@ -77,7 +78,7 @@ namespace GnorpWar
                 if (!enemy && !BattleManager.Fighting)
                     body += (building.Stacks > 0 ? BuildingTooltip.Note($"스택 {building.Stacks}") : "") + BuildingTooltip.UpgradeNote(building) + BuildingTooltip.Note($"팔면 {RunState.SellValue(building)}골드를 얻습니다.");
                 OwnedBuilding[] board = enemy ? System.Array.ConvertAll(BoardRunner.For(Team.Enemy).Slots, s => s.Building) : RunState.Field;
-                BuildingTooltip.Show(this, BuildingTooltip.Title(building.Definition, enemy, building.Rarity), body,
+                BuildingTooltip.Show(this, BuildingTooltip.Title(building.Definition, enemy, building.Rarity), body, building.Definition.Unit,
                     BuildingTooltip.UnitInfo(building.Definition, board));
             }
         }

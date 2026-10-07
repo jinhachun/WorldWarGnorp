@@ -18,3 +18,4 @@ MonoBehaviour:
     Stat: 2
     Op: 1
     Value: 0.05
+  _perTier: 0.05

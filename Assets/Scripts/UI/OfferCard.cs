@@ -55,7 +55,7 @@ namespace GnorpWar
                 string body = BuildingTooltip.Describe(building, 1, building.Cooldown);
                 if (pair != null)
                     body += BuildingTooltip.Note($"사면 가진 것과 합쳐져 {(pair.Rarity + 1).DisplayName()} 등급이 됩니다.");
-                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity), body, BuildingTooltip.UnitInfo(building, RunState.Field));
+                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity), body, building.Unit, BuildingTooltip.UnitInfo(building, RunState.Field));
             }
         }
 

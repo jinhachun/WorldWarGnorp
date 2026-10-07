@@ -12,6 +12,10 @@ namespace GnorpWar
         [SerializeField] private int _consumeCount = 10;
         [SerializeField] private UnitDefinition _summon;
         [SerializeField] private int _summonCount = 1;
+        [Tooltip("등급이 오를 때마다 소환 수에 더한다(소모 수는 그대로)")]
+        [SerializeField] private int _summonCountPerTier = 1;
+
+        private int SummonCount(int level) => OwnedBuilding.Scaled(_summonCount, _summonCountPerTier, level);
 
         private readonly List<Unit> _found = new List<Unit>();
 
@@ -27,10 +31,11 @@ namespace GnorpWar
             _found.Sort((a, b) => (a.Position.x * a.Forward).CompareTo(b.Position.x * b.Forward));
             for (int i = 0; i < _consumeCount; i++)
                 _found[i].Consume();
-            board.Summon(_summon, _summonCount, slot);
+            board.Summon(_summon, SummonCount(level), slot);
         }
 
         public override string Describe(int level)
-            => $"전장에 {_consume.DisplayName}가 {_consumeCount}기 이상이면 {_consumeCount}기를 소모하여 {_summon.DisplayName} {_summonCount}기를 소환합니다.";
+            => $"전장에 {_consume.DisplayName}가 {_consumeCount}기 이상이면 {_consumeCount}기를 소모하여 {_summon.DisplayName} {SummonCount(level)}기를 소환합니다.";
+        public override string Headline(int level) => $"{SummonCount(level)}기";
     }
 }

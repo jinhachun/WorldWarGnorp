@@ -16,6 +16,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3a39e5b8cf800ec4a90e5827c089bfe9, type: 2}
   _units: []
   _description: "\uB0B4 \uC911\uBCF4\uBCD1\uC774 \uD68C\uBCF5\uBC1B\uC744 \uB54C\uB9C8\uB2E4
-    \uD06C\uAE30, \uCCB4\uB825, \uACF5\uACA9\uB825 +5%"
+    \uD06C\uAE30, \uCCB4\uB825, \uACF5\uACA9\uB825 +{0}%"
   _size: 0.05
   _stats: 0.05

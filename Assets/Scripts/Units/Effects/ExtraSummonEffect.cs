@@ -7,7 +7,13 @@ namespace GnorpWar
     public class ExtraSummonEffect : UnitEffect
     {
         [SerializeField] private int _extra = 1;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private int _extraPerTier = 1;
 
-        public override int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks) => _extra;
+        public override int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level)
+            => OwnedBuilding.Scaled(_extra, _extraPerTier, level);
+
+        public override string Describe(int level) => string.Format(Description, OwnedBuilding.Scaled(_extra, _extraPerTier, level));
+        public override string Headline(int level) => $"+{OwnedBuilding.Scaled(_extra, _extraPerTier, level)}기";
     }
 }

@@ -7,7 +7,14 @@ namespace GnorpWar
     public class HasteOnHealEffect : UnitEffect
     {
         [SerializeField] private float _seconds = 0.5f;
+        [Tooltip("등급이 오를 때마다 더한다")]
+        [SerializeField] private float _secondsPerTier = 0.5f;
 
-        public override void OnHealed(Unit healer, Unit patient, int stacks) => BoardRunner.For(healer.Team).HasteRandom(_seconds);
+        private float Seconds(int level) => OwnedBuilding.Scaled(_seconds, _secondsPerTier, level);
+
+        public override void OnHealed(Unit healer, Unit patient, int stacks) => BoardRunner.For(healer.Team).HasteRandom(Seconds(Level(healer.Team)));
+
+        public override string Describe(int level) => string.Format(Description, $"{Seconds(level):0.#}");
+        public override string Headline(int level) => $"{Seconds(level):0.#}초";
     }
 }

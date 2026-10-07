@@ -13,6 +13,8 @@ namespace GnorpWar
         [Tooltip("이 유닛에게 — 비우면 전부")]
         [SerializeField] private UnitDefinition[] _units = new UnitDefinition[0];
         [SerializeField] private StatModifier _modifier;
+        [Tooltip("등급이 오를 때마다 _modifier 값에 더한다")]
+        [SerializeField] private float _perTier;
 
         public bool AppliesTo(UnitDefinition unit) => _units.Length == 0 || System.Array.IndexOf(_units, unit) >= 0;
 
@@ -24,22 +26,24 @@ namespace GnorpWar
             if (_trigger != Trigger.Buy)
                 return;
             if (team == Team.Ally)
-                StatBook.AddForRun(this, _modifier);
+                StatBook.AddForRun(this, _modifier.Scaled(_perTier, self.Level));
             else
-                StatBook.AddForBattle(team, this, _modifier);
+                StatBook.AddForBattle(team, this, _modifier.Scaled(_perTier, self.Level));
         }
 
         public override void OnGoldGained(OwnedBuilding self)
         {
             if (_trigger == Trigger.GoldGained)
-                StatBook.AddForRun(this, _modifier);
+                StatBook.AddForRun(this, _modifier.Scaled(_perTier, self.Level));
         }
 
         public override string Describe(int level)
         {
             string target = _units.Length == 0 ? "내 유닛들" : string.Join("·", System.Array.ConvertAll(_units, u => u.DisplayName));
             string when = _trigger == Trigger.Buy ? "「구매할 때마다,」" : "내가 골드를 얻을 때마다,";
-            return $"{when} {target}의 {_modifier.Name} 영구히 {_modifier.ValueText}";
+            return $"{when} {target}의 {_modifier.Name} 영구히 {_modifier.Scaled(_perTier, level).ValueText}";
         }
+
+        public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
     }
 }

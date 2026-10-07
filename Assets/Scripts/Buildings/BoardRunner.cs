@@ -68,7 +68,7 @@ namespace GnorpWar
             foreach (Slot slot in _slots)
                 if (slot.Building != null)
                     foreach (UnitEffect effect in slot.Building.Definition.Effects)
-                        TeamEffects.Enable(_team, effect);
+                        TeamEffects.Enable(_team, effect, slot.Building.Level);
             for (int i = 0; i < _slots.Length; i++)
                 if (_slots[i].Building != null)
                     foreach (BuildingPassive passive in _slots[i].Building.Definition.Passives)
@@ -80,7 +80,8 @@ namespace GnorpWar
 
         private void Update()
         {
-            if (!_running)
+            // 데스매치 — 정해진 시각부터 기물이 발동하지 않는다. 발동 경로(Fire)는 이 루프에서만 시작된다(FireNow는 전투 시작 때뿐)
+            if (!_running || BattleManager.BoardsStopped)
                 return;
 
             foreach (Slot slot in _slots)
@@ -131,7 +132,7 @@ namespace GnorpWar
         {
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
-                    count += e.Effect.ExtraSummons(unit, count, sourceSlot, e.Stacks);
+                    count += e.Effect.ExtraSummons(unit, count, sourceSlot, e.Stacks, e.Level);
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
                     unit = e.Effect.ConvertSummon(unit, sourceSlot, e.Stacks);

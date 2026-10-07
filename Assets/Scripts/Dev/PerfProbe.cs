@@ -9,7 +9,7 @@ namespace GnorpWar
     {
         private const float Period = 2f;
         // 재는 구간(Unity 내부 표시 이름) — 스크립트 FixedUpdate · 2D 물리 · 스크립트 Update · 그리기
-        private static readonly string[] Markers = { "FixedBehaviourUpdate", "Physics2D.Simulate", "BehaviourUpdate", "Unit.Contacts", "Unit.Scan", "Unit.Support", "Unit.Walk" };
+        private static readonly string[] Markers = { "FixedBehaviourUpdate", "Physics2D.Simulate", "BehaviourUpdate", "Unit.Contacts", "Unit.Scan", "Unit.Support", "Unit.Walk", "Unit.Climb" };
 
         private ProfilerRecorder[] _recorders;
         private float _timer;

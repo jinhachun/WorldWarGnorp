@@ -14,5 +14,7 @@ namespace GnorpWar
                 unit.GrantInvulnerable(_seconds);
             return false;
         }
+
+        public override string Headline(int level) => $"{_seconds:0.#}초";
     }
 }

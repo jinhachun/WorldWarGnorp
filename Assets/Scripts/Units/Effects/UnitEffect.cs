@@ -15,6 +15,12 @@ namespace GnorpWar
         [SerializeField] private string _description = "";
 
         public string Description => _description;
+        // 툴팁 글 — 등급으로 크는 효과는 설명의 {0}에 지금 등급 값을 넣는다
+        public virtual string Describe(int level) => _description;
+        // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null
+        public virtual string Headline(int level) => null;
+        // 이 효과를 켠 기물의 등급(같은 효과를 여러 기물이 켜면 가장 높은 것) — 훅 안에서 수치를 읽을 때
+        protected int Level(Team team) => TeamEffects.LevelOf(team, this);
 
         public bool AppliesTo(UnitDefinition unit)
             => (_categories.Length == 0 && _units.Length == 0)
@@ -22,7 +28,7 @@ namespace GnorpWar
                || System.Array.IndexOf(_units, unit) >= 0;
 
         // 소환 처리 ① — 이 유닛을 count기 소환할 때 더 소환할 수(BoardRunner.Summon). sourceSlot = 소환한 기물 칸(아니면 -1)
-        public virtual int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks) => 0;
+        public virtual int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level) => 0;
         // 소환 처리 ② — 대신 소환할 유닛(그대로면 unit)
         public virtual UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks) => unit;
 
@@ -52,7 +58,7 @@ namespace GnorpWar
         public virtual bool ProjectilesPierce => false;
         public virtual bool TowerArrowsPierce => false;
         // 상대보다 높은 고도에서 주는 피해 +비율(기름투하대) — 타워는 늘 높은 고도
-        public virtual float HighGroundDamageBonus => 0f;
+        public virtual float HighGroundDamageBonus(int level) => 0f;
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
         // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)

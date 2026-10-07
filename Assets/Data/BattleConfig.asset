@@ -241,5 +241,9 @@ MonoBehaviour:
       _stacks: 0
   _rampStartSeconds: 60
   _rampStepSeconds: 10
-  _rampPerStep: 1
+  _rampPerStep: 0
   _rampUnitsPerStep: 0
+  _deathmatchSeconds: 180
+  _boardGraceSeconds: 10
+  _maxUnitSize: 3
+  _stompDamagePerSecond: 0.5

@@ -48,3 +48,6 @@ mono_crash.*
 # OS
 .DS_Store
 Thumbs.db
+
+# 역할 세션 명단·에디터 잠금 — 실행 중 상태라 커밋하지 않는다 (.claude/skills/role)
+/.claude/team/

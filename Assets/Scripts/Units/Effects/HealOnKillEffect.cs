@@ -13,7 +13,11 @@ namespace GnorpWar
 
         private float Ratio(int level) => OwnedBuilding.Scaled(_ratio, _ratioPerTier, level);
 
-        public override void OnKill(Unit killer, Unit victim, int stacks) => killer.Heal(killer.MaxHp * Ratio(Level(killer.Team)));
+        public override void OnKill(Unit killer, Unit victim, int stacks)
+        {
+            killer.Heal(killer.MaxHp * Ratio(Level(killer.Team)));
+            BuffLinks.EffectToPoint(killer.Team, this, killer.Position, BuffKind.Heal);
+        }
 
         public override string Describe(int level) => string.Format(Description, $"{Ratio(level) * 100f:0.#}");
         public override string Headline(int level) => $"{Ratio(level) * 100f:0.#}%";

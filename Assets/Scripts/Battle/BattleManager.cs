@@ -40,9 +40,30 @@ namespace GnorpWar
         // 유닛 크기 상한(1 = 기본) · 밟기 피해(초당 공격력 비율) — 전투 씬 밖이면 상한 없음 · 0
         public static float MaxUnitSize => _instance != null ? _instance._config.MaxUnitSize : float.MaxValue;
         public static float StompDamagePerSecond => _instance != null ? _instance._config.StompDamagePerSecond : 0f;
+        // 등반 — 모든 등반 점프 뒤 쉬는 초 · 앞 아군이 이 비율보다 느려야 오른다 · 점프 높이 = 키 + 이 칸. 전투 씬 밖이면 기본값
+        public static float ClimbRest => _instance != null ? _instance._config.ClimbRest : 0f;
+        public static float ClimbSlowerThan => _instance != null ? _instance._config.ClimbSlowerThan : 0.5f;
+        public static float ClimbJumpExtra => _instance != null ? _instance._config.ClimbJumpExtra : 2f;
         // 데스매치 시각(전투 경과 초) — 화면 표시용. 전투 씬 밖이면 0
         public static float DeathmatchAt => _instance != null ? _instance._config.DeathmatchSeconds : 0f;
         public static float BoardStopAt => _instance != null ? _instance._config.BoardStopSeconds : 0f;
+        // 전투력 계수(CombatPower가 읽는다) — 전투 씬 밖이면 null
+        public static BattleConfig Config => _instance != null ? _instance._config : null;
+
+        // ── 치트 훅(Dev/CheatPanel만 부른다) — 상점 단계인가 · 전투 경과 시간을 이 초로 · 전투를 바로 끝낸다
+        public static bool InShop => _instance != null && !_instance._fighting && !_instance._over;
+
+        public static void CheatSkipTo(float elapsed)
+        {
+            if (Fighting)
+                _instance._battleStart = Time.time - elapsed;
+        }
+
+        public static void CheatFinish(bool won)
+        {
+            if (Fighting)
+                _instance.Finish(won);
+        }
 
         private void Awake()
         {
@@ -54,7 +75,7 @@ namespace GnorpWar
             RunState.EnterShop();
 
             _allyBoard.Load(RunState.Field);
-            _enemyBoard.Load(_config.EnemyRoundAt(RunState.Round).Field);
+            _enemyBoard.Load(OwnedBuilding.Compacted(RunState.CheatEnemyField ?? _config.EnemyRoundAt(RunState.Round).Field));
             _shopPanel.SetActive(true);
             _resultPanel.SetActive(false);
             _speedButton.SetActive(false);
@@ -77,6 +98,13 @@ namespace GnorpWar
             StatBook.ClearBattle();
             TowerBook.ClearBattle();
             UnitAliases.Clear();
+            // 맵의 유닛 수치(숲 · 초원) — 양 진영에 똑같이, 전투 동안
+            if (RunState.Map != null)
+                foreach (MapDefinition.UnitRule rule in RunState.Map.UnitRules)
+                {
+                    StatBook.AddForBattle(Team.Ally, rule, rule.Modifier);
+                    StatBook.AddForBattle(Team.Enemy, rule, rule.Modifier);
+                }
             _allyBoard.Begin();
             _enemyBoard.Begin();
             _battleStart = Time.time;
@@ -89,6 +117,9 @@ namespace GnorpWar
         // 한쪽만 남았는데 남은 유닛이 전부 공격 못 하는 유닛(회복 전용 · 공격력 0)이면 본진을 못 깨므로 남은 쪽 승리(사용자 결정)
         private void Update()
         {
+            // 상점에서 층을 올리면 RunState.Field가 새 배열이 된다 — 아군 보드(탑 그림이 읽는다)를 다시 올린다
+            if (!_fighting && _allyBoard.Field != RunState.Field)
+                _allyBoard.Load(RunState.Field);
             if (!BoardsStopped || _over)
                 return;
             int allies = 0, enemies = 0, allyAttackers = 0, enemyAttackers = 0;
@@ -148,7 +179,7 @@ namespace GnorpWar
                 line = "런 클리어!";
             else if (RunState.IsOver)
                 line = "게임 오버";
-            _resultText.text = $"{line}\n<size=48>목숨 {RunState.Lives} · 승리 {RunState.Wins}</size>";
+            _resultText.text = line;   // 목숨·승리는 결과 창 아이콘 줄(UI)이 그린다
             _retryLabel.text = RunState.IsOver ? "새 런" : "다음 라운드";
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);

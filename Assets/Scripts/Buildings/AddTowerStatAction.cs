@@ -10,9 +10,21 @@ namespace GnorpWar
         [Tooltip("등급이 오를 때마다 _modifier 값에 더한다")]
         [SerializeField] private float _perTier = 0.05f;
 
-        public override void Execute(BoardRunner board, int slot, int level) => TowerBook.AddForBattle(board.Team, _modifier.Scaled(_perTier, level));
+        public override void Execute(BoardRunner board, int slot, int level)
+        {
+            TowerModifier modifier = _modifier.Scaled(_perTier, level);
+            TowerBook.AddForBattle(board.Team, modifier);
+            board.AddBattleGain(slot, modifier.Op, modifier.Value);
+            BuffLinks.ToTowers(board.Team, slot, BuffLinks.KindOf(modifier.Stat));
+        }
 
-        public override string Describe(int level) => $"전투 동안 내 타워의 {_modifier.Name} {_modifier.Scaled(_perTier, level).ValueText}";
+        public override bool BattleGain(out StatOp op)
+        {
+            op = _modifier.Op;
+            return true;
+        }
+
+        public override string Describe(int level) => $"전투 동안 내 타워들의 {_modifier.Name} {_modifier.Scaled(_perTier, level).ValueText}";
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
     }
 }

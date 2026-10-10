@@ -20,6 +20,8 @@ namespace GnorpWar
         // 0보다 크면 회복 투사체 — 적·던진 본인·체력이 가득 찬 아군은 통과하고, 처음 닿은 다친 아군을 회복
         private float _heal;
         private Unit _owner;
+        // 던진 유닛의 종류 — 구슬이 나는 동안 던진 유닛이 죽어 풀에서 다른 유닛이 돼도 착지 효과(OnHealLanded)의 적용 분류는 던질 때 기준
+        private UnitDefinition _ownerDefinition;
         // 쏜 쪽(처치자 판정) — 유닛은 풀에서 다시 쓰이므로 쏠 때의 생애 번호가 맞을 때만 그 유닛으로 친다
         private IDamageable _shooter;
         private int _shooterLife;
@@ -86,6 +88,7 @@ namespace GnorpWar
         {
             Team team = owner.Team;
             _owner = owner;
+            _ownerDefinition = owner.Definition;
             _heal = amount;
             Launch(team, 0f, 0f, targetPoint, arcHeight, 0f, null);
         }
@@ -107,7 +110,7 @@ namespace GnorpWar
 
         private void OnTriggerEnter2D(Collider2D other)
         {
-            if (_spent || other.isTrigger)
+            if (_spent || other.isTrigger || other.usedByEffector)   // 탑의 층 바닥(이펙터)은 지나간다
                 return;
 
             if (_heal > 0f)
@@ -118,7 +121,11 @@ namespace GnorpWar
                 {
                     if (ally == _owner || !ally.IsDamaged)
                         return;   // 던진 본인·멀쩡한 아군은 통과
-                    ally.Heal(_heal);
+                    float healed = ally.Heal(_heal);
+                    if (healed > 0f)
+                        foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                            if (e.Effect.AppliesFor(_team, _ownerDefinition))
+                                e.Effect.OnHealLanded(_team, ally, healed, e.Stacks);
                 }
                 _spent = true;
                 gameObject.SetActive(false);

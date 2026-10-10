@@ -61,6 +61,8 @@ namespace GnorpWar
         public virtual float HighGroundDamageBonus(int level) => 0f;
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
+        // 회복 투사체가 아군에 닿아 실제로 체력이 찬 직후(구슬마다, 빗나간 구슬은 안 불린다) — team = 던진 쪽. 적용 분류는 던진 유닛 기준
+        public virtual void OnHealLanded(Team team, Unit patient, float amount, int stacks) { }
         // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)
         public virtual void OnSummoned(Unit unit, int sourceSlot, int stacks) { }
     }

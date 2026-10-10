@@ -18,10 +18,13 @@ MonoBehaviour:
   _rarity: 2
   _nation: 1
   _faction: 1
-  _cooldown: 10
+  _cooldown: 3
   _unit: {fileID: 11400000, guid: b6298655f3645eb4bb2033b8f8d1d83a, type: 2}
   _unitCount: 1
   _actions: []
   _effects: []
   _passives:
   - {fileID: 11400000, guid: 27fb44adcf7b5d246a16d274bdccf3ff, type: 2}
+  _mentionedUnits:
+  - {fileID: 11400000, guid: b6298655f3645eb4bb2033b8f8d1d83a, type: 2}
+  - {fileID: 11400000, guid: 2db8a66f89f8778458884185910698a5, type: 2}

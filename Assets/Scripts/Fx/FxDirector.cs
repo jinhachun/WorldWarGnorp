@@ -24,6 +24,8 @@ namespace GnorpWar
         private void Awake()
         {
             Instance = this;
+            // 버프 선 — 파편과 같은 픽셀 재질(FX_Pixel)로 그린다
+            gameObject.AddComponent<BuffLinkFx>().Init(_hitSpark.GetComponent<ParticleSystemRenderer>().sharedMaterial);
         }
 
         private void OnDestroy()

@@ -13,9 +13,17 @@ namespace GnorpWar
 
         public override void OnSummoned(Unit unit, int sourceSlot, int stacks)
         {
+            Vector2 sum = Vector2.zero;
+            int count = 0;
             foreach (Unit ally in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (ally.IsAlive && ally.Team == unit.Team && this.AppliesFor(ally.Team, ally.Definition))
+                {
                     ally.Grow(_growPerSummon);
+                    sum += ally.Position;
+                    count++;
+                }
+            if (count > 0)
+                BuffLinks.EffectToPoint(unit.Team, this, sum / count, BuffKind.Vitality);
         }
 
         public override void OnAttack(Unit attacker, IDamageable target, int stacks)

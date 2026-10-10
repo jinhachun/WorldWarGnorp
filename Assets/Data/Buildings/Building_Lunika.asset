@@ -26,3 +26,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2130f2cc7868d3a41989a78d03e90058, type: 2}
   - {fileID: 11400000, guid: c4e4a1c05e74cf64d87f8392d7c4e69a, type: 2}
   _passives: []
+  _mentionedUnits: []

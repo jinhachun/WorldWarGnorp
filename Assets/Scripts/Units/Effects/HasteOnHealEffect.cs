@@ -12,7 +12,13 @@ namespace GnorpWar
 
         private float Seconds(int level) => OwnedBuilding.Scaled(_seconds, _secondsPerTier, level);
 
-        public override void OnHealed(Unit healer, Unit patient, int stacks) => BoardRunner.For(healer.Team).HasteRandom(Seconds(Level(healer.Team)));
+        // 던진 순간이 아니라 구슬이 닿아 체력이 실제로 찼을 때(사용자 10/10 "닿으면 걸리게") — 빗나간 구슬은 가속 없음
+        public override void OnHealLanded(Team team, Unit patient, float amount, int stacks)
+        {
+            int picked = BoardRunner.For(team).HasteRandom(Seconds(Level(team)));
+            if (picked >= 0)
+                BuffLinks.EffectToSlot(team, this, picked, BuffKind.Haste);
+        }
 
         public override string Describe(int level) => string.Format(Description, $"{Seconds(level):0.#}");
         public override string Headline(int level) => $"{Seconds(level):0.#}초";

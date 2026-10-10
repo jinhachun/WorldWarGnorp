@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 건물 하나 — 쿨다운마다 발동한다. 발동하면 ① 유닛 생산(유닛 수 × 레벨) ② 액션들(차지·쿨감 …) ③ 켜 둔 효과 스택 +1.
+    // 건물 하나 — 쿨다운마다 발동한다. 발동하면 ① 유닛 생산(유닛 수는 등급과 무관 — 등급은 생산 기물의 쿨다운을 줄인다, CooldownAt) ② 액션들(차지·쿨감 …) ③ 켜 둔 효과 스택 +1.
     // 효과(Effects)는 이 건물이 필드에 있으면 전투 시작부터 이 진영 유닛에게 켜진다
     [CreateAssetMenu(menuName = "GnorpWar/Building")]
     public class BuildingDefinition : ScriptableObject
@@ -24,7 +24,7 @@ namespace GnorpWar
         [Header("생산")]
         [Tooltip("비우면 생산하지 않는 건물(유틸)")]
         [SerializeField] private UnitDefinition _unit;
-        [Tooltip("Lv1 한 번에 나오는 수 — 실제 = 이 값 × 레벨")]
+        [Tooltip("한 번에 나오는 수 — 등급이 올라도 그대로(등급은 쿨다운을 줄인다, BattleConfig)")]
         [SerializeField] private int _unitCount = 1;
 
         [Header("유틸")]
@@ -33,6 +33,10 @@ namespace GnorpWar
         [SerializeField] private UnitEffect[] _effects = new UnitEffect[0];
         [Tooltip("늘 켜진 기물 능력 — 전투 시작·인접 기물 소환 등")]
         [SerializeField] private BuildingPassive[] _passives = new BuildingPassive[0];
+
+        [Header("툴팁")]
+        [Tooltip("툴팁 글에 이름이 나오는 유닛 — 나오는 순서대로(소환 유닛 포함). 기물 판 아래로 유닛 판을 이 순서로 쌓는다. 병종 태그는 넣지 않는다")]
+        [SerializeField] private UnitDefinition[] _mentionedUnits = new UnitDefinition[0];
 
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
@@ -43,8 +47,19 @@ namespace GnorpWar
         public float Cooldown => _cooldown;
         public UnitDefinition Unit => _unit;
         public int UnitCount => _unitCount;
+        // 지금 한 번 발동에 소환하는 수(전투 가속분 포함) — 발동(BoardRunner)과 툴팁·칸 숫자가 같이 읽는다
+        public int SummonCount => _unitCount + BattleManager.ExtraUnits;
+
+        // 그 등급의 원래 쿨다운 — 생산 기물은 등급마다 준다(BattleConfig, 8 → 6.4 → 5.12), 그 밖의 기물은 Cooldown 그대로.
+        // 풍차·가속·맵 배율은 이 값 위에 곱해진다. 발동(BoardRunner)과 툴팁이 같이 읽는다
+        public float CooldownAt(int level)
+            => _unit == null || BattleManager.Config == null ? _cooldown : _cooldown * BattleManager.Config.RankCooldownScale(level);
+
+        // 지울 자리 — 등급 보너스 줄은 없어졌다(등급업 = 쿨다운 감소). UI가 호출을 빼면 지운다
+        public string RankLine(int level) => null;
         public BuildingAction[] Actions => _actions;
         public UnitEffect[] Effects => _effects;
         public BuildingPassive[] Passives => _passives;
+        public UnitDefinition[] MentionedUnits => _mentionedUnits;
     }
 }

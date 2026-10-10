@@ -18,12 +18,18 @@ namespace GnorpWar
             TeamEffects.AddStack(unit.Team, this);
             if ((stacks + 1) % _every != 0)
                 return;
+            Vector2 sum = Vector2.zero;
+            int count = 0;
             foreach (Unit ally in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (ally.IsAlive && ally.Team == unit.Team)
                 {
                     ally.LoseHpRatio(_hpLoss);
                     ally.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Percent, _attack));
+                    sum += ally.Position;
+                    count++;
                 }
+            if (count > 0)
+                BuffLinks.EffectToPoint(unit.Team, this, sum / count, BuffKind.Attack);
         }
     }
 }

@@ -10,5 +10,11 @@ namespace GnorpWar
         public abstract string Describe(int level);
         // 칸 아래에 보이는 대표 숫자(지금 등급 값, "1초"·"10%") — 없으면 null
         public virtual string Headline(int level) => null;
+        // 전투 동안 칸이 값을 쌓는가(허수아비 등) — 쌓으면 그 계산 방식. 쌓은 값은 Execute에서 board.AddBattleGain으로
+        public virtual bool BattleGain(out StatOp op)
+        {
+            op = default;
+            return false;
+        }
     }
 }

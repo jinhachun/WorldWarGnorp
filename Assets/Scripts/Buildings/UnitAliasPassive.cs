@@ -11,6 +11,8 @@ namespace GnorpWar
 
         public override void OnBattleStart(BoardRunner board, int slot, int level) => UnitAliases.Add(board.Team, _unit, _alsoAs);
 
+        public override UnitDefinition AliasOf(UnitDefinition unit) => unit == _unit ? _alsoAs : null;
+
         public override string Describe(int level) => $"{_unit.DisplayName}은 {_alsoAs.DisplayName}에게 적용되는 효과를 함께 받습니다.";
     }
 }

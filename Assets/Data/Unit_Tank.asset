@@ -41,3 +41,8 @@ MonoBehaviour:
   _slamDamage: 20
   _slamLiftHeight: 3
   _slamStun: 0.8
+  _buildPrefab: {fileID: 0}
+  _buildSeconds: 2
+  _buildFlatness: 0.25
+  _buildSpacing: 2.5
+  _buildGateClearance: 3

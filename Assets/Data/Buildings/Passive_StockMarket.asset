@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 028a6ce96a9e70844bd7a338422a1270, type: 3}
   m_Name: Passive_StockMarket
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.GoldOnBuyEffectPassive
-  _gold: 1
+  _percent: 50
+  _percentPerTier: 25

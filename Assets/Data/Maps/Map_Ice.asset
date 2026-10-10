@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7731cb1895523504f9709054d1acc48c, type: 3}
+  m_Name: Map_Ice
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapDefinition
+  _displayName: "\uC5BC\uC74C"
+  _description: "5\uCD08\uB9C8\uB2E4 \uCFE8\uB2E4\uC6B4\uC774 \uC788\uB294 \uBAA8\uB4E0
+    \uAE30\uBB3C\uC744 \uBC1C\uB3D9\uD569\uB2C8\uB2E4.\n\uBAA8\uB4E0 \uAE30\uBB3C\uC758
+    \uCFE8\uB2E4\uC6B4 \xD72"
+  _unitRules: []
+  _cooldownRate: 0.5
+  _fireAllInterval: 10
+  _passiveBuildingsOff: 0
+  _fireRepeats: 1
+  _terrain:
+    FeatureCount: {x: 2, y: 4}
+    FeatureHeight: {x: 2, y: 4}
+    FeatureWidth: {x: 14, y: 24}
+    ValleyChance: 0.2
+    PlateauChance: 0.7
+    Roughness: 0.05
+    MaxSlope: 0.55
+  _backdrop:
+  - Sprites:
+    - {fileID: 21300000, guid: 097b9bf98a408f49caec146da6ddff7b, type: 3}
+    - {fileID: 21300000, guid: fe5671f523b1bf631e9ef85b1faaf259, type: 3}
+    Brightness: 0.1
+    Spacing: {x: 16, y: 26}
+    Bottom: {x: -3, y: -1}
+    Parallax: 0.4
+  - Sprites:
+    - {fileID: 21300000, guid: 70471b1dbc694c80881ca28178c73171, type: 3}
+    - {fileID: 21300000, guid: 9ef1fe193e94843e653ab71713d914c0, type: 3}
+    Brightness: 0.18
+    Spacing: {x: 9, y: 16}
+    Bottom: {x: -3, y: -1.5}
+    Parallax: 0.15

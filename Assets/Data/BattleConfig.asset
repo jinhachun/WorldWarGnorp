@@ -12,13 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51532fc22289b7f47a229e744c7c9379, type: 3}
   m_Name: BattleConfig
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BattleConfig
-  _fieldSlots: 6
+  _startFloors: 3
+  _maxFloors: 8
+  _floorCostStart: 6
+  _floorCostPerRaise: 2
   _storageSlots: 6
   _lives: 3
+  _baseHpPerRound: 100
   _winsToClear: 10
-  _roundGold: 10
+  _roundGoldStart: 18
+  _roundGoldPerRound: 2
   _winBonus: 3
-  _rerollCost: 1
+  _rerollCost: 2
   _sellRatio: 0.5
   _offerCount: 5
   _shopPool:
@@ -65,7 +70,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0a1057b84c9d51e4e87258122eda315a, type: 2}
   - {fileID: 11400000, guid: 8460ac0469b2a6240897101c50459a88, type: 2}
   - {fileID: 11400000, guid: b66c9a7594d68384e80c4a695b9f7155, type: 2}
-  _rarityPrices: 0300000004000000050000000a0000000c000000
+  - {fileID: 11400000, guid: bd3f57ae5b7ee104f8e5192397e5583b, type: 2}
+  _rarityPrices: 04000000080000000c000000110000001a000000
   _rarityWeightsFirst:
   - 60
   - 30
@@ -78,6 +84,13 @@ MonoBehaviour:
   - 30
   - 20
   - 10
+  _maps:
+  - {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
+  - {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
+  - {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
+  - {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
+  - {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
+  - {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
   _enemyRounds:
   - _field:
     - _definition: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
@@ -247,3 +260,10 @@ MonoBehaviour:
   _boardGraceSeconds: 10
   _maxUnitSize: 3
   _stompDamagePerSecond: 0.5
+  _climbRest: 1.5
+  _climbSlowerThan: 0.5
+  _climbJumpExtra: 2
+  _powerAreaScale: 2
+  _powerHealScale: 1
+  _powerDisplayScale: 1
+  _spawnRateWindowSeconds: 10

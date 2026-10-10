@@ -33,8 +33,10 @@ namespace GnorpWar
 
         public override void OnGoldGained(OwnedBuilding self)
         {
-            if (_trigger == Trigger.GoldGained)
-                StatBook.AddForRun(this, _modifier.Scaled(_perTier, self.Level));
+            if (_trigger != Trigger.GoldGained)
+                return;
+            StatBook.AddForRun(this, _modifier.Scaled(_perTier, self.Level));
+            OwnedBuilding.NotifyEffect(self);
         }
 
         public override string Describe(int level)

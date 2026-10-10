@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: Action_HasteNeighbors
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HasteNeighborsAction
   _seconds: 1
+  _secondsPerTier: 0.5

@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7731cb1895523504f9709054d1acc48c, type: 3}
+  m_Name: Map_Jungle
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapDefinition
+  _displayName: "\uC815\uAE00"
+  _description: "\uBAA8\uB4E0 \uAE30\uBB3C\uC758 \uCFE8\uB2E4\uC6B4 \xD70.5"
+  _unitRules: []
+  _cooldownRate: 1.5
+  _fireAllInterval: 0
+  _passiveBuildingsOff: 0
+  _fireRepeats: 1
+  _terrain:
+    FeatureCount: {x: 4, y: 7}
+    FeatureHeight: {x: 2, y: 5}
+    FeatureWidth: {x: 8, y: 18}
+    ValleyChance: 0.35
+    PlateauChance: 0.15
+    Roughness: 0.6
+    MaxSlope: 0.6
+  _backdrop:
+  - Sprites:
+    - {fileID: 21300000, guid: d3ff63a4854e1838bfcb3d4729aa16c6, type: 3}
+    - {fileID: 21300000, guid: bb232a957b9645172596a394efbd2cb1, type: 3}
+    Brightness: 0.09
+    Spacing: {x: 14, y: 20}
+    Bottom: {x: -3, y: -1}
+    Parallax: 0.4
+  - Sprites:
+    - {fileID: 21300000, guid: e912d89a0e38e5103cf0b54d95be4777, type: 3}
+    - {fileID: 21300000, guid: d885ff4aa6f835f15dc497bcc6970ca2, type: 3}
+    Brightness: 0.18
+    Spacing: {x: 5, y: 10}
+    Bottom: {x: -3, y: -1.5}
+    Parallax: 0.15

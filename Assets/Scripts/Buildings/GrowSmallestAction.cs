@@ -21,7 +21,10 @@ namespace GnorpWar
                 if (unit.IsAlive && unit.Team == board.Team && unit.Definition.Category == _category && (smallest == null || unit.Size < smallest.Size))
                     smallest = unit;
             if (smallest != null)
+            {
                 smallest.Grow(Amount(level));
+                BuffLinks.ToPoint(board.Team, slot, smallest.Position, BuffKind.Vitality);
+            }
         }
 
         public override string Describe(int level) => $"가장 작은 {_category.DisplayName}의 크기 +{Amount(level) * 100f:0.#}%";

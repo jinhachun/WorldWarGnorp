@@ -32,9 +32,13 @@ namespace GnorpWar
         // 칸 검사는 몸(고체)만 본다 — 날아가는 화살(트리거) 때문에 칸이 막힌 걸로 보이면 안 된다
         private static readonly ContactFilter2D SolidOnly = new ContactFilter2D { useTriggers = false };
         private static readonly List<Collider2D> CellProbe = new List<Collider2D>();
-        // 등반 — 앞 아군이 내 속도의 이 비율보다 느리면 넘는다(더 빠르면 공중에 있는 동안 다시 걸어가 버려 헛점프) · 앞 기둥은 이만큼까지만 위로 훑는다
-        private const float ClimbSlowerThan = 0.5f;
+        // 등반 — 앞 기둥은 이만큼까지만 위로 훑는다. "앞 아군이 내 속도의 몇 배보다 느리면 넘나"는 BattleConfig
         private const int ClimbMaxColumn = 4;
+        // 측정 전용(Dev/PyramidProbe·측정 스크립트가 읽는다) — 게임 동작에는 쓰지 않는다
+        public static readonly double[] DevDamage = new double[2];   // 유닛이 유닛에게 준 피해 합 — 0 근접 등 · 1 원거리
+        public bool DevFront;             // 앞에 맞닿은 아군이 없다
+        public float DevHitAt = -99f, DevAttackAt = -99f;   // 적 원거리 유닛에게 맞은 시각 · 내가 공격한 시각
+        public byte DevIdle;   // 10 계단 상한(받침) · 0 싸움 · 1 걷는 중 · 2 위 아군 기다림 · 3 기지 위 · 4 계단 상한 · 5 앞 원딜(윗역할) 뒤 · 6 앞 아군 뒤(나는 받침) · 7 앞 아군 뒤 · 9 그 밖
         // 기둥 꼭대기가 점프 높이에 딱 걸리면 꼭짓점에서 못 넘어가 떨어진다 — 이만큼 여유가 있어야 노린다
         private const float ClimbReachMargin = 0.2f;
         // 넘쳐흐르기 — 근접은 머리가 내 발 높이(+이만큼) 아래인 적을 치지 않고 밟고 넘어간다
@@ -86,6 +90,11 @@ namespace GnorpWar
         private Vector2 _baseBodySize;
         private Vector3 _baseVisualScale = Vector3.one;
         private float _knockbackTimer;
+        // 맞아서 밀려나는 중(경직) — 측정(Dev)이 넉백을 스스로 움직인 것과 가린다
+        public bool IsStaggered => _knockbackTimer > 0f;
+        // 측정(Dev)용 — 등반 점프 중 · 착지 충격 점프 중
+        public bool IsClimbing => _climbing;
+        public bool IsSlamJumping => _slamJumping;
         private float _squashTime = SquashDuration;
         private bool _squashVertical = true;
         private float _flashTimer;
@@ -99,8 +108,10 @@ namespace GnorpWar
         // 밟기 피해 — 적 위에 서 있은 시간(간격마다 피해를 주고 덜어낸다)
         private const float StompTickInterval = 0.5f;
         private float _stompTimer;
-        // 싸우던 자리에서 앞 아군 위로 뛰어올라 아직 내려앉지 않았다
-        private bool _fightClimbing;
+        // 등반 점프로 뛰어올라 아직 내려앉지 않았다(행군·싸움 모두) — 그동안 가로 속도는 착지 자리에 맞춘다(ClimbVx)
+        private bool _climbing;
+        // 다음 등반 점프(행군·싸움 모두)까지 남은 시간(BattleConfig)
+        private float _climbRestTimer;
         // 점프 착지 충격(코끼리) — 다음 점프까지 남은 시간 · 뛰어오른 뒤 착지 전인가 · 그 사이 발이 땅에서 떨어진 적이 있나
         private float _slamTimer;
         private bool _slamJumping;
@@ -110,6 +121,16 @@ namespace GnorpWar
         private readonly float[] _stats = new float[4];
         private int _statsVersion = -1;
         private bool _ownModifiersChanged;
+        // 건축가(AttackType.Build) — 자리 찾기 → 걸어가기 → 짓기 → 성으로 돌아가기. 짓는 자리를 잡은 건축가들(같은 자리를 두 명이 고르지 않게)
+        private enum BuildPhase { Find, Going, Building, Returning }
+        private const float BuildArriveDistance = 0.1f;
+        private const float BuildSearchStep = 0.25f;
+        private const float HammerInterval = 0.5f;
+        private static readonly List<Unit> Builders = new List<Unit>();
+        private BuildPhase _buildPhase;
+        private float _buildX;
+        private float _buildTimer;
+        private float _hammerTimer;
 
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
@@ -153,6 +174,62 @@ namespace GnorpWar
             if (!IsInvulnerable)
                 _ownModifiersChanged = true;
             _invulnerableTimer = Mathf.Max(_invulnerableTimer, seconds);
+            if (_invulnerableRing == null)
+                _invulnerableRing = MakeHalo("InvulnerableRing", RingSprite(), InvulnerableRingColor, _weaponSortingOrder + 1);
+        }
+
+        // 무적 표시 — 몸을 감싸는 노란 원(사용자 10/7). 처음 무적이 될 때 만들고 무적 동안만 켠다(Update)
+        private static readonly Color InvulnerableRingColor = new Color(1f, 0.85f, 0.1f);
+        // 공격력 버프 — 받는 순간 몸 뒤로 빨간 원판이 잠깐 비쳤다가 흐려진다(사용자 10/7). 처음 버프를 받을 때 만들고 재사용
+        private static readonly Color AttackAuraColor = new Color(1f, 0.15f, 0.1f, 0.6f);
+        private const float AttackAuraDuration = 0.4f;
+        private const float HaloDiameterScale = 1.5f;   // 몸(충돌 박스) 긴 변의 몇 배
+        private static Sprite _ringSprite;
+        private static Sprite _discSprite;
+        private SpriteRenderer _invulnerableRing;
+        private SpriteRenderer _attackAura;
+        private float _attackAuraTimer;
+
+        private void FlashAttackAura()
+        {
+            if (_attackAura == null)
+                _attackAura = MakeHalo("AttackAura", DiscSprite(), AttackAuraColor, Mathf.Min(_bodySortingOrders) - 1);
+            _attackAuraTimer = AttackAuraDuration;
+        }
+
+        // 16px 원 — PPU 16이라 지름 1유닛, 몸 크기에 맞춰 늘린다. 테두리 1px(링) 또는 꽉 찬 원판
+        private static Sprite RingSprite() => _ringSprite != null ? _ringSprite : _ringSprite = CircleSprite(true);
+        private static Sprite DiscSprite() => _discSprite != null ? _discSprite : _discSprite = CircleSprite(false);
+
+        private static Sprite CircleSprite(bool ringOnly)
+        {
+            const int size = 16;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+            Vector2 center = new Vector2(size * 0.5f - 0.5f, size * 0.5f - 0.5f);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), center);
+                    bool on = d <= size * 0.5f - 0.5f && (!ringOnly || d > size * 0.5f - 1.5f);
+                    texture.SetPixel(x, y, on ? Color.white : Color.clear);
+                }
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        }
+
+        private SpriteRenderer MakeHalo(string name, Sprite sprite, Color color, int sortingOrder)
+        {
+            var halo = new GameObject(name).AddComponent<SpriteRenderer>();
+            halo.transform.SetParent(_visual, false);
+            float diameter = Mathf.Max(_baseBodySize.x, _baseBodySize.y) * HaloDiameterScale;
+            halo.transform.localScale = Vector3.one * (diameter / Mathf.Abs(_baseVisualScale.y));
+            halo.transform.localPosition = _body.offset / Mathf.Abs(_baseVisualScale.y);
+            halo.sprite = sprite;
+            halo.color = color;
+            halo.sharedMaterial = _weaponRenderer.sharedMaterial;
+            halo.sortingLayerID = _weaponRenderer.sortingLayerID;
+            halo.sortingOrder = sortingOrder;
+            return halo;
         }
 
         // 이 생애에 이 효과를 처음 쓰나 — 쓰면 표시한다(루니카 첫 피격 · 충정의 맹세 첫 죽음)
@@ -187,6 +264,111 @@ namespace GnorpWar
             gameObject.SetActive(false);
         }
 
+        private void OnDisable() => Builders.Remove(this);
+
+        // 건축가 한 스텝 — 이번 스텝의 가로 속도. 싸우지 않는다. 자리가 없으면 바로 돌아가고, 성(앞쪽 끝)에 닿으면 조용히 사라진다(죽음 아님)
+        private float BuildStep()
+        {
+            float x = _rb.position.x;
+            if (_buildPhase == BuildPhase.Find)
+            {
+                _buildX = FindBuildSite();
+                _buildPhase = float.IsNaN(_buildX) ? BuildPhase.Returning : BuildPhase.Going;
+                if (_buildPhase == BuildPhase.Going)
+                    Builders.Add(this);
+            }
+            if (_buildPhase == BuildPhase.Going)
+            {
+                float dx = _buildX - x;
+                if (Mathf.Abs(dx) > BuildArriveDistance)
+                    return Mathf.Sign(dx) * MoveSpeed;
+                _buildPhase = BuildPhase.Building;
+                _buildTimer = _definition.BuildSeconds;
+            }
+            if (_buildPhase == BuildPhase.Building)
+            {
+                _buildTimer -= Time.fixedDeltaTime;
+                _hammerTimer -= Time.fixedDeltaTime;
+                if (_hammerTimer <= 0f)
+                {
+                    StartThrust(new Vector2(Forward, -1f).normalized);   // 망치질
+                    _hammerTimer = HammerInterval;
+                }
+                if (_buildTimer > 0f)
+                    return 0f;
+                Base.Build(_definition.BuildPrefab, _team, new Vector2(_buildX, LowestGround(_buildX, BuildHalfWidth)));
+                Builders.Remove(this);
+                _buildPhase = BuildPhase.Returning;
+            }
+            Base home = Base.For(_team);
+            float gate = home == null ? x : Forward > 0f ? home.Bounds.max.x : home.Bounds.min.x;
+            if ((x - gate) * Forward <= 0f)
+            {
+                _hp = 0f;
+                gameObject.SetActive(false);
+                return 0f;
+            }
+            return -Forward * MoveSpeed;
+        }
+
+        private float BuildHalfWidth
+        {
+            get
+            {
+                Base prefab = _definition.BuildPrefab;
+                return prefab.GetComponent<BoxCollider2D>().size.x * Mathf.Abs(prefab.transform.localScale.x) * 0.5f;
+            }
+        }
+
+        // 내 진영 쪽 절반에서 성에 가장 가까운 빈 평지의 x — 성문 앞(BuildGateClearance)은 비우고, 타워 폭 안의 땅 높이 차가 BuildFlatness 이하,
+        // 작은 타워·다른 건축가가 잡은 자리와 BuildSpacing 이상 떨어진 곳. 없으면 NaN
+        private float FindBuildSite()
+        {
+            Base home = Base.For(_team);
+            Base enemy = Base.For(_team == Team.Ally ? Team.Enemy : Team.Ally);
+            if (home == null || _definition.BuildPrefab == null)
+                return float.NaN;
+            float half = BuildHalfWidth;
+            float front = Forward > 0f ? home.Bounds.max.x : home.Bounds.min.x;
+            float middle = enemy != null ? (home.transform.position.x + enemy.transform.position.x) * 0.5f : 0f;
+            for (float x = front + Forward * (_definition.BuildGateClearance + half); (middle - x) * Forward >= half; x += Forward * BuildSearchStep)
+                if (IsFlat(x, half) && !IsSiteTaken(x))
+                    return x;
+            return float.NaN;
+        }
+
+        private bool IsFlat(float x, float half)
+        {
+            float min = float.MaxValue, max = float.MinValue;
+            for (float s = x - half; s <= x + half + 0.001f; s += BuildSearchStep)
+            {
+                float h = Ground.Instance.HeightAt(s);
+                min = Mathf.Min(min, h);
+                max = Mathf.Max(max, h);
+            }
+            return max - min <= _definition.BuildFlatness;
+        }
+
+        private static float LowestGround(float x, float half)
+        {
+            float min = float.MaxValue;
+            for (float s = x - half; s <= x + half + 0.001f; s += BuildSearchStep)
+                min = Mathf.Min(min, Ground.Instance.HeightAt(s));
+            return min;
+        }
+
+        private bool IsSiteTaken(float x)
+        {
+            float spacing = _definition.BuildSpacing;
+            foreach (Base tower in Base.SmallTowers())
+                if (Mathf.Abs(tower.transform.position.x - x) < spacing)
+                    return true;
+            foreach (Unit builder in Builders)
+                if (builder != this && builder.IsAlive && Mathf.Abs(builder._buildX - x) < spacing)
+                    return true;
+            return false;
+        }
+
         public Vector2 Position => _rb.position;
 
         public void AddModifier(StatModifier modifier)
@@ -206,7 +388,11 @@ namespace GnorpWar
         private void RefreshStats()
         {
             float oldMaxHp = _stats[(int)UnitStat.MaxHp];
+            float oldAttack = _stats[(int)UnitStat.Attack];
             _stats[(int)UnitStat.Attack] = Compute(UnitStat.Attack, _definition.AttackDamage);
+            // 공격력 버프를 받은 순간 — 빨간 오라(사용자 10/7: 받는 순간 반짝). 생애 첫 계산(oldAttack 0)은 버프가 아니다
+            if (oldAttack > 0f && _stats[(int)UnitStat.Attack] > oldAttack + 0.0001f && IsAlive)
+                FlashAttackAura();
             _stats[(int)UnitStat.MaxHp] = Compute(UnitStat.MaxHp, _definition.MaxHp);
             _stats[(int)UnitStat.MoveSpeed] = Compute(UnitStat.MoveSpeed, _definition.MoveSpeed);
             _stats[(int)UnitStat.AttackSpeed] = Compute(UnitStat.AttackSpeed, 1f);
@@ -248,6 +434,13 @@ namespace GnorpWar
         private static readonly Unity.Profiling.ProfilerMarker ClimbMarker = new Unity.Profiling.ProfilerMarker("Unit.Climb");
         // 땅에 박혀 나오지 않게 발을 땅보다 살짝 위에
         private const float SpawnGroundGap = 0.02f;
+
+        // 발을 feet에 맞춰 그대로 낸다(탑의 층 바닥 — 빈칸을 찾지 않는다. 겹쳐 나와도 층을 걸어 나가며 풀린다)
+        public static Unit SpawnStanding(Unit prefab, Vector2 feet)
+        {
+            float height = prefab.GetComponent<BoxCollider2D>().size.y;
+            return Pooled.Get(prefab, feet + Vector2.up * (height * 0.5f + SpawnGroundGap), Quaternion.identity);
+        }
 
         public static Unit Spawn(Unit prefab, Vector2 groundPoint)
         {
@@ -339,8 +532,8 @@ namespace GnorpWar
         }
         private float Feet => _rb.position.y - _halfHeight;
         private float Top => _rb.position.y + _halfHeight;
-        // 점프 높이(발이 올라가는 높이) = 내 키 + 2칸 — 모든 유닛 공통. 한 번에 두 층을 올라타 산이 가파르게 선다(사용자 10/6 "뾰족한 산")
-        private float JumpHeight => _halfHeight * 2f + 2f;
+        // 점프 높이(발이 올라가는 높이) = 내 키 + N칸(BattleConfig, 기본 2) — 모든 유닛 공통. 2면 한 번에 두 층을 올라타 산이 가파르게 선다(사용자 10/6 "뾰족한 산")
+        private float JumpHeight => _halfHeight * 2f + BattleManager.ClimbJumpExtra;
 
         // 머리 바로 위 한 칸 — 거기 선 유닛(없으면 null), 칸이 완전히 비었나.
         // 한 물리 스텝 안에서는 몸이 움직이지 않으므로 처음 물은 답을 그 스텝 동안 다시 쓴다 — 산 뒤의 여러 유닛이 같은 기둥을 훑는다
@@ -368,12 +561,15 @@ namespace GnorpWar
 
         // 이번 스텝에 앞에서 맞닿은, 나보다 느린 아군들(접촉 순서) — 그중 하나라도 기둥 위로 올라탈 수 있나
         private readonly List<Unit> _climbCandidates = new List<Unit>();
-        private bool CanClimb()
+        private Unit FindClimbTarget()
         {
             foreach (Unit front in _climbCandidates)
-                if (ClimbTarget(front) != null)
-                    return true;
-            return false;
+            {
+                Unit top = ClimbTarget(front);
+                if (top != null)
+                    return top;
+            }
+            return null;
         }
 
         // 앞 아군 위로 쌓인 기둥의 꼭대기 — 점프로 닿고, 그 위가 비었고, 층 정렬상 그 위에 서도 되면 그 유닛. 아니면 null
@@ -387,8 +583,9 @@ namespace GnorpWar
                     return null;   // 닿지도 않는 높이에 계속 뛰지 않게
                 Unit above = top.OnHead(out bool free);
                 if (free)
-                    // 층 정렬: 나보다 위층 역할(예: 탱커 앞의 원딜) 위에는 오르지 않고 뒤에서 기다린다
-                    return BelongsBelow(top) ? null : top;
+                    // 나보다 위층 역할(예: 근접 앞의 원딜) 위에도 오른다 — 올라탄 뒤 층 정렬(FixedUpdate의 BelongsBelow)이 앞으로 걸어 내려보내
+                    // 원딜을 넘어간다. 뒤에서 기다리면 멈춰 쏘는 원딜 뒤에 근접이 줄 서서 못 싸운다(사용자 10/10)
+                    return top;
                 if (above == null || above._team != _team || !above.IsAlive)
                     return null;   // 유닛 아닌 것(기지 등)·적이 막고 있다
                 top = above;
@@ -420,7 +617,7 @@ namespace GnorpWar
             _weaponRestPosition = _weapon.localPosition;
             // 진영별 유닛 레이어 — 충돌 규칙은 그대로 두고 검색에서만 거른다. 적 찾기가 산 속 아군 수백 마리를 훑지 않게
             int ownLayer = LayerMask.NameToLayer(_team == Team.Ally ? "AllyUnit" : "EnemyUnit");
-            gameObject.layer = ownLayer;
+            gameObject.layer = _definition.AttackType == AttackType.Build ? Base.BuilderLayer(_team) : ownLayer;   // 건축가는 같은 진영 유닛과 부딪히지 않는다(Base.SetupLayers)
             _enemyFilter = new ContactFilter2D { useTriggers = false, useLayerMask = true, layerMask = ~(1 << ownLayer) };
             _allyFilter = new ContactFilter2D { useTriggers = false, useLayerMask = true, layerMask = 1 << ownLayer };
             // 그림은 오른쪽(아군 전방)을 보고 그려져 있다 — 전방이 -x면 자식(무기)까지 통째로 뒤집는다
@@ -432,6 +629,7 @@ namespace GnorpWar
         private void OnEnable()
         {
             Life++;
+            CombatPower.NoteSpawn(_team);
             if (Size != 1f)
                 SetSize(1f);
             _ownModifiers.Clear();
@@ -441,6 +639,8 @@ namespace GnorpWar
             _doomKiller = null;
             _usedOnce.Clear();
             _stats[(int)UnitStat.MaxHp] = 0f;   // 지난 생애의 최대 체력으로 비율을 맞추지 않게
+            _stats[(int)UnitStat.Attack] = 0f;  // 지난 생애의 공격력과 비교해 오라가 켜지지 않게
+            _attackAuraTimer = 0f;
             _hp = 0f;
             RefreshStats();
             _hp = MaxHp;
@@ -452,7 +652,14 @@ namespace GnorpWar
             _bigKnockbackUsed = false;
             _stompedOn = null;
             _stompTimer = 0f;
-            _fightClimbing = false;
+            _climbing = false;
+            _holdBack = false;
+            StartCoroutine(HoldBack());
+            _climbRestTimer = 0f;
+            _stackLayer = 0;
+            _supportFeet = float.MaxValue;
+            _allyBehind = false;
+            _allyAhead = false;
             _onHeadAt = -1f;
             _slamTimer = _definition.SlamInterval;
             _slamJumping = false;
@@ -467,6 +674,8 @@ namespace GnorpWar
             _walkScanTimer = Random.Range(0f, TargetScanInterval);
             _cachedPatient = null;
             _aheadOnBaseUnit = false;
+            _buildPhase = BuildPhase.Find;
+            _hammerTimer = 0f;
 
             // 죽을 때 바꾼 물리·그림을 되돌린다(Die)
             foreach (Collider2D col in GetComponents<Collider2D>())
@@ -518,6 +727,10 @@ namespace GnorpWar
             _advanceSpeed = (_rb.position.x - _lastX) * Forward / Time.fixedDeltaTime;
             _lastX = _rb.position.x;
             _attackCooldown -= Time.fixedDeltaTime;
+            _climbRestTimer -= Time.fixedDeltaTime;
+            // 공격력이 오른 순간을 바로 잡도록(빨간 오라) 바뀐 스탯은 기다리지 않고 다시 계산
+            if (_statsVersion != StatBook.Version || _ownModifiersChanged)
+                RefreshStats();
             _targetScanTimer -= Time.fixedDeltaTime;
             _supportScanTimer -= Time.fixedDeltaTime;
             _walkScanTimer -= Time.fixedDeltaTime;
@@ -529,6 +742,12 @@ namespace GnorpWar
             Unit allyBelow = null;
             Unit allyAbove = null;
             Unit enemyBelow = null;
+            bool onDeck = false;
+            bool onGroundSurface = false;
+            int belowLayer = -1;
+            float frontSupport = float.NegativeInfinity;   // 발밑 아군 중 가장 앞(전방 좌표)
+            bool allyBehind = false, allyAhead = false;   // 같은 높이에서 뒤·앞에 아군이 붙어 있나(등반 착지 자리 고르기)
+            Unit allyInFront = null;                      // 앞에 맞닿은 아군 중 가장 느린 쪽(밀어붙이지 않기)
             _onBase = false;
             ContactsMarker.Begin();
             int count = _rb.GetContacts(_contacts);
@@ -544,22 +763,49 @@ namespace GnorpWar
                     grounded = true;
                     if (touched != null)
                     {
+                        belowLayer = Mathf.Max(belowLayer, touched._stackLayer);
                         if (touched._team == _team)
+                        {
                             allyBelow = touched;
+                            frontSupport = Mathf.Max(frontSupport, touched._rb.position.x * Forward);
+                        }
                         else
                             enemyBelow = touched;
                     }
+                    else if (contact.collider.usedByEffector)
+                        onDeck = true;   // 이펙터를 쓰는 콜라이더는 탑의 층 바닥뿐(Tower)
                     else if (contact.collider.TryGetComponent(out Base _))
                         _onBase = true;
+                    else
+                        onGroundSurface = true;   // 유닛·층 바닥·기지가 아닌 발판 = 땅
+                }
+                if (contact.normal.x * Forward > 0.5f && touched != null && touched._team == _team)
+                    allyBehind = true;
+                if (contact.normal.x * Forward < -0.5f && touched != null && touched._team == _team)
+                {
+                    allyAhead = true;
+                    if (allyInFront == null || touched._advanceSpeed < allyInFront._advanceSpeed)
+                        allyInFront = touched;
                 }
                 if (contact.normal.x * Forward < -0.5f && touched != null && touched._team != _team)
                     blockedByEnemy = true;   // 발밑 판정과 별개 — 대각선 접촉(발밑이면서 앞)도 막힌 것
                 else if (contact.normal.y <= 0.5f && contact.normal.x * Forward < -0.5f && touched != null   // 앞의 아군
-                         && touched._advanceSpeed < MoveSpeed * ClimbSlowerThan   // 나보다 느리면(멈추지 않았어도) 넘는다 — 같은 속도로 같이 걷는 줄은 안 넘는다
+                         && touched._advanceSpeed < MoveSpeed * BattleManager.ClimbSlowerThan   // 나보다 느리면(멈추지 않았어도) 넘는다 — 같은 속도로 같이 걷는 줄은 안 넘는다
                          && !touched._onBase)
-                    _climbCandidates.Add(touched);   // 기둥 검사(물리)는 비싸다 — 정말 뛸 수 있는 자리(땅을 딛고 걷기·싸움 분기)에서만 CanClimb로
+                    _climbCandidates.Add(touched);   // 기둥 검사(물리)는 비싸다 — 정말 뛸 수 있는 자리(땅을 딛고 걷기·싸움 분기)에서만 FindClimbTarget으로
             }
             ContactsMarker.End();
+            _allyBehind = allyBehind;
+            _allyAhead = allyAhead;
+            DevFront = !allyAhead;
+            ReportPile(grounded, onGroundSurface);
+            if (grounded)
+            {
+                if (_rb.linearVelocity.y <= 0.1f)
+                    _climbing = false;   // 뛰어오르는 첫 스텝은 아직 발이 닿아 있다
+                _stackLayer = onGroundSurface || belowLayer < 0 ? 0 : belowLayer + 1;
+                _supportFeet = Feet;
+            }
 
             // 적 머리 위에 새로 내려앉은 순간 (계속 서 있는 동안은 다시 안 부른다)
             if (enemyBelow != null && enemyBelow != _stompedOn && enemyBelow.IsAlive)
@@ -579,7 +825,8 @@ namespace GnorpWar
                 {
                     _stompTimer -= StompTickInterval;
                     float damage = AttackDamage * DamageScale * BattleManager.StompDamagePerSecond * StompTickInterval;
-                    if (damage > 0f)
+                    // 회복 유닛은 공격력이 회복량이다 — 밟아도 피해를 주지 않는다
+                    if (damage > 0f && _definition.AttackType != AttackType.Heal)
                         enemyBelow.TakeDamage(damage, Vector2.down, 0f, this);
                 }
             }
@@ -605,8 +852,11 @@ namespace GnorpWar
             if (_knockbackTimer > 0f)
             {
                 _knockbackTimer -= Time.fixedDeltaTime;
+                _holdBack = false;
                 return;
             }
+            _holdBack = _definition.AttackType != AttackType.Build;   // 건축가는 성으로 걸어 돌아간다
+            _holdX = _rb.position.x;
 
             // 공격·이동과 별개로 매 스텝 도는 효과(칼 던지기 등)
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -629,17 +879,36 @@ namespace GnorpWar
 
             Vector2 velocity = _rb.linearVelocity;
 
-            // 층 정렬은 등반 조건(BelongsBelow)으로 애초에 뒤집혀 오르지 않게 한다. 넉백·착지 등으로 이미 뒤집혀 올라탔으면
-            // 내가 바로 아래 아군보다 아래층 역할일 때(예: 원딜 위의 탱커) 싸움보다 먼저 앞으로 걸어 내려간다.
-            // 밑의 아군은 그동안 멈춰 선다(BelongsBelow) — 내가 앞쪽 땅에 떨어지면 그 아군이 뒤에서 내 위로 올라탄다(보통 등반 점프).
-            // 앞이 적 몸으로 막혔으면 내려갈 곳이 없으니 그 자리에서 싸운다
-            if (allyBelow != null && BelongsBelow(allyBelow) && !blockedByEnemy)
+            // 탑의 층 바닥 위 — 싸우지도 뛰지도 않고 앞쪽 가장자리로 걸어 나가 떨어진다(사용자 10/8). 탑 위에 남아 활만 쏘지 않게
+            if (onDeck)
             {
                 velocity.x = Forward * MoveSpeed;
                 _rb.linearVelocity = velocity;
                 return;
             }
+
+            if (_definition.AttackType == AttackType.Build)
+            {
+                velocity.x = BuildStep();
+                _rb.linearVelocity = velocity;
+                return;
+            }
+
+            // 층 정렬 — 등반(원딜을 넘어가려고)·넉백·착지 등으로 뒤집혀 올라탔으면
+            // 내가 바로 아래 아군보다 아래층 역할일 때(예: 원딜 위의 탱커) 싸움보다 먼저 앞으로 걸어 내려간다.
+            // 밑의 아군은 그동안 멈춰 선다(BelongsBelow) — 내가 앞쪽 땅에 떨어지면 그 아군이 뒤에서 내 위로 올라탄다(보통 등반 점프).
+            // 앞이 적 몸으로 막혔으면 내려갈 곳이 없으니 그 자리에서 싸운다
+            DevIdle = 9;
+            if (allyBelow != null && BelongsBelow(allyBelow) && !blockedByEnemy)
+            {
+                DevIdle = 1;
+                velocity.x = Forward * MoveSpeed;
+                _rb.linearVelocity = velocity;
+                return;
+            }
             bool holdForAbove = allyAbove != null && allyAbove.BelongsBelow(this);
+            // 피라미드의 중요 자리 — 적과 맞닿은 맨 앞줄 · 머리에 아군이 올라탄 받침. 스스로 등반 점프를 하지 않는다(사용자 10/8)
+            bool keySpot = blockedByEnemy || allyAbove != null;
 
             // 프리스트 — 적은 공격하지 않는다. 다친 아군을 회복하고, 적이 사거리에 들면 뒤에 멈춰 선다(앞으로 걸어가 죽지 않게)
             if (_definition.AttackType == AttackType.Heal)
@@ -676,19 +945,23 @@ namespace GnorpWar
             // 싸움이 점프·전진보다 우선 (프리스트는 위에서 처리 — 회복할 대상도 적도 없으면 여기로 내려와 전진)
             if (_definition.AttackType != AttackType.Heal && FindTargetCached(out IDamageable target, out Vector2 targetPoint))
             {
+                DevIdle = 0;
                 // 싸우는 중에도 앞 아군 기둥 위로 올라탄다 — 사거리 안에 적이 있다고 그 자리에 서면 산이 옆으로만 넓어진다(사용자 10/6 "뾰족한 산").
                 // 뛰어오른 뒤 내려앉을 때까지는 앞으로 나아가야 기둥 위에 앉는다
-                if (grounded)
-                    _fightClimbing = false;
-                if (grounded && CanClimb())
+                // 피라미드의 중요 자리(맨 앞줄·받침)는 뛰지 않는다 — 그 밖(원딜 포함)은 적극적으로 올라타 피라미드를 쌓는다(사용자 10/8)
+                if (grounded && !keySpot && _climbRestTimer <= 0f)
                 {
-                    _fightClimbing = true;
-                    velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * JumpHeight);
+                    Unit top = FindClimbTarget();
+                    if (top != null && HeadClear())
+                        StartClimb(top, ref velocity);
                 }
-                velocity.x = _fightClimbing ? Forward * MoveSpeed : 0f;
+                // 아군 위에서 싸우는 유닛도 계단 자리까지는 앞으로 다가앉는다 — 내려앉은 자리에 그대로 서면 기둥이 생긴다
+                bool settle = allyBelow != null && !blockedByEnemy && !holdForAbove && StairActive;
+                velocity.x = NoPress(_climbing ? ClimbVx(velocity.y) : StairAdvance(settle ? Forward * MoveSpeed : 0f, onGroundSurface, frontSupport), allyInFront);
                 _rb.linearVelocity = velocity;
                 if (_attackCooldown <= 0f)
                 {
+                    DevAttackAt = Time.time;
                     Vector2 toTarget = targetPoint - _rb.position;
                     Vector2 hitDirection = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
                     if (_definition.AttackType == AttackType.Flame)
@@ -735,10 +1008,26 @@ namespace GnorpWar
                 _walkScanTimer = TargetScanInterval;
             }
             velocity.x = _aheadOnBaseUnit || holdForAbove ? 0f : Forward * MoveSpeed;
+            // 앞면 유닛(앞에 맞닿은 아군이 없다)은 계단 상한에 묶이지 않고 걷는다 — 사거리에 적이 없는 맨 앞 유닛은 적과 맞붙을 때까지 전진한다(사용자 10/10).
+            // 앞면이 나가면 그 뒤 유닛의 앞이 비어 차례로 따라간다. 사거리에 적이 들면 위의 싸움 분기가 다시 계단 자리에 세운다
+            bool frontFace = !allyAhead;
+            velocity.x = NoPress(_climbing ? ClimbVx(velocity.y) : StairAdvance(velocity.x, onGroundSurface || frontFace, frontSupport), allyInFront);
+            if (_climbing || velocity.x * Forward > 0.5f * MoveSpeed) DevIdle = 1;
+            else if (_aheadOnBaseUnit) DevIdle = 3;
+            else if (holdForAbove) DevIdle = 2;
+            else if (StairAdvance(Forward * MoveSpeed, onGroundSurface || frontFace, frontSupport) * Forward <= 0.5f * MoveSpeed) DevIdle = (byte)(StairAdvance(Forward * MoveSpeed, onGroundSurface, float.NegativeInfinity) * Forward <= 0.5f * MoveSpeed ? 4 : 10);
+            else if (allyInFront != null) DevIdle = (byte)(BelongsBelow(allyInFront) ? 5 : allyAbove != null ? 6 : 7);
+            else DevIdle = 9;
             WalkMarker.End();
             // 못 올라탈 땐 뛰지 않고 서 있어야 뒤 유닛의 발판이 된다 — 계속 뛰면 계단(산)이 안 생긴다
-            if (grounded && CanClimb())
-                velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * JumpHeight);
+            // 피라미드의 중요 자리(맨 앞줄·받침)는 뛰지 않고, 그 밖은 적극적으로 올라탄다(사용자 10/8).
+            // 등반 점프마다 쉬는 시간(BattleConfig) — 너무 자주 뛰어 산이 쌓이기 전에 넘어가지 않게
+            if (grounded && !keySpot && _climbRestTimer <= 0f)
+            {
+                Unit top = FindClimbTarget();
+                if (top != null && HeadClear())
+                    StartClimb(top, ref velocity);
+            }
             _rb.linearVelocity = velocity;
         }
 
@@ -749,6 +1038,11 @@ namespace GnorpWar
                 return;
 
             _hp -= amount;
+            if (attacker is Unit devAttacker)
+            {
+                DevDamage[devAttacker._definition.AttackType == AttackType.Ranged ? 1 : 0] += amount;
+                if (devAttacker._definition.AttackType == AttackType.Ranged) DevHitAt = Time.time;
+            }
             DamageNumbers.Damage(this, _team, new Vector2(_rb.position.x, Top), amount);
             // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다
             if (FxDirector.Instance != null)
@@ -763,6 +1057,7 @@ namespace GnorpWar
                         _doomTimer = e.Effect.FirstDeathDelay;
                         _doomKiller = attacker;
                         GrantInvulnerable(e.Effect.FirstDeathDelay);
+                        BuffLinks.EffectToPoint(_team, e.Effect, _rb.position, BuffKind.Invulnerable);
                         return;
                     }
                 Perish(attacker);
@@ -805,6 +1100,16 @@ namespace GnorpWar
 
         private void Update()
         {
+            if (_invulnerableRing != null && _invulnerableRing.enabled != (IsAlive && IsInvulnerable))
+                _invulnerableRing.enabled = IsAlive && IsInvulnerable;
+            if (_attackAura != null && (_attackAura.enabled || _attackAuraTimer > 0f))
+            {
+                _attackAuraTimer -= Time.deltaTime;
+                bool on = IsAlive && _attackAuraTimer > 0f;
+                _attackAura.enabled = on;
+                if (on)
+                    _attackAura.color = new Color(AttackAuraColor.r, AttackAuraColor.g, AttackAuraColor.b, AttackAuraColor.a * _attackAuraTimer / AttackAuraDuration);
+            }
             if (!IsAlive)
             {
                 // 뒤집혀 화면 밖으로 떨어지는 중 — 다 떨어지면 풀로 돌아간다
@@ -905,9 +1210,159 @@ namespace GnorpWar
         }
 
         // 산이 넘쳐흐르게 — 적 머리 위에 선 근접은 발밑 적을 치느라 멈추지 않고 머리를 밟고 계속 걷는다.
-        // 같은 높이의 적을 만나거나 적 줄 끝에서 떨어지면 다시 싸운다. 원거리·보스·기지·탑은 그대로
+        // 같은 높이의 적을 만나거나 적 줄 끝에서 떨어지면 다시 싸운다. 원거리·보스·기지·탑은 그대로.
+        // 단, 내 진영 산이 적 산보다 높을 때만 넘는다(사용자 10/8) — 그 전엔 발밑 적을 쳐서 그 자리에 서고, 뒤 유닛이 그 위로 쌓인다
         private bool IsUnderfoot(IDamageable damageable)
-            => _definition.AttackType == AttackType.Melee && damageable is Unit unit && unit.Top <= Feet + StandOnMargin;
+            => _definition.AttackType == AttackType.Melee && damageable is Unit unit && unit.Top <= Feet + StandOnMargin
+               && PileNow[(int)_team] > PileNow[1 - (int)_team] + PileLeadToCross;
+
+        // 진영별 전선 산 높이 — 선두(가장 앞 유닛)에서 PileFrontRange 안에 무언가를 딛고 선 유닛의 가장 높은 머리(땅 기준).
+        // 물리 검사 없이 유닛마다 제 값을 보고하고, 물리 스텝이 바뀌면 굳힌다(한 스텝 늦은 값). 선두도 같은 방식
+        private const float PileFrontRange = 6f;
+        private const float PileLeadToCross = 0.5f;
+        private static readonly float[] FrontNow = { float.NegativeInfinity, float.NegativeInfinity };
+        private static readonly float[] FrontNext = { float.NegativeInfinity, float.NegativeInfinity };
+        private static readonly float[] PileNow = { 0f, 0f };
+        private static readonly float[] PileNext = { 0f, 0f };
+        private static float _pileStep = -1f;
+        // 진영별 땅 선두 — 땅을 딛고 선 유닛 중 가장 앞(전방 좌표). 계단 피라미드의 기준선
+        private static readonly float[] LineNow = { float.NegativeInfinity, float.NegativeInfinity };
+        private static readonly float[] LineNext = { float.NegativeInfinity, float.NegativeInfinity };
+        // 계단 피라미드(사용자 10/9) — 층마다 반 칸씩 물러난다
+        private const float StairStep = 0.5f;
+
+        // 계단은 막기만 한다 — 유닛이 스스로 뒤로 걷지 않는다(사용자 10/9 "갑자기 뒤로 가는 거 어색"). 앞으로 가는 속도만 줄인다.
+        // 땅을 딛지 않은 유닛(위층·공중)은 두 상한 중 가까운 쪽 앞에서 멈춘다(닿기 전 StairBrakeTime 동안 서서히 줄인다):
+        // ① 전선 — 땅 선두에서 층 × 반 칸 뒤까지. 위층이 적 산 위로 넘어가지 않는다
+        // ② 받침 — 발밑 가장 앞 아군보다 반 칸 뒤까지
+        // 반 칸 자리에 앉히는 건 등반 점프가 한다(StartClimb — 뛰기 전에 착지 자리를 정하고 가로 속도를 맞춘다).
+        // 내 산이 StairHoldLead 넘게 높을 때와 데스매치(기물 정지 뒤)에는 걸지 않는다 — 이긴 쪽이 넘어가 판을 끝낸다(안 풀면 위층이 영영 안 싸워 판이 멈춘다)
+        private bool StairActive => !BattleManager.BoardsStopped && PileNow[(int)_team] <= PileNow[1 - (int)_team] + StairHoldLead;
+        // 내 산이 이만큼(칸) 넘게 높으면 계단을 풀고 넘쳐흐른다. 산 높이는 출렁여서 0.5처럼 작게 잡으면 비슷한 판에서도 수시로 열린다(10/9 측정)
+        private const float StairHoldLead = 2f;
+
+        private const float StairBrakeTime = 0.25f;
+        // 등반 점프의 가로 속도 상한 — 이동 속도의 이 배(착지 자리가 멀어도 날아가듯 튀지 않게)
+        private const float ClimbMaxSpeedRatio = 1.5f;
+
+        private float StairAdvance(float vx, bool onGroundSurface, float frontSupport)
+        {
+            if (onGroundSurface || vx * Forward <= 0f || !StairActive)
+                return vx;
+            float ahead = _rb.position.x * Forward;
+            float room = float.PositiveInfinity;
+            float line = LineNow[(int)_team];
+            if (!float.IsNegativeInfinity(line))
+            {
+                float layer = _stackLayer + Mathf.Max(0f, Feet - _supportFeet);   // 공중이면 마지막 디딘 층 + 그보다 오른 높이
+                room = line - StairStep * layer - ahead;
+            }
+            if (!float.IsNegativeInfinity(frontSupport))
+                room = Mathf.Min(room, frontSupport - StairStep - ahead);
+            if (float.IsPositiveInfinity(room))
+                return vx;
+            return Forward * Mathf.Min(vx * Forward, Mathf.Max(room, 0f) / StairBrakeTime);
+        }
+
+        // 등반 점프 — 기둥 꼭대기(top) 위의 반 칸 자리를 착지점으로 정하고 뛴다.
+        // top 앞에 아군이 붙어 있으면 그 둘 사이, 뒤에 붙어 있으면 그 둘 사이, 둘 다 없으면 top 바로 위. 계단 상한(전선)을 넘지 않고, 지금 자리보다 뒤로는 안 잡는다
+        private void StartClimb(Unit top, ref Vector2 velocity)
+        {
+            float topAhead = top._rb.position.x * Forward;
+            float seat = top._allyAhead ? topAhead + StairStep : top._allyBehind ? topAhead - StairStep : topAhead;
+            float line = LineNow[(int)_team];
+            if (StairActive && !float.IsNegativeInfinity(line))
+                seat = Mathf.Min(seat, line - StairStep * (top._stackLayer + 1));
+            _climbSeat = Mathf.Max(seat, _rb.position.x * Forward);
+            _climbLandFeet = top.Top;
+            _climbing = true;
+            _climbRestTimer = BattleManager.ClimbRest;
+            velocity.y = Mathf.Sqrt(2f * -Physics2D.gravity.y * _rb.gravityScale * JumpHeight);
+        }
+
+        // 앞에 맞닿은 아군을 밀어붙이지 않는다 — 그 아군의 실제 속도 + PressSpeed까지만(맞닿음은 유지돼 등반 후보로 남는다).
+        // 멈춘 줄에 걸어 들어가 짓누르면 산 속 유닛이 충돌 밀어내기로 위·뒤로 튄다(사용자 10/10 "갑자기 뒤로 점프")
+        private const float PressSpeed = 0.3f;
+        private float NoPress(float vx, Unit allyInFront)
+        {
+            if (allyInFront == null || vx * Forward <= 0f)
+                return vx;
+            return Forward * Mathf.Min(vx * Forward, Mathf.Max(allyInFront._advanceSpeed, 0f) + PressSpeed);
+        }
+
+        // 머리 위 한 칸이 비었나 — 막혔는데 뛰면 머리를 부딪쳐 뒤로 튕긴다. 뛰기 직전에만 묻는다(물리 검사, 스텝 캐시)
+        private bool HeadClear()
+        {
+            OnHead(out bool free);
+            return free;
+        }
+
+        // 등반 중 가로 속도 — 남은 체공 시간 안에 착지 자리에 닿을 만큼(앞으로만). 체공이 거의 끝났으면 서서히 다가간다
+        private float ClimbVx(float vy)
+        {
+            float g = -Physics2D.gravity.y * _rb.gravityScale;
+            float disc = vy * vy + 2f * g * (Feet - _climbLandFeet);
+            float flight = disc > 0f ? (vy + Mathf.Sqrt(disc)) / g : 0f;
+            float distance = _climbSeat - _rb.position.x * Forward;
+            if (distance <= 0f)
+                return 0f;
+            return Forward * Mathf.Min(distance / Mathf.Max(flight, StairBrakeTime), MoveSpeed * ClimbMaxSpeedRatio);
+        }
+        private float _climbSeat;
+        private float _climbLandFeet;
+
+        // 뒤로 못 가는 래칫(사용자 10/10 "뒤로 점프는 아예 하지마") — 넉백(경직)이 아닌 유닛은 물리 스텝이 뒤로 민 만큼 되돌린다.
+        // 유닛은 스스로 뒤로 걷지 않으므로 남는 뒤로 움직임은 전부 충돌(짓눌림 · 받침이 밀림 · 넉백된 유닛에 부딪힘)이다.
+        // 물리 스텝 직후(WaitForFixedUpdate)에 고쳐야 밀린 자리가 한 번도 그려지지 않는다. 물리 검사는 없다
+        private static readonly WaitForFixedUpdate AfterPhysics = new WaitForFixedUpdate();
+        private bool _holdBack;
+        private float _holdX;
+        private System.Collections.IEnumerator HoldBack()
+        {
+            while (true)
+            {
+                yield return AfterPhysics;
+                if (!_holdBack || _knockbackTimer > 0f || !IsAlive)
+                    continue;   // _holdX = 이번 물리 스텝 전 자리(FixedUpdate가 적는다)
+                Vector2 position = _rb.position;
+                if ((position.x - _holdX) * Forward < 0f)
+                    _rb.position = new Vector2(_holdX, position.y);
+                Vector2 velocity = _rb.linearVelocity;
+                if (velocity.x * Forward < 0f)
+                    _rb.linearVelocity = new Vector2(0f, velocity.y);
+            }
+        }
+        private bool _allyAhead;
+        // 쌓인 층 — 땅 0, 유닛 위면 그 유닛 층 + 1(한 스텝 늦은 값) · 그때의 발 높이
+        private int _stackLayer;
+        private float _supportFeet;
+        // 바로 뒤(같은 높이)에 아군이 붙어 있다(한 스텝 늦은 값)
+        private bool _allyBehind;
+        public int StackLayer => _stackLayer;
+
+        private void ReportPile(bool standing, bool onGroundSurface)
+        {
+            if (Time.fixedTime != _pileStep)
+            {
+                _pileStep = Time.fixedTime;
+                for (int i = 0; i < 2; i++)
+                {
+                    FrontNow[i] = FrontNext[i];
+                    FrontNext[i] = float.NegativeInfinity;
+                    PileNow[i] = PileNext[i];
+                    PileNext[i] = 0f;
+                    LineNow[i] = LineNext[i];
+                    LineNext[i] = float.NegativeInfinity;
+                }
+            }
+            int team = (int)_team;
+            float ahead = _rb.position.x * Forward;
+            FrontNext[team] = Mathf.Max(FrontNext[team], ahead);
+            if (onGroundSurface)
+                LineNext[team] = Mathf.Max(LineNext[team], ahead);
+            if (standing && ahead >= FrontNow[team] - PileFrontRange && Ground.Instance != null)
+                PileNext[team] = Mathf.Max(PileNext[team], Top - Ground.Instance.HeightAt(_rb.position.x));
+        }
 
         // 적 찾기는 비싸다(사거리 원 안의 콜라이더를 전부 본다 — 산 속 원딜은 수백 개). 그래서 TargetScanInterval마다만 새로 찾고,
         // 그 사이엔 찾아 둔 적이 아직 살아 있고 사거리 안인지만 본다. 못 찾았으면 다음 검색까지 없는 것으로 친다
@@ -958,12 +1413,12 @@ namespace GnorpWar
                 }
         }
 
-        // 기름투하대 — 내 발이 상대 유닛 발보다 높으면 주는 피해 +비율. 상대가 본진이면 본진이 늘 높은 고도라 해당 없음
+        // 기름투하대 — 내 머리가 상대 유닛 머리보다 높으면 주는 피해 +비율(언덕·점프·크기·타고난 키 모두 고도). 상대가 본진이면 본진이 늘 높은 고도라 해당 없음
         private const float HighGroundMargin = 0.25f;
 
         private float HighGroundScale(IDamageable target)
         {
-            if (!(target is Unit enemy) || Feet <= enemy.Feet + HighGroundMargin)
+            if (!(target is Unit enemy) || Top <= enemy.Top + HighGroundMargin)
                 return 1f;
             float bonus = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -975,7 +1430,8 @@ namespace GnorpWar
         public void ThrowHeal(Unit patient)
         {
             Projectile orb = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
-            orb.LaunchHeal(this, _definition.HealAmount, patient._rb.position, _definition.ProjectileArcHeight);
+            // 회복량 = 공격력(버프·영구 강화·공격력 가속 포함 — 공격 피해와 같은 식, 사용자 10/10)
+            orb.LaunchHeal(this, AttackDamage * DamageScale, patient._rb.position, _definition.ProjectileArcHeight);
         }
 
         // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기·exclude 제외)
@@ -1061,12 +1517,15 @@ namespace GnorpWar
             _rb.linearVelocity = velocity;
         }
 
-        public void Heal(float amount)
+        // 돌려주는 값 = 실제로 찬 양(가득 차 있었으면 0)
+        public float Heal(float amount)
         {
             if (!IsAlive)
-                return;
+                return 0f;
+            // 최대 체력을 먼저 읽는다 — 밀린 스탯 갱신(RefreshStats)이 체력을 비율로 올린 몫을 회복량으로 세지 않게(가득 찬 유닛은 회복량 0)
+            float maxHp = MaxHp;
             float before = _hp;
-            _hp = Mathf.Min(_hp + amount, MaxHp);
+            _hp = Mathf.Min(_hp + amount, maxHp);
             float healed = _hp - before;
             DamageNumbers.Heal(this, new Vector2(_rb.position.x, Top), healed);
             // 실제로 찬 만큼이 있을 때만 — 가득 찬 유닛은 회복받은 게 아니다(순례지)
@@ -1074,6 +1533,7 @@ namespace GnorpWar
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     if (e.Effect.AppliesFor(_team, _definition))
                         e.Effect.OnHealReceived(this, healed, e.Stacks);
+            return healed;
         }
 
         // 크기 — 1 = 프리팹 그대로. 기준 크기의 amount만큼 더한다(+10% = 0.1). 발은 그 자리, 위로 커진다

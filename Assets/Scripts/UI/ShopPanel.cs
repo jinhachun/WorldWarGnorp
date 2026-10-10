@@ -12,17 +12,39 @@ namespace GnorpWar
         [SerializeField] private BattleManager _battle;
         [SerializeField] private OfferCard _offerTemplate;
         [SerializeField] private float _offerStep = 250f;
+        [Tooltip("상태 줄 — 칸마다 아이콘 + 글(라운드 · 골드 · 목숨 · 승리)")]
         [SerializeField] private Text _status;
+        [SerializeField] private Text _gold;
+        [SerializeField] private Text _lives;
+        [SerializeField] private Text _wins;
         [SerializeField] private Button _reroll;
         [SerializeField] private Text _rerollLabel;
+        [Tooltip("진열 잠금 — 잠그면 다음 라운드에 같은 진열이 나온다(RunState.ShopLocked)")]
+        [SerializeField] private Button _lock;
+        [SerializeField] private Text _lockLabel;
+        [Tooltip("층 올리기 — 골드를 내고 탑 맨 위에 빈 층을 하나 더한다(RunState.RaiseFloor)")]
+        [SerializeField] private Button _raise;
+        [SerializeField] private Text _raiseLabel;
+        [Tooltip("이번 라운드 맵 이름(RunState.Map) — 도트 폰트")]
+        [SerializeField] private Text _map;
+        [Tooltip("맵 설명 — 읽는 글이라 깔끔한 폰트. 한 Text에 폰트 둘을 못 써서 이름과 나눴다")]
+        [SerializeField] private Text _mapDesc;
+        [Tooltip("맵 이름 앞 아이콘(MapLabel.IconFor) — 가로 자리는 이름 폭에 맞춰 코드가 놓는다")]
+        [SerializeField] private Image _mapIcon;
         [SerializeField] private Button _sell;
         [SerializeField] private Text _sellLabel;
         [SerializeField] private Button _start;
         [Tooltip("끄는 동안 포인터를 따라다니는 그림 — 레이캐스트를 막지 않아야 아래 칸이 놓기를 받는다")]
         [SerializeField] private RectTransform _dragGhost;
         [SerializeField] private Image _dragGhostIcon;
+        [Tooltip("고스트도 탑 층 조각 — 끄는 기물의 벽·창(사용자 10/9) · 창틀은 그 등급 색")]
+        [SerializeField] private FloorLook _dragGhostFloor;
+        [SerializeField] private Image _dragGhostWindow;
+        [Tooltip("끄는 동안 탑 층 경계에 뜨는 끼워 넣기 선(가운데 기준) — 레이캐스트를 막지 않아야 한다")]
+        [SerializeField] private RectTransform _insertLine;
 
         private OfferCard[] _offers;
+        private ButtonHover _sellHover;
         private bool _hasSelection;
         private BoardView.Source _selectedSource;
         private int _selectedIndex;
@@ -31,6 +53,9 @@ namespace GnorpWar
         private bool _dragFromOffer;
         private BoardView.Source _dragSource;
         private int _dragIndex;
+        // 끄는 속도(화면 px/초) — 보관함 상자에 놓으면 이 속도로 던져진다
+        private Vector2 _dragVelocity;
+        private float _dragTime;
 
         private void Start()
         {
@@ -47,9 +72,12 @@ namespace GnorpWar
                 _offers[i] = card;
             }
             _reroll.onClick.AddListener(RunState.Reroll);
+            _lock.onClick.AddListener(RunState.ToggleShopLock);
+            _raise.onClick.AddListener(RunState.RaiseFloor);
             _sell.onClick.AddListener(SellSelected);
             _start.onClick.AddListener(_battle.StartBattle);
             _dragGhost.gameObject.SetActive(false);
+            _sellHover = _sell.GetComponent<ButtonHover>();
         }
 
         private void OnDisable()
@@ -58,6 +86,9 @@ namespace GnorpWar
             _dragging = false;
             if (_dragGhost != null)
                 _dragGhost.gameObject.SetActive(false);
+            _insertAt = -1;
+            if (_insertLine != null)
+                _insertLine.gameObject.SetActive(false);
         }
 
         public bool Dragging => _dragging;
@@ -85,7 +116,7 @@ namespace GnorpWar
             OwnedBuilding building = BuildingAt(source, index);
             if (OwnedBuilding.IsEmpty(building))
                 return;
-            StartDrag(false, source, index, building.Definition.Icon, eventData);
+            StartDrag(false, source, index, building.Definition, building.Rarity, eventData);
         }
 
         public void BeginDragOffer(int index, PointerEventData eventData)
@@ -93,25 +124,37 @@ namespace GnorpWar
             BuildingDefinition offer = RunState.Offers[index];
             if (BattleManager.Fighting || offer == null)
                 return;
-            StartDrag(true, default, index, offer.Icon, eventData);
+            StartDrag(true, default, index, offer, offer.Rarity, eventData);
         }
 
-        private void StartDrag(bool fromOffer, BoardView.Source source, int index, Sprite icon, PointerEventData eventData)
+        private void StartDrag(bool fromOffer, BoardView.Source source, int index, BuildingDefinition definition, BuildingRarity rarity, PointerEventData eventData)
         {
             _dragging = true;
             _dragFromOffer = fromOffer;
             _dragSource = source;
             _dragIndex = index;
             _hasSelection = false;
-            _dragGhostIcon.sprite = icon;
+            _dragGhostIcon.sprite = definition.Icon;
+            _dragGhostFloor.Show(definition);
+            _dragGhostWindow.color = rarity.FrameColor();
             _dragGhost.gameObject.SetActive(true);
+            _dragVelocity = Vector2.zero;
+            _dragTime = Time.unscaledTime;
             Drag(eventData);
         }
 
         public void Drag(PointerEventData eventData)
         {
-            if (_dragging)
-                _dragGhost.position = eventData.position;   // Overlay 캔버스라 화면 좌표 = 월드 좌표
+            if (!_dragging)
+                return;
+            float dt = Time.unscaledTime - _dragTime;
+            if (dt > 0f)
+            {
+                _dragVelocity = Vector2.Lerp(_dragVelocity, eventData.delta / dt, 0.5f);
+                _dragTime = Time.unscaledTime;
+            }
+            _dragGhost.position = eventData.position;   // Overlay 캔버스라 화면 좌표 = 월드 좌표
+            FindInsert(eventData);
         }
 
         // 놓기(OnDrop)가 끝난 뒤에 불린다 — 아무 데도 안 놓았으면 그냥 제자리
@@ -119,17 +162,99 @@ namespace GnorpWar
         {
             _dragging = false;
             _dragGhost.gameObject.SetActive(false);
+            _insertAt = -1;
+            _insertLine.gameObject.SetActive(false);
+        }
+
+        // --- 층 사이 끼워 넣기(사용자 10/8: 1 2 3 4 5의 1·2층 사이에 A → 1 A 2 3 4 5) ---
+        // 탑 층의 위·아래 1/4에 놓으면 그 경계에 끼워 넣는다. 가운데에 놓으면 예전대로(맞바꿈·합치기). 끄는 동안 경계선을 보여 준다
+        private const float InsertZone = 0.25f;
+        private int _insertAt = -1;
+
+        private void FindInsert(PointerEventData eventData)
+        {
+            _insertAt = -1;
+            GameObject hovered = eventData.pointerCurrentRaycast.gameObject;
+            SlotView slot = hovered != null ? hovered.GetComponentInParent<SlotView>() : null;
+            if (slot != null && slot.Source == BoardView.Source.AllyField)
+            {
+                var rect = (RectTransform)slot.transform;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, eventData.position, null, out Vector2 local);
+                float t = Mathf.InverseLerp(rect.rect.yMin, rect.rect.yMax, local.y);
+                bool above = t > 1f - InsertZone;
+                int at = above ? slot.Index + 1 : t < InsertZone ? slot.Index : -1;
+                if (at >= 0 && CanInsert(at))
+                {
+                    _insertAt = at;
+                    _insertLine.position = rect.TransformPoint(new Vector3(0f, above ? rect.rect.yMax : rect.rect.yMin, 0f));
+                }
+            }
+            if (_insertLine.gameObject.activeSelf != _insertAt >= 0)
+                _insertLine.gameObject.SetActive(_insertAt >= 0);
+        }
+
+        // 기물이 있는 층 사이와 맨 위 기물 위까지만 — 그 위 빈 층 경계는 결국 맨 위로 떨어지므로 보여 주지 않는다.
+        // 탑 안에서 옮길 때 제자리 양옆 경계는 아무 일도 안 하므로 뺀다
+        private bool CanInsert(int at)
+        {
+            int filled = 0;
+            while (filled < RunState.Field.Length && !OwnedBuilding.IsEmpty(RunState.Field[filled]))
+                filled++;
+            if (at > filled)
+                return false;
+            if (_dragFromOffer)
+                return RunState.CanBuyInsert(_dragIndex, at);
+            bool fromStorage = _dragSource == BoardView.Source.Storage;
+            if (!fromStorage && (at == _dragIndex || at == _dragIndex + 1))
+                return false;
+            return RunState.CanMoveInsert(fromStorage, _dragIndex, at);
         }
 
         public void DropOnSlot(BoardView.Source source, int index)
         {
             if (!_dragging || source == BoardView.Source.EnemyField)
                 return;
+            if (_insertAt >= 0 && source == BoardView.Source.AllyField)
+            {
+                if (_dragFromOffer)
+                    RunState.BuyInsert(_dragIndex, _insertAt);
+                else
+                    RunState.MoveInsert(_dragSource == BoardView.Source.Storage, _dragIndex, _insertAt);
+                return;
+            }
             bool storage = source == BoardView.Source.Storage;
             if (_dragFromOffer)
                 RunState.BuyInto(_dragIndex, storage, index);
             else
                 RunState.Swap(_dragSource == BoardView.Source.Storage, _dragIndex, storage, index);
+        }
+
+        // 보관함 상자의 빈 자리에 놓았다 — 보관함 빈 칸에 넣고 그 자리에서 떨어뜨린다. 꽉 찼으면 안 받는다.
+        // 상자 안 조각끼리는 자리만 옮긴다(다시 던지기). 조각 위에 놓으면 DropOnSlot(맞바꿈·합치기)이 받는다
+        public void DropOnBox(StorageBox box, Vector2 local)
+        {
+            if (!_dragging)
+                return;
+            Vector2 size = _dragGhost.rect.size;
+            // 멈췄다 놓으면(끌기 이벤트는 움직일 때만 온다) 그냥 떨어진다
+            Vector2 velocity = Time.unscaledTime - _dragTime > 0.1f ? Vector2.zero : _dragVelocity;
+            if (!_dragFromOffer && _dragSource == BoardView.Source.Storage)
+            {
+                box.Throw(_dragIndex, local, size, velocity);
+                return;
+            }
+            int index = StorageBox.FirstEmpty();
+            if (_dragFromOffer)
+            {
+                // 합쳐질 짝이 있으면 상자가 꽉 차도 산다(어디 놓든 합쳐지는 규칙 그대로)
+                if (!RunState.CanBuyInto(_dragIndex, true, Mathf.Max(index, 0)))
+                    return;
+                RunState.BuyInto(_dragIndex, true, Mathf.Max(index, 0));
+            }
+            else if (index >= 0)
+                RunState.Swap(false, _dragIndex, true, index);
+            if (index >= 0)
+                box.Throw(index, local, size, velocity);
         }
 
         public void DropOnSell()
@@ -163,10 +288,30 @@ namespace GnorpWar
         private void Update()
         {
             for (int i = 0; i < _offers.Length; i++)
-                _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i));
+                _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
 
-            _status.text = $"라운드 {RunState.Round + 1}   골드 {RunState.Gold}   목숨 {RunState.Lives}   승리 {RunState.Wins}";
+            _status.text = $"라운드 {RunState.Round + 1}";
+            _gold.text = $"골드 <color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>";
+            _lives.text = $"목숨 {RunState.Lives}";
+            _wins.text = $"승리 {RunState.Wins}";
             _reroll.interactable = RunState.CanReroll;
+            _rerollLabel.text = $"리롤 {RunState.RerollCost}G";
+            _lockLabel.text = RunState.ShopLocked ? "잠금 해제" : "잠금";
+            _raise.interactable = RunState.CanRaiseFloor;
+            _raiseLabel.text = RunState.Floors < RunState.MaxFloors ? $"층 올리기 {RunState.NextFloorCost}G" : "최고층";
+            MapDefinition map = RunState.Map;
+            _map.text = map == null ? "" : map.DisplayName;
+            _mapDesc.text = map == null ? "" : BuildingTooltip.Highlight(map.Description);
+            // 맵 아이콘은 가운데 놓인 이름의 바로 왼쪽
+            Sprite mapIcon = MapLabel.IconFor(map);
+            _mapIcon.enabled = mapIcon != null;
+            if (mapIcon != null)
+            {
+                _mapIcon.sprite = mapIcon;
+                float nameWidth = _map.preferredWidth;
+                var iconRect = _mapIcon.rectTransform;
+                iconRect.anchoredPosition = new Vector2(-nameWidth / 2f - MapIconGap - iconRect.sizeDelta.x / 2f, iconRect.anchoredPosition.y);
+            }
 
             OwnedBuilding selected = _hasSelection ? BuildingAt(_selectedSource, _selectedIndex) : null;
             if (OwnedBuilding.IsEmpty(selected))
@@ -180,7 +325,20 @@ namespace GnorpWar
             if (dragSellable)
                 _sellLabel.text = $"판매 +{RunState.SellValue(BuildingAt(_dragSource, _dragIndex))}G";
             else
-                _sellLabel.text = SelectionSellable && selected != null ? $"판매 +{RunState.SellValue(selected)}G" : "판매";
+                _sellLabel.text = SelectionSellable && selected != null ? $"판매 +{RunState.SellValue(selected)}G" : "끌어서 판매";
+            // 끄는 동안 판매 칸이 노랗게 — 놓는 자리임이 보이게
+            _sellHover.Base = dragSellable ? DropColor : Color.white;
+
+            // 못 누르는 버튼은 글도 회색
+            Grey(_reroll, _rerollLabel);
+            Grey(_raise, _raiseLabel);
+            Grey(_sell, _sellLabel);
         }
+
+        private const float MapIconGap = 10f;
+        private static readonly Color DropColor =new Color(1f, 0.85f, 0.35f);
+        private static readonly Color DisabledText = new Color(0.6f, 0.6f, 0.66f);
+
+        private static void Grey(Button button, Text label) => label.color = button.interactable ? Color.white : DisabledText;
     }
 }

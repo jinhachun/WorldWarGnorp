@@ -20,6 +20,7 @@ namespace GnorpWar
             unit.Grow(OwnedBuilding.Scaled(_size, _perTier, level));
             unit.AddModifier(new StatModifier(UnitStat.MaxHp, StatOp.Percent, stats));
             unit.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Percent, stats));
+            BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Vitality);
         }
 
         // 설명은 크기·스탯을 한 숫자로 쓴다(기획서 "크기, 체력, 공격력 +5%") — 셋이 같은 값일 때만 맞다

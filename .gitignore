@@ -51,3 +51,6 @@ Thumbs.db
 
 # 역할 세션 명단·에디터 잠금 — 실행 중 상태라 커밋하지 않는다 (.claude/skills/role)
 /.claude/team/
+
+# Claude 검증 캡처 — Temp/는 에디터가 다시 켜질 때 지워져서 여기에 둔다 (커밋하지 않는다)
+/Captures/

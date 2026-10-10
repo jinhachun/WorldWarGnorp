@@ -41,7 +41,7 @@ namespace GnorpWar
         [SerializeField] private float _projectileSplashRadius = 0f;
         [Tooltip("화염 전용(AttackType.Flame) — 불길 띠의 두께. 길이는 Attack Range")]
         [SerializeField] private float _flameThickness = 2f;
-        [Tooltip("회복 전용(AttackType.Heal) — 회복 투사체 한 번에 채우는 체력")]
+        [Tooltip("회복 유닛의 회복량은 이제 공격력(Attack Damage)이다 — 이 값은 교황청의 내려치기 피해(SmiteEffect)와 전투력 표시(CombatPower)만 읽는다")]
         [SerializeField] private float _healAmount = 0f;
         [Tooltip("점프 착지 충격(코끼리) — 이 간격(초)마다 제자리에서 뛰었다가, 땅에 닿으면 반경 안의 적 유닛(탑·기지 제외)을 띄우며 피해. 0이면 없음")]
         [SerializeField] private float _slamInterval = 0f;
@@ -54,6 +54,17 @@ namespace GnorpWar
         [SerializeField] private float _slamLiftHeight = 3f;
         [Tooltip("점프 착지 충격 — 맞은 적이 조종 불능인 시간(초)")]
         [SerializeField] private float _slamStun = 0.8f;
+        [Header("짓기 전용(AttackType.Build) — 건축가")]
+        [Tooltip("지을 작은 타워 프리팹(양 진영 같은 것 — 진영은 지을 때 정한다)")]
+        [SerializeField] private Base _buildPrefab;
+        [Tooltip("자리에 도착해 짓는 데 걸리는 시간(초)")]
+        [SerializeField] private float _buildSeconds = 2f;
+        [Tooltip("평지 — 타워 폭 안의 땅 높이 차가 이 값 이하인 자리만")]
+        [SerializeField] private float _buildFlatness = 0.25f;
+        [Tooltip("다른 작은 타워(짓는 중인 자리 포함)와 중심 사이 최소 거리")]
+        [SerializeField] private float _buildSpacing = 2.5f;
+        [Tooltip("성문 앞 비움 — 성 앞쪽 끝에서 이만큼 떨어진 곳부터 찾는다(유닛이 나오는 자리)")]
+        [SerializeField] private float _buildGateClearance = 3f;
 
         public string DisplayName => _displayName;
         public UnitCategory Category => _category;
@@ -83,5 +94,10 @@ namespace GnorpWar
         public float SlamDamage => _slamDamage;
         public float SlamLiftHeight => _slamLiftHeight;
         public float SlamStun => _slamStun;
+        public Base BuildPrefab => _buildPrefab;
+        public float BuildSeconds => _buildSeconds;
+        public float BuildFlatness => _buildFlatness;
+        public float BuildSpacing => _buildSpacing;
+        public float BuildGateClearance => _buildGateClearance;
     }
 }

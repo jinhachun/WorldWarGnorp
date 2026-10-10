@@ -11,7 +11,10 @@ namespace GnorpWar
         public override bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks)
         {
             if (unit.UseOnce(this))
+            {
                 unit.GrantInvulnerable(_seconds);
+                BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Invulnerable);
+            }
             return false;
         }
 

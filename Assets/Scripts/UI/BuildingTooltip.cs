@@ -24,7 +24,8 @@ namespace GnorpWar
         [SerializeField] private RectTransform _panel;
         [SerializeField] private Text _title;
         [SerializeField] private Text _body;
-        [Tooltip("생산 건물일 때만 켜지는 유닛 판 — Panel 아래에 붙는다(Panel의 자식, 위쪽 가운데 기준)")]
+        [Tooltip("설명에 나오는 유닛(BuildingDefinition.MentionedUnits)마다 한 장 — Panel 아래로 세로로 쌓는다(Panel의 자식, 위쪽 가운데 기준). " +
+                 "이 판이 첫 장이자 틀이고, 둘째 장부터는 복제한다")]
         [SerializeField] private RectTransform _unitPanel;
         [Tooltip("유닛 그림 칸(왼위 기준) — 프리팹의 그림 부품을 Image로 다시 짜 넣는다")]
         [SerializeField] private RectTransform _unitIcon;
@@ -35,25 +36,42 @@ namespace GnorpWar
         private static BuildingTooltip _instance;
         private readonly Vector3[] _corners = new Vector3[4];
         private Component _owner;
-        private UnitDefinition _iconUnit;
 
-        private const string NumberColor = "#FFD95A";
+        // 유닛 판 한 장 — 그림은 유닛이 바뀔 때만 다시 짠다
+        private class UnitCard
+        {
+            public RectTransform Panel;
+            public RectTransform Icon;
+            public Text Name;
+            public Text Body;
+            public UnitDefinition IconUnit;
+        }
+
+        private readonly List<UnitCard> _cards = new List<UnitCard>();
+
+        public const string NumberColor = "#FFD95A";
         private const string NoteColor = "#9A9AA8";
         private const string EnemyColor = "#FF7A6E";
-        // 글자 크기 — 중요한 것일수록 크게. 능력치 줄은 _unitBody의 글자 크기
-        private const int SubtitleSize = 18;
-        private const int UnitNameSize = 28;
-        private const int UnitCategorySize = 18;
+        // 유닛 판 능력치의 영구 강화분(「공격력 11+1」의 +1) · RANK UP 미리보기의 바뀐 숫자 — 버프 선의 체력 초록(BuffLinkFx)보다 밝은 초록
+        private const string BonusColor = "#5AE66E";
+        // 글자 크기 — 중요한 것일수록 크게. 능력치 줄은 _unitBody의 글자 크기.
+        // 제목 · 유닛 이름 칸은 도트 폰트(12px)라 12의 정수배만 쓰고 굵게(<b>)를 쓰지 않는다 — 합성 굵기가 픽셀을 뭉갠다
+        private const int SubtitleSize = 24;
+        private const int UnitNameSize = 36;
+        private const int UnitCategorySize = 24;
         private const int UnitTraitSize = 18;
         private const int UnitEffectSize = 16;
 
         // 효과 줄 — "N초마다 ~" 먼저(기획서: 쿨다운 효과는 첫 줄), 그다음 늘 켜진 것. cooldown = 지금 간격(전투 중엔 줄어든 값). 글 규칙은 CLAUDE.md §5-2
         public static string Describe(BuildingDefinition building, int level, float cooldown)
+            => Highlight(string.Join("\n", Lines(building, level, cooldown)));
+
+        private static List<string> Lines(BuildingDefinition building, int level, float cooldown)
         {
             var lines = new List<string>();
             string every = $"{cooldown:0.#}초마다 ";
             if (building.Unit != null)
-                lines.Add(every + $"{building.Unit.DisplayName} {building.UnitCount * level + BattleManager.ExtraUnits}기를 소환합니다.");
+                lines.Add(every + $"{building.Unit.DisplayName} {building.SummonCount}기를 소환합니다.");
             foreach (BuildingAction action in building.Actions)
                 lines.Add(every + action.Describe(level));
             if (!string.IsNullOrEmpty(building.Description))
@@ -63,14 +81,45 @@ namespace GnorpWar
             foreach (UnitEffect effect in building.Effects)
                 if (!string.IsNullOrEmpty(effect.Description))
                     lines.Add(effect.Describe(level));
-            return Highlight(string.Join("\n", lines));
+            return lines;
+        }
+
+        // RANK UP 진열 카드 — 합쳐진 뒤(level + 1, next 등급)의 효과 줄 중 지금(level)과 달라지는 줄만. 바뀐 숫자는 BonusColor
+        public static string RankUpPreview(BuildingDefinition building, int level, BuildingRarity next)
+        {
+            List<string> now = Lines(building, level, building.CooldownAt(level));
+            List<string> after = Lines(building, level + 1, building.CooldownAt(level + 1));
+            string text = $"\n<color={NumberColor}>{next.DisplayName()} 등급이 되면</color>";
+            bool any = false;
+            for (int i = 0; i < after.Count; i++)
+            {
+                if (i < now.Count && now[i] == after[i])
+                    continue;
+                any = true;
+                text += "\n" + MarkChanges(i < now.Count ? now[i] : "", after[i]);
+            }
+            return any ? text : text + Note("효과는 그대로입니다.");
+        }
+
+        // after 줄을 효과 글처럼 꾸미되, before와 값이 다른 숫자만 BonusColor로(숫자 개수가 다르면 전부)
+        private static string MarkChanges(string before, string after)
+        {
+            MatchCollection old = Number.Matches(before);
+            bool aligned = old.Count == Number.Matches(after).Count;
+            int n = 0;
+            return Number.Replace(Keyword.Replace(after, "<b>$0</b>"), m =>
+            {
+                bool same = aligned && old[n].Value == m.Value;
+                n++;
+                return $"<color={(same ? NumberColor : BonusColor)}>{m.Value}</color>";
+            });
         }
 
         // 칸 아래 대표 숫자 — 툴팁 첫 숫자와 같은 순서(생산 수 · 액션 · 패시브 · 효과)로 처음 나오는 것. 없으면 ""
         public static string Headline(BuildingDefinition building, int level)
         {
             if (building.Unit != null)
-                return $"{building.UnitCount * level + BattleManager.ExtraUnits}기";
+                return $"{building.SummonCount}기";
             foreach (BuildingAction action in building.Actions)
                 if (action.Headline(level) is string a)
                     return a;
@@ -89,7 +138,7 @@ namespace GnorpWar
         // 첫 줄 이름(크게) · 둘째 줄 등급 · 국가(작게). 세력은 쓰지 않는다(사용자 결정)
         public static string Title(BuildingDefinition building, bool enemy, BuildingRarity rarity)
         {
-            string name = $"<b>{building.DisplayName}{(enemy ? " (적)" : "")}</b>";
+            string name = $"{building.DisplayName}{(enemy ? " (적)" : "")}";
             if (enemy)
                 name = $"<color={EnemyColor}>{name}</color>";
             return $"{name}\n<size={SubtitleSize}>{rarity.DisplayName()} · {building.Nation.DisplayName()}</size>";
@@ -97,23 +146,22 @@ namespace GnorpWar
 
         // 유닛 판 그림 오른쪽 글 — 이름(크게) · 병종(작게)
         private static string UnitName(UnitDefinition unit)
-            => $"<b><size={UnitNameSize}>{unit.DisplayName}</size></b>\n<size={UnitCategorySize}>{unit.Category.DisplayName}</size>";
+            => $"<size={UnitNameSize}>{unit.DisplayName}</size>\n<size={UnitCategorySize}>{unit.Category.DisplayName}</size>";
 
-        // 생산 건물의 유닛 판 본문 — 능력치(체력 · 공격력 · 사거리) / 특성 / board의 건물이 이 유닛에 켜 준 효과 순으로,
-        // 뒤로 갈수록 작은 글씨. 생산하지 않는 건물이면 null
-        public static string UnitInfo(BuildingDefinition building, OwnedBuilding[] board)
+        // 유닛 판 본문 — 능력치(체력 · 공격력 · 사거리) / 특성 / board의 건물이 이 유닛에 켜 준 효과 순으로, 뒤로 갈수록 작은 글씨
+        private static string UnitInfo(UnitDefinition unit, OwnedBuilding[] board, bool enemy)
         {
-            UnitDefinition unit = building.Unit;
-            if (unit == null)
-                return null;
-            var lines = new List<string> { ColorNumbers($"체력 {unit.MaxHp:0}") };
-            if (unit.AttackType == AttackType.Heal)
-                lines.Add(ColorNumbers($"회복 {unit.HealAmount:0}"));
+            var lines = new List<string> { Stat("체력", unit, UnitStat.MaxHp, enemy) };
+            if (unit.AttackType == AttackType.Build)
+                lines.Add("공격 안 함");   // 싸우지 않는 유닛(건축가) — 사거리도 뜻이 없어 뺀다
+            else if (unit.AttackType == AttackType.Heal)
+                lines.Add(Stat("회복", unit, UnitStat.Attack, enemy));   // 회복량 = 공격력
             else if (unit.AttackType == AttackType.Flame)
-                lines.Add(ColorNumbers($"공격력 초당 {unit.AttackDamage / unit.AttackInterval:0}"));
+                lines.Add(Stat("공격력 초당", unit, UnitStat.Attack, enemy, 1f / unit.AttackInterval));
             else
-                lines.Add(ColorNumbers($"공격력 {unit.AttackDamage:0}"));
-            lines.Add("사거리 " + RangeWord(unit.AttackRange));
+                lines.Add(Stat("공격력", unit, UnitStat.Attack, enemy));
+            if (unit.AttackType != AttackType.Build)
+                lines.Add("사거리 " + RangeWord(unit.AttackRange));
 
             var traits = new List<string>();
             if (unit.ChargeDamageMultiplier > 1f)
@@ -124,6 +172,8 @@ namespace GnorpWar
                 traits.Add("앞에 있는 적을 한꺼번에 불태웁니다.");
             if (unit.AttackType == AttackType.Sweep)
                 traits.Add("앞에 있는 적을 한꺼번에 칩니다.");
+            if (unit.AttackType == AttackType.Build)
+                traits.Add("가까운 땅에 작은 타워를 설치합니다.");
             if (unit.SlamInterval > 0f)
                 traits.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄웁니다."));
             AddGroup(lines, traits, UnitTraitSize);
@@ -138,6 +188,18 @@ namespace GnorpWar
             return string.Join("\n", lines);
         }
 
+        // 능력치 한 줄 — 기본값(노랑) 뒤에 이번 런의 영구 강화분을 「+1」로(BonusColor). 값은 RunStats.Preview가 준다.
+        // 적 유닛은 영구 강화가 없어 기본값만. scale = 표시 단위 환산(초당 피해)
+        private static string Stat(string label, UnitDefinition unit, UnitStat stat, bool enemy, float scale = 1f)
+        {
+            RunStats.Value value = RunStats.Preview(unit, stat);
+            string text = $"{label} <color={NumberColor}>{value.Base * scale:0}</color>";
+            float bonus = enemy ? 0f : value.Bonus * scale;
+            if (Mathf.Abs(bonus) >= 0.05f)
+                text += $"<color={BonusColor}>{bonus:+0.#;-0.#}</color>";
+            return text;
+        }
+
         // group을 size 글씨로 붙인다 — 묶음은 글자 크기로만 갈린다(빈 줄은 legacy Text가 본문 크기로 잡아 너무 벌어진다)
         private static void AddGroup(List<string> lines, List<string> group, int size)
         {
@@ -145,14 +207,16 @@ namespace GnorpWar
                 lines.Add($"<size={size}>{line}</size>");
         }
 
-        private static string ColorNumbers(string text) => Regex.Replace(text, @"\d+(\.\d+)?%?", $"<color={NumberColor}>$0</color>");
+        private static readonly Regex Number = new Regex(@"\d+(\.\d+)?%?");
+
+        private static string ColorNumbers(string text) => Number.Replace(text, $"<color={NumberColor}>$0</color>");
 
         // 효과 글 — 숫자는 노랑, 키워드(기획서 §5 낱말 · 병종 태그)는 굵게. 색은 늘리지 않는다(CLAUDE.md §5-2 9번).
         // 「관통탄 특허국」 같은 기물 이름 속 낱말은 건너뛴다
         private static readonly Regex Keyword =
-            new Regex("「[^」]*」|인접 기물(들|이)|전투 동안|영구히|가속|무적|고도|크기|스택|관통(?!탄)|경보병|중보병|궁병|경기병|중기병|지원병");
+            new Regex("「[^」]*」|아래에 있는 모든 기물|위에 있는 모든 기물|바로 위·아래 기물들|바로 위 기물|인접 기물(들|이)|전투 동안|영구히|가속|무적|고도|크기|스택|관통(?!탄)|경보병|중보병|궁병|경기병|중기병|지원병");
 
-        private static string Highlight(string text) => ColorNumbers(Keyword.Replace(text, "<b>$0</b>"));
+        public static string Highlight(string text) => ColorNumbers(Keyword.Replace(text, "<b>$0</b>"));
 
         // 근접 0.8 · 코끼리 3 · 공룡 5 · 사제 6 · 궁수 7 · 투석기 10
         private static string RangeWord(float range) => range <= 1f ? "가까움" : range <= 5f ? "보통" : "멂";
@@ -169,13 +233,43 @@ namespace GnorpWar
         {
             _instance = this;
             _panel.gameObject.SetActive(false);
+            _cards.Add(new UnitCard { Panel = _unitPanel, Icon = _unitIcon, Name = _unitName, Body = _unitBody });
         }
 
-        // unitInfo = UnitInfo(...) — null이면 유닛 판을 끈다
-        public static void Show(Component owner, string title, string body, UnitDefinition unit, string unitInfo)
+        // units = 설명에 나오는 유닛(설명 순서) — 한 장씩 판 아래로 쌓는다. board = 유닛 판의 "켜 준 효과"를 찾을 보드
+        // 가진 기물(필드·보관함 칸, 전장 탑 층) — running = 전투 중 돌고 있는 칸(상점에선 null)
+        public static void ShowOwned(Component owner, OwnedBuilding building, BoardRunner.Slot running, bool enemy)
+        {
+            float cooldown = running != null ? running.Cooldown : building.Definition.CooldownAt(building.Level);
+            string body = Describe(building.Definition, building.Level, cooldown);
+            if (!enemy && !BattleManager.Fighting)
+                body += (building.Stacks > 0 ? Note($"스택 {building.Stacks}") : "") + UpgradeNote(building) + Note($"팔면 {RunState.SellValue(building)}골드를 얻습니다.");
+            OwnedBuilding[] board = enemy ? System.Array.ConvertAll(BoardRunner.For(Team.Enemy).Slots, s => s.Building) : RunState.Field;
+            Show(owner, Title(building.Definition, enemy, building.Rarity), body, building.Definition.MentionedUnits, board, enemy);
+        }
+
+        public static void Show(Component owner, string title, string body, UnitDefinition[] units, OwnedBuilding[] board, bool enemy = false)
         {
             if (_instance != null)
-                _instance.Place(owner, title, body, unit, unitInfo);
+                _instance.Place(owner, title, body, units, board, enemy);
+        }
+
+        // i번째 유닛 판 — 모자라면 첫 장을 복제한다
+        private UnitCard Card(int i)
+        {
+            while (_cards.Count <= i)
+            {
+                RectTransform panel = Instantiate(_unitPanel, _unitPanel.parent);
+                _cards.Add(new UnitCard
+                {
+                    Panel = panel,
+                    Icon = (RectTransform)panel.Find(_unitIcon.name),
+                    Name = panel.Find(_unitName.name).GetComponent<Text>(),
+                    Body = panel.Find(_unitBody.name).GetComponent<Text>(),
+                    IconUnit = _cards[0].IconUnit,   // 그림 부품도 함께 복제됐다
+                });
+            }
+            return _cards[i];
         }
 
         public static void Hide(Component owner)
@@ -187,7 +281,7 @@ namespace GnorpWar
             }
         }
 
-        private void Place(Component owner, string title, string body, UnitDefinition unit, string unitInfo)
+        private void Place(Component owner, string title, string body, UnitDefinition[] units, OwnedBuilding[] board, bool enemy)
         {
             _owner = owner;
             _title.text = title;
@@ -197,28 +291,27 @@ namespace GnorpWar
             float bodyHeight = Fit(_body, -(Pad + titleHeight + InnerGap));
             _panel.sizeDelta = new Vector2(_panel.sizeDelta.x, Pad + titleHeight + InnerGap + bodyHeight + Pad);
 
-            _unitPanel.gameObject.SetActive(unitInfo != null);
-            if (unitInfo != null)
+            // 유닛 판 — 첫 장과 Panel 사이 간격(틀의 y)을 판끼리도 띄운다
+            float spacing = -_unitPanel.anchoredPosition.y;
+            float y = -spacing;
+            for (int i = 0; i < Mathf.Max(units.Length, _cards.Count); i++)
             {
-                if (_iconUnit != unit)
-                    BuildIcon(unit);
-                _unitName.text = UnitName(unit);
-                _unitBody.text = unitInfo;
-                // 이름 · 병종은 그림 높이 가운데에
-                float nameHeight = _unitName.preferredHeight;
-                float header = Mathf.Max(_unitIcon.sizeDelta.y, nameHeight);
-                _unitIcon.anchoredPosition = new Vector2(_unitIcon.anchoredPosition.x, -(Pad + (header - _unitIcon.sizeDelta.y) / 2f));
-                Fit(_unitName, -(Pad + (header - nameHeight) / 2f));
-                float unitBodyHeight = Fit(_unitBody, -(Pad + header + InnerGap));
-                _unitPanel.sizeDelta = new Vector2(_unitPanel.sizeDelta.x, Pad + header + InnerGap + unitBodyHeight + Pad);
+                bool used = i < units.Length;
+                UnitCard card = Card(i);
+                card.Panel.gameObject.SetActive(used);
+                if (!used)
+                    continue;
+                float height = Fill(card, units[i], board, enemy);
+                card.Panel.anchoredPosition = new Vector2(card.Panel.anchoredPosition.x, y);
+                y -= height + spacing;
             }
             _panel.gameObject.SetActive(true);
 
-            // Overlay 캔버스라 월드 좌표 = 화면 픽셀. 유닛 판은 Panel 밑에 매달려 있어 높이에 더한다
+            // Overlay 캔버스라 월드 좌표 = 화면 픽셀. 유닛 판들은 Panel 밑에 매달려 있어 높이에 더한다
             ((RectTransform)owner.transform).GetWorldCorners(_corners);   // 0 왼아래 · 1 왼위 · 2 오른위
             float scale = _panel.lossyScale.y;
             Vector2 size = _panel.rect.size * scale;
-            float below = unitInfo == null ? 0f : (_unitPanel.rect.height - _unitPanel.anchoredPosition.y) * scale;
+            float below = units.Length == 0 ? 0f : (-y - spacing) * scale;
             float gap = Gap * scale;
             bool right = _corners[2].x + gap + size.x <= Screen.width;
             // 윗변을 칸 윗변에 맞추고, 화면 위아래를 넘으면 안으로 민다
@@ -237,13 +330,32 @@ namespace GnorpWar
             return height;
         }
 
+        // 유닛 판 한 장을 채우고 높이를 돌려준다
+        private static float Fill(UnitCard card, UnitDefinition unit, OwnedBuilding[] board, bool enemy)
+        {
+            if (card.IconUnit != unit)
+                BuildIcon(card, unit);
+            card.Name.text = UnitName(unit);
+            card.Body.text = UnitInfo(unit, board, enemy);
+            // 이름 · 병종은 그림 높이 가운데에
+            float nameHeight = card.Name.preferredHeight;
+            float header = Mathf.Max(card.Icon.sizeDelta.y, nameHeight);
+            card.Icon.anchoredPosition = new Vector2(card.Icon.anchoredPosition.x, -(Pad + (header - card.Icon.sizeDelta.y) / 2f));
+            Fit(card.Name, -(Pad + (header - nameHeight) / 2f));
+            float bodyHeight = Fit(card.Body, -(Pad + header + InnerGap));
+            float height = Pad + header + InnerGap + bodyHeight + Pad;
+            card.Panel.sizeDelta = new Vector2(card.Panel.sizeDelta.x, height);
+            return height;
+        }
+
         // 프리팹의 그림 부품(몸통 · 무기 · 말 …)을 같은 배치 · 색 · 그리는 순서로 Image에 옮긴다.
         // 배율은 IconBox에 들어가는 가장 큰 정수배(PPU 8 그림 1픽셀 = 화면 배율 px)
-        private void BuildIcon(UnitDefinition unit)
+        private static void BuildIcon(UnitCard card, UnitDefinition unit)
         {
-            _iconUnit = unit;
-            for (int i = _unitIcon.childCount - 1; i >= 0; i--)
-                Destroy(_unitIcon.GetChild(i).gameObject);
+            card.IconUnit = unit;
+            RectTransform icon = card.Icon;
+            for (int i = icon.childCount - 1; i >= 0; i--)
+                Destroy(icon.GetChild(i).gameObject);
 
             // 적 전용 유닛(투석기)은 아군 프리팹이 없다
             Unit prefab = unit.PrefabFor(Team.Ally) != null ? unit.PrefabFor(Team.Ally) : unit.PrefabFor(Team.Enemy);
@@ -269,8 +381,8 @@ namespace GnorpWar
             }
             Vector2 extent = max - min;
             float scale = 8f * Mathf.Max(1, Mathf.FloorToInt(IconBox / (Mathf.Max(extent.x, extent.y) * 8f)));
-            _unitIcon.sizeDelta = extent * scale;
-            _unitIcon.anchoredPosition = new Vector2(Side + (IconBox - _unitIcon.sizeDelta.x) / 2f, _unitIcon.anchoredPosition.y);
+            icon.sizeDelta = extent * scale;
+            icon.anchoredPosition = new Vector2(Side + (IconBox - icon.sizeDelta.x) / 2f, icon.anchoredPosition.y);
 
             foreach (SpriteRenderer part in parts)
             {
@@ -281,7 +393,7 @@ namespace GnorpWar
                 image.sprite = part.sprite;
                 image.color = part.color;
                 RectTransform rect = image.rectTransform;
-                rect.SetParent(_unitIcon, false);
+                rect.SetParent(icon, false);
                 rect.anchorMin = rect.anchorMax = Vector2.zero;
                 rect.pivot = part.sprite.pivot / part.sprite.rect.size;
                 rect.sizeDelta = part.sprite.rect.size / part.sprite.pixelsPerUnit * scale * (Vector2)m.lossyScale;

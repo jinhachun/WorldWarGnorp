@@ -15,10 +15,10 @@ TagManager:
   - 
   - AllyUnit
   - EnemyUnit
-  - 
-  - 
-  - 
-  - 
+  - AllyBuilder
+  - EnemyBuilder
+  - AllyTower
+  - EnemyTower
   - 
   - 
   - 

@@ -86,10 +86,17 @@ namespace GnorpWar
             list.Add(modifier);
         }
 
+        // 데스매치에서도 타워가 공격하는 진영(오버드라이브) — 전투 동안
+        private static readonly bool[] Deathmatch = new bool[2];
+
+        public static bool AttacksInDeathmatch(Team team) => Deathmatch[(int)team];
+        public static void AttackInDeathmatch(Team team) => Deathmatch[(int)team] = true;
+
         public static void ClearBattle()
         {
             foreach (List<TowerModifier> list in Battle)
                 list.Clear();
+            Deathmatch[0] = Deathmatch[1] = false;
             Version++;
         }
 
@@ -219,14 +226,61 @@ namespace GnorpWar
         {
             Accumulate(Battle[(int)team], team, unit, stat, ref sum);
             if (team == Team.Ally)
-                Accumulate(Run, team, unit, stat, ref sum);
+                AccumulateRun(unit, stat, ref sum);
         }
 
-        private static void Accumulate(List<Entry> entries, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum)
+        // 영구히 걸린 것만(아군, 런 동안) — 전투의 유닛 계산과 RunStats.Preview가 같이 쓴다.
+        // alias = 전투 시작 때 걸릴 별칭(상점에서는 아직 UnitAliases에 없다 — Preview가 필드에서 찾아 넘긴다)
+        public static void AccumulateRun(UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
+            => Accumulate(Run, Team.Ally, unit, stat, ref sum, alias);
+
+        private static void Accumulate(List<Entry> entries, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
         {
             foreach (Entry e in entries)
-                if (e.Modifier.Stat == stat && e.Source.AppliesFor(team, unit))
+                if (e.Modifier.Stat == stat && (e.Source.AppliesFor(team, unit) || (alias != null && e.Source.AppliesTo(alias))))
                     sum.Add(e.Modifier.Op, e.Modifier.Value);
+        }
+    }
+
+    // 유닛 카드의 「공격력 11+1」용 — 내(아군) 유닛의 스탯 기본값과, 이번 런에 쌓인 강화까지 반영한 값.
+    // 넣는 것: 영구히 붙은 것(StatBook.AccumulateRun) + 필드 기물이 런 동안 쌓아 전투 시작 때 거는 것(스패너 — BuildingPassive.BattleStartStat, 사용자 10/10).
+    // 조립 라인의 별칭(톱니거인 → 톱니병사)도 필드에 있으면 따른다. 전투 중에 쌓이는 것·버프·맵은 넣지 않는다. 계산은 전투의 유닛과 같은 길(StatSum)
+    public static class RunStats
+    {
+        public struct Value
+        {
+            public float Base;
+            public float Now;
+            public float Bonus => Now - Base;
+        }
+
+        // 공격속도는 기본 1의 배율이다(공격 간격 = UnitDefinition.AttackInterval ÷ 값). 회복 유닛은 공격력이 회복량
+        public static Value Preview(UnitDefinition unit, UnitStat stat)
+        {
+            float baseValue = stat == UnitStat.Attack ? unit.AttackDamage
+                : stat == UnitStat.MaxHp ? unit.MaxHp
+                : stat == UnitStat.MoveSpeed ? unit.MoveSpeed
+                : 1f;
+            // 전투에서 효과를 내는 필드 기물만 — 보관함은 안 걸리고, 늪지에서는 쿨다운 없는 기물이 꺼진다(BoardRunner.IsActive와 같은 조건)
+            var active = new List<OwnedBuilding>();
+            if (RunState.Started)
+                foreach (OwnedBuilding owned in RunState.Field)
+                    if (!OwnedBuilding.IsEmpty(owned) && !(RunState.Map != null && RunState.Map.PassiveBuildingsOff && owned.Definition.Cooldown <= 0f))
+                        active.Add(owned);
+
+            UnitDefinition alias = null;
+            foreach (OwnedBuilding owned in active)
+                foreach (BuildingPassive passive in owned.Definition.Passives)
+                    alias = passive.AliasOf(unit) ?? alias;
+
+            StatSum sum = StatSum.Identity;
+            StatBook.AccumulateRun(unit, stat, ref sum, alias);
+            foreach (OwnedBuilding owned in active)
+                foreach (BuildingPassive passive in owned.Definition.Passives)
+                    if (passive is IUnitFilter filter && (filter.AppliesTo(unit) || (alias != null && filter.AppliesTo(alias)))
+                        && passive.BattleStartStat(owned, stat, out StatModifier modifier))
+                        sum.Add(modifier.Op, modifier.Value);
+            return new Value { Base = baseValue, Now = sum.Apply(baseValue) };
         }
     }
 }

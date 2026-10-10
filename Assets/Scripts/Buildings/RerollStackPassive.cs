@@ -15,16 +15,23 @@ namespace GnorpWar
 
         public bool AppliesTo(UnitDefinition unit) => _units.Length == 0 || System.Array.IndexOf(_units, unit) >= 0;
 
-        public override void OnReroll(OwnedBuilding self) => self.AddStacks(1);
+        public override void OnReroll(OwnedBuilding self)
+        {
+            self.AddStacks(1);
+            OwnedBuilding.NotifyEffect(self);
+        }
 
         public override void OnBattleStart(BoardRunner board, int slot, int level)
         {
-            int stacks = board.Slots[slot].Building.Stacks;
-            if (stacks <= 0)
-                return;
-            float factor = Mathf.Pow(_perStack, stacks);
             foreach (UnitStat stat in _stats)
-                StatBook.AddForBattle(board.Team, this, new StatModifier(stat, StatOp.Multiply, factor));
+                if (BattleStartStat(board.Slots[slot].Building, stat, out StatModifier modifier))
+                    StatBook.AddForBattle(board.Team, this, modifier);
+        }
+
+        public override bool BattleStartStat(OwnedBuilding self, UnitStat stat, out StatModifier modifier)
+        {
+            modifier = new StatModifier(stat, StatOp.Multiply, Mathf.Pow(_perStack, self.Stacks));
+            return self.Stacks > 0 && System.Array.IndexOf(_stats, stat) >= 0;
         }
 
         public override string Describe(int level)

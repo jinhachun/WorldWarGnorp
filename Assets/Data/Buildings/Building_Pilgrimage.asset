@@ -26,3 +26,4 @@ MonoBehaviour:
   _effects:
   - {fileID: 11400000, guid: 365e7c79b56dad34884185f5f71ed203, type: 2}
   _passives: []
+  _mentionedUnits: []

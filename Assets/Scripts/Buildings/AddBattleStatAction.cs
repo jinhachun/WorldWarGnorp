@@ -18,7 +18,19 @@ namespace GnorpWar
                || System.Array.IndexOf(_categories, unit.Category) >= 0
                || System.Array.IndexOf(_units, unit) >= 0;
 
-        public override void Execute(BoardRunner board, int slot, int level) => StatBook.AddForBattle(board.Team, this, _modifier.Scaled(_perTier, level));
+        public override void Execute(BoardRunner board, int slot, int level)
+        {
+            StatModifier modifier = _modifier.Scaled(_perTier, level);
+            StatBook.AddForBattle(board.Team, this, modifier);
+            board.AddBattleGain(slot, modifier.Op, modifier.Value);
+            BuffLinks.ToUnits(board.Team, slot, BuffLinks.KindOf(modifier.Stat), this);
+        }
+
+        public override bool BattleGain(out StatOp op)
+        {
+            op = _modifier.Op;
+            return true;
+        }
 
         public override string Describe(int level) => $"전투 동안 {TargetName()} {_modifier.Scaled(_perTier, level).Describe()}";
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;

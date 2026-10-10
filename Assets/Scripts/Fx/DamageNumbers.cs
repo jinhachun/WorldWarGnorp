@@ -16,7 +16,10 @@ namespace GnorpWar
         private const float Lifetime = 0.7f;
         private const float RiseHeight = 1.2f;
         // 이 나이 안의 숫자에는 같은 대상의 새 피해를 더한다
-        private const float MergeWindow = 0.2f;
+        private const float MergeWindow = 0.3f;
+        // 이 나이 안의 같은 색 숫자가 이 거리 안에 있으면 대상이 달라도 거기에 더한다 — 전선에서 숫자가 겹쳐 덩어리로 안 읽히지 않게(사용자 10/8)
+        private const float NearbyMergeX = 1f;
+        private const float NearbyMergeY = 0.8f;
         // 사라지기 시작하는 나이 비율
         private const float FadeFrom = 0.6f;
         private const float JitterX = 0.2f;
@@ -32,8 +35,8 @@ namespace GnorpWar
         private static readonly Color32 AllyHurt = new Color32(255, 80, 70, 255);
         private static readonly Color32 Healed = new Color32(90, 255, 110, 255);
 
-        // 위에서 아래로 3칸씩
-        private static readonly string[] Glyphs =
+        // 위에서 아래로 3칸씩 — 탑 층 표시(TowerBadge)의 숫자도 이 그림
+        public static readonly string[] Glyphs =
         {
             "111101101101111", "010110010010111", "111001111100111", "111001111001111", "101101111001001",
             "111100111001111", "111100111101111", "111001001001001", "111101111101111", "111101111001111",
@@ -118,6 +121,16 @@ namespace GnorpWar
             {
                 ref Entry e = ref _entries[last];
                 if (e.Active && e.Age < MergeWindow && e.Color.Equals(color))
+                {
+                    e.Amount += amount;
+                    return;
+                }
+            }
+            for (int i = 0; i < Capacity; i++)
+            {
+                ref Entry e = ref _entries[i];
+                if (e.Active && e.Age < MergeWindow && e.Color.Equals(color)
+                    && Mathf.Abs(e.Position.x - point.x) < NearbyMergeX && Mathf.Abs(e.Position.y - point.y) < NearbyMergeY)
                 {
                     e.Amount += amount;
                     return;

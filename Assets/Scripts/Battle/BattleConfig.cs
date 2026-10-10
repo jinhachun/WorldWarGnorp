@@ -15,18 +15,29 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Battle Config")]
     public class BattleConfig : ScriptableObject
     {
-        [Header("보드")]
-        [SerializeField] private int _fieldSlots = 5;
+        [Header("보드 — 필드는 성 위로 쌓는 탑(칸 0 = 1층)")]
+        [Tooltip("런을 시작할 때의 탑 층수")]
+        [SerializeField] private int _startFloors = 3;
+        [Tooltip("층 올리기로 닿을 수 있는 최대 층수")]
+        [SerializeField] private int _maxFloors = 8;
+        [Tooltip("층 올리기 비용 = 이 값 + 아래 값 × (지금까지 올린 횟수)")]
+        [SerializeField] private int _floorCostStart = 6;
+        [SerializeField] private int _floorCostPerRaise = 2;
         [SerializeField] private int _storageSlots = 5;
 
         [Header("런")]
         [SerializeField] private int _lives = 3;
+        [Tooltip("라운드가 하나 오를 때마다 양쪽 성 최대 체력에 더하는 값 — N라운드 = 성 에셋 체력 + 이 값 × (N - 1). 기물의 성 체력 보너스(+%·×)는 이 합에 붙는다")]
+        [SerializeField] private float _baseHpPerRound = 0f;
         [Tooltip("이만큼 이기면 런 클리어")]
         [SerializeField] private int _winsToClear = 10;
 
         [Header("상점")]
-        [Tooltip("상점 단계마다 받는 골드 (남은 골드는 이월)")]
-        [SerializeField] private int _roundGold = 10;
+        [Tooltip("1라운드 상점에서 받는 골드 (남은 골드는 이월)")]
+        [UnityEngine.Serialization.FormerlySerializedAs("_roundGold")]
+        [SerializeField] private int _roundGoldStart = 10;
+        [Tooltip("라운드가 하나 오를 때마다 상점 골드에 더하는 값 — N라운드 = 시작 + 이 값 × (N - 1)")]
+        [SerializeField] private int _roundGoldPerRound = 0;
         [Tooltip("직전 전투에서 이겼으면 더 받는 골드")]
         [SerializeField] private int _winBonus = 3;
         [SerializeField] private int _rerollCost = 1;
@@ -42,6 +53,14 @@ namespace GnorpWar
         [SerializeField] private float[] _rarityWeightsFirst = { 60, 30, 10, 0, 0 };
         [Tooltip("런 클리어 라운드(이긴 수 = Wins To Clear) 진열의 등급 가중치 — 그 사이는 라운드에 따라 섞고, 넘으면 이 값")]
         [SerializeField] private float[] _rarityWeightsLast = { 15, 25, 30, 20, 10 };
+
+        [Header("등급업 — 생산 기물은 등급이 올라도 한 번에 나오는 수가 그대로고, 쿨다운이 준다(사용자 10/10)")]
+        [Tooltip("생산 기물(유닛을 내는 기물)의 등급이 하나 오를 때마다 쿨다운에 곱한다 — 0.8이면 8 → 6.4 → 5.12초")]
+        [SerializeField] private float _rankCooldownFactor = 0.8f;
+
+        [Header("맵 — 라운드마다 상점에 들어올 때 하나")]
+        [Tooltip("0번 = 1라운드 맵(기본). 2라운드부터는 이 목록 전체에서 같은 확률로")]
+        [SerializeField] private MapDefinition[] _maps = new MapDefinition[0];
 
         [Header("적")]
         [Tooltip("라운드별 적 보드 — 0번이 1라운드. 라운드가 목록보다 많으면 마지막 보드")]
@@ -67,26 +86,63 @@ namespace GnorpWar
         [SerializeField] private float _maxUnitSize = 3f;
         [Tooltip("밟기 — 적 머리 위에 서 있는 동안 그 적에게 초당 내 공격력의 이 비율만큼 피해 (모든 유닛)")]
         [SerializeField] private float _stompDamagePerSecond = 0.5f;
+        [Tooltip("모든 유닛이 앞 아군 위로 한 번 뛰면(행군·싸움) 이만큼(초) 쉬고 다시 뛸 수 있다 — 너무 자주 뛰어 산이 쌓이기 전에 넘어가지 않게. 0 = 쉬지 않음")]
+        [SerializeField] private float _climbRest = 0f;
+        [Tooltip("앞 아군이 내 이동 속도의 이 비율보다 느리게 움직여야 그 위로 올라탄다 — 낮출수록 거의 멈춘 아군에만 오른다")]
+        [SerializeField] private float _climbSlowerThan = 0.5f;
+        [Tooltip("등반 점프 높이 = 내 키 + 이 칸 수. 2면 한 번에 두 층을 넘는다")]
+        [SerializeField] private float _climbJumpExtra = 2f;
 
-        public int FieldSlots => _fieldSlots;
+        [Header("전투력 — 체력바 밑 표시. 유닛 전투력 = √(지금 체력 × 초당 피해) × 표시 배율, 진영 합계")]
+        [Tooltip("범위 공격(화염·휩쓸기) 유닛의 초당 피해에 곱한다 — 한 번에 여럿을 친다")]
+        [SerializeField] private float _powerAreaScale = 2f;
+        [Tooltip("회복 유닛은 초당 피해 대신 초당 회복량 × 이 값")]
+        [SerializeField] private float _powerHealScale = 1f;
+        [Tooltip("유닛 전투력에 곱하는 표시 배율")]
+        [SerializeField] private float _powerDisplayScale = 1f;
+        [Tooltip("초당 유닛 생산 수 표시 — 최근 이만큼(초) 동안 전장에 나온 유닛 수를 이 시간으로 나눈다")]
+        [SerializeField] private float _spawnRateWindowSeconds = 10f;
+
+        public int StartFloors => _startFloors;
+        public int MaxFloors => _maxFloors;
+        // raises = 지금까지 올린 횟수(0부터)
+        public int FloorCost(int raises) => _floorCostStart + _floorCostPerRaise * raises;
+        public float ClimbRest => _climbRest;
+        public float ClimbSlowerThan => _climbSlowerThan;
+        public float ClimbJumpExtra => _climbJumpExtra;
+        public float PowerAreaScale => _powerAreaScale;
+        public float PowerHealScale => _powerHealScale;
+        public float PowerDisplayScale => _powerDisplayScale;
+        public float SpawnRateWindowSeconds => _spawnRateWindowSeconds;
         public float MaxUnitSize => _maxUnitSize;
         public float StompDamagePerSecond => _stompDamagePerSecond;
         public float DeathmatchSeconds => _deathmatchSeconds;
         public float BoardStopSeconds => _deathmatchSeconds + _boardGraceSeconds;
         public int StorageSlots => _storageSlots;
         public int Lives => _lives;
+        // round는 0부터(RunState.Round) — 0이면 0
+        public float BaseHpBonus(int round) => _baseHpPerRound * round;
         public int WinsToClear => _winsToClear;
-        public int RoundGold => _roundGold;
+        // round는 0부터(RunState.Round) — 0이면 시작값
+        public int RoundGold(int round) => _roundGoldStart + _roundGoldPerRound * round;
         public int WinBonus => _winBonus;
         public int RerollCost => _rerollCost;
         public float SellRatio => _sellRatio;
         public int OfferCount => _offerCount;
         public BuildingDefinition[] ShopPool => _shopPool;
         public int PriceOf(BuildingRarity rarity) => _rarityPrices[(int)rarity];
+        // level = OwnedBuilding.Level(1 = 시작 등급 → 1)
+        public float RankCooldownScale(int level) => Mathf.Pow(_rankCooldownFactor, level - 1);
 
         // round는 0부터 — 0이면 First, WinsToClear - 1 이상이면 Last
         public float RarityWeight(BuildingRarity rarity, int round)
             => Mathf.Lerp(_rarityWeightsFirst[(int)rarity], _rarityWeightsLast[(int)rarity], round / (float)Mathf.Max(1, _winsToClear - 1));
+
+        // round는 0부터 — 0이면 첫 맵, 이후 무작위. 목록이 비면 null
+        public MapDefinition MapFor(int round)
+            => _maps.Length == 0 ? null : _maps[round == 0 ? 0 : Random.Range(0, _maps.Length)];
+
+        public MapDefinition[] Maps => _maps;
 
         public EnemyRound EnemyRoundAt(int round) => _enemyRounds[Mathf.Clamp(round, 0, _enemyRounds.Length - 1)];
 

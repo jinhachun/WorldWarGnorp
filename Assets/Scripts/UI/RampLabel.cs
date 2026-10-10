@@ -11,6 +11,9 @@ namespace GnorpWar
         private const float PulseDuration = 0.3f;
         private const float DeathmatchWarning = 30f; // 데스매치 몇 초 전부터 남은 초를 보일지 (표시용)
 
+        // 이 시계가 마지막으로 읽은 전투 시간 — 전투가 끝나면 BattleManager.Elapsed가 0이 되므로 결과 창(ResultStats)이 여기서 읽는다
+        public static float LastElapsed { get; private set; }
+
         private Text _text;
         private int _lastPhase;
         private float _pulse = PulseDuration;
@@ -26,6 +29,7 @@ namespace GnorpWar
             }
 
             float elapsed = BattleManager.Elapsed;
+            LastElapsed = elapsed;
 
             // 0 평소 · 1 데스매치 카운트다운 · 2 데스매치(기물은 아직 발동) · 3 데스매치(기물 멈춤)
             // 남은 초는 올림 — 내림한 시계와 더하면 그 시각이 되고(2:41 + 19초 = 3:00), 0초는 단계가 넘어가 안 보인다

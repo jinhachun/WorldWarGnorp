@@ -16,6 +16,11 @@ namespace GnorpWar
         [SerializeField] private Projectile _projectile;
         [SerializeField] private float _projectileArcHeight = 2.5f;
 
+        [Header("작은 타워(건축가가 짓는다) — 본진 대비 배율. 공격 간격·사거리는 본진과 같다")]
+        [SerializeField] private float _smallAttackScale = 0.5f;
+        [Tooltip("본진 최대 체력(라운드 보너스 포함, 기물 보너스 전) × 이 값")]
+        [SerializeField] private float _smallHpScale = 0.25f;
+
         public float MaxHp => _maxHp;
         public float AttackDamage => _attackDamage;
         public float AttackInterval => _attackInterval;
@@ -23,5 +28,7 @@ namespace GnorpWar
         public float PushPower => _pushPower;
         public Projectile Projectile => _projectile;
         public float ProjectileArcHeight => _projectileArcHeight;
+        public float SmallAttackScale => _smallAttackScale;
+        public float SmallHpScale => _smallHpScale;
     }
 }

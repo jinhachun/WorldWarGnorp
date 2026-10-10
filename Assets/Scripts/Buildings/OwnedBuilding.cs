@@ -21,7 +21,7 @@ namespace GnorpWar
         public BuildingDefinition Definition => _definition;
         public int Upgrades => _upgrades;
         public BuildingRarity Rarity => (BuildingRarity)((int)_definition.Rarity + _upgrades);
-        // 1 = 시작 등급. 생산 수는 × Level, 다른 수치는 Scaled로 등급마다 증가량을 더한다
+        // 1 = 시작 등급. 생산 기물은 쿨다운이 줄고(BuildingDefinition.CooldownAt), 다른 수치는 Scaled로 등급마다 증가량을 더한다
         public int Level => _upgrades + 1;
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
@@ -36,6 +36,22 @@ namespace GnorpWar
         public static float Scaled(float value, float perTier, int level) => value + perTier * (level - 1);
         public static int Scaled(int value, int perTier, int level) => value + perTier * (level - 1);
 
+        // 효과가 터지거나 효과를 받은 순간(UI 칸 튐) — 「구매할 때마다,」·전투 시작 시·상점 훅(리롤·판매·골드).
+        // 쿨다운 발동·가속은 BoardRunner.Triggered 쪽이다
+        public static event System.Action<OwnedBuilding> EffectFired;
+        public static void NotifyEffect(OwnedBuilding building) => EffectFired?.Invoke(building);
+
         public static bool IsEmpty(OwnedBuilding building) => building == null || building._definition == null;
+
+        // 탑은 중간 층을 비울 수 없다 — 빈 칸을 빼고 아래로 당긴 새 배열(길이 = 층수 그대로). 적 라운드 표처럼 원본을 건드리면 안 되는 보드에
+        public static OwnedBuilding[] Compacted(OwnedBuilding[] field)
+        {
+            var result = new OwnedBuilding[field.Length];
+            int write = 0;
+            foreach (OwnedBuilding building in field)
+                if (!IsEmpty(building))
+                    result[write++] = building;
+            return result;
+        }
     }
 }

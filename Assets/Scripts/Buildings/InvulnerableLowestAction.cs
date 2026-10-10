@@ -19,7 +19,10 @@ namespace GnorpWar
                 if (unit.IsAlive && unit.Team == board.Team && (lowest == null || unit.Hp < lowest.Hp))
                     lowest = unit;
             if (lowest != null)
+            {
                 lowest.GrantInvulnerable(Seconds(level));
+                BuffLinks.ToPoint(board.Team, slot, lowest.Position, BuffKind.Invulnerable);
+            }
         }
 
         public override string Describe(int level) => $"체력이 가장 낮은 아군 1기에게 {Seconds(level):0.#}초간 무적을 부여합니다.";

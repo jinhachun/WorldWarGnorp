@@ -16,7 +16,7 @@ MonoBehaviour:
   _category: {fileID: 11400000, guid: 85153d7df66545344b8f09cebb62a3f9, type: 2}
   _allyPrefab: {fileID: 638779955689807151, guid: 33f981cfd0ef39e409a8d3d38eec424a, type: 3}
   _enemyPrefab: {fileID: 6082175181310963690, guid: ababd41fcc14be044afb25bb910468ce, type: 3}
-  _moveSpeed: 16
+  _moveSpeed: 10
   _maxHp: 150
   _attackDamage: 12
   _attackInterval: 0.8
@@ -41,3 +41,8 @@ MonoBehaviour:
   _slamDamage: 20
   _slamLiftHeight: 3
   _slamStun: 0.8
+  _buildPrefab: {fileID: 0}
+  _buildSeconds: 2
+  _buildFlatness: 0.25
+  _buildSpacing: 2.5
+  _buildGateClearance: 3

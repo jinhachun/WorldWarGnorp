@@ -48,6 +48,9 @@ namespace GnorpWar
         // 상대 — 런 내내 한 명. 런을 시작할 때 빌드 방향 하나를 뽑고, 라운드마다 같은 상점 규칙으로 그 빌드를 키운다(Run/EnemyShopper)
         public static EnemyBuildProfile EnemyBuild { get; private set; }
         public static OwnedBuilding[] EnemyField => Enemy.Field;
+        // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발이 이 색이다. 나는 그린 그대로(열쇠 색), 적은 런을 시작할 때 하나 뽑아 런 내내
+        private static Color _enemyLordColor;
+        public static Color LordColor(Team team) => team == Team.Ally ? _config.LordKeyColor : _enemyLordColor;
         // 상점 효과(골드 훅 등)를 받는 진영 — 지금 상점을 도는 쪽
         public static Team ActingTeam => _side.Team;
         // 적이 쇼핑을 마친 라운드 수 — 씬만 다시 불러와도 한 번 더 돌지 않게
@@ -134,6 +137,7 @@ namespace GnorpWar
             _shopEnteredRound = -1;
             _enemyShoppedRounds = 0;
             EnemyBuild = CheatEnemyBuild != null ? CheatEnemyBuild : config.RandomEnemyBuild();
+            _enemyLordColor = config.RandomEnemyLordColor();
             StatBook.ClearRun();
             TowerBook.ClearRun();
         }

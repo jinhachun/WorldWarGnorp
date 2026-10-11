@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -15,21 +16,33 @@ namespace GnorpWar
             public float Weight;
         }
 
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _displayName = "";
         [Tooltip("이 방향의 핵심 기물과 값 — 이 방향에서 쓰는 생산 기물도 여기에")]
+        [BoxGroup("기물 값")]
         [SerializeField] private Pick[] _picks = new Pick[0];
         [Tooltip("위 목록에 없는 생산 기물(싸우는 유닛을 내는 기물)의 값")]
+        [BoxGroup("기물 값")]
         [SerializeField] private float _producerValue = 1f;
         [Tooltip("탑의 기물 중 싸우는 유닛을 내는 기물이 이 비율보다 적으면 생산 기물을 가장 먼저 산다. 채웠으면 목록에 없는 생산 기물은 새로 사지 않는다")]
+        [BoxGroup("상점 성향")]
         [SerializeField] private float _producerShare = 0.5f;
         [Tooltip("위 목록에 없는 공용 기물(생산 기물 제외)의 값 — 다른 세력의 기물은 사지 않는다")]
+        [BoxGroup("기물 값")]
         [SerializeField] private float _commonValue = 0.5f;
         [Tooltip("이미 가진 기물이 진열에 나오면(합쳐서 등급을 올린다) 값에 곱한다")]
+        [BoxGroup("기물 값")]
         [SerializeField] private float _ownedScale = 1.5f;
         [Tooltip("리롤 성향 — 살 것이 없을 때, 리롤하고도 이만큼의 골드가 남으면 리롤한다(작을수록 많이 돌린다)")]
+        [BoxGroup("상점 성향")]
+        [SuffixLabel("골드", true)]
         [SerializeField] private int _rerollReserve = 6;
         [Tooltip("층 올리기 성향 — 켜면 탑이 꽉 찼을 때 골드가 되는 대로 층을 미리 올린다. 끄면 놓을 기물을 살 때에만 올린다")]
+        [BoxGroup("상점 성향")]
         [SerializeField] private bool _raisesFloorAhead = true;
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
+        private bool HideNonBalance => BalanceView.HideNonBalance;
 
         public string DisplayName => _displayName;
         public float ProducerValue => _producerValue;

@@ -22,19 +22,20 @@
 
 | 폴더 | 책임 | 새 코드는 어디로 |
 |---|---|---|
-| `Assets/Scripts/Core/` | 여러 곳이 같이 쓰는 기본 타입 (`Team` · `IDamageable` · `Pooled`) | 진영·공통 인터페이스·풀 |
+| `Assets/Scripts/Core/` | 여러 곳이 같이 쓰는 기본 타입 (`Team` · `IDamageable` · `Pooled`) · `LordPaint`(그림의 파랑 `#81ABFF`만 진영 영주 색으로 바꾼 스프라이트를 만들어 캐시 — 유닛 몸·시체·툴팁 카드가 같이 쓴다. 진영 → 색은 `RunState.LordColor` 한 곳) · `BalanceView`(밸런싱 창이 그리는 동안만 켜지는 표시 플래그 — 게임은 읽지 않는다) | 진영·공통 인터페이스·풀 |
 | `Assets/Scripts/Units/` | 유닛·공격·화살·분류 (`Unit` · `UnitDefinition` · `UnitCategory` · `AttackType` · `Projectile`) | 유닛 행동·유닛 SO 정의 |
 | `Assets/Scripts/Units/Effects/` | 유닛 효과 — 효과마다 파일 하나(`UnitEffect` 상속) + 진영별 켜진 효과 `TeamEffects` | 새 유닛 효과 |
 | `Assets/Scripts/Buildings/` | 건물 (`BuildingDefinition` · `BuildingAction`과 액션들 · `OwnedBuilding` · `BoardRunner`) | 건물·발동 액션 |
 | `Assets/Scripts/Run/` | 런 상태·상점 규칙 (`RunState`) | 골드·목숨·구매/판매 규칙 |
+| `Assets/Scripts/World/` | 월드맵 규칙 — 판도·영주·턴 (스펙 `Docs/WorldWarGnorp_아웃게임기획.md`). 규칙 6파일(`WorldGraph` · `Lord` · `LordTemper` · `WorldRules` · `WorldState` · `WorldTurn`)은 **`UnityEngine`을 쓰지 않는다** — Unity 밖에서 수천 판을 돌려 검증하려고(영주의 힘·난수는 밖에서 받는다). SO = `WorldMapDefinition`(손으로 짠 맵 한 장) · `RegionUpgradeDefinition` · `WorldConfig` | 지역·영주·턴 규칙 |
 | `Assets/Scripts/Bases/` | 본진 (`Base` · `BaseDefinition`) — 본진은 화살을 쏘는 타워 | 본진 로직과 SO 정의 |
 | `Assets/Scripts/Battle/` | 라운드 흐름·전장 (`BattleManager` · `BattleConfig` · `Ground`) | 라운드 단위 규칙 |
 | `Assets/Scripts/UI/` | HUD·상점 화면 (`BoardView` · `SlotView` · `ShopPanel` · `OfferCard` · `RampLabel` · `BaseHealthBar` · `CameraDrag`) | 화면 표시·버튼 |
 | `Assets/Scripts/Fx/` | 타격감 연출 (`FxDirector` · `CameraShake`) | 연출 |
 | `Assets/Scripts/Dev/` | 개발·테스트 전용 — 게임에 쓰이지 않음 (측정 도구 `PyramidProbe`·`StackOrderProbe`·`PerfProbe`는 10/10 정리 때 지움 — 다시 필요하면 커밋 `3494db7`의 `Assets/Scripts/Dev/`에서 꺼낸다). `CheatPanel` = F1 테스트 패널(탭 4개: 기물 · 값 · 전투 · 런 — 값 란은 플레이 중 상태만 바꾸고 에셋은 안 건드림, 숫자 입력은 `Keyboard.current.onTextInput`, 뒤 UI는 패널 크기의 투명 uGUI 판으로 막음. 게임이 켜질 때 스스로 생김, 게임 쪽은 `RunState`·`BattleManager`의 `Cheat*` 훅만 부름, 배포 땐 `Enabled`를 끈다) | 개발 도구 |
-| `Assets/Editor/` | 에디터 전용 툴 | 에디터 툴·인스펙터 |
-| `Assets/Plugins/Sirenix/` | Odin Inspector (사용자가 추가한 **유료 에셋**) — `.gitignore`로 저장소에서 제외 | 손대지 말 것 |
-| `Assets/Data/` | 데이터 에셋. 루트 = `BattleConfig` · 본진 정의 · 물리 재질 / `Units/`(유닛 정의 `Unit_*` · 병종 `Category_*`) / `Buildings/`(기물 `Building_*`) · `Buildings/Actions/` · `Buildings/Passives/` / `Effects/`(유닛 효과) / `Maps/` | 코드 X, 에셋만 |
+| `Assets/Editor/` | 에디터 전용 툴. `BalanceWindow` = 메뉴 GnorpWar → 밸런싱(Odin 메뉴 창 — 유닛 표 · 유닛 · 전투·경제 설정 · 맵 · 적 빌드, 유형으로 에셋을 찾고 바뀌면 바로 저장. 새 유형은 `Groups`에, 표의 칸은 `UnitRow`에 한 줄) · `WorldMapTable`(30지역 표) + `WorldAssetsMenu`(GnorpWar → 월드 에셋 만들기) | 에디터 툴·인스펙터 |
+| `Assets/Plugins/Sirenix/` | Odin Inspector (사용자가 추가한 **유료 에셋**) — `.gitignore`로 저장소에서 제외. 밸런싱 창과 데이터 클래스 어트리뷰트가 쓴다(규칙은 CLAUDE.md §5) | 손대지 말 것 |
+| `Assets/Data/` | 데이터 에셋. 루트 = `BattleConfig` · 본진 정의 · 물리 재질 / `Units/`(유닛 정의 `Unit_*` · 병종 `Category_*`) / `Buildings/`(기물 `Building_*`) · `Buildings/Actions/` · `Buildings/Passives/` / `Effects/`(유닛 효과) / `Maps/` / `EnemyBuilds/` / `World/`(`WorldConfig` · `WorldMap_Main` · `Upgrades/`) | 코드 X, 에셋만 |
 | `Assets/Prefabs/` | 프리팹. `Units/`(`Ally_*` · `Enemy_*`) · `Projectiles/`(화살 · 회복 구슬 · 돌 · 타워 화살) · 루트의 `SmallTower` | — |
 | `Assets/Fx/` | 파티클 프리팹·재질 (`FX_HitSpark` · `FX_DeathPuff` · `FX_Pixel`) | — |
 | `Assets/Sprites/` | 스프라이트. `Units/`(유닛 몸) · `Weapons/`(무기·소지품) · `World/`(성 · 깃발 · 작은 타워) · `Fx/`(불꽃 · `Square.png` PPU 32) · `Backdrop/` · `Icons/` · `UI/` | 새 그림 임포트 규칙은 CLAUDE.md 「픽셀 크기 컨벤션」 |

@@ -102,6 +102,14 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 60b9b1a6080e0444780ee2acef0f04e1, type: 2}
   - {fileID: 11400000, guid: a01b5b7ef459b69449aa28969039ae56, type: 2}
   _enemyGoldScale: 1
+  _lordKeyColor: {r: 0.5058824, g: 0.67058825, b: 1, a: 1}
+  _enemyLordColors:
+  - {r: 1, g: 0.40392157, b: 0.40392157, a: 1}
+  - {r: 1, g: 0.6509804, b: 0.3019608, a: 1}
+  - {r: 1, g: 0.88235295, b: 0.3019608, a: 1}
+  - {r: 0.43137255, g: 0.9019608, b: 0.43137255, a: 1}
+  - {r: 0.77254903, g: 0.54901963, b: 1, a: 1}
+  - {r: 1, g: 0.5411765, b: 0.8156863, a: 1}
   _rampStartSeconds: 60
   _rampStepSeconds: 10
   _rampPerStep: 0

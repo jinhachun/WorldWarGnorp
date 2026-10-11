@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16e4e4050e7302640972d1b916e2d5c2, type: 3}
+  m_Name: WorldConfig
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.WorldConfig
+  _map: {fileID: 11400000, guid: 45ed4a3aa8297fb478ccf5bf445c4563, type: 2}
+  _happinessStart: 3
+  _happinessMax: 6
+  _winHappiness: 1
+  _lossLandSteps: 040000000a000000
+  _temperWeights:
+  - 0.4
+  - 0.27
+  - 0.23
+  - 0.1

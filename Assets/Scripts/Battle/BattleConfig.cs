@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -25,11 +26,15 @@ namespace GnorpWar
         [Header("상점")]
         [Tooltip("1라운드 상점에서 받는 골드 (남은 골드는 이월)")]
         [UnityEngine.Serialization.FormerlySerializedAs("_roundGold")]
+        [SuffixLabel("골드", true)]
         [SerializeField] private int _roundGoldStart = 10;
         [Tooltip("라운드가 하나 오를 때마다 상점 골드에 더하는 값 — N라운드 = 시작 + 이 값 × (N - 1)")]
+        [SuffixLabel("골드", true)]
         [SerializeField] private int _roundGoldPerRound = 0;
         [Tooltip("직전 전투에서 이겼으면 더 받는 골드")]
+        [SuffixLabel("골드", true)]
         [SerializeField] private int _winBonus = 3;
+        [SuffixLabel("골드", true)]
         [SerializeField] private int _rerollCost = 1;
         [Tooltip("판매 값 = 가격 × 산 개수(경험치 + 1) × 이 비율, 내림, 최소 1")]
         [SerializeField] private float _sellRatio = 0.5f;
@@ -58,21 +63,43 @@ namespace GnorpWar
         [Tooltip("적이 라운드마다 받는 상점 골드에 곱한다 — 1 = 플레이어와 같다(반올림)")]
         [SerializeField] private float _enemyGoldScale = 1f;
 
+        [Header("영주 색 — 유닛 그림의 한 색 · 탑 지붕 · 깃발을 그 진영 영주의 색으로 칠한다(Core/LordPaint)")]
+        [Tooltip("유닛 그림에서 영주 색으로 바뀌는 색 — 아군 그림(Sprites/Units/Ally)에 칠한 파랑과 같아야 한다. 내 색이기도 하다(나는 그린 그대로)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Color _lordKeyColor = new Color32(0x81, 0xAB, 0xFF, 0xFF);
+        [Tooltip("적 영주의 색 후보 — 런을 시작할 때 하나를 같은 확률로 뽑아 그 런 내내 쓴다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Color[] _enemyLordColors =
+        {
+            new Color32(0xFF, 0x67, 0x67, 0xFF),
+            new Color32(0xFF, 0xA6, 0x4D, 0xFF),
+            new Color32(0xFF, 0xE1, 0x4D, 0xFF),
+            new Color32(0x6E, 0xE6, 0x6E, 0xFF),
+            new Color32(0xC5, 0x8C, 0xFF, 0xFF),
+            new Color32(0xFF, 0x8A, 0xD0, 0xFF),
+        };
+
         [Header("가속 — 전투가 끝나지 않는 것을 막는다 (공격력 · 생산 수)")]
         [Tooltip("이 시각(초)에 첫 증가")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _rampStartSeconds = 60f;
+        [SuffixLabel("초", true)]
         [SerializeField] private float _rampStepSeconds = 10f;
         [Tooltip("한 번에 원래 공격력의 몇 배를 더하나 (단리, 0.1 = +10%)")]
         [SerializeField] private float _rampPerStep = 0.1f;
         [Tooltip("한 번에 모든 건물의 한 번 생산 수에 더하는 마리 수 (양 진영)")]
+        [SuffixLabel("기", true)]
         [SerializeField] private int _rampUnitsPerStep = 1;
 
         [Header("데스매치 — 오래 끄는 전투를 남은 유닛으로 끝낸다")]
         [Tooltip("이 시각(초)에 양쪽 본진이 화살을 멈춘다")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _deathmatchSeconds = 180f;
         [Tooltip("본진이 멈춘 뒤 기물이 이만큼(초) 더 발동하고 멈춘다(생산 포함)")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _boardGraceSeconds = 10f;
         [Tooltip("교착 — 기물이 멈춘 뒤 이만큼(초) 동안 아무도 피해를 받지 않고 죽지 않으면 아군 승리. 가장 느린 유닛이 가장 느린 맵에서 성에서 성까지 걷는 시간보다 길어야 한다")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _stalemateSeconds = 240f;
 
         [Header("유닛")]
@@ -81,10 +108,12 @@ namespace GnorpWar
         [Tooltip("밟기 — 적 머리 위에 서 있는 동안 그 적에게 초당 내 공격력의 이 비율만큼 피해 (모든 유닛)")]
         [SerializeField] private float _stompDamagePerSecond = 0.5f;
         [Tooltip("모든 유닛이 앞 아군 위로 한 번 뛰면(행군·싸움) 이만큼(초) 쉬고 다시 뛸 수 있다 — 너무 자주 뛰어 산이 쌓이기 전에 넘어가지 않게. 0 = 쉬지 않음")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _climbRest = 0f;
         [Tooltip("앞 아군이 내 이동 속도의 이 비율보다 느리게 움직여야 그 위로 올라탄다 — 낮출수록 거의 멈춘 아군에만 오른다")]
         [SerializeField] private float _climbSlowerThan = 0.5f;
         [Tooltip("등반 점프 높이 = 내 키 + 이 칸 수. 2면 한 번에 두 층을 넘는다")]
+        [SuffixLabel("칸", true)]
         [SerializeField] private float _climbJumpExtra = 2f;
 
         [Header("전투력 — 체력바 밑 표시. 유닛 전투력 = √(지금 체력 × 초당 피해) × 표시 배율, 진영 합계")]
@@ -95,25 +124,45 @@ namespace GnorpWar
         [Tooltip("유닛 전투력에 곱하는 표시 배율")]
         [SerializeField] private float _powerDisplayScale = 1f;
         [Tooltip("초당 유닛 생산 수 표시 — 최근 이만큼(초) 동안 전장에 나온 유닛 수를 이 시간으로 나눈다")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _spawnRateWindowSeconds = 10f;
 
         [Header("시체 — 죽은 유닛의 모습이 뒤쪽(자기 성 쪽)으로 날려 보내진다(연출만 — 규칙과 무관). 화면 = 가로 71 × 세로 40칸")]
         [Tooltip("날리는 세기(초당 칸) — 이 사이에서 무작위")]
+        [SuffixLabel("칸/초", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseSpeedMin = 32f;
+        [SuffixLabel("칸/초", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseSpeedMax = 40f;
         [Tooltip("발사 각도(도) — 수평에서 위로. 방향은 언제나 유닛의 뒤쪽")]
+        [SuffixLabel("도", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseAngle = 35f;
         [Tooltip("발사 각도 편차 — ±이 값(도) 안에서 무작위")]
+        [SuffixLabel("도", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseAngleSpread = 10f;
         [Tooltip("시체를 끌어내리는 중력(초당 칸/초) — 낮을수록 곧게 멀리 날아간다")]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseGravity = 12f;
         [Tooltip("도는 속도(초당 도) — 이 사이에서 무작위. 방향은 언제나 뒤로 구르는 쪽")]
+        [SuffixLabel("도/초", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseSpinMin = 360f;
+        [SuffixLabel("도/초", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseSpinMax = 540f;
         [Tooltip("이만큼(게임 시간 초) 지나면 사라진다. 그 전에 화면 아래로 빠져도 사라진다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _corpseLifetime = 5f;
         [Tooltip("동시에 떠 있는 시체 수 상한 — 넘으면 가장 오래된 것부터 돌려 쓴다. 전투 씬을 불러올 때 읽는다")]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private int _corpseMax = 128;
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
+        private bool HideNonBalance => BalanceView.HideNonBalance;
 
         public float CorpseSpeedMin => _corpseSpeedMin;
         public float CorpseSpeedMax => _corpseSpeedMax;
@@ -170,6 +219,8 @@ namespace GnorpWar
         public EnemyBuildProfile[] EnemyBuilds => _enemyBuilds;
         public EnemyBuildProfile RandomEnemyBuild() => _enemyBuilds[Random.Range(0, _enemyBuilds.Length)];
         public float EnemyGoldScale => _enemyGoldScale;
+        public Color LordKeyColor => _lordKeyColor;
+        public Color RandomEnemyLordColor() => _enemyLordColors[Random.Range(0, _enemyLordColors.Length)];
 
         // 전투 경과 시간까지 오른 가속 단계 수 — 시작 시각에 첫 증가, 이후 간격마다
         private int RampStepsAt(float elapsed)

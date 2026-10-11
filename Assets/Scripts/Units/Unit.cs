@@ -580,6 +580,8 @@ namespace GnorpWar
             _bodySortingOrders = new int[_bodyRenderers.Length];
             for (int i = 0; i < _bodyRenderers.Length; i++)
             {
+                // 영주 색 — 그림의 파란 자리만 이 진영 영주의 색으로(Core/LordPaint). color는 건드리지 않아 번쩍임·말 색과 부딪히지 않는다
+                _bodyRenderers[i].sprite = LordPaint.Of(_bodyRenderers[i].sprite, _team);
                 _bodyColors[i] = _bodyRenderers[i].color;
                 _bodySortingOrders[i] = _bodyRenderers[i].sortingOrder;
             }

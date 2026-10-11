@@ -94,7 +94,7 @@ namespace GnorpWar
 
         public Team Team => _base.Team;
         // 진영색 — 작은 타워의 깃발이 같은 색을 쓴다(Base.Build)
-        public Color FlagColor => _flag != null ? _flag.color : Color.white;
+        public Color FlagColor => RunState.LordColor(_base.Team);
         public int FloorCount => _floors.Count;
         public TowerFloor Floor(int index) => _floors[index].Floor;
         private float Forward => _base.Team == Team.Ally ? 1f : -1f;
@@ -136,6 +136,10 @@ namespace GnorpWar
 
         private void Start()
         {
+            // 지붕·깃발은 영주 색(흰 그림에 칠한다) — 런은 BattleManager.Awake가 시작하므로 Awake가 아니라 여기서
+            _roof.color = FlagColor;
+            if (_flag != null)
+                _flag.color = FlagColor;
             _subscribed = BoardRunner.For(_base.Team);
             if (_subscribed != null)
                 _subscribed.Triggered += OnTriggered;
@@ -337,7 +341,6 @@ namespace GnorpWar
             roof.transform.SetParent(transform, false);
             roof.transform.localScale = new Vector3(1f / transform.lossyScale.x, 1f / transform.lossyScale.y, 1f);
             roof.sprite = RoofSprite();
-            roof.color = _flag != null ? _flag.color : Color.white;
             Sort(roof);
             return roof;
         }

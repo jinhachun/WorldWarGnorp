@@ -106,6 +106,9 @@ For multi-step tasks, state a brief plan:
 - **빌드 폴더 = `Builds/<프로젝트명>_<YYMMDD>/`**(예: `Builds/WorldWarGnorp_261007/WorldWarGnorp.exe`, 사용자 결정 10/7)
 - **서드파티 플러그인**:
   - **Unity MCP** (CoplayDev, `com.coplaydev.unity-mcp` v10) — Claude Code가 Unity 에디터를 직접 조작하기 위한 MCP 브릿지. §6 참고.
+  - **Odin Inspector** (`Assets/Plugins/Sirenix/`, 유료 — `.gitignore`로 저장소에서 제외) — 밸런싱 창(`Assets/Editor/BalanceWindow`)과 데이터 클래스의 인스펙터 어트리뷰트가 쓴다(사용자 결정 10/11). **새로 클론하면 Odin부터 임포트해야 게임 코드가 컴파일된다.**
+    - 데이터 클래스에 **값을 막는 어트리뷰트(`MinValue`·`PropertyRange` 등)를 달지 않는다** — 에셋 값이 조용히 잘린다. 단위는 `SuffixLabel`, 이미 `[Header]`가 있으면 묶음을 얹지 않는다.
+    - 그림·프리팹·표시용 글·색·연출 값 칸에는 `[HideIf(nameof(HideNonBalance))]`를 단다(밸런싱 창의 「밸런스와 무관한 값 숨기기」).
 
 ### 🎨 픽셀 크기 컨벤션
 **PPU 8 — 유닛 그림 8×8px = 월드 1유닛 = 유닛 키 1.** 무기·아이콘도 같은 PPU로 원본 크기 그대로 쓴다.
@@ -113,11 +116,11 @@ For multi-step tasks, state a brief plan:
 - ⚠️ 새 PNG는 임포트 기본값(PPU 100 · Bilinear · 압축 · **NPOT 크기 보정**)으로 들어온다. 크기 보정 때문에 5×3 같은 그림이 **4×4로 늘어난 채 들어온다.**
   → Sprite · Single · PPU 8 · Point · 압축 없음 · `npotScale = None` · 밉맵 끔으로 바꾼다. 동종 스프라이트의 `.meta`와 대조할 것.
 - 그림은 **오른쪽(아군 전방)을 보고** 그린다. 적은 `Unit`이 진영에서 방향을 읽어 좌우를 뒤집는다.
-- 🎨 **아트 톤(Gnorp Apologue풍): 검은 배경 · 유닛·건물·땅·투사체는 흰색, 색은 이펙트(불꽃·힐·피격)에만.** 예외: 기사의 말은 갈색(사용자 결정). 아군·적은 색이 아니라 그림과 방향으로 구분한다 — 몸 그림은 유닛마다 한 장씩(아군 `Assets/Sprites/Units/Ally/<유닛>.png` · 적 `Assets/Sprites/Units/Enemy/<유닛>.png`, 사용자가 직접 그린다 — 파일을 덮어쓰면 그 유닛에 바로 반영). 원본 `gnorp.png`·`enemy.png`는 새 유닛 파일을 만들 때 복사할 바탕이다.
+- 🎨 **아트 톤(Gnorp Apologue풍): 검은 배경 · 유닛·건물·땅·투사체는 흰색, 색은 이펙트(불꽃·힐·피격)에만.** 예외: 기사의 말은 갈색(사용자 결정). **영주 색도 예외(사용자 결정 10/11)** — 모든 진영이 같은 몸 그림(`Assets/Sprites/Units/Ally/<유닛>.png`, 유닛마다 한 장, 사용자가 직접 그린다 — 파일을 덮어쓰면 그 유닛에 바로 반영)을 쓰고, 그림의 파란 자리만 그 진영 영주의 색으로 바뀐다. **파란 자리는 정확히 `#81ABFF`로 칠할 것** — 다른 파랑은 안 바뀐다(색 값·후보는 `BattleConfig` 「영주 색」). 탑 지붕·깃발도 같은 색. 그림이 8×8보다 크면 충돌 박스는 그대로 두고 피벗으로 발·몸을 박스에 맞춘다(솟은 부분은 장식).
 
 ### 코드 컨벤션
 - 네임스페이스 `GnorpWar`. 클래스/메서드/프로퍼티 PascalCase, private 필드 `_camelCase`, 인스펙터 노출은 `[SerializeField] private`.
-- **새 스크립트는 `Assets/Scripts/` 아래 역할 폴더에**(Core · Units · Buildings · Run · Bases · Battle · UI · Fx · Dev — 책임은 ARCHITECTURE.md 「폴더 책임」). 루트에 두지 않는다. 폴더가 달라도 네임스페이스는 `GnorpWar` 하나.
+- **새 스크립트는 `Assets/Scripts/` 아래 역할 폴더에**(Core · Units · Buildings · Run · World · Bases · Battle · UI · Fx · Dev — 책임은 ARCHITECTURE.md 「폴더 책임」). 루트에 두지 않는다. 폴더가 달라도 네임스페이스는 `GnorpWar` 하나.
 - 스크립트를 옮길 땐 `.cs`와 `.meta`를 **짝으로** `git mv` — GUID가 바뀌면 씬·프리팹의 스크립트 참조가 끊긴다.
 - **수치 데이터(체력·공격력·비용·쿨다운 등)는 코드가 아니라 ScriptableObject 에셋에.**
 - **아군/적군은 같은 유닛 코드를 쓴다.** 진영(Team) 값과 진행 방향으로만 구분하고, 진영 전용 분기를 만들지 않는다.
@@ -172,6 +175,7 @@ GameObject 생성·컴포넌트 부착/수정·프리팹 생성·씬 저장·플
 - 새 세션에서 MCP 툴이 안 보이면: Claude Code 재시작해야 `.mcp.json` 변경이 반영된다.
 - 🔴 **사용자가 에디터에서 저장 안 한 편집이 있을 수 있다.** 씬을 다시 열거나 전환하기 전에 현재 씬의 dirty 여부부터 본다.
 - 🔴 **모달 창을 띄우는 에디터 API(`EditorUtility.DisplayDialog` 등)를 부르지 말 것** — Unity가 멈추고 MCP가 끊긴다.
+- 🔴 **에디터 창을 캡처할 땐 화면을 읽지 말고 그 창의 그림만 뽑는다** — 화면 읽기는 사용자가 앞에 띄워 둔 다른 창을 찍는다. 창에 포커스를 걸지도 않는다.
 - 🔴 **에디터 하나를 여러 Claude 세션이 같이 쓴다 — MCP로 에디터를 건드리기 전에 다른 세션과 상의한다**(사용자 결정).
   1. 에디터 작업을 시작하기 전에 `ListAgents`로 같은 프로젝트 세션을 보고, 있으면 `SendMessage`로 무엇을 할지 한 줄 알린다.
   2. **플레이모드 진입·종료 · 스크립트 컴파일(refresh) · 씬·에셋 저장**은 알린 뒤에 한다. 상대가 쓰는 중이라고 하면 끝났다는 알림까지 기다린다.

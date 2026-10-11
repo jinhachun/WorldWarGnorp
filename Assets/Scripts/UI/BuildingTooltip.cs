@@ -37,7 +37,7 @@ namespace GnorpWar
         private readonly Vector3[] _corners = new Vector3[4];
         private Component _owner;
 
-        // 유닛 판 한 장 — 그림은 유닛이 바뀔 때만 다시 짠다
+        // 유닛 판 한 장 — 그림은 유닛·진영(영주 색)이 바뀔 때만 다시 짠다
         private class UnitCard
         {
             public RectTransform Panel;
@@ -45,6 +45,7 @@ namespace GnorpWar
             public Text Name;
             public Text Body;
             public UnitDefinition IconUnit;
+            public bool IconEnemy;
         }
 
         private readonly List<UnitCard> _cards = new List<UnitCard>();
@@ -260,6 +261,7 @@ namespace GnorpWar
                     Name = panel.Find(_unitName.name).GetComponent<Text>(),
                     Body = panel.Find(_unitBody.name).GetComponent<Text>(),
                     IconUnit = _cards[0].IconUnit,   // 그림 부품도 함께 복제됐다
+                    IconEnemy = _cards[0].IconEnemy,
                 });
             }
             return _cards[i];
@@ -326,8 +328,8 @@ namespace GnorpWar
         // 유닛 판 한 장을 채우고 높이를 돌려준다
         private static float Fill(UnitCard card, UnitDefinition unit, OwnedBuilding[] board, bool enemy)
         {
-            if (card.IconUnit != unit)
-                BuildIcon(card, unit);
+            if (card.IconUnit != unit || card.IconEnemy != enemy)
+                BuildIcon(card, unit, enemy);
             card.Name.text = UnitName(unit);
             card.Body.text = UnitInfo(unit, board, enemy);
             // 이름 · 병종은 그림 높이 가운데에
@@ -343,9 +345,10 @@ namespace GnorpWar
 
         // 프리팹의 그림 부품(몸통 · 무기 · 말 …)을 같은 배치 · 색 · 그리는 순서로 Image에 옮긴다.
         // 배율은 IconBox에 들어가는 가장 큰 정수배(PPU 8 그림 1픽셀 = 화면 배율 px)
-        private static void BuildIcon(UnitCard card, UnitDefinition unit)
+        private static void BuildIcon(UnitCard card, UnitDefinition unit, bool enemy)
         {
             card.IconUnit = unit;
+            card.IconEnemy = enemy;
             RectTransform icon = card.Icon;
             for (int i = icon.childCount - 1; i >= 0; i--)
                 Destroy(icon.GetChild(i).gameObject);
@@ -383,7 +386,7 @@ namespace GnorpWar
                 var image = new GameObject(part.name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
                 image.raycastTarget = false;
                 image.preserveAspect = true;
-                image.sprite = part.sprite;
+                image.sprite = LordPaint.Of(part.sprite, enemy ? Team.Enemy : Team.Ally);   // 그 진영 영주의 색으로
                 image.color = part.color;
                 RectTransform rect = image.rectTransform;
                 rect.SetParent(icon, false);

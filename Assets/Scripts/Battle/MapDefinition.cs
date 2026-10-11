@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -67,28 +68,49 @@ namespace GnorpWar
             [Range(0f, 1f)] public float Parallax = 0f;
         }
 
+        // 에디터 전용(에셋에 안 쓰인다) — 꺼진 값인 효과 칸은 숨기고, 이걸 켜면 전부 보여 새 효과를 넣을 수 있다
+        [ShowInInspector, PropertyOrder(-1), LabelText("꺼진 효과도 보기")]
+#pragma warning disable 0649   // 값은 인스펙터(Odin)가 넣는다
+        [System.NonSerialized] private bool _showOffEffects;
+#pragma warning restore 0649
+        private bool ShowUnitRules => _showOffEffects || _unitRules.Length > 0;
+        private bool ShowCooldownRate => _showOffEffects || _cooldownRate != 1f;
+        private bool ShowFireAllInterval => _showOffEffects || _fireAllInterval > 0f;
+        private bool ShowPassiveBuildingsOff => _showOffEffects || _passiveBuildingsOff;
+        private bool ShowFireRepeats => _showOffEffects || _fireRepeats > 1;
+
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _displayName = "";
         [Tooltip("아래 수치에서 나오는 줄이 하나도 없을 때만 보이는 글(기본 맵) — 수치가 있는 맵의 글은 코드가 만든다(Description)")]
+        [HideIf(nameof(HideNonBalance))]
         [TextArea] [SerializeField] private string _description = "";
 
-        [Header("유닛 — 전투 동안 양 진영에")]
+        [TitleGroup("유닛 — 전투 동안 양 진영에"), ShowIf(nameof(ShowUnitRules))]
         [SerializeField] private UnitRule[] _unitRules = new UnitRule[0];
 
-        [Header("기물 — 양 진영에")]
         [Tooltip("쿨다운 게이지가 차는 속도 배율(가속과 곱한다) — 0.5 = 절반 속도")]
+        [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowCooldownRate))]
         [SerializeField] private float _cooldownRate = 1f;
         [Tooltip("이 간격(초)마다 쿨다운이 있는 기물을 전부 발동 — 0이면 없음")]
+        [SuffixLabel("초", true)]
+        [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowFireAllInterval))]
         [SerializeField] private float _fireAllInterval = 0f;
         [Tooltip("쿨다운이 없는 기물은 전투에서 효과가 없다")]
+        [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowPassiveBuildingsOff))]
         [SerializeField] private bool _passiveBuildingsOff;
         [Tooltip("쿨다운이 있는 기물이 한 번 발동할 때 효과를 몇 번 내나")]
+        [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowFireRepeats))]
         [SerializeField] private int _fireRepeats = 1;
 
         [Header("지형")]
         [SerializeField] private TerrainStyle _terrain = new TerrainStyle();
 
         [Header("뒷배경 — 맵이 무엇인지 보이게(사용자 10/10: 전장이 아니라 뒤에 흐리게). 앞에 적은 겹이 더 뒤에 그려진다")]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private BackdropLayer[] _backdrop = new BackdropLayer[0];
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
+        private bool HideNonBalance => BalanceView.HideNonBalance;
 
         public string DisplayName => _displayName;
         // 설명 글 — 아래 수치 필드에서 만든다(값을 고치면 글이 따라간다, CLAUDE.md §5-2 6번). 수치로 나오는 줄이 없는 맵(기본)만 _description

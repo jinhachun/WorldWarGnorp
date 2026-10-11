@@ -13,7 +13,7 @@ namespace GnorpWar
     // 땅마다 지형 아이콘 · 업그레이드 아이콘과 땅 번호는 구운 표시 자리(AnchorOf)에 한 번 놓는다.
     // 누름 · 가리킴은 화면 좌표를 칸으로 바꿔 땅 번호를 읽는다 — 무엇을 할지는 WorldManager가 정한다
     [RequireComponent(typeof(RawImage))]
-    public class WorldMapView : MonoBehaviour, IPointerClickHandler, IPointerMoveHandler, IPointerExitHandler
+    public class WorldMapView : MonoBehaviour, IPointerClickHandler, IPointerMoveHandler, IPointerExitHandler, IScrollHandler, IDragHandler
     {
         public const int None = -1;
 
@@ -75,6 +75,10 @@ namespace GnorpWar
         [SerializeField] private Font _dotFont;
         [Tooltip("침략할 수 있는 땅에 화살표와 함께 그 영주 색 빗금도 친다")]
         [SerializeField] private bool _hatch;
+        [Tooltip("지도 위를 돌아다니는 영주 그림 — 유닛 몸 그림 한 장(영주 색으로 칠한다, 왼쪽 패널의 영주 그림과 같은 것)")]
+        [SerializeField] private Sprite _lordSprite;
+        [Tooltip("영주 그림이 드는 깃발 — 흰 그림(영주 색을 입힌다)")]
+        [SerializeField] private Sprite _lordFlag;
 
         private RawImage _image;
         private Texture2D _texture;
@@ -100,10 +104,13 @@ namespace GnorpWar
         public int Arrows { get; private set; }
         // 땅을 눌렀다(바다 · 지도 밖이면 None)
         public event System.Action<int> Clicked;
+        // 지도 위를 돌아다니는 영주들 — 표시(번호 · 아이콘) 위에 그려진다
+        public WorldLords Lords { get; private set; }
 
         public void Build(WorldMapDefinition map)
         {
             _image = GetComponent<RawImage>();
+            _home = ((RectTransform)transform).anchoredPosition;
             _cells = map.ReadCells(out _width, out _height);
             _texture = new Texture2D(_width, _height, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
             _pixels = new Color32[_width * _height];
@@ -133,6 +140,7 @@ namespace GnorpWar
                 }
 
             var rect = (RectTransform)transform;
+            BuildDecor(map);
             float scale = rect.rect.width / _width;
             for (int region = 0; region < regions; region++)
             {
@@ -155,6 +163,7 @@ namespace GnorpWar
                     Image image = NewImage(mark, "Icon");
                     image.sprite = icons[i];
                     image.SetNativeSize();
+                    image.preserveAspect = true;   // 지도 확대가 localScale을 쓴다(CLAUDE.md §5-1)
                     image.rectTransform.anchoredPosition = new Vector2(x, IconY);
                 }
 
@@ -173,6 +182,8 @@ namespace GnorpWar
                 outline.effectColor = Color.black;
                 outline.effectDistance = new Vector2(2f, 2f);
             }
+            Lords = gameObject.AddComponent<WorldLords>();
+            Lords.Init(_cells, _width, _height, scale, _anchors, _lordSprite, _lordFlag);
         }
 
         private static Image NewImage(RectTransform parent, string name)
@@ -211,12 +222,16 @@ namespace GnorpWar
             _mine = mine;
             _painted = true;
             Paint(_pixels, _cells, _width, _height, _owner, _colors, _mine, _hatch ? _invadable : null, _selected, _hovered);
+            // 지형 장식 — 채움 색 위에 살짝 밝게(화살표는 그 위에 찍는다)
+            foreach (int pixel in _decor)
+                _pixels[pixel] = Color32.Lerp(_pixels[pixel], White, DecorBrightness);
             Arrows = 0;
             for (int region = 0; region < _owner.Length; region++)
                 if (_invadable[region] && DrawArrow(region))
                     Arrows++;
             _texture.SetPixels32(_pixels);
             _texture.Apply();
+            Lords.Sync(_owner, colorOf);
         }
 
         // 내 땅에서 region으로 화살표 하나 — 국경을 가장 길게 맞댄 내 땅과의 국경 한가운데에서, region의 표시 자리 쪽(여덟 방향 중 가장 가까운 쪽)으로.
@@ -376,7 +391,122 @@ namespace GnorpWar
             return region < 0 ? None : region;
         }
 
-        public void OnPointerClick(PointerEventData eventData) => Clicked?.Invoke(RegionAt(eventData.position, eventData.pressEventCamera));
+        // ── 지형 장식(사용자 10/11 — 임시 그림) — 땅 안에 그 지형의 작은 도장을 드문드문. 지도 한 칸 = 도장의 한 점.
+        // 자리는 땅 번호로 씨앗을 고정한다(턴마다 그대로). 국경 · 표시 자리(아이콘 · 번호)에서 떨어뜨린다. 땅 모양(번호 지도)은 건드리지 않고 칠할 때 얹기만 한다
+        private const float DecorBrightness = 0.22f;
+        // 땅 넓이(칸) 이만큼에 도장 하나 · 땅마다 최대 개수 · 국경에서 띄우는 칸 · 도장끼리 띄우는 칸
+        private const int DecorArea = 260;
+        private const int DecorMax = 7;
+        private const int DecorBorderGap = 3;
+        private const int DecorGap = 5;
+        // 표시 자리(기준점)에서 좌우 · 위 · 아래로 비우는 칸 — 아이콘 판 둘과 번호
+        private const int MarkHalfWidth = 11, MarkAbove = 9, MarkBelow = 10;
+
+        // 지형(전투 맵 에셋 이름) → 도장. 표에 없는 지형은 장식이 없다
+        private static readonly Dictionary<string, string[]> DecorStamps = new Dictionary<string, string[]>
+        {
+            { "Map_Forest", new[] { "..#..", ".###.", "#####", "..#.." } },                 // 나무
+            { "Map_Ice", new[] { "..#..", ".#.#.", "#...#" } },                            // 얼음 산
+            { "Map_Grassland", new[] { "#.#.#", ".###." } },                               // 풀
+            { "Map_Swamp", new[] { ".#.#.", ".#.#.", "#####" } },                          // 갈대와 물
+            { "Map_Jungle", new[] { ".##.##.", "#..#..#", "...#...", "...#..." } },        // 큰 잎
+            { "Map_Plain", new[] { "..##..", ".#..#." } },                                 // 언덕
+        };
+
+        private int[] _decor = new int[0];
+
+        private void BuildDecor(WorldMapDefinition map)
+        {
+            var pixels = new List<int>();
+            var taken = new List<RectInt>();
+            for (int region = 0; region < map.RegionCount; region++)
+            {
+                if (!DecorStamps.TryGetValue(map.TerrainOf(region).name, out string[] stamp))
+                    continue;
+                int area = 0, minX = _width, maxX = 0, minY = _height, maxY = 0;
+                for (int i = 0; i < _cells.Length; i++)
+                    if (_cells[i] == region)
+                    {
+                        area++;
+                        minX = Mathf.Min(minX, i % _width);
+                        maxX = Mathf.Max(maxX, i % _width);
+                        minY = Mathf.Min(minY, i / _width);
+                        maxY = Mathf.Max(maxY, i / _width);
+                    }
+                int want = Mathf.Min(DecorMax, area / DecorArea), w = stamp[0].Length, h = stamp.Length;
+                var random = new System.Random(1000 + region);
+                Vector2Int anchor = map.AnchorOf(region);
+                var mark = new RectInt(anchor.x - MarkHalfWidth, anchor.y - MarkAbove, MarkHalfWidth * 2, MarkAbove + MarkBelow);
+                // 자리를 못 찾아도 끝나게 시도 횟수를 묶는다
+                for (int tries = 0, placed = 0; tries < 400 && placed < want; tries++)
+                {
+                    int x = random.Next(minX, maxX + 1), y = random.Next(minY, maxY + 1);
+                    var box = new RectInt(x - DecorGap, y - DecorGap, w + DecorGap * 2, h + DecorGap * 2);
+                    if (box.Overlaps(mark) || taken.Exists(other => other.Overlaps(box)) || !Inside(region, x - DecorBorderGap, y - DecorBorderGap, w + DecorBorderGap * 2, h + DecorBorderGap * 2))
+                        continue;
+                    taken.Add(new RectInt(x, y, w, h));
+                    placed++;
+                    for (int sy = 0; sy < h; sy++)
+                        for (int sx = 0; sx < w; sx++)
+                            if (stamp[sy][sx] == '#')
+                                pixels.Add((_height - 1 - (y + sy)) * _width + x + sx);
+                }
+            }
+            _decor = pixels.ToArray();
+        }
+
+        // (x, y)에서 width × height 칸이 전부 region의 땅인가
+        private bool Inside(int region, int x, int y, int width, int height)
+        {
+            for (int cy = y; cy < y + height; cy++)
+                for (int cx = x; cx < x + width; cx++)
+                    if (At(_cells, _width, _height, cx, cy) != region)
+                        return false;
+            return true;
+        }
+
+        // 확대한 지도를 끌어 옮긴 끝의 떼기는 누르기가 아니다
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (_zoom == 1 || !eventData.dragging)
+                Clicked?.Invoke(RegionAt(eventData.position, eventData.pressEventCamera));
+        }
+
+        // ── 확대 · 끌기(사용자 10/11) — 지도는 처음 크기(지도 한 칸 = 화면 4px)가 가장 작고, 휠을 올리면 정수배로만 커진다(도트 유지).
+        // 마우스가 가리키는 곳을 중심으로 커지고, 커진 지도는 끌어 옮긴다. 지도 영역 밖으로 빈 곳이 드러나지 않게 가둔다.
+        // 그림 · 아이콘 · 글이 같이 커진다(RectTransform의 크기 배율). 화면 좌표 → 땅 번호(RegionAt)는 배율 · 자리를 따라간다
+        private const int MaxZoom = 2;
+        private int _zoom = 1;
+        private Vector2 _home;
+
+        public int Zoom => _zoom;
+
+        public void OnScroll(PointerEventData eventData)
+        {
+            int zoom = Mathf.Clamp(_zoom + (eventData.scrollDelta.y > 0f ? 1 : -1), 1, MaxZoom);
+            var rect = (RectTransform)transform;
+            if (zoom == _zoom || !RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, eventData.position, eventData.enterEventCamera, out Vector2 local))
+                return;
+            // 가리킨 점(local)이 화면의 같은 자리에 남게
+            Vector2 position = rect.anchoredPosition + local * (_zoom - zoom);
+            _zoom = zoom;
+            rect.localScale = new Vector3(zoom, zoom, 1f);
+            Place(position);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (_zoom > 1)
+                Place(((RectTransform)transform).anchoredPosition + eventData.delta / GetComponentInParent<Canvas>().scaleFactor);
+        }
+
+        // 지도의 왼쪽 위(기준점)를 position에 — 처음 자리(_home)의 지도 영역을 늘 다 덮는 범위 안으로
+        private void Place(Vector2 position)
+        {
+            var rect = (RectTransform)transform;
+            Vector2 extra = rect.rect.size * (_zoom - 1);
+            rect.anchoredPosition = new Vector2(Mathf.Clamp(position.x, _home.x - extra.x, _home.x), Mathf.Clamp(position.y, _home.y, _home.y + extra.y));
+        }
         public void OnPointerMove(PointerEventData eventData) => Hovered = RegionAt(eventData.position, eventData.enterEventCamera);
         public void OnPointerExit(PointerEventData eventData) => Hovered = None;
     }

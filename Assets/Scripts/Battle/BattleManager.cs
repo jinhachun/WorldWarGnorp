@@ -22,6 +22,8 @@ namespace GnorpWar
         [SerializeField] private Text _resultSummary;
         [Tooltip("패배 시 내 결과 한 줄(「-1」) 바로 왼쪽에 뜨는 행복도 하트")]
         [SerializeField] private Image _resultHeart;
+        [Tooltip("결과 창 — 이번 승리로 얻은 지역 업그레이드 아이콘 줄(내 결과 한 줄 아래)")]
+        [SerializeField] private ResultGains _resultGains;
         [Tooltip("전투 배속 버튼 — 전투 중에만 보인다")]
         [SerializeField] private GameObject _speedButton;
 
@@ -123,6 +125,10 @@ namespace GnorpWar
             StatBook.ClearBattle();
             TowerBook.ClearBattle();
             UnitAliases.Clear();
+            // 맵의 「전부 발동」(얼음) — 양쪽 성 근처에 출발점 그림을 띄운다
+            if (RunState.Map != null && RunState.Map.FireAllInterval > 0f)
+                foreach (Team team in new[] { Team.Ally, Team.Enemy })
+                    MapMarker.Spawn(team, RunState.Map.FireAllMarker);
             // 맵의 유닛 수치(숲 · 초원) — 양 진영에 똑같이, 전투 동안
             if (RunState.Map != null)
                 foreach (MapDefinition.UnitRule rule in RunState.Map.UnitRules)
@@ -213,10 +219,13 @@ namespace GnorpWar
             // AI 영주들의 턴 · 통일 · 게임 오버는 지도에서 보여 준다
             _resultText.text = won ? "승리!" : "패배...";
             _resultSummary.text = BuildingTooltip.Highlight(won ? $"땅 +{RunState.Lands - lands}" : $"-{happiness - RunState.Happiness}");
-            // 잃은 행복도는 하트 + 숫자로 — 하트는 가운데 놓인 글의 바로 왼쪽
+            // 잃은 행복도는 하트 + 숫자로 — 하트(글의 자식)는 글의 바로 왼쪽. 하트와 글이 한 덩어리로 가운데에 오게 글을 하트 몫의 절반만큼 오른쪽으로
             _resultHeart.enabled = !won;
-            RectTransform heart = _resultHeart.rectTransform;
+            RectTransform heart = _resultHeart.rectTransform, summary = _resultSummary.rectTransform;
+            summary.anchoredPosition = new Vector2(won ? 0f : (heart.sizeDelta.x + ResultHeartGap) * 0.5f, summary.anchoredPosition.y);
             heart.anchoredPosition = new Vector2(-(_resultSummary.preferredWidth + heart.sizeDelta.x) * 0.5f - ResultHeartGap, heart.anchoredPosition.y);
+            // 이번 승리로 넘어온 땅들의 업그레이드(졌으면 없다)
+            _resultGains.Show(RunState.LastGains);
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
             Time.timeScale = 0f;

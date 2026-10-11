@@ -44,6 +44,11 @@ namespace GnorpWar
         private BoardView.Source _selectedSource;
         private int _selectedIndex;
 
+        // 합치기 재생(UI/MergeFx) · 방금 산 조각이 출발한 화면 자리(진열 카드나 놓은 자리) · 자리를 묻는 두 줄
+        private MergeFx _merge;
+        private Vector3 _buyFrom;
+        private BoardView _fieldView, _storageView;
+
         private bool _dragging;
         private bool _dragFromOffer;
         private BoardView.Source _dragSource;
@@ -62,7 +67,11 @@ namespace GnorpWar
                 rect.anchoredPosition = ((RectTransform)_offerTemplate.transform).anchoredPosition + new Vector2(i * _offerStep, 0f);
                 int index = i;
                 card.Bind(this, index);
-                card.Button.onClick.AddListener(() => RunState.Buy(index));
+                card.Button.onClick.AddListener(() =>
+                {
+                    _buyFrom = card.transform.position;
+                    RunState.Buy(index);
+                });
                 card.gameObject.SetActive(true);
                 _offers[i] = card;
             }
@@ -73,10 +82,37 @@ namespace GnorpWar
             _start.onClick.AddListener(() => MapRequested?.Invoke());
             _dragGhost.gameObject.SetActive(false);
             _sellHover = _sell.GetComponent<ButtonHover>();
+            _merge = gameObject.AddComponent<MergeFx>();
+            _merge.Init(_dragGhost);
+            foreach (BoardView view in GetComponentsInChildren<BoardView>(true))
+                if (view.Kind == BoardView.Source.Storage)
+                    _storageView = view;
+                else
+                    _fieldView = view;
         }
+
+        private void OnEnable() => RunState.Merged += OnMerged;
+
+        // 합치기가 일어났다(상태는 이미 끝났다) — 한 단계씩 재생한다. 단계의 자리는 합치기 전 모습 기준이고, 칸 그림은 아직 그 모습이다
+        private void OnMerged(System.Collections.Generic.IReadOnlyList<RunState.MergeStep> steps)
+        {
+            var targets = new Vector3[steps.Count];
+            for (int i = 0; i < targets.Length; i++)
+                targets[i] = (steps[i].Storage ? _storageView : _fieldView).SlotPosition(steps[i].Index);
+            OwnedBuilding result = steps[steps.Count - 1].Into;
+            _merge.Play(result.Definition, _buyFrom, steps, targets, () =>
+            {
+                int index = System.Array.IndexOf(RunState.Field, result);
+                return index >= 0 ? _fieldView.SlotPosition(index) : _storageView.SlotPosition(System.Array.IndexOf(RunState.Storage, result));
+            });
+        }
+
+        // 합치기 재생 중 실제 칸을 숨길 기물인가(결과 — 재생이 끝나며 나타난다)
+        public bool Concealed(OwnedBuilding building) => building != null && _merge != null && _merge.Concealed == building;
 
         private void OnDisable()
         {
+            RunState.Merged -= OnMerged;
             _hasSelection = false;
             _dragging = false;
             if (_dragGhost != null)
@@ -106,6 +142,8 @@ namespace GnorpWar
 
         public void BeginDragSlot(BoardView.Source source, int index, PointerEventData eventData)
         {
+            // 재생 중에 조각을 집으면 재생을 바로 끝낸다 — 칸이 끝 상태와 어긋난 채로 집히지 않게
+            _merge.Finish();
             if (BattleManager.Fighting || source == BoardView.Source.EnemyField)
                 return;
             OwnedBuilding building = BuildingAt(source, index);
@@ -116,6 +154,7 @@ namespace GnorpWar
 
         public void BeginDragOffer(int index, PointerEventData eventData)
         {
+            _merge.Finish();
             BuildingDefinition offer = RunState.Offers[index];
             if (BattleManager.Fighting || offer == null)
                 return;
@@ -219,7 +258,10 @@ namespace GnorpWar
             }
             bool storage = source == BoardView.Source.Storage;
             if (_dragFromOffer)
+            {
+                _buyFrom = _dragGhost.position;
                 RunState.BuyInto(_dragIndex, storage, index);
+            }
             else
                 RunState.Swap(_dragSource == BoardView.Source.Storage, _dragIndex, storage, index);
         }
@@ -244,6 +286,7 @@ namespace GnorpWar
                 // 합쳐질 짝이 있으면 상자가 꽉 차도 산다(어디 놓든 합쳐지는 규칙 그대로)
                 if (!RunState.CanBuyInto(_dragIndex, true, Mathf.Max(index, 0)))
                     return;
+                _buyFrom = _dragGhost.position;
                 RunState.BuyInto(_dragIndex, true, Mathf.Max(index, 0));
             }
             else if (index >= 0)

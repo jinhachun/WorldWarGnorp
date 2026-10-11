@@ -57,19 +57,28 @@ namespace GnorpWar
             rect.anchoredPosition = position;
         }
 
+        // 지금 보이는 칸들의 폭(px) — 첫 아이콘의 왼쪽부터 마지막 칸의 아이콘(「×N」이 있으면 그 글)의 오른쪽까지. 한 줄일 때만 뜻이 있다
+        public float Width { get; private set; }
+
         // lord가 가진 것을 보여 주고 줄의 높이를 돌려준다(하나도 없으면 0)
         public float Show(WorldRun world, Lord lord)
+            => Show(world.Map, kind => world.UpgradeCount(lord, kind), "{0}개 보유");
+
+        // 종류마다 countOf개를 보여 주고 줄의 높이를 돌려준다(하나도 없으면 0). note = 툴팁의 회색 줄({0} = 개수)
+        public float Show(WorldMapDefinition map, System.Func<RegionUpgradeKind, int> countOf, string note)
         {
             int cells = 0;
+            Width = 0f;
             foreach (RegionUpgradeKind kind in System.Enum.GetValues(typeof(RegionUpgradeKind)))
             {
-                int count = world.UpgradeCount(lord, kind);
+                int count = countOf(kind);
                 if (count == 0)
                     continue;
                 _icons[cells].gameObject.SetActive(true);
-                _icons[cells].Set(world.Map.UpgradeOfKind(kind), count);
+                _icons[cells].Set(map.UpgradeOfKind(kind), count, note);
                 _counts[cells].gameObject.SetActive(true);
                 _counts[cells].text = count > 1 ? $"×<color={BuildingTooltip.NumberColor}>{count}</color>" : "";
+                Width = Mathf.Abs(_counts[cells].rectTransform.anchoredPosition.x) + (count > 1 ? _counts[cells].preferredWidth : -LabelGap);
                 cells++;
             }
             for (int i = cells; i < _icons.Length; i++)

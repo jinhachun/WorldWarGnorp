@@ -36,6 +36,8 @@ namespace GnorpWar
         [Tooltip("판매 값 = 가격 × 산 개수(경험치 + 1) × 이 비율, 내림, 최소 1")]
         [SerializeField] private float _sellRatio = 0.5f;
         [SerializeField] private int _offerCount = 5;
+        [Tooltip("진열 한 칸이 「공용 + 그 탑의 국가」 기물일 확률(0.66 = 66%) — 나머지는 다른 국가들의 기물. 등급을 먼저 뽑고 그 등급 안에서 건다(그 등급에 한쪽 기물이 없으면 다른 쪽에서). 내 상점과 AI 영주의 상점(영주의 국가 = 빌드 방향의 국가)에 같이 걸린다")]
+        [SerializeField] private float _homeNationShare = 0.66f;
         [Tooltip("상점에 나오는 건물 — 등급을 먼저 뽑고 그 등급 안에서는 같은 확률")]
         [SerializeField] private BuildingDefinition[] _shopPool = new BuildingDefinition[0];
 
@@ -180,6 +182,7 @@ namespace GnorpWar
         public int RerollCost => _rerollCost;
         public float SellRatio => _sellRatio;
         public int OfferCount => _offerCount;
+        public float HomeNationShare => _homeNationShare;
         public BuildingDefinition[] ShopPool => _shopPool;
         public int PriceOf(BuildingRarity rarity) => _rarityPrices[(int)rarity];
         // level = OwnedBuilding.Level(1 = 시작 등급 → 1)

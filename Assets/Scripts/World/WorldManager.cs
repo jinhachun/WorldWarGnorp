@@ -14,9 +14,12 @@ namespace GnorpWar
         public const string SceneName = "World";
         public const string BattleSceneName = "Battle";
 
-        // AI 턴 재생 — 판도가 바뀌는 사건 하나를 보여 주는 시간(초)과 전체 상한(사건이 많으면 한 건이 짧아진다)
+        // AI 턴 재생 — 반란 · 연합 하나를 보여 주는 시간(초) · 침략 걸음들이 다 출발하기까지의 상한(초, 침략이 많으면 출발 간격이 짧아진다)
         private const float EventSeconds = 0.15f;
         private const float ReplaySeconds = 3f;
+        // 침략 걸음이 잇달아 출발하는 간격(초) · 땅 색이 도착보다 얼마나 먼저 바뀌는지(초)
+        private const float MarchStagger = 0.12f;
+        private const float ApplyLead = 0.02f;
         // 상점 팝업이 내려오는 · 올라가는 시간(초)
         private const float ShopOpenSeconds = 0.3f, ShopCloseSeconds = 0.2f;
         // 못 누르는 버튼의 글 색(상점과 같다)
@@ -64,8 +67,10 @@ namespace GnorpWar
         // 재생 중 지도에 보이는 주인 표(턴을 닫기 전 표에 사건을 하나씩 적용한다) — 재생이 끝나면 null(실제 판도를 그린다)
         private int[] _shown;
         private List<WorldEvent> _events;
-        private int _eventAt;
-        private float _eventTimer, _eventStep;
+        // 재생 일정 — 사건마다 시작하는 때 · 판도에 반영하는 때(재생이 시작된 뒤 초), 재생이 끝나는 때
+        private float[] _eventStart, _eventApply;
+        private bool[] _eventStarted, _eventApplied;
+        private float _replayClock, _replayEnd;
 
         // 명령을 받는 중인가(치트 패널이 읽는다)
         public static bool Commanding => _instance != null && _instance._stage == Stage.Command && !RunState.IsOver;
@@ -230,13 +235,7 @@ namespace GnorpWar
                 ShowEnd();
                 return;
             }
-            int changes = 0;
-            foreach (WorldEvent e in _events)
-                if (Changes(e))
-                    changes++;
-            _eventAt = 0;
-            _eventStep = Mathf.Min(EventSeconds, ReplaySeconds / Mathf.Max(1, changes));
-            _eventTimer = _eventStep;
+            Schedule();
             _stage = Stage.Replay;
             _skip.gameObject.SetActive(true);
             ShowNotice("영주들의 차례", "화면을 누르면 건너뜁니다.", null);
@@ -253,12 +252,55 @@ namespace GnorpWar
             _notice.SetActive(true);
         }
 
-        // 지도의 색이 바뀌는 사건인가 — 진 침략은 아무것도 바꾸지 않는다
-        private static bool Changes(WorldEvent e) => e.Rebellion || e.Won || e.Coalition;
+        // 재생 일정을 짠다 — 침략은 영주가 그 땅으로 걸어 들어가는 걸음(UI/WorldLords)이고, 여럿이 조금씩 어긋나 동시에 걷는다.
+        // 같은 영주 · 같은 땅이 얽힌 침략은 앞의 것이 끝난 뒤에 시작하고(순서가 뒤집혀 보이지 않게), 반란 · 연합은 앞의 걸음이 다 끝난 뒤에 벌어진다
+        private void Schedule()
+        {
+            int count = _events.Count, marches = 0;
+            foreach (WorldEvent e in _events)
+                if (!e.Rebellion && !e.Coalition)
+                    marches++;
+            float stagger = Mathf.Min(MarchStagger, Mathf.Max(0f, ReplaySeconds - WorldLords.MarchSeconds) / Mathf.Max(1, marches));
+            _eventStart = new float[count];
+            _eventApply = new float[count];
+            _eventStarted = new bool[count];
+            _eventApplied = new bool[count];
+            var lordFree = new Dictionary<int, float>();
+            var regionFree = new Dictionary<int, float>();
+            float cursor = 0f;
+            _replayEnd = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                WorldEvent e = _events[i];
+                if (e.Rebellion || e.Coalition)
+                {
+                    _eventStart[i] = _eventApply[i] = _replayEnd;
+                    cursor = _replayEnd += EventSeconds;
+                    continue;
+                }
+                float start = cursor;
+                if (lordFree.TryGetValue(e.Lord, out float lord))
+                    start = Mathf.Max(start, lord);
+                if (regionFree.TryGetValue(e.Region, out float region))
+                    start = Mathf.Max(start, region);
+                _eventStart[i] = start;
+                // 땅 색은 영주가 다 들어서기 바로 전에 바뀐다
+                _eventApply[i] = start + WorldLords.MarchSeconds - ApplyLead;
+                regionFree[e.Region] = start + WorldLords.MarchSeconds;
+                lordFree[e.Lord] = start + WorldLords.MarchSeconds + (e.Won ? 0f : WorldLords.ReturnSeconds);
+                _replayEnd = Mathf.Max(_replayEnd, lordFree[e.Lord]);
+                cursor = start + stagger;
+            }
+            _replayClock = 0f;
+        }
+
+        // 이번 AI 턴 재생의 길이(초, 검사용)
+        public float ReplayLength => _replayEnd;
 
         // 재생을 끝낸다(건너뛰기 포함) — 실제 판도를 그리고 요약을 띄운다
         private void FinishReplay()
         {
+            _map.Lords.Snap();
             _shown = null;
             _stage = Stage.Summary;
             _skip.gameObject.SetActive(false);
@@ -293,15 +335,23 @@ namespace GnorpWar
             if (_stage == Stage.Replay)
             {
                 // 한 프레임이 길어도(씬을 막 불러온 프레임 등) 사건이 한꺼번에 넘어가지 않게 프레임당 진행을 묶는다
-                _eventTimer -= Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
-                while (_eventTimer <= 0f && _eventAt < _events.Count)
+                _replayClock += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
+                for (int i = 0; i < _events.Count; i++)
                 {
-                    WorldEvent e = _events[_eventAt++];
-                    e.Apply(_shown);
-                    if (Changes(e))
-                        _eventTimer += _eventStep;
+                    WorldEvent e = _events[i];
+                    if (!_eventStarted[i] && _replayClock >= _eventStart[i])
+                    {
+                        _eventStarted[i] = true;
+                        if (!e.Rebellion && !e.Coalition)
+                            _map.Lords.March(e.Lord, e.Region, e.Won);
+                    }
+                    if (!_eventApplied[i] && _replayClock >= _eventApply[i])
+                    {
+                        _eventApplied[i] = true;
+                        e.Apply(_shown);
+                    }
                 }
-                if (_eventAt >= _events.Count && _eventTimer <= 0f)
+                if (_replayClock >= _replayEnd)
                     FinishReplay();
             }
 
@@ -317,6 +367,9 @@ namespace GnorpWar
                 foreach (int region in invadable)
                     open[region] = true;
             }
+            // 상점 팝업이 지도를 다 덮은 동안에는 영주들이 걷지 않는다(보이지 않는 일을 하지 않는다)
+            _map.Lords.enabled = !(_shopOpen && _shopSlide == 1f);
+            _map.Lords.Group(state.Coalition != null ? state.Coalition.Id : -1, state.CoalitionMembers);
             _map.Show(_shown ?? state.Owner, lord => RunState.ColorOf(state.Lords[lord]), state.Player.Id, open, _selected);
             // 명령을 받는 동안에만 고른 땅 · 명령 버튼이 보인다 — 그 밖에는 그 자리에 알림(AI 턴 · 요약 · 끝)
             _panel.Show(_selected, command, _shopOpen);

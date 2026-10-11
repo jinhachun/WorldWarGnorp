@@ -98,6 +98,9 @@ namespace GnorpWar
         [SuffixLabel("초", true)]
         [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowFireAllInterval))]
         [SerializeField] private float _fireAllInterval = 0f;
+        [Tooltip("「전부 발동」의 출발점으로 양쪽 성 근처에 떠 있는 그림(얼음 덩이) — 버프 선이 여기서 나간다. 비우면 탑 꼭대기에서")]
+        [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowFireAllInterval)), HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _fireAllMarker;
         [Tooltip("쿨다운이 없는 기물은 전투에서 효과가 없다")]
         [TitleGroup("기물 — 양 진영에"), ShowIf(nameof(ShowPassiveBuildingsOff))]
         [SerializeField] private bool _passiveBuildingsOff;
@@ -140,6 +143,7 @@ namespace GnorpWar
         public UnitRule[] UnitRules => _unitRules;
         public float CooldownRate => _cooldownRate;
         public float FireAllInterval => _fireAllInterval;
+        public Sprite FireAllMarker => _fireAllMarker;
         public bool PassiveBuildingsOff => _passiveBuildingsOff;
         public int FireRepeats => Mathf.Max(1, _fireRepeats);
         public TerrainStyle Terrain => _terrain;

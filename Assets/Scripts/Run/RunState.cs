@@ -240,10 +240,13 @@ namespace GnorpWar
         }
 
         // 침략의 결과 — 이기면 상대의 땅을 전부(연합이면 몫만큼 — 침략한 땅부터) 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn(AI 턴)을 부른다
+        // 지난 전투로 넘어온 땅들(졌으면 빈 목록) — 결과 창이 그 땅들의 업그레이드를 보여 준다
+        public static System.Collections.Generic.IReadOnlyList<int> LastGains { get; private set; } = new int[0];
+
         public static void FinishBattle(bool won)
         {
             LastOutcome = won ? Outcome.Win : Outcome.Lose;
-            WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
+            LastGains = WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
             Phase = RunPhase.Aftermath;
         }
 
@@ -294,7 +297,10 @@ namespace GnorpWar
             var merged = new System.Collections.Generic.List<Lord>();
             Lord coalition = World.FormCoalition(merged);
             if (coalition != null)
-                events.Add(new WorldEvent { Coalition = true, Lord = coalition.Id, Members = merged.ConvertAll(lord => lord.Id).ToArray() });
+            {
+                state.CoalitionMembers = merged.ConvertAll(lord => lord.Id).ToArray();
+                events.Add(new WorldEvent { Coalition = true, Lord = coalition.Id, Members = state.CoalitionMembers });
+            }
             foreach (Lord lord in state.Lords)
                 if (lord.Alive && !lord.IsPlayer)
                     largest = Mathf.Max(largest, state.LandsOf(lord));
@@ -312,7 +318,10 @@ namespace GnorpWar
             return events;
         }
 
-        // 탑 한 채에 상점 한 번 — gold를 받고 새 진열에서 build 방향대로 산다(Run/EnemyShopper). 그동안 상점 규칙과 그 진영의 영구 강화는 이 탑에 걸린다.
+        // ShopAs로 도는 탑의 국가 — 진열의 국가 비율(HomeOffer)이 읽는다
+        private static BuildingNation _shopNation;
+
+        // 탑 한 채에 상점 한 번 — gold를 받고 새 진열에서 build 방향대로 산다(Run/EnemyShopper). 그동안 상점 규칙과 그 진영의 영구 강화는 이 탑에 걸린다. 진열의 국가 비율은 build의 국가로 건다.
         // round = 진열 등급 확률을 정하는 라운드(0부터). 월드맵 영주의 턴 상점(World/WorldRun)이 쓴다
         public static void ShopAs(TowerState tower, EnemyBuildProfile build, int gold, int round)
         {
@@ -324,6 +333,7 @@ namespace GnorpWar
                 _side = tower;
                 RunBook.Use(tower.Team, tower.Book);
                 Round = round;
+                _shopNation = build.Nation;
                 GainGold(gold);
                 RollOffers(onlyEmpty: ShopLocked);
                 EnemyShopper.Shop(build);
@@ -339,9 +349,6 @@ namespace GnorpWar
         // ── 내 국가(기획 §4 「내 국가와 상점 풀」) — 런을 시작할 때 고른다. 민족주의가 상대 영주의 국가와 견준다
         public static BuildingNation Nation => World.PlayerNation;
         public static bool NationChosen { get; private set; }
-        // 내 상점 풀 — 공용 기물 + 내 국가를 포함한 국가 PoolNations개의 기물(국가가 그보다 적으면 전부). 다른 탑의 상점(AI 영주)은 전체 풀
-        private const int PoolNations = 3;
-        private static BuildingDefinition[] _playerPool;
 
         // 고를 수 있는 국가 — 상점 풀에 기물이 있는 국가들(공용 제외), 풀에 나온 순서
         public static BuildingNation[] NationChoices
@@ -362,17 +369,7 @@ namespace GnorpWar
             NationChosen = true;
         }
 
-        private static void SetNation(BuildingNation nation)
-        {
-            World.PlayerNation = nation;
-            // 내 국가는 늘 있고, 나머지 자리는 무작위로
-            var nations = new System.Collections.Generic.List<BuildingNation>(NationChoices);
-            nations.Remove(nation);
-            while (nations.Count > PoolNations - 1)
-                nations.RemoveAt(Random.Range(0, nations.Count));
-            nations.Add(nation);
-            _playerPool = System.Array.FindAll(_config.ShopPool, b => b.Nation == BuildingNation.Common || nations.Contains(b.Nation));
-        }
+        private static void SetNation(BuildingNation nation) => World.PlayerNation = nation;
 
         public static void ToggleShopLock() => ShopLocked = !ShopLocked;
 
@@ -435,7 +432,8 @@ namespace GnorpWar
 
         public static int PriceOf(BuildingDefinition definition) => _config.PriceOf(definition.Rarity);
 
-        // 칸마다 등급을 가중치로 먼저 뽑고(풀에 없는 등급은 빼고), 그 등급의 건물 중 하나. onlyEmpty = 산 칸(빈칸)만 새로(상점 잠금)
+        // 칸마다 등급을 가중치로 먼저 뽑고(풀에 없는 등급은 빼고), 그 등급의 건물 중 하나. onlyEmpty = 산 칸(빈칸)만 새로(상점 잠금).
+        // 내 상점도 AI 영주의 상점도 그 등급 안에서 국가 비율을 건다(HomeOffer)
         private static void RollOffers(bool onlyEmpty = false)
         {
             BuildingDefinition[] pool = Pool;
@@ -443,24 +441,43 @@ namespace GnorpWar
             {
                 if (onlyEmpty && Offers[i] != null)
                     continue;
-                float total = 0f;
-                foreach (BuildingDefinition b in pool)
-                    total += OfferWeight(pool, b);
-                float pick = Random.Range(0f, total);
-                Offers[i] = pool[pool.Length - 1];
-                foreach (BuildingDefinition b in pool)
-                {
-                    pick -= OfferWeight(pool, b);
-                    if (pick < 0f)
-                    {
-                        Offers[i] = b;
-                        break;
-                    }
-                }
+                Offers[i] = HomeOffer(pool);
             }
         }
 
-        // 진열 한 칸에서 b가 뽑힐 가중치 — 뽑기(RollOffers)와 화면의 확률(OfferChance)이 같이 쓴다
+        // 진열 한 칸 — 등급을 먼저 뽑고(등급 확률 표가 우선), 그 등급 안에서 HomeNationShare 확률로 「공용 + 그 탑의 국가」 기물,
+        // 나머지 확률로 다른 국가들의 기물. 그 등급에 한쪽 기물이 없으면 다른 쪽에서 뽑는다(등급을 건너뛰지 않는다)
+        private static BuildingDefinition HomeOffer(BuildingDefinition[] pool)
+        {
+            float total = 0f;
+            foreach (BuildingRarity rarity in System.Enum.GetValues(typeof(BuildingRarity)))
+                if (CountOf(pool, rarity) > 0)
+                    total += _config.RarityWeight(rarity, ShopTier);
+            float pick = Random.Range(0f, total);
+            BuildingRarity rolled = pool[pool.Length - 1].Rarity;
+            foreach (BuildingRarity rarity in System.Enum.GetValues(typeof(BuildingRarity)))
+            {
+                if (CountOf(pool, rarity) == 0)
+                    continue;
+                pick -= _config.RarityWeight(rarity, ShopTier);
+                if (pick < 0f)
+                {
+                    rolled = rarity;
+                    break;
+                }
+            }
+            bool home = Random.value < _config.HomeNationShare;
+            BuildingDefinition[] group = System.Array.FindAll(pool, b => b.Rarity == rolled && IsHome(b) == home);
+            if (group.Length == 0)
+                group = System.Array.FindAll(pool, b => b.Rarity == rolled);
+            return group[Random.Range(0, group.Length)];
+        }
+
+        // 공용이거나 지금 상점을 도는 탑의 국가(내 차례면 내 국가, 영주의 차례면 그 영주의 빌드 방향의 국가) 기물인가
+        private static bool IsHome(BuildingDefinition building)
+            => building.Nation == BuildingNation.Common || building.Nation == (_side == Player ? Nation : _shopNation);
+
+        // 진열 한 칸에서 b가 뽑힐 가중치(국가 비율을 걸기 전 — 등급 비율만) — 화면의 등급 확률(OfferChance)이 쓴다
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
             => _config.RarityWeight(b.Rarity, ShopTier) / CountOf(pool, b.Rarity);
 
@@ -506,7 +523,11 @@ namespace GnorpWar
         // 스택은 합친다(사용자 결정: 등급이 오르면 스택 유지). 합쳐진 결과를 돌려준다
         private static OwnedBuilding MergeInto(OwnedBuilding target)
         {
+            // 내 상점이면 합치기를 한 번씩 적어 둔다 — 화면이 차례로 보여 준다(상태는 여기서 한 번에 끝난다)
+            var steps = _side == Player && Merged != null ? new System.Collections.Generic.List<MergeStep>() : null;
+            OwnedBuilding[] field = steps != null ? (OwnedBuilding[])Field.Clone() : null, storage = steps != null ? (OwnedBuilding[])Storage.Clone() : null;
             target.Upgrade();
+            steps?.Add(new MergeStep(target, field, storage));
             OwnedBuilding pair = FindMergeTarget(target.Definition, target.Upgrades, target);
             while (pair != null && target.CanUpgrade)
             {
@@ -514,10 +535,35 @@ namespace GnorpWar
                 pair.Upgrade();
                 pair.AddStacks(target.Stacks);
                 target = pair;
+                steps?.Add(new MergeStep(target, field, storage));
                 pair = FindMergeTarget(target.Definition, target.Upgrades, target);
             }
+            if (steps != null)
+                Merged(steps);
             return target;
         }
+
+        // 합치기 한 번 — 들어온 조각(첫 단계는 방금 산 것, 그다음은 앞 단계의 결과)이 Into에 합쳐져 Into가 After 등급이 됐다.
+        // 자리(Storage · Index)는 합치기가 시작되기 전의 탑 · 보관함 기준이다 — 화면은 아직 그 모습이다
+        public readonly struct MergeStep
+        {
+            public readonly OwnedBuilding Into;
+            public readonly bool Storage;
+            public readonly int Index;
+            public readonly BuildingRarity After;
+
+            public MergeStep(OwnedBuilding into, OwnedBuilding[] field, OwnedBuilding[] storage)
+            {
+                Into = into;
+                After = into.Rarity;
+                int index = System.Array.IndexOf(field, into);
+                Storage = index < 0;
+                Index = Storage ? System.Array.IndexOf(storage, into) : index;
+            }
+        }
+
+        // 내 상점에서 합치기(연쇄 포함)가 끝났다 — 단계들을 일어난 순서대로. 결과 기물 = 마지막 단계의 Into
+        public static event System.Action<System.Collections.Generic.IReadOnlyList<MergeStep>> Merged;
 
         private static void Remove(OwnedBuilding building)
         {
@@ -676,8 +722,8 @@ namespace GnorpWar
                 passive.OnSell(sold);
         }
 
-        // 이번 판에 등장하는 기물(상점 풀)
-        public static BuildingDefinition[] Pool => _side == Player ? _playerPool : _config.ShopPool;
+        // 이번 판에 등장하는 기물(상점 풀) — 내 상점도 AI 영주의 상점도 같은 풀이다(내 진열은 국가 비율을 건다 — HomeOffer)
+        public static BuildingDefinition[] Pool => _config.ShopPool;
 
         // 산 게 아니라 얻는다(판도라의 상자) — 「구매할 때마다,」·합치기 없이 필드 → 보관함 빈 칸에. 자리가 없으면 못 얻는다
         public static void Acquire(BuildingDefinition definition)

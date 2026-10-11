@@ -32,7 +32,6 @@ namespace GnorpWar
         [SerializeField] private Image _mineIcon;
         [SerializeField] private Text _mineTitle;
         [Header("고른 땅이 없을 때의 안내")]
-        [SerializeField] private Text _landTitle;
         [Tooltip("안내 글 — 고른 땅이 있으면 이 자리에 「맞닿지 않았다」는 회색 글이 뜬다")]
         [SerializeField] private Text _landBody;
         [TextArea] [SerializeField] private string _noLandHint = "화살표가 가리키는 땅을 눌러 침략할 곳을 고릅니다.";
@@ -107,7 +106,6 @@ namespace GnorpWar
             Lord lord = any ? state.OwnerOf(selected) : null;
             bool mine = any && lord == state.Player;
             bool invadable = any && !mine && RunState.InvadableRegions().Contains(selected);
-            _landTitle.enabled = land && !any;
             _landBody.enabled = land && (!any || (!mine && !invadable));
             _lordIcon.enabled = _lordTitle.enabled = any;
             _lordBody.enabled = any && !mine;
@@ -117,10 +115,8 @@ namespace GnorpWar
             _loseLine.Root.gameObject.SetActive(any && !mine);
             if (!any)
             {
-                _landTitle.text = "고른 땅 없음";
                 _landBody.text = shop ? _shopHint : _noLandHint;
-                _landTitle.rectTransform.anchoredPosition = new Vector2(_landTitle.rectTransform.anchoredPosition.x, y);
-                PlaceText(_landBody, left, y - _landTitle.rectTransform.sizeDelta.y - LineGap);
+                PlaceText(_landBody, left, y);
                 ShowTower(null, false, Color.white);
                 return;
             }

@@ -18,6 +18,7 @@ MonoBehaviour:
   _unitRules: []
   _cooldownRate: 0.5
   _fireAllInterval: 10
+  _fireAllMarker: {fileID: 21300000, guid: a120a95dbbaf0494281ac6a5e6c7f6e4, type: 3}
   _passiveBuildingsOff: 0
   _fireRepeats: 1
   _terrain:

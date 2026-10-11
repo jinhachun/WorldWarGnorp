@@ -18,6 +18,8 @@ namespace GnorpWar
         // 연합이 뭉칠 때의 땅 수 · 내가 연합을 이긴 횟수
         public int CoalitionStartLands;
         public int CoalitionWins;
+        // 연합에 든 나머지 영주들의 번호(바탕 영주 제외, 뭉치기 전에는 null) — 지도의 그림(UI/WorldLords)이 쓰는 표시용 정보다. 규칙은 읽지 않는다
+        public int[] CoalitionMembers;
         // 1부터
         public int Turn = 1;
 

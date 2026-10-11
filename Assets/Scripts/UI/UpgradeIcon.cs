@@ -15,11 +15,12 @@ namespace GnorpWar
         private string _title;
         private string _body;
 
-        public void Set(RegionUpgradeDefinition upgrade, int count)
+        // note = 여러 개일 때 회색 줄의 글({0} = 개수)
+        public void Set(RegionUpgradeDefinition upgrade, int count, string note = "{0}개 보유")
         {
             string body = BuildingTooltip.Highlight(upgrade.Describe(count));
             if (count > 1)
-                body += $"\n<color={BuildingTooltip.NoteColor}>{count}개 보유</color>";
+                body += $"\n<color={BuildingTooltip.NoteColor}>{string.Format(note, count)}</color>";
             Set(upgrade.Icon, upgrade.DisplayName, body);
         }
 

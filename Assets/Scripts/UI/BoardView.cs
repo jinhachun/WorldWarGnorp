@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GnorpWar
 {
@@ -104,10 +105,52 @@ namespace GnorpWar
             // 화면 안쪽으로 불룩하게 — 왼쪽 탑은 오른쪽으로, 오른쪽 탑은 왼쪽으로
             float side = slot.position.x < _links.canvas.rootCanvas.transform.position.x ? 1f : -1f;
             Vector2 edge = slot.rect.center + new Vector2(side * slot.rect.width * 0.5f, 0f);
-            // 맵 효과(준 기물 없음)는 탑 꼭대기 위에서 내려온다
-            Vector2 from = edge + new Vector2(0f, (link.From >= 0 ? link.From : count + 0.5f) * _step);
+            // 맵 효과(준 기물 없음)는 탑 옆에 뜬 출발점 그림(얼음)에서, 그 그림이 없으면 탑 꼭대기 위에서 내려온다
+            Vector2 from = link.From < 0 && _marker != null && _marker.enabled ? edge + MarkerOffset(side) : edge + new Vector2(0f, (link.From >= 0 ? link.From : count + 0.5f) * _step);
             Vector2 to = edge + new Vector2(0f, link.To * _step);
             _links.Add(from, to, side, link.Kind, link.Weak, ((link.From + 1) * 4096 + link.To * 64 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0));
+        }
+
+        // ── 맵 효과의 출발점 그림(얼음 맵의 얼음 — 전장의 Fx/MapMarker와 같은 그림) — 전투 화면의 UI 탑 옆, 화면 안쪽에 살짝 떠 있다.
+        // 탑이 숨으면 같이 숨고, 그 맵 효과가 없는 전투에는 없다. 그림은 도트를 정수배로(전장의 얼음과 비슷한 크기)
+        private const int MarkerPixelScale = 3;
+        // 탑 옆으로 띄우는 거리(px) · 1층 가운데에서 위로(층) · 흔들리는 폭(px) · 한 번 오르내리는 시간(초)
+        private const float MarkerAside = 36f;
+        private const float MarkerFloors = 1.5f;
+        private const float MarkerBob = 4f;
+        private const float MarkerBobSeconds = 2.4f;
+
+        private Image _marker;
+
+        // 층 옆 가장자리(edge)에서 출발점 그림까지
+        private Vector2 MarkerOffset(float side) => new Vector2(side * MarkerAside, MarkerFloors * _step);
+
+        private void ShowMarker(bool visible)
+        {
+            Sprite sprite = _stack && BattleManager.Fighting && RunState.Map != null && RunState.Map.FireAllInterval > 0f ? RunState.Map.FireAllMarker : null;
+            if (sprite == null || !visible)
+            {
+                if (_marker != null)
+                    _marker.enabled = false;
+                return;
+            }
+            RectTransform slot = (RectTransform)_template.transform;
+            if (_marker == null)
+            {
+                _marker = new GameObject("MapMarker", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                _marker.raycastTarget = false;
+                _marker.preserveAspect = true;
+                RectTransform rect = _marker.rectTransform;
+                rect.SetParent(slot.parent, false);
+                rect.anchorMin = slot.anchorMin;
+                rect.anchorMax = slot.anchorMax;
+            }
+            _marker.enabled = true;
+            _marker.sprite = sprite;
+            _marker.rectTransform.sizeDelta = sprite.rect.size * MarkerPixelScale;
+            float side = slot.position.x < _marker.canvas.rootCanvas.transform.position.x ? 1f : -1f;
+            float bob = Mathf.Round(Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f / MarkerBobSeconds) * MarkerBob);
+            _marker.rectTransform.anchoredPosition = _origin + new Vector2(side * slot.rect.width * 0.5f, bob) + MarkerOffset(side);
         }
 
         // 칸이 발동한 순간 — 그 칸이 튄다
@@ -154,6 +197,10 @@ namespace GnorpWar
         // 이 줄이 상점 판에 놓였고 그 판이 열려 있나 — 전투 화면의 줄에는 상점 판이 없다
         private bool InShop => _shop != null && _shop.gameObject.activeInHierarchy;
 
+        public Source Kind => _source;
+        // index칸 그림의 화면 자리(지금 그려진 모습 기준)
+        public Vector3 SlotPosition(int index) => _views[index].transform.position;
+
         private BoardRunner Runner => BoardRunner.For(_source == Source.EnemyField ? Team.Enemy : Team.Ally);
 
         // 전투 중 필드 줄(아군·적)은 그 진영 성 위 탑이 화면에 보이면 숨는다 — 탑이 같은 기물을 보여 주므로(사용자 10/8).
@@ -179,6 +226,7 @@ namespace GnorpWar
                 ? _source == Source.Storage || !TowerOnScreen()
                 : !_battleOnly;
             int count = Count;
+            ShowMarker(visible);
             if (_links != null && !visible)
                 _links.Clear();
             if (_roof != null)
@@ -192,7 +240,11 @@ namespace GnorpWar
             for (int i = 0; i < _views.Length; i++)
             {
                 // 보관함 상자는 빈 칸을 보이지 않는다 — 들어 있는 조각만 상자 안에 쌓인다
-                bool shown = visible && i < count && (_box == null || !OwnedBuilding.IsEmpty(BuildingAt(i)));
+                // 합치기 재생 중인 결과 기물은 빈 칸으로 보인다 — 재생이 끝나며 그 자리에 나타난다(UI/MergeFx)
+                OwnedBuilding building = i < count ? BuildingAt(i) : null;
+                if (InShop && _shop.Concealed(building))
+                    building = null;
+                bool shown = visible && i < count && (_box == null || !OwnedBuilding.IsEmpty(building));
                 if (_views[i].gameObject.activeSelf != shown)
                     _views[i].gameObject.SetActive(shown);
                 if (!shown)
@@ -201,7 +253,6 @@ namespace GnorpWar
                 if (_stack)
                     ((RectTransform)_views[i].transform).anchoredPosition = _origin + new Vector2(0f, i * _step);
 
-                OwnedBuilding building = BuildingAt(i);
                 BoardRunner.Slot running = _source != Source.Storage && BattleManager.Fighting ? Runner.Slots[i] : null;
                 // 가속받은 칸도 튄다 — 쿨다운 없는 칸은 가속이 아무 일도 안 하므로 빼고
                 float haste = running != null && running.Cooldown > 0f ? running.Haste : 0f;

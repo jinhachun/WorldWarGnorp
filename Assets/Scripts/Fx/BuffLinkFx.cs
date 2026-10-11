@@ -83,7 +83,9 @@ namespace GnorpWar
             if (_lastDrawn.TryGetValue(key, out float last) && now - last < MinGap)
                 return;
 
-            Vector2 from = link.From >= 0 ? tower.FloorFront(link.From) : tower.RoofTop;
+            // 맵 효과(준 기물 없음)는 그 진영의 출발점 그림에서(얼음 덩이 — Fx/MapMarker), 없으면 탑 꼭대기에서
+            MapMarker marker = MapMarker.For(link.Team);
+            Vector2 from = link.From >= 0 ? tower.FloorFront(link.From) : marker != null ? marker.Position : tower.RoofTop;
             Vector2 to = link.To >= 0 ? tower.FloorFront(link.To) : link.At.Value;
             if (!InView(from) && !InView(to))
                 return;

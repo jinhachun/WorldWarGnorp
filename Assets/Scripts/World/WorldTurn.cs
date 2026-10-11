@@ -79,7 +79,7 @@ namespace GnorpWar
         public static void AiPhase(WorldState state, Func<Lord, float> power, Random random)
         {
             foreach (Lord lord in AiOrder(state, random))
-                AiInvade(state, lord, power, random);
+                AiInvade(state, lord, power, random, out _);
         }
 
         // 이번 턴 AI 영주들의 차례(무작위)
@@ -97,16 +97,18 @@ namespace GnorpWar
             return order;
         }
 
-        // AI 영주 한 명의 차례 — 침략했으면 true
-        public static bool AiInvade(WorldState state, Lord lord, Func<Lord, float> power, Random random)
+        // AI 영주 한 명의 차례 — 침략했으면 그 대상(쉬었으면 null), won = 이겼나
+        public static Lord AiInvade(WorldState state, Lord lord, Func<Lord, float> power, Random random, out bool won)
         {
+            won = false;
             if (!lord.Alive)
-                return false;
+                return null;
             Lord target = PickTarget(state, lord, power, random);
             if (target == null)
-                return false;
-            Invade(state, lord, target, random.NextDouble() < WinChance(power(lord), power(target)));
-            return true;
+                return null;
+            won = random.NextDouble() < WinChance(power(lord), power(target));
+            Invade(state, lord, target, won);
+            return target;
         }
 
         // ④ 정산 — 행복도가 0인 영주는 반란으로 멸망한다. 플레이어면 게임 오버(WorldState.GameOver), AI면 그 영주의 땅마다 새 영주가 들어선다.

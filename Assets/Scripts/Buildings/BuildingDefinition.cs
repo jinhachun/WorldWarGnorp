@@ -46,6 +46,8 @@ namespace GnorpWar
         public BuildingFaction Faction => _faction;
         public float Cooldown => _cooldown;
         public UnitDefinition Unit => _unit;
+        // 에셋에 적힌 한 번 소환 수(전투 가속분 없이) — 전투 밖 계산(World/TowerPower)
+        public int UnitCount => _unitCount;
         // 지금 한 번 발동에 소환하는 수(전투 가속분 포함) — 발동(BoardRunner)과 툴팁·칸 숫자가 같이 읽는다
         public int SummonCount => _unitCount + BattleManager.ExtraUnits;
 

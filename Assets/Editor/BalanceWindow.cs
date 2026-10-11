@@ -7,7 +7,7 @@ using UnityEngine;
 namespace GnorpWar.Editor
 {
     // 밸런싱 창(메뉴 GnorpWar/밸런싱) — 왼쪽 메뉴 트리에서 에셋을 고르면 오른쪽에 그 인스펙터가 나온다(Odin Inspector). 고친 값은 바로 .asset 파일에 쓴다.
-    // 묶음은 넷(유닛 · 전투·경제 설정 · 맵 · 적 빌드) — 유형으로 찾으므로(FindAssets) 에셋이 늘면 목록도 따라온다. 「유닛」 묶음 자체를 누르면 유닛 표.
+    // 묶음은 다섯(유닛 · 전투·경제 설정 · 맵 · 적 빌드 · 월드) — 유형으로 찾으므로(FindAssets) 에셋이 늘면 목록도 따라온다. 「유닛」 묶음 자체를 누르면 유닛 표.
     // 에셋(ScriptableObject)을 고치는 것이라 플레이 중에 고쳐도 플레이를 끈 뒤 값이 남는다
     internal class BalanceWindow : OdinMenuEditorWindow
     {
@@ -20,6 +20,7 @@ namespace GnorpWar.Editor
             ("전투·경제 설정", new[] { nameof(BattleConfig), nameof(BaseDefinition) }),
             ("맵", new[] { nameof(MapDefinition) }),
             ("적 빌드", new[] { nameof(EnemyBuildProfile) }),
+            ("월드", new[] { nameof(WorldConfig), nameof(RegionUpgradeDefinition) }),
         };
 
         // 유닛 표 — 유닛을 줄로, 자주 고치는 수치를 칸으로. 칸에서 고치면 그 유닛 에셋에 바로 쓴다

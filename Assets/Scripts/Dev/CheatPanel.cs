@@ -198,7 +198,7 @@ namespace GnorpWar
                 return;
             }
             string phase = Fight ? $"전투 {BattleManager.Elapsed:0}초" : Shop ? "상점" : "결과";
-            Label($"치트 (F1 닫기) · 라운드 {RunState.Round + 1} · {phase} · 골드 {RunState.Gold} · 맵 {MapName(RunState.Map)} · 시간 ×{Time.timeScale:0.##}", Lit);
+            Label($"치트 (F1 닫기) · 턴 {RunState.Round + 1} · 땅 {RunState.Lands}/{RunState.RegionCount} · {phase} · 골드 {RunState.Gold} · 맵 {MapName(RunState.Map)} · 시간 ×{Time.timeScale:0.##}", Lit);
             for (int t = 0; t < TabNames.Length; t++)
                 if (Button(TabNames[t], 120f, _tab == t))
                 {
@@ -290,13 +290,10 @@ namespace GnorpWar
 
         private void DrawRunValues()
         {
-            ValueRow("gold", "골드", RunState.Gold, $"{RunState.Gold}", 10f, true, v => RunState.CheatSetGold(Team.Ally, Mathf.RoundToInt(v)));
-            ValueRow("lives", "목숨", RunState.Lives, $"{RunState.Lives}", 1f, true, v => RunState.CheatSetLives(Mathf.RoundToInt(v)));
-            ValueRow("wins", "승리 수", RunState.Wins, $"{RunState.Wins}", 1f, true, v => RunState.CheatSetWins(Mathf.RoundToInt(v)));
-            ValueRow("round", "라운드", RunState.Round + 1, $"{RunState.Round + 1}", 1f, Shop, v => SetRound(Mathf.RoundToInt(v) - 1));
-            ValueRow("floors", "내 탑 층수", RunState.Floors, $"{RunState.Floors} / {RunState.MaxFloors}", 1f, Shop, v => SetFloors(Team.Ally, Mathf.RoundToInt(v)));
-            ValueRow("egold", "적 골드", RunState.EnemyGold, $"{RunState.EnemyGold}", 10f, true, v => RunState.CheatSetGold(Team.Enemy, Mathf.RoundToInt(v)));
-            ValueRow("efloors", "적 탑 층수", RunState.EnemyField.Length, $"{RunState.EnemyField.Length} / {RunState.MaxFloors}", 1f, Shop, v => SetFloors(Team.Enemy, Mathf.RoundToInt(v)));
+            ValueRow("gold", "골드", RunState.Gold, $"{RunState.Gold}", 10f, true, v => RunState.CheatSetGold(Mathf.RoundToInt(v)));
+            ValueRow("happiness", "행복도", RunState.Happiness, $"{RunState.Happiness} / {RunState.HappinessMax}", 1f, true, v => RunState.CheatSetHappiness(Mathf.RoundToInt(v)));
+            ValueRow("round", "턴", RunState.Round + 1, $"{RunState.Round + 1}", 1f, Shop, v => SetRound(Mathf.RoundToInt(v) - 1));
+            ValueRow("floors", "내 탑 층수", RunState.Floors, $"{RunState.Floors} / {RunState.MaxFloors}", 1f, Shop, v => SetFloors(Mathf.RoundToInt(v)));
         }
 
         private void DrawBattleValues()
@@ -336,26 +333,22 @@ namespace GnorpWar
         // ── 탭: 런
         private void DrawRun()
         {
-            Label("맵 — 고르면 「무작위」로 풀 때까지 매 라운드 그 맵", Dim);
-            if (Button("무작위", 84f, RunState.CheatMap == null))
+            Label("맵 — 고르면 「땅의 지형」으로 풀 때까지 어느 땅을 치든 그 맵", Dim);
+            if (Button("땅의 지형", 100f, RunState.CheatMap == null))
                 SetMap(null);
             foreach (MapDefinition map in BattleManager.Config.Maps)
                 if (Button(MapName(map), 84f, RunState.CheatMap == map))
                     SetMap(map);
 
-            Label("라운드 — 성 체력 · 진열 등급이 따라간다 (골드 · 새 진열은 안 준다)", Dim);
-            ValueRow("round", "라운드", RunState.Round + 1, $"{RunState.Round + 1}", 1f, Shop, v => SetRound(Mathf.RoundToInt(v) - 1));
+            Label("턴 — 성 체력 · 진열 등급이 따라간다 (골드 · 새 진열은 안 주고, 영주들도 그대로다)", Dim);
+            ValueRow("round", "턴", RunState.Round + 1, $"{RunState.Round + 1}", 1f, Shop, v => SetRound(Mathf.RoundToInt(v) - 1));
             NewLine();
             if (Button("진열 다시 뽑기", 150f, false, Shop)) RunState.CheatRollOffers();
             if (Button("새 런 시작", 150f, false, Shop)) NewRun();
 
-            Label($"적 빌드 방향 — 지금: {RunState.EnemyBuild.DisplayName}", Dim);
-            Label("고르면 다음 라운드 쇼핑부터 · 「새 런 시작」을 누르면 처음부터 그 방향", Dim);
-            if (Button("무작위", 84f, RunState.CheatEnemyBuild == null))
-                RunState.CheatSetEnemyBuild(null);
-            foreach (EnemyBuildProfile build in BattleManager.Config.EnemyBuilds)
-                if (Button(build.DisplayName, 140f, RunState.CheatEnemyBuild == build))
-                    RunState.CheatSetEnemyBuild(build);
+            Label($"판도 — 내 땅 {RunState.Lands}/{RunState.RegionCount} · 행복도 {RunState.Happiness}/{RunState.HappinessMax} · 남은 영주 {RunState.World.State.AiLords}명", Dim);
+            if (Button("이웃 영주 먹기", 150f, false, Shop)) Conquer();
+            Text("땅이 가장 적은 이웃 영주를 전투 없이 이긴 것으로 친다", 460f, Dim);
             NewLine();
             if (Button(_enemyOn ? "치트 적 보드: 켬" : "치트 적 보드: 끔", 180f, _enemyOn))
                 SetEnemyOverride(!_enemyOn);
@@ -579,17 +572,19 @@ namespace GnorpWar
 
         // ── 값 · 맵 · 라운드 · 전투
 
-        public void SetFloors(Team team, int floors)
+        public void SetFloors(int floors)
+        {
+            if (Shop)
+                RunState.CheatSetFloors(floors);
+        }
+
+        // 이웃 영주 하나를 먹는다 — 다음 상점 화면부터 수입 · 이웃이 달라진다(상점을 다시 불러온다)
+        public void Conquer()
         {
             if (!Shop)
                 return;
-            RunState.CheatSetFloors(team, floors);
-            if (team == Team.Enemy)
-            {
-                ShowEnemyBoard();
-                if (!_enemyOn)
-                    _enemy = null;   // 편집본은 새 적 탑에서 다시 뜬다
-            }
+            RunState.CheatConquer();
+            Reload();
         }
 
         public void SetMap(MapDefinition map)
@@ -609,7 +604,7 @@ namespace GnorpWar
             Reload();
         }
 
-        // 런을 처음부터(골드·탑·목숨·영구 강화 전부) — 고른 맵 · 적 빌드 방향 · 치트 적 보드는 남는다
+        // 런을 처음부터(골드·탑·판도·영구 강화 전부) — 고른 맵 · 치트 적 보드는 남는다
         public void NewRun()
         {
             if (!Shop)

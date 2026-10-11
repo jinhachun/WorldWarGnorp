@@ -63,7 +63,14 @@ namespace GnorpWar
     public static class TowerBook
     {
         private static readonly List<TowerModifier>[] Battle = { new List<TowerModifier>(), new List<TowerModifier>() };
-        private static readonly List<TowerModifier>[] Run = { new List<TowerModifier>(), new List<TowerModifier>() };
+        // 영구히 — 진영마다 「지금 쓰는 탑」의 목록(RunBook)
+        private static readonly List<TowerModifier>[] Run = { RunBook.Of(Team.Ally).Towers, RunBook.Of(Team.Enemy).Towers };
+
+        internal static void UseRun(Team team, List<TowerModifier> list)
+        {
+            Run[(int)team] = list;
+            Version++;
+        }
 
         public static int Version { get; private set; }
 
@@ -191,14 +198,21 @@ namespace GnorpWar
     // 적용 대상은 걸어 준 쪽(효과·기물 능력)의 AppliesTo(병종 태그·유닛 이름). 바뀔 때마다 Version이 올라 유닛이 다시 계산한다
     public static class StatBook
     {
-        private struct Entry
+        internal struct Entry
         {
             public IUnitFilter Source;
             public StatModifier Modifier;
         }
 
         private static readonly List<Entry>[] Battle = { new List<Entry>(), new List<Entry>() };
-        private static readonly List<Entry>[] Run = { new List<Entry>(), new List<Entry>() };
+        // 영구히 — 진영마다 「지금 쓰는 탑」의 목록(RunBook)
+        private static readonly List<Entry>[] Run = { RunBook.Of(Team.Ally).Units, RunBook.Of(Team.Enemy).Units };
+
+        internal static void UseRun(Team team, List<Entry> list)
+        {
+            Run[(int)team] = list;
+            Version++;
+        }
 
         public static int Version { get; private set; }
 
@@ -254,6 +268,25 @@ namespace GnorpWar
             foreach (Entry e in entries)
                 if (e.Modifier.Stat == stat && (e.Source.AppliesFor(team, unit) || (alias != null && e.Source.AppliesTo(alias))))
                     sum.Add(e.Modifier.Op, e.Modifier.Value);
+        }
+    }
+
+    // 탑 한 채가 「영구히」 쌓은 강화(유닛 · 타워) — 탑마다 하나(TowerState.Book). 진영마다 「지금 쓰는 탑」의 것이 StatBook · TowerBook의 영구히 목록이 된다.
+    // 평소엔 플레이어 탑과 적 탑의 것이고, 다른 탑이 상점을 도는 동안(RunState.ShopAs)만 그 탑의 것으로 바뀐다
+    public class RunBook
+    {
+        private static readonly RunBook[] Current = { new RunBook(), new RunBook() };
+
+        internal readonly List<StatBook.Entry> Units = new List<StatBook.Entry>();
+        internal readonly List<TowerModifier> Towers = new List<TowerModifier>();
+
+        public static RunBook Of(Team team) => Current[(int)team];
+
+        public static void Use(Team team, RunBook book)
+        {
+            Current[(int)team] = book;
+            StatBook.UseRun(team, book.Units);
+            TowerBook.UseRun(team, book.Towers);
         }
     }
 

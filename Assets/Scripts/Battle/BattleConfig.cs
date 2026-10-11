@@ -16,21 +16,18 @@ namespace GnorpWar
         [SerializeField] private int[] _floorCosts = { 8, 14, 28, 44, 64 };
         [SerializeField] private int _storageSlots = 5;
 
+        [Header("월드맵 — 런 한 판의 판도 · 영주 · 턴 규칙")]
+        [SerializeField] private WorldConfig _world;
+
         [Header("런")]
-        [SerializeField] private int _lives = 3;
-        [Tooltip("라운드가 하나 오를 때마다 양쪽 성 최대 체력에 더하는 값 — N라운드 = 성 에셋 체력 + 이 값 × (N - 1). 기물의 성 체력 보너스(+%·×)는 이 합에 붙는다")]
+        [Tooltip("턴이 하나 오를 때마다 양쪽 성 최대 체력에 더하는 값 — N턴 = 성 에셋 체력 + 이 값 × (N - 1). 기물의 성 체력 보너스(+%·×)는 이 합에 붙는다")]
         [SerializeField] private float _baseHpPerRound = 0f;
-        [Tooltip("이만큼 이기면 런 클리어")]
-        [SerializeField] private int _winsToClear = 10;
 
         [Header("상점")]
-        [Tooltip("1라운드 상점에서 받는 골드 (남은 골드는 이월)")]
+        [Tooltip("턴마다 받는 상점 골드의 바탕 — 수입 = 이 값 + 땅 수 × 땅당 골드(WorldConfig) (남은 골드는 이월)")]
         [UnityEngine.Serialization.FormerlySerializedAs("_roundGold")]
         [SuffixLabel("골드", true)]
         [SerializeField] private int _roundGoldStart = 10;
-        [Tooltip("라운드가 하나 오를 때마다 상점 골드에 더하는 값 — N라운드 = 시작 + 이 값 × (N - 1)")]
-        [SuffixLabel("골드", true)]
-        [SerializeField] private int _roundGoldPerRound = 0;
         [Tooltip("직전 전투에서 이겼으면 더 받는 골드")]
         [SuffixLabel("골드", true)]
         [SerializeField] private int _winBonus = 3;
@@ -46,38 +43,21 @@ namespace GnorpWar
         [SerializeField] private int[] _rarityPrices = { 3, 4, 5, 10, 12 };
         [Tooltip("1라운드 진열의 등급 가중치")]
         [SerializeField] private float[] _rarityWeightsFirst = { 60, 30, 10, 0, 0 };
-        [Tooltip("런 클리어 라운드(이긴 수 = Wins To Clear) 진열의 등급 가중치 — 그 사이는 라운드에 따라 섞고, 넘으면 이 값")]
+        [Tooltip("등급 단계 상한(WorldConfig)에 닿은 턴의 진열 등급 가중치 — 그 사이는 턴에 따라 섞고, 넘으면 이 값")]
         [SerializeField] private float[] _rarityWeightsLast = { 15, 25, 30, 20, 10 };
 
         [Header("등급업 — 생산 기물은 등급이 올라도 한 번에 나오는 수가 그대로고, 쿨다운이 준다(사용자 10/10)")]
         [Tooltip("생산 기물(유닛을 내는 기물)의 등급이 하나 오를 때마다 쿨다운에 곱한다 — 0.8이면 8 → 6.4 → 5.12초")]
         [SerializeField] private float _rankCooldownFactor = 0.8f;
 
-        [Header("맵 — 라운드마다 상점에 들어올 때 하나")]
-        [Tooltip("0번 = 1라운드 맵(기본). 2라운드부터는 이 목록 전체에서 같은 확률로")]
+        [Header("맵 — 전장은 침략한 땅의 지형이다(WorldMapDefinition). 이 목록은 상점의 지형과 치트의 맵 고정이 읽는다")]
+        [Tooltip("0번 = 상대를 고르기 전(상점)에 깔리는 지형(기본)")]
         [SerializeField] private MapDefinition[] _maps = new MapDefinition[0];
-
-        [Header("적")]
-        [Tooltip("적의 빌드 방향 — 런을 시작할 때 하나를 같은 확률로 뽑고, 적은 런 내내 그 방향으로 상점을 돈다(Run/EnemyShopper)")]
-        [SerializeField] private EnemyBuildProfile[] _enemyBuilds = new EnemyBuildProfile[0];
-        [Tooltip("적이 라운드마다 받는 상점 골드에 곱한다 — 1 = 플레이어와 같다(반올림)")]
-        [SerializeField] private float _enemyGoldScale = 1f;
 
         [Header("영주 색 — 유닛 그림의 한 색 · 탑 지붕 · 깃발을 그 진영 영주의 색으로 칠한다(Core/LordPaint)")]
         [Tooltip("유닛 그림에서 영주 색으로 바뀌는 색 — 아군 그림(Sprites/Units/Ally)에 칠한 파랑과 같아야 한다. 내 색이기도 하다(나는 그린 그대로)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Color _lordKeyColor = new Color32(0x81, 0xAB, 0xFF, 0xFF);
-        [Tooltip("적 영주의 색 후보 — 런을 시작할 때 하나를 같은 확률로 뽑아 그 런 내내 쓴다")]
-        [HideIf(nameof(HideNonBalance))]
-        [SerializeField] private Color[] _enemyLordColors =
-        {
-            new Color32(0xFF, 0x67, 0x67, 0xFF),
-            new Color32(0xFF, 0xA6, 0x4D, 0xFF),
-            new Color32(0xFF, 0xE1, 0x4D, 0xFF),
-            new Color32(0x6E, 0xE6, 0x6E, 0xFF),
-            new Color32(0xC5, 0x8C, 0xFF, 0xFF),
-            new Color32(0xFF, 0x8A, 0xD0, 0xFF),
-        };
 
         [Header("가속 — 전투가 끝나지 않는 것을 막는다 (공격력 · 생산 수)")]
         [Tooltip("이 시각(초)에 첫 증가")]
@@ -174,6 +154,7 @@ namespace GnorpWar
         public float CorpseLifetime => _corpseLifetime;
         public int CorpseMax => _corpseMax;
 
+        public WorldConfig World => _world;
         public int StartFloors => _startFloors;
         public int MaxFloors => _maxFloors;
         // raises = 지금까지 올린 횟수(0부터)
@@ -191,12 +172,10 @@ namespace GnorpWar
         public float BoardStopSeconds => _deathmatchSeconds + _boardGraceSeconds;
         public float StalemateSeconds => _stalemateSeconds;
         public int StorageSlots => _storageSlots;
-        public int Lives => _lives;
         // round는 0부터(RunState.Round) — 0이면 0
         public float BaseHpBonus(int round) => _baseHpPerRound * round;
-        public int WinsToClear => _winsToClear;
-        // round는 0부터(RunState.Round) — 0이면 시작값
-        public int RoundGold(int round) => _roundGoldStart + _roundGoldPerRound * round;
+        // 턴 수입의 바탕 — 땅 수와 승리 보너스는 그 위에 얹는다(RunState.Income · WorldRun.IncomeOf)
+        public int ShopGold => _roundGoldStart;
         public int WinBonus => _winBonus;
         public int RerollCost => _rerollCost;
         public float SellRatio => _sellRatio;
@@ -206,21 +185,13 @@ namespace GnorpWar
         // level = OwnedBuilding.Level(1 = 시작 등급 → 1)
         public float RankCooldownScale(int level) => Mathf.Pow(_rankCooldownFactor, level - 1);
 
-        // round는 0부터 — 0이면 First, WinsToClear - 1 이상이면 Last
+        // round는 0부터(RunState.Round = 턴 − 1) — 0이면 First, 등급 단계 상한(WorldConfig) 이상이면 Last
         public float RarityWeight(BuildingRarity rarity, int round)
-            => Mathf.Lerp(_rarityWeightsFirst[(int)rarity], _rarityWeightsLast[(int)rarity], round / (float)Mathf.Max(1, _winsToClear - 1));
-
-        // round는 0부터 — 0이면 첫 맵, 이후 무작위. 목록이 비면 null
-        public MapDefinition MapFor(int round)
-            => _maps.Length == 0 ? null : _maps[round == 0 ? 0 : Random.Range(0, _maps.Length)];
+            => Mathf.Lerp(_rarityWeightsFirst[(int)rarity], _rarityWeightsLast[(int)rarity], round / (float)Mathf.Max(1, _world.ShopTierMax));
 
         public MapDefinition[] Maps => _maps;
 
-        public EnemyBuildProfile[] EnemyBuilds => _enemyBuilds;
-        public EnemyBuildProfile RandomEnemyBuild() => _enemyBuilds[Random.Range(0, _enemyBuilds.Length)];
-        public float EnemyGoldScale => _enemyGoldScale;
         public Color LordKeyColor => _lordKeyColor;
-        public Color RandomEnemyLordColor() => _enemyLordColors[Random.Range(0, _enemyLordColors.Length)];
 
         // 전투 경과 시간까지 오른 가속 단계 수 — 시작 시각에 첫 증가, 이후 간격마다
         private int RampStepsAt(float elapsed)

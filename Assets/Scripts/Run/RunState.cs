@@ -2,62 +2,68 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 한 런(상점 → 전투 → … 목숨이 다하거나 클리어할 때까지)의 상태. 전투마다 씬을 다시 불러오므로 static으로 살아남는다.
-    // 규칙(구매·판매·리롤·자리 바꾸기)도 여기 — UI는 이 메서드만 부른다
+    // 한 런(월드맵 한 판 — 통일하거나 내 행복도가 0이 될 때까지)의 상태. 씬을 다시 불러와도 남도록 static이다.
+    // 한 턴 = 상점(EnterShop) → 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest) → 전투 결과(FinishBattle) → AI 턴·정산(EndTurn) → 다음 턴.
+    // 판도·영주·AI 영주의 탑은 World(World/WorldRun)에, 내 탑은 여기(Player)에 있다. 상점 규칙(구매·판매·리롤·자리 바꾸기)도 여기 — UI는 이 메서드만 부른다
     public static class RunState
     {
         public enum Outcome { None, Win, Lose }
+        // 씬이 뜰 때 BattleManager가 본다 — Shop이면 상점으로, Battle이면 상점 없이 바로 전투
+        public enum RunPhase { Shop, Battle }
 
-        // 상점을 도는 한 쪽의 것 — 골드·탑·보관함·진열. 플레이어와 적이 하나씩 갖고, 아래 규칙(구매·판매·리롤·층 올리기)은 지금 차례인 쪽(_side)에 걸린다.
-        // 영구 강화(StatBook·TowerBook의 "영구히")는 진영별로 거기에, 스택은 기물(OwnedBuilding)에 있다
-        private class Side
-        {
-            public Team Team;
-            public int Gold;
-            public OwnedBuilding[] Field;
-            public OwnedBuilding[] Storage;
-            public BuildingDefinition[] Offers;
-            public bool ShopLocked;
-            public int FloorRaises;
-        }
-
-        private static readonly Side Player = new Side { Team = Team.Ally };
-        private static readonly Side Enemy = new Side { Team = Team.Enemy };
-        // 지금 상점을 도는 쪽 — 적의 쇼핑(EnemyShop) 동안만 Enemy
-        private static Side _side = Player;
+        // 탑 한 채(TowerState) — 골드·탑·보관함·진열·영구 강화. 내 탑은 여기(Player)에 있고, 아래 규칙(구매·판매·리롤·층 올리기)은 지금 차례인 탑(_side)에 걸린다.
+        // 월드맵의 영주들은 저마다 탑을 따로 들고 ShopAs로 차례를 받는다(World/WorldRun)
+        private static readonly TowerState Player = new TowerState(Team.Ally);
+        // 상대를 고르기 전의 빈 탑 — 적 탑 자리와 적 진영의 영구 강화 목록을 비워 둔다
+        private static readonly TowerState NoOpponent = new TowerState(Team.Enemy);
+        // 지금 상점을 도는 탑 — ShopAs 동안만 다른 탑
+        private static TowerState _side = Player;
 
         public static bool Started { get; private set; }
         public static int Gold { get => _side.Gold; private set => _side.Gold = value; }
-        public static int Lives { get; private set; }
-        public static int Wins { get; private set; }
-        // 0부터. 전투를 하나 끝낼 때마다 +1 (이기든 지든)
+        // 내 행복도(0이 되면 게임 오버) · 내 땅 수(전부면 통일)
+        public static int Happiness => World.State.Player.Happiness;
+        public static int HappinessMax => World.State.Rules.HappinessMax;
+        public static int Lands => World.State.LandsOf(World.State.Player);
+        public static int RegionCount => World.State.Owner.Length;
+        // 턴 − 1(0부터) — 턴이 끝날 때마다 +1(쉬어도). 진열 등급 확률 · 성 체력이 읽는다
         public static int Round { get; private set; }
+        public static RunPhase Phase { get; private set; }
+        // 판도 · 영주 · AI 영주의 탑 — 런마다 새로
+        public static WorldRun World { get; private set; }
+        // 이번 턴에 침략한 영주(상점 동안은 null)와 그 영주의 탑
+        public static Lord Opponent { get; private set; }
+        private static TowerState _opponentTower;
         public static Outcome LastOutcome { get; private set; }
         public static OwnedBuilding[] Field { get => _side.Field; private set => _side.Field = value; }
         public static OwnedBuilding[] Storage { get => _side.Storage; private set => _side.Storage = value; }
         public static BuildingDefinition[] Offers { get => _side.Offers; private set => _side.Offers = value; }
         // 상점 잠금 — 잠긴 채 다음 라운드 상점에 들어오면 진열이 그대로(산 칸만 새로). 다시 누르거나 리롤하거나 새 런이면 풀린다
         public static bool ShopLocked { get => _side.ShopLocked; private set => _side.ShopLocked = value; }
-        // 이번 라운드 맵 — 상점에 들어올 때 뽑는다(1라운드 = 첫 맵, 이후 목록에서 균등 무작위). 양 진영에 똑같이
+        // 전장의 맵 — 침략한 땅의 지형(Invade). 상대를 고르기 전(상점)에는 첫 맵(기본). 양 진영에 똑같이
         public static MapDefinition Map { get; private set; }
 
         private static BattleConfig _config;
-        // 상점 골드·진열을 이미 준 라운드 — 전투 없이 씬만 다시 불러와도 두 번 주지 않게
+        // 상점 골드·진열을 이미 준 턴 — 씬만 다시 불러와도 두 번 주지 않게
         private static int _shopEnteredRound;
 
-        // 상대 — 런 내내 한 명. 런을 시작할 때 빌드 방향 하나를 뽑고, 라운드마다 같은 상점 규칙으로 그 빌드를 키운다(Run/EnemyShopper)
-        public static EnemyBuildProfile EnemyBuild { get; private set; }
-        public static OwnedBuilding[] EnemyField => Enemy.Field;
-        // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발이 이 색이다. 나는 그린 그대로(열쇠 색), 적은 런을 시작할 때 하나 뽑아 런 내내
-        private static Color _enemyLordColor;
-        public static Color LordColor(Team team) => team == Team.Ally ? _config.LordKeyColor : _enemyLordColor;
+        // 상대의 탑 — 침략한 영주가 상점에서 키운 탑. 상대를 고르기 전에는 빈 탑
+        public static OwnedBuilding[] EnemyField => (_opponentTower ?? PreviewTower ?? NoOpponent).Field;
+
+        // 상점에서 미리 보는 땅(침략 목록에서 가리키거나 고른 땅, 없으면 -1) — 오른쪽 적 탑 자리에 그 영주의 탑이, 맵 칸에 그 땅의 지형이 뜬다.
+        // 보기만 한다: 상대(Opponent) · 전장(Map) · 영주 색은 Invade로 확정할 때 정해진다
+        public static int PreviewRegion { get; private set; } = -1;
+        public static void Preview(int region) => PreviewRegion = region;
+        private static TowerState PreviewTower => PreviewRegion >= 0 ? World.TowerOf(World.State.OwnerOf(PreviewRegion)) : null;
+        public static MapDefinition PreviewMap => PreviewRegion >= 0 ? World.Map.TerrainOf(PreviewRegion) : Map;
+        // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발이 이 색이다. 나는 그린 그대로(열쇠 색), 적은 침략한 영주의 색(고르기 전에는 흰색)
+        public static Color LordColor(Team team)
+            => team == Team.Ally ? _config.LordKeyColor : Opponent != null ? World.ColorOf(Opponent) : Color.white;
         // 상점 효과(골드 훅 등)를 받는 진영 — 지금 상점을 도는 쪽
         public static Team ActingTeam => _side.Team;
-        // 적이 쇼핑을 마친 라운드 수 — 씬만 다시 불러와도 한 번 더 돌지 않게
-        private static int _enemyShoppedRounds;
 
-        public static bool IsOver => Started && (Lives <= 0 || Wins >= _config.WinsToClear);
-        public static bool Cleared => Started && Wins >= _config.WinsToClear;
+        public static bool IsOver => Started && (World.State.GameOver || World.State.Unified);
+        public static bool Cleared => Started && World.State.Unified;
 
         // 플레이 모드를 새로 켤 때(도메인 리로드를 끈 설정에서도) 지난 런이 남지 않게
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -67,7 +73,6 @@ namespace GnorpWar
             _side = Player;
             CheatMap = null;
             CheatEnemyField = null;
-            CheatEnemyBuild = null;
         }
 
         // ── 치트 훅(Dev/CheatPanel만 부른다) — 꺼 둘 때까지(null) 라운드·런이 바뀌어도 남는다
@@ -83,36 +88,42 @@ namespace GnorpWar
                 Map = map;
         }
 
-        // 라운드만 바꾼다 — 상점 골드·새 진열은 주지 않는다
-        public static void CheatSetRound(int round) => Round = _shopEnteredRound = round;
-
-        // 값을 바로 넣는다 — 골드 훅(주식시장 등) 없이. 목숨·승리 수는 런이 끝나지 않는 범위로
-        public static int EnemyGold => Enemy.Gold;
-        public static void CheatSetGold(Team team, int gold) => (team == Team.Ally ? Player : Enemy).Gold = Mathf.Max(0, gold);
-        public static void CheatSetLives(int lives) => Lives = Mathf.Max(1, lives);
-        public static void CheatSetWins(int wins) => Wins = Mathf.Clamp(wins, 0, _config.WinsToClear - 1);
-
-        // 골드 없이 층수만 — 다음 층 비용은 그대로. 줄이면 위층 기물은 사라진다
-        public static void CheatSetFloors(Team team, int floors)
+        // 턴만 바꾼다 — 상점 골드·새 진열은 주지 않는다
+        public static void CheatSetRound(int round)
         {
-            Side side = team == Team.Ally ? Player : Enemy;
+            Round = _shopEnteredRound = round;
+            World.State.Turn = round + 1;
+        }
+
+        // 값을 바로 넣는다 — 골드 훅(주식시장 등) 없이. 행복도는 런이 끝나지 않는 범위로
+        public static void CheatSetGold(int gold) => Player.Gold = Mathf.Max(0, gold);
+        public static void CheatSetHappiness(int happiness) => World.State.Player.Happiness = Mathf.Clamp(happiness, 1, HappinessMax);
+
+        // 이어진 영주 하나(땅이 가장 적은 영주)를 전투 없이 이긴 것으로 친다 — 땅 전부 + 행복도. 마지막 영주는 남긴다(통일은 전투로)
+        public static void CheatConquer()
+        {
+            WorldState state = World.State;
+            if (state.AiLords <= 1)
+                return;
+            Lord target = null;
+            foreach (int region in InvadableRegions())
+                if (target == null || state.LandsOf(state.OwnerOf(region)) < state.LandsOf(target))
+                    target = state.OwnerOf(region);
+            PreviewRegion = -1;
+            WorldTurn.Invade(state, state.Player, target, true);
+            World.Settle();
+        }
+
+        // 골드 없이 내 탑 층수만 — 다음 층 비용은 그대로. 줄이면 위층 기물은 사라진다
+        public static void CheatSetFloors(int floors)
+        {
             var resized = new OwnedBuilding[Mathf.Clamp(floors, 1, MaxFloors)];
-            System.Array.Copy(side.Field, resized, Mathf.Min(side.Field.Length, resized.Length));
-            side.Field = resized;
+            System.Array.Copy(Player.Field, resized, Mathf.Min(Player.Field.Length, resized.Length));
+            Player.Field = resized;
         }
 
         // 골드·리롤 훅 없이 진열만 새로
         public static void CheatRollOffers() => RollOffers();
-
-        // 적 빌드 방향 고정 — 런을 시작할 때 무작위로 뽑는 대신 이 방향. 런 도중에 고르면 다음 쇼핑부터
-        public static EnemyBuildProfile CheatEnemyBuild { get; private set; }
-
-        public static void CheatSetEnemyBuild(EnemyBuildProfile build)
-        {
-            CheatEnemyBuild = build;
-            if (build != null)
-                EnemyBuild = build;
-        }
 
         // 런을 처음부터 — 씬은 부른 쪽이 다시 불러온다
         public static void CheatNewRun() => StartNew(_config);
@@ -121,62 +132,146 @@ namespace GnorpWar
         {
             _config = config;
             Started = true;
-            Lives = config.Lives;
-            Wins = 0;
             Round = 0;
+            Phase = RunPhase.Shop;
             LastOutcome = Outcome.None;
-            foreach (Side side in new[] { Player, Enemy })
+            Opponent = null;
+            _opponentTower = null;
+            PreviewRegion = -1;
+            foreach (TowerState side in new[] { Player, NoOpponent })
             {
-                side.Gold = 0;
-                side.Field = new OwnedBuilding[config.StartFloors];
-                side.FloorRaises = 0;
-                side.Storage = new OwnedBuilding[config.StorageSlots];
-                side.Offers = new BuildingDefinition[config.OfferCount];
-                side.ShopLocked = false;
+                side.Reset(config);
+                RunBook.Use(side.Team, side.Book);
             }
             _shopEnteredRound = -1;
-            _enemyShoppedRounds = 0;
-            EnemyBuild = CheatEnemyBuild != null ? CheatEnemyBuild : config.RandomEnemyBuild();
-            _enemyLordColor = config.RandomEnemyLordColor();
             StatBook.ClearRun();
             TowerBook.ClearRun();
+            // 새 런 = 새 월드 — 영주가 지역마다 하나씩, 그중 무작위 한 자리가 나
+            var random = new System.Random(Random.Range(0, int.MaxValue));
+            World = new WorldRun(config.World, config, random.Next(config.World.Map.RegionCount), random);
+            Map = CheatMap != null ? CheatMap : ShopMap;
         }
 
-        // 상점 단계에 들어설 때 — 골드 지급 + 무료로 새 진열 (라운드당 한 번)
+        // 상대를 고르기 전(상점)에 깔리는 지형 — 첫 맵(기본)
+        private static MapDefinition ShopMap => _config.Maps[0];
+
+        // 이번 턴 내 수입 = 1라운드 상점 골드 + 내 땅 수 × 땅당 골드, 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 — WorldRun.IncomeOf)
+        public static int Income
+            => _config.ShopGold + Lands * _config.World.GoldPerLand + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+
+        // 상점 단계에 들어설 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 본다 (턴당 한 번)
         public static void EnterShop()
         {
-            EnemyShop();
             if (_shopEnteredRound == Round)
                 return;
             _shopEnteredRound = Round;
-            GainGold(_config.RoundGold(Round) + (LastOutcome == Outcome.Win ? _config.WinBonus : 0));
+            // 지난 턴의 상대는 여기서 내려놓는다(결과 화면까지는 그 영주의 색 · 탑이 남아 있어야 한다)
+            Opponent = null;
+            _opponentTower = null;
+            PreviewRegion = -1;
+            RunBook.Use(Team.Enemy, NoOpponent.Book);
+            World.ShopPhase();
+            GainGold(Income);
             if (ShopLocked)
                 RollOffers(onlyEmpty: true);
             else
                 RollOffers();
-            Map = CheatMap != null ? CheatMap : _config.MapFor(Round);
         }
 
-        // 적도 같은 상점을 돈다 — 같은 골드(× BattleConfig 적 골드 배율)·같은 진열 확률·같은 규칙, 라운드당 한 번.
-        // 플레이어가 상점에 있는 동안 다음 전투의 적 탑이 보이도록 상점에 들어설 때 끝내 둔다. 치트로 라운드를 건너뛰면 건너뛴 라운드까지 따라잡는다
-        private static void EnemyShop()
+        // 내 땅과 길로 이어진 남의 땅들 — 침략할 수 있는 곳
+        public static System.Collections.Generic.List<int> InvadableRegions()
         {
+            WorldState state = World.State;
+            var regions = new System.Collections.Generic.List<int>();
+            for (int region = 0; region < state.Owner.Length; region++)
+                if (state.OwnerOf(region) == state.Player)
+                    foreach (int next in state.Graph.Links[region])
+                        if (state.OwnerOf(next) != state.Player && !regions.Contains(next))
+                            regions.Add(next);
+            return regions;
+        }
+
+        // region을 침략한다 — 그 땅의 영주가 상대, 그 땅의 지형이 전장. 씬은 부른 쪽이 다시 불러온다(Phase = Battle이라 상점 없이 전투로 뜬다)
+        public static void Invade(int region)
+        {
+            Opponent = World.State.OwnerOf(region);
+            _opponentTower = World.TowerOf(Opponent);
+            RunBook.Use(Team.Enemy, _opponentTower.Book);
+            Map = CheatMap != null ? CheatMap : World.Map.TerrainOf(region);
+            Phase = RunPhase.Battle;
+            PreviewRegion = -1;
+        }
+
+        // 쉬는 턴 — 침략하지 않는다. 행복도는 그대로고 AI 턴은 돈다. 요약 글을 돌려준다(EndTurn)
+        public static string Rest()
+        {
+            LastOutcome = Outcome.None;
+            return EndTurn();
+        }
+
+        // 침략의 결과 — 이기면 상대의 땅을 전부 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn을 부른다
+        public static void FinishBattle(bool won)
+        {
+            LastOutcome = won ? Outcome.Win : Outcome.Lose;
+            WorldTurn.Invade(World.State, World.State.Player, Opponent, won);
+        }
+
+        // 턴을 닫는다 — AI 영주들의 침략 → 정산(반란 · 새 영주) → 다음 턴(상점). 이번 턴 판도에 생긴 일을 글 몇 줄로 돌려준다(결과 창이 보여 준다).
+        // 내 행복도가 0이면 게임 오버(IsOver), 내가 통일했으면 클리어(Cleared) — 그때는 턴이 넘어가지 않는다
+        public static string EndTurn()
+        {
+            WorldState state = World.State;
+            Phase = RunPhase.Shop;
+            Map = CheatMap != null ? CheatMap : ShopMap;
+            if (state.Unified || state.Player.Happiness <= 0)
+            {
+                World.Settle();
+                return "";
+            }
+            int invasions = 0, conquests = 0, before = state.Lords.Count;
+            World.AiPhase((attacker, target, won) =>
+            {
+                invasions++;
+                if (won)
+                    conquests++;
+            });
+            int rebels = 0;
+            foreach (Lord lord in state.Lords)
+                if (lord.Alive && !lord.IsPlayer && lord.Happiness <= 0)
+                    rebels++;
+            World.Settle();
+            int risen = state.Lords.Count - before, largest = 0;
+            foreach (Lord lord in state.Lords)
+                if (lord.Alive && !lord.IsPlayer)
+                    largest = Mathf.Max(largest, state.LandsOf(lord));
+            Round++;
+            state.Turn = Round + 1;
+            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 먹힌 영주 {conquests}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명 · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
+            return $"영주 {conquests}명이 다른 영주에게 먹혔습니다.\n"
+                + (rebels > 0 ? $"반란이 {rebels}번 일어나 새 영주 {risen}명이 들어섰습니다.\n" : "")
+                + $"남은 영주는 {state.AiLords}명이고, 가장 큰 영주의 땅은 {largest}개입니다.";
+        }
+
+        // 탑 한 채에 상점 한 번 — gold를 받고 새 진열에서 build 방향대로 산다(Run/EnemyShopper). 그동안 상점 규칙과 그 진영의 영구 강화는 이 탑에 걸린다.
+        // round = 진열 등급 확률을 정하는 라운드(0부터). 월드맵 영주의 턴 상점(World/WorldRun)이 쓴다
+        public static void ShopAs(TowerState tower, EnemyBuildProfile build, int gold, int round)
+        {
+            TowerState side = _side;
+            RunBook book = RunBook.Of(tower.Team);
             int now = Round;
             try
             {
-                _side = Enemy;
-                for (; _enemyShoppedRounds <= now; _enemyShoppedRounds++)
-                {
-                    Round = _enemyShoppedRounds;   // 진열 등급 확률은 그 라운드 것
-                    int bonus = Round == now && LastOutcome == Outcome.Lose ? _config.WinBonus : 0;
-                    GainGold(Mathf.RoundToInt((_config.RoundGold(Round) + bonus) * _config.EnemyGoldScale));
-                    RollOffers(onlyEmpty: ShopLocked);
-                    EnemyShopper.Shop(EnemyBuild);
-                }
+                _side = tower;
+                RunBook.Use(tower.Team, tower.Book);
+                Round = round;
+                GainGold(gold);
+                RollOffers(onlyEmpty: ShopLocked);
+                EnemyShopper.Shop(build);
             }
             finally
             {
-                _side = Player;
+                _side = side;
+                RunBook.Use(tower.Team, book);
                 Round = now;
             }
         }
@@ -204,16 +299,6 @@ namespace GnorpWar
         {
             BuildingPassive.TriggerBuyEffects(owned, _side.Team, BuildingPassive.BuyRepeats(Field));
             ForEachFieldPassive((passive, self) => passive.OnAnyBought(self, owned));
-        }
-
-        public static void FinishBattle(bool won)
-        {
-            LastOutcome = won ? Outcome.Win : Outcome.Lose;
-            if (won)
-                Wins++;
-            else
-                Lives--;
-            Round++;
         }
 
         // 이번 라운드 성 최대 체력에 더할 값(양 진영) — 런 밖이면 0
@@ -279,7 +364,7 @@ namespace GnorpWar
 
         // 진열 한 칸에서 b가 뽑힐 가중치 — 뽑기(RollOffers)와 화면의 확률(OfferChance)이 같이 쓴다
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
-            => _config.RarityWeight(b.Rarity, Round) / CountOf(pool, b.Rarity);
+            => _config.RarityWeight(b.Rarity, Mathf.Min(Round, _config.World.ShopTierMax)) / CountOf(pool, b.Rarity);
 
         // 지금 라운드에 진열 한 칸이 rarity 등급일 확률(0~1) — 풀에 없는 등급은 0
         public static float OfferChance(BuildingRarity rarity)

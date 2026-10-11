@@ -9,10 +9,9 @@ namespace GnorpWar
     // 누르면: 칸은 선택(설명·판매 버튼), 진열은 빈 칸에 구매. 적 칸은 설명만
     public class ShopPanel : MonoBehaviour
     {
-        [SerializeField] private BattleManager _battle;
         [SerializeField] private OfferCard _offerTemplate;
         [SerializeField] private float _offerStep = 250f;
-        [Tooltip("상태 줄 — 칸마다 아이콘 + 글(라운드 · 골드 · 목숨 · 승리)")]
+        [Tooltip("상태 줄 — 칸마다 아이콘 + 글(턴 · 골드 · 행복도 · 내 땅 수)")]
         [SerializeField] private Text _status;
         [SerializeField] private Text _gold;
         [SerializeField] private Text _lives;
@@ -35,7 +34,9 @@ namespace GnorpWar
         [SerializeField] private Image _mapIcon;
         [SerializeField] private Button _sell;
         [SerializeField] private Text _sellLabel;
+        [Tooltip("「침략」 — 침략 목록을 열고, 열린 채 땅을 골랐으면 그 땅으로 전투에 들어간다(InvadePanel)")]
         [SerializeField] private Button _start;
+        [SerializeField] private InvadePanel _invade;
         [Tooltip("끄는 동안 포인터를 따라다니는 그림 — 레이캐스트를 막지 않아야 아래 칸이 놓기를 받는다")]
         [SerializeField] private RectTransform _dragGhost;
         [SerializeField] private Image _dragGhostIcon;
@@ -77,7 +78,12 @@ namespace GnorpWar
             _lock.onClick.AddListener(RunState.ToggleShopLock);
             _raise.onClick.AddListener(RunState.RaiseFloor);
             _sell.onClick.AddListener(SellSelected);
-            _start.onClick.AddListener(_battle.StartBattle);
+            // 목록은 열릴 때 맨 위 형제가 된다 — 「침략」 버튼은 그 위에 남아야 닫힌 뒤에도, 열린 동안에도 눌린다
+            _start.onClick.AddListener(() =>
+            {
+                _invade.OnStartPressed();
+                _start.transform.SetAsLastSibling();
+            });
             _dragGhost.gameObject.SetActive(false);
             _sellHover = _sell.GetComponent<ButtonHover>();
         }
@@ -292,18 +298,21 @@ namespace GnorpWar
             for (int i = 0; i < _offers.Length; i++)
                 _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
 
-            _status.text = $"라운드 {RunState.Round + 1}";
+            _status.text = $"턴 {RunState.Round + 1}";
             _gold.text = $"골드 <color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>";
-            _lives.text = $"목숨 {RunState.Lives}";
-            _wins.text = $"승리 {RunState.Wins}";
+            _lives.text = $"행복도 {RunState.Happiness}/{RunState.HappinessMax}";
+            _wins.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
+            _start.interactable = _invade.CanPress;
             _reroll.interactable = RunState.CanReroll;
             _rerollLabel.text = $"리롤 {RunState.RerollCost}G";
             _chances.text = ChanceLine();
             _lockLabel.text = RunState.ShopLocked ? "잠금 해제" : "잠금";
             _raise.interactable = RunState.CanRaiseFloor;
             _raiseLabel.text = RunState.Floors < RunState.MaxFloors ? $"층 올리기 {RunState.NextFloorCost}G" : "최고층";
-            MapDefinition map = RunState.Map;
-            _map.text = map == null ? "" : map.DisplayName;
+            // 침략 목록에서 가리키거나 고른 땅이 있으면 그 땅의 지형(RunState.Preview), 없으면 지금 깔린 맵
+            MapDefinition map = RunState.PreviewMap;
+            // 고른(가리킨) 땅이 있으면 땅 번호를 같이 — 목록을 닫은 뒤에도 무엇을 골랐는지 여기서 보인다
+            _map.text = map == null ? "" : RunState.PreviewRegion >= 0 ? $"{RunState.PreviewRegion + 1:00}번 땅 · {map.DisplayName}" : map.DisplayName;
             _mapDesc.text = map == null ? "" : BuildingTooltip.Highlight(map.Description);
             // 맵 아이콘은 가운데 놓인 이름의 바로 왼쪽
             Sprite mapIcon = MapLabel.IconFor(map);

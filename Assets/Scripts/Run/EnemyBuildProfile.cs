@@ -18,6 +18,9 @@ namespace GnorpWar
 
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _displayName = "";
+        [Tooltip("이 방향의 영주가 속한 국가 · 세력 — 지금은 이름표다(민족주의 업그레이드가 국가를 읽는다)")]
+        [SerializeField] private BuildingNation _nation;
+        [SerializeField] private BuildingFaction _faction;
         [Tooltip("이 방향의 핵심 기물과 값 — 이 방향에서 쓰는 생산 기물도 여기에")]
         [BoxGroup("기물 값")]
         [SerializeField] private Pick[] _picks = new Pick[0];
@@ -45,6 +48,8 @@ namespace GnorpWar
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
         public string DisplayName => _displayName;
+        public BuildingNation Nation => _nation;
+        public BuildingFaction Faction => _faction;
         public float ProducerValue => _producerValue;
         public float ProducerShare => _producerShare;
         public float CommonValue => _commonValue;

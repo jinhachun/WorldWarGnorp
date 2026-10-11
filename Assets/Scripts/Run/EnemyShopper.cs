@@ -14,6 +14,9 @@ namespace GnorpWar
         // 싸우는 유닛을 내는 기물이 모자랄 때 생산 기물에 얹는 값 — 무엇보다 먼저 사게(탑에 유닛이 없으면 전투가 안 된다)
         private const float Urgent = 100f;
 
+        // 상점 한 번마다 남기는 로그를 끈다 — 월드맵 시뮬레이션이 영주 수십 명을 수백 판 돌릴 때(Editor/WorldSimMenu)
+        public static bool Quiet;
+
         // 이번 라운드 상점에 들어올 때 탑에 있던 기물 — 방금 산 기물을 같은 라운드에 되팔지 않게
         private static readonly List<OwnedBuilding> Held = new List<OwnedBuilding>();
 
@@ -67,7 +70,8 @@ namespace GnorpWar
             foreach (OwnedBuilding owned in RunState.Field)
                 if (!OwnedBuilding.IsEmpty(owned))
                     log.Append($" {owned.Definition.DisplayName}[{owned.Rarity.DisplayName()}]");
-            Debug.Log($"[Enemy] 라운드 {RunState.Round + 1} · {build.DisplayName} · 골드 {goldAtStart} → {RunState.Gold} ·{log}");
+            if (!Quiet)
+                Debug.Log($"[Enemy] 라운드 {RunState.Round + 1} · {build.DisplayName} · 골드 {goldAtStart} → {RunState.Gold} ·{log}");
         }
 
         // 지금 살 수 있는 진열 중 값이 가장 높은 칸(없으면 -1). saving = 원하는 기물(빌드 목록·가진 기물)이 있는데 골드가 모자라다

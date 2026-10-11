@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -21,7 +22,42 @@ namespace GnorpWar
         [Tooltip("칸 순서: 약탈자(가장 약한 이웃을 침) · 야심가(땅이 가장 많은 이웃) · 무모한 자(무작위 이웃) · 안전주의자(늘 쉰다). 합이 1이 아니어도 된다(비율로 읽는다)")]
         [SerializeField] private float[] _temperWeights = { 0.40f, 0.27f, 0.23f, 0.10f };
 
+        [Header("수입 · 상점 — 영주마다 턴에 한 번")]
+        [Tooltip("턴 수입 = 1라운드 상점 골드(BattleConfig) + 땅 수 × 이 값. 침략에 이긴 다음 턴에는 승리 보너스(BattleConfig)도 받는다")]
+        [SuffixLabel("골드", true)]
+        [SerializeField] private int _goldPerLand = 2;
+        [Tooltip("상점 등급 단계 = 턴 − 1, 이 값까지(단계 0 = 지금의 1라운드 진열 확률 · 9 = 10라운드)")]
+        [SerializeField] private int _shopTierMax = 9;
+        [Tooltip("반란 뒤 들어선 새 영주가 생기자마자 보는 상점 횟수(그 턴의 수입으로) — 탑은 시작 층수(BattleConfig)")]
+        [SerializeField] private int _newLordShops = 1;
+
+        [Header("탑 전투력 — AI끼리의 승패 주사위가 읽는다(World/TowerPower)")]
+        [Tooltip("유닛을 쿨다운마다 내지 않는 기물(강화 · 타워 · 패시브)은 쓴 골드(구매가 × 합쳐진 수) × 이 값을 전투력에 얹는다. 0 = 생산 기물만 센다")]
+        [SerializeField] private float _powerPerGold = 1f;
+
+        [Header("영주 색 — 유닛 그림의 파란 자리 · 탑 지붕 · 깃발(Core/LordPaint). 내 색(파랑)은 BattleConfig의 열쇠 색")]
+        [Tooltip("AI 영주의 색 — 영주 번호 순서로 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Color[] _lordColors = DefaultLordColors();
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
+        private bool HideNonBalance => BalanceView.HideNonBalance;
+
+        // 첫 값(임시) — 색상환에서 파랑 둘레 90도(내 색)를 비우고 고르게 나눈 28색. 이웃한 색이 헷갈리지 않게 한 칸 건너 옅게
+        private static Color[] DefaultLordColors()
+        {
+            var colors = new Color[28];
+            for (int i = 0; i < colors.Length; i++)
+                colors[i] = Color.HSVToRGB(Mathf.Repeat((265f + 270f * i / colors.Length) / 360f, 1f), i % 2 == 0 ? 0.7f : 0.4f, 1f);
+            return colors;
+        }
+
         public WorldMapDefinition Map => _map;
+        public Color LordColor(int lord) => _lordColors[lord % _lordColors.Length];
+        public int GoldPerLand => _goldPerLand;
+        public int ShopTierMax => _shopTierMax;
+        public int NewLordShops => _newLordShops;
+        public float PowerPerGold => _powerPerGold;
 
         public WorldRules ToRules() => new WorldRules
         {

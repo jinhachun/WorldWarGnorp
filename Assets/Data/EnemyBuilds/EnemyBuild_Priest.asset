@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: EnemyBuild_Priest
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
   _displayName: "\uD0B9\uB364 \uC0AC\uC81C"
+  _nation: 1
+  _faction: 1
   _picks:
   - Building: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
     Weight: 3

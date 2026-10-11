@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: EnemyBuild_Cog
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
   _displayName: "\uD2F0\uD06C\uD1A1 \uD1B1\uB2C8\uBCD1\uC0AC"
+  _nation: 2
+  _faction: 4
   _picks:
   - Building: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
     Weight: 2

@@ -16,11 +16,9 @@ MonoBehaviour:
   _maxFloors: 8
   _floorCosts: 080000000e0000001c0000002c00000040000000
   _storageSlots: 6
-  _lives: 3
+  _world: {fileID: 11400000, guid: fd5a5e7053c0d8940be6ba739a4c9675, type: 2}
   _baseHpPerRound: 100
-  _winsToClear: 10
   _roundGoldStart: 18
-  _roundGoldPerRound: 2
   _winBonus: 3
   _rerollCost: 2
   _sellRatio: 0.5
@@ -94,22 +92,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
   - {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
   - {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
-  _enemyBuilds:
-  - {fileID: 11400000, guid: d197769888f00154996ed83f4fe47a00, type: 2}
-  - {fileID: 11400000, guid: 95a73726d915f914990b8615c731f83a, type: 2}
-  - {fileID: 11400000, guid: 1b6f7ff4d8aaa124782d136d2adb8cef, type: 2}
-  - {fileID: 11400000, guid: fcd6b26dce9fc7e4997bc28a751264b5, type: 2}
-  - {fileID: 11400000, guid: 60b9b1a6080e0444780ee2acef0f04e1, type: 2}
-  - {fileID: 11400000, guid: a01b5b7ef459b69449aa28969039ae56, type: 2}
-  _enemyGoldScale: 1
   _lordKeyColor: {r: 0.5058824, g: 0.67058825, b: 1, a: 1}
-  _enemyLordColors:
-  - {r: 1, g: 0.40392157, b: 0.40392157, a: 1}
-  - {r: 1, g: 0.6509804, b: 0.3019608, a: 1}
-  - {r: 1, g: 0.88235295, b: 0.3019608, a: 1}
-  - {r: 0.43137255, g: 0.9019608, b: 0.43137255, a: 1}
-  - {r: 0.77254903, g: 0.54901963, b: 1, a: 1}
-  - {r: 1, g: 0.5411765, b: 0.8156863, a: 1}
   _rampStartSeconds: 60
   _rampStepSeconds: 10
   _rampPerStep: 0

@@ -18,9 +18,11 @@ namespace GnorpWar
         private static void ResetStatics() => Painted.Clear();
 
         // 열쇠 색이 없는 그림(무기·말)과 열쇠 색 그대로인 진영(나)은 원본을 그대로 돌려준다
-        public static Sprite Of(Sprite source, Team team)
+        public static Sprite Of(Sprite source, Team team) => Of(source, RunState.LordColor(team));
+
+        // color = 칠할 영주의 색 — 진영이 아니라 영주를 가리켜 칠할 때(목록 화면 등)
+        public static Sprite Of(Sprite source, Color color)
         {
-            Color color = RunState.LordColor(team);
             Color32 key = BattleManager.Config.LordKeyColor;
             if (source == null || Near(color, key))
                 return source;

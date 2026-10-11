@@ -42,10 +42,10 @@ namespace GnorpWar
         [SerializeField] private Text _noticeBody;
         [SerializeField] private Button _next;
         [SerializeField] private Text _nextLabel;
-        [Tooltip("런을 시작할 때 내 국가를 고르는 판 — 국가마다 버튼 하나와 그 국가의 기물 이름 글 하나(칸 순서 = RunState.NationChoices)")]
+        [Tooltip("런을 시작할 때 내 국가를 고르는 판 — 국가마다 버튼 하나와 그 버튼의 아이콘(칸 순서 = RunState.NationChoices)")]
         [SerializeField] private GameObject _nationPanel;
         [SerializeField] private Button[] _nationButtons;
-        [SerializeField] private Text[] _nationTexts;
+        [SerializeField] private Image[] _nationIcons;
 
         private Stage _stage;
         private int _selected = WorldMapView.None;
@@ -95,7 +95,7 @@ namespace GnorpWar
             }
         }
 
-        // 내 국가 고르기 — 국가 이름 버튼과 그 국가의 기물 이름들. 고르면 첫 턴이 열린다
+        // 내 국가 고르기 — 국가마다 아이콘과 이름이 든 버튼 하나. 고르면 첫 턴이 열린다
         private void ShowNations()
         {
             _stage = Stage.Choose;
@@ -105,12 +105,12 @@ namespace GnorpWar
             {
                 bool used = i < nations.Length;
                 _nationButtons[i].gameObject.SetActive(used);
-                _nationTexts[i].gameObject.SetActive(used);
                 if (!used)
                     continue;
                 BuildingNation nation = nations[i];
                 _nationButtons[i].GetComponentInChildren<Text>(true).text = nation.DisplayName();
-                _nationTexts[i].text = string.Join(" · ", RunState.BuildingsOf(nation).ConvertAll(building => building.DisplayName).ToArray());
+                _nationIcons[i].sprite = _config.World.NationIcon(nation);
+                _nationIcons[i].SetNativeSize();
                 _nationButtons[i].onClick.AddListener(() =>
                 {
                     RunState.ChooseNation(nation);

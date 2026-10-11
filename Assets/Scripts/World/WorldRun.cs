@@ -14,7 +14,7 @@ namespace GnorpWar
         private readonly WorldConfig _world;
         private readonly BattleConfig _battle;
         private readonly System.Random _random;
-        // [영주 번호] = 그 AI 영주의 탑 — 먹히거나 멸망하면 사라진다
+        // [영주 번호] = 그 AI 영주의 탑 — 땅을 다 잃거나 멸망하면 사라진다
         private readonly Dictionary<int, TowerState> _towers = new Dictionary<int, TowerState>();
 
         // 영주의 상점(RunState.ShopAs)은 런이 시작돼 있어야 돈다 — RunState.StartNew가 이것을 만든다
@@ -48,14 +48,14 @@ namespace GnorpWar
                     Shop(lord);
         }
 
-        // ③ AI 침략 — 한 번의 침략마다 report(침략한 영주, 대상, 이겼나)
-        public void AiPhase(System.Action<Lord, Lord, bool> report = null)
+        // ③ AI 침략 — 한 번의 침략마다 report(침략한 영주, 대상, 침략한 땅, 이겼나)
+        public void AiPhase(System.Action<Lord, Lord, int, bool> report = null)
         {
             foreach (Lord lord in WorldTurn.AiOrder(State, _random))
             {
-                Lord target = WorldTurn.AiInvade(State, lord, PowerOf, _random, out bool won);
+                Lord target = WorldTurn.AiInvade(State, lord, PowerOf, _random, out int region, out bool won);
                 if (target != null)
-                    report?.Invoke(lord, target, won);
+                    report?.Invoke(lord, target, region, won);
             }
         }
 
@@ -110,13 +110,14 @@ namespace GnorpWar
         }
 
         // 최후의 연합(기획 §6-1) — ④ 정산 뒤에 부른다. 뭉쳤으면 바탕 영주(탑 전투력이 가장 높은 영주)를 돌려주고 merged에 합쳐진 영주들을 담는다(아니면 null).
-        // 연합의 탑 = 바탕 영주의 탑 + 나머지 영주들의 남은 골드와 탑 · 보관함을 판 값(지금 판매 규칙 — RunState.SellValue)으로 본 상점. 상점은 합쳐진 영주 수만큼 돈다
+        // 연합의 탑 = 바탕 영주의 탑 + 나머지 영주들의 남은 골드와 탑 · 보관함을 판 값(지금 판매 규칙 — RunState.SellValue) × CoalitionGoldScale로 본 상점.
+        // 상점은 합쳐진 영주 수만큼 돈다. 이 탑이 연합전 내내 그대로다 — 땅을 잃어도 줄지 않고, 턴마다 남은 땅의 수입으로 상점을 돈다(ShopPhase)
         public Lord FormCoalition(List<Lord> merged)
         {
             Lord leader = WorldTurn.FormCoalition(State, PowerOf, merged);
             if (leader == null)
                 return null;
-            int gold = 0;
+            int gold = 0, sold = 0;
             foreach (Lord lord in merged)
             {
                 TowerState tower = _towers[lord.Id];
@@ -124,9 +125,10 @@ namespace GnorpWar
                 foreach (OwnedBuilding[] row in new[] { tower.Field, tower.Storage })
                     foreach (OwnedBuilding building in row)
                         if (!OwnedBuilding.IsEmpty(building))
-                            gold += RunState.SellValue(building);
+                            sold += RunState.SellValue(building);
                 _towers.Remove(lord.Id);
             }
+            gold += Mathf.RoundToInt(sold * _world.CoalitionGoldScale);
             // 모은 골드는 상점마다 고르게 나눠 받는다(나머지는 첫 상점에) — 못 쓴 골드는 탑에 남아 다음 상점으로 넘어간다
             for (int i = 0; i < merged.Count; i++)
                 Shop(leader, gold / merged.Count + (i == 0 ? gold % merged.Count : 0));
@@ -149,8 +151,8 @@ namespace GnorpWar
 
         private void Shop(Lord lord, int gold)
         {
-            // 등급 단계 = 턴 − 1 + 기술 연구, 상한까지
-            int tier = System.Math.Min(State.Turn - 1 + TechTiers(lord), _world.ShopTierMax);
+            // 등급 단계 = 그 턴의 단계 + 기술 연구, 상한까지
+            int tier = System.Math.Min(_world.ShopTier(State.Turn - 1) + TechTiers(lord), _world.ShopTierMax);
             // 영주가 수십 명이라 상점 한 번마다의 로그는 끈다
             bool quiet = EnemyShopper.Quiet;
             EnemyShopper.Quiet = true;

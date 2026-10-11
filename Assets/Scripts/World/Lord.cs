@@ -9,7 +9,7 @@ namespace GnorpWar
         public LordTemper Temper;
         public int Happiness;
         public bool IsPlayer;
-        // 먹혔거나 반란으로 멸망하면 false — 땅은 0
+        // 땅을 다 잃었거나 반란으로 멸망하면 false — 땅은 0
         public bool Alive = true;
         // 마지막 침략을 이겼나 — 다음 턴 수입의 승리 보너스가 읽는다
         public bool WonLastInvasion;

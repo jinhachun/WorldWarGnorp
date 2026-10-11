@@ -15,6 +15,9 @@ namespace GnorpWar
         public readonly Lord Player;
         // 최후의 연합이 뭉쳤으면 그 영주(바탕이 된 영주 — 남은 AI 영주는 이 하나뿐이다), 아니면 null
         public Lord Coalition;
+        // 연합이 뭉칠 때의 땅 수 · 내가 연합을 이긴 횟수
+        public int CoalitionStartLands;
+        public int CoalitionWins;
         // 1부터
         public int Turn = 1;
 
@@ -101,6 +104,17 @@ namespace GnorpWar
                 return count;
             }
         }
+
+        // 연합전을 한 번 이길 때 넘어오는 몫 = 뭉칠 때 땅 수 ÷ 필요한 승리 수(올림) — 땅 14개 · 세 번이면 5 · 5 · 나머지 4
+        private int CoalitionShare => Math.Max(1, (CoalitionStartLands + Rules.CoalitionWins - 1) / Math.Max(1, Rules.CoalitionWins));
+
+        // 지금 연합을 이기면 넘어오는 땅 수 — 마지막 승리면 남은 땅 전부, 남은 땅이 몫보다 적어도 전부
+        public int CoalitionTake
+            => CoalitionWins + 1 >= Rules.CoalitionWins ? LandsOf(Coalition) : Math.Min(LandsOf(Coalition), CoalitionShare);
+
+        // 연합을 다 먹기까지 남은 승리 수
+        public int CoalitionWinsLeft
+            => Math.Max(1, Math.Min(Rules.CoalitionWins - CoalitionWins, (LandsOf(Coalition) + CoalitionShare - 1) / CoalitionShare));
 
         public bool Unified => LandsOf(Player) == Owner.Length;
         public bool GameOver => !Player.Alive;

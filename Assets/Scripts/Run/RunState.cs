@@ -32,9 +32,10 @@ namespace GnorpWar
         public static RunPhase Phase { get; private set; }
         // 판도 · 영주 · AI 영주의 탑 — 런마다 새로
         public static WorldRun World { get; private set; }
-        // 이번 턴에 침략한 영주(상점 동안은 null)와 그 영주의 탑
+        // 이번 턴에 침략한 영주(상점 동안은 null)와 그 영주의 탑 · 침략한 땅
         public static Lord Opponent { get; private set; }
         private static TowerState _opponentTower;
+        private static int _invadedRegion;
         public static Outcome LastOutcome { get; private set; }
         public static OwnedBuilding[] Field { get => _side.Field; private set => _side.Field = value; }
         public static OwnedBuilding[] Storage { get => _side.Storage; private set => _side.Storage = value; }
@@ -116,10 +117,10 @@ namespace GnorpWar
             WorldState state = World.State;
             if (state.AiLords <= 1)
                 return;
-            Lord target = null;
+            int target = -1;
             foreach (int region in InvadableRegions())
-                if (target == null || state.LandsOf(state.OwnerOf(region)) < state.LandsOf(target))
-                    target = state.OwnerOf(region);
+                if (target < 0 || state.LandsOf(state.OwnerOf(region)) < state.LandsOf(state.OwnerOf(target)))
+                    target = region;
             PreviewRegion = -1;
             WorldTurn.Invade(state, state.Player, target, true);
             World.Settle();
@@ -210,6 +211,7 @@ namespace GnorpWar
         public static void Invade(int region)
         {
             Opponent = World.State.OwnerOf(region);
+            _invadedRegion = region;
             _opponentTower = World.TowerOf(Opponent);
             RunBook.Use(Team.Enemy, _opponentTower.Book);
             Map = CheatMap != null ? CheatMap : World.Map.TerrainOf(region);
@@ -228,11 +230,11 @@ namespace GnorpWar
             Phase = RunPhase.Aftermath;
         }
 
-        // 침략의 결과 — 이기면 상대의 땅을 전부 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn(AI 턴)을 부른다
+        // 침략의 결과 — 이기면 상대의 땅을 전부(연합이면 몫만큼 — 침략한 땅부터) 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn(AI 턴)을 부른다
         public static void FinishBattle(bool won)
         {
             LastOutcome = won ? Outcome.Win : Outcome.Lose;
-            WorldTurn.Invade(World.State, World.State.Player, Opponent, won);
+            WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
             Phase = RunPhase.Aftermath;
         }
 
@@ -254,12 +256,14 @@ namespace GnorpWar
                 World.Settle();
                 return events;
             }
-            int conquests = 0, before = state.Lords.Count;
-            World.AiPhase((attacker, target, won) =>
+            int moved = 0, vanished = 0, before = state.Lords.Count;
+            World.AiPhase((attacker, target, region, won) =>
             {
-                events.Add(new WorldEvent { Lord = attacker.Id, Target = target.Id, Won = won });
+                events.Add(new WorldEvent { Lord = attacker.Id, Region = region, Won = won });
                 if (won)
-                    conquests++;
+                    moved++;
+                if (!target.Alive)
+                    vanished++;
             });
             // 반란 — 정산 전에 누가 어느 땅을 들고 무너지는지 적어 두고, 정산 뒤에 그 땅의 새 영주를 읽는다
             int invasions = events.Count;
@@ -287,10 +291,11 @@ namespace GnorpWar
                     largest = Mathf.Max(largest, state.LandsOf(lord));
             Round++;
             state.Turn = Round + 1;
-            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 먹힌 영주 {conquests}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition != null ? $"(최후의 연합 — {merged.Count + 1}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
+            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 넘어간 땅 {moved}개 · 사라진 영주 {vanished}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition != null ? $"(최후의 연합 — {merged.Count + 1}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
             // 연합이 이미 뭉친 뒤의 턴에는 AI끼리 벌어지는 일이 없다
             TurnSummary = coalition == null && state.Coalition != null ? $"최후의 연합의 땅은 {largest}개입니다."
-                : $"영주 {conquests}명이 다른 영주에게 먹혔습니다.\n"
+                : $"영주들의 침략으로 땅 {moved}개의 주인이 바뀌었습니다.\n"
+                + (vanished > 0 ? $"땅을 모두 잃은 영주 {vanished}명이 사라졌습니다.\n" : "")
                 + (rebels > 0 ? $"반란이 {rebels}번 일어나 새 영주 {risen}명이 들어섰습니다.\n" : "")
                 + (coalition != null
                     ? $"남은 영주 {merged.Count + 1}명이 최후의 연합으로 뭉쳤습니다.\n최후의 연합의 땅은 {largest}개입니다."
@@ -340,16 +345,6 @@ namespace GnorpWar
                         nations.Add(b.Nation);
                 return nations.ToArray();
             }
-        }
-
-        // 그 국가의 기물(상점 풀에서) — 고르는 화면이 무엇을 쓰는 국가인지 보여 준다
-        public static System.Collections.Generic.List<BuildingDefinition> BuildingsOf(BuildingNation nation)
-        {
-            var buildings = new System.Collections.Generic.List<BuildingDefinition>();
-            foreach (BuildingDefinition b in _config.ShopPool)
-                if (b.Nation == nation)
-                    buildings.Add(b);
-            return buildings;
         }
 
         public static void ChooseNation(BuildingNation nation)
@@ -460,9 +455,9 @@ namespace GnorpWar
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
             => _config.RarityWeight(b.Rarity, ShopTier) / CountOf(pool, b.Rarity);
 
-        // 상점 등급 단계 — 내 상점은 턴 − 1 + 기술 연구(상한까지). 다른 탑의 차례(ShopAs)에는 넘겨받은 단계 그대로
+        // 상점 등급 단계 — 내 상점은 그 턴의 단계(WorldConfig.ShopTier) + 기술 연구(상한까지). 다른 탑의 차례(ShopAs)에는 넘겨받은 단계 그대로
         private static int ShopTier
-            => Mathf.Min(Round + (_side == Player ? World.TechTiers(World.State.Player) : 0), _config.World.ShopTierMax);
+            => Mathf.Min(_side == Player ? _config.World.ShopTier(Round) + World.TechTiers(World.State.Player) : Round, _config.World.ShopTierMax);
 
         // 지금 라운드에 진열 한 칸이 rarity 등급일 확률(0~1) — 풀에 없는 등급은 0
         public static float OfferChance(BuildingRarity rarity)

@@ -24,10 +24,13 @@ MonoBehaviour:
   - 0.1
   _goldPerLand: 2
   _shopTierMax: 9
+  _shopTierTurns: 14
   _newLordShops: 1
   _powerPerGold: 1
   _coalition: 1
   _coalitionLands: 15
+  _coalitionWins: 3
+  _coalitionGoldScale: 0.3
   _underdog: 1
   _underdogGoldPerLand: 1
   _underdogGoldMax: 10
@@ -60,3 +63,7 @@ MonoBehaviour:
   - {r: 0.6, g: 1, b: 0.77380955, a: 1}
   - {r: 0.3, g: 1, b: 0.71666676, a: 1}
   - {r: 0.6, g: 1, b: 0.90238106, a: 1}
+  _nationIcons:
+  - {fileID: 0}
+  - {fileID: 21300000, guid: f4eaee187eed05143a496ebf60cfa554, type: 3}
+  - {fileID: 21300000, guid: e9e8d8e66c61c6e4bba0f2b2cda2446d, type: 3}

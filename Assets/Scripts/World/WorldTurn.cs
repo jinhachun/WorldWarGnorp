@@ -56,30 +56,68 @@ namespace GnorpWar
             return best;
         }
 
-        // 침략 한 번의 결과 — 이기면 상대의 땅을 전부 가져가고 행복도가 오른다(상대는 사라진다). 지면 상대의 땅 수만큼 행복도가 떨어진다(막아 낸 쪽은 그대로).
+        // region 땅을 침략한 결과(기획 §7-2) — 상대는 그 땅의 영주다. 이기면 행복도가 오르고 땅이 넘어온다(넘어온 땅들을 돌려준다):
+        //   AI 영주가 이기면 그 땅 하나 · 내가 이기면 그 영주의 땅 전부 · 내가 연합을 이기면 몫만큼(WorldState.CoalitionTake — 침략한 땅부터 가까운 순).
+        // 땅이 0개가 된 영주는 사라진다. 지면 상대의 땅 수만큼 행복도가 떨어진다(막아 낸 쪽은 그대로) — 빈 목록.
         // 행복도가 바닥난 영주의 멸망은 여기가 아니라 Settle에서
-        public static void Invade(WorldState state, Lord attacker, Lord target, bool won)
+        public static List<int> Invade(WorldState state, Lord attacker, int region, bool won)
         {
             WorldRules rules = state.Rules;
+            Lord target = state.OwnerOf(region);
+            var taken = new List<int>();
             attacker.WonLastInvasion = won;
             if (!won)
             {
                 attacker.Happiness = Math.Max(0, attacker.Happiness - rules.LossDrop(state.LandsOf(target)));
-                return;
+                return taken;
             }
-            for (int region = 0; region < state.Owner.Length; region++)
-                if (state.Owner[region] == target.Id)
-                    state.Owner[region] = attacker.Id;
-            target.Alive = false;
+            if (!attacker.IsPlayer)
+                taken.Add(region);
+            else if (target == state.Coalition)
+            {
+                taken = Nearest(state, region, state.CoalitionTake);
+                state.CoalitionWins++;
+            }
+            else
+                taken = Nearest(state, region, state.LandsOf(target));
+            foreach (int land in taken)
+                state.Owner[land] = attacker.Id;
+            if (state.LandsOf(target) == 0)
+                target.Alive = false;
             attacker.Happiness = Math.Min(rules.HappinessMax, attacker.Happiness + rules.WinHappiness);
+            return taken;
+        }
+
+        // region의 영주가 가진 땅 중 region에서 가까운 순으로 count개 — region이 맨 앞이고, 그 영주의 땅을 따라 국경을 맞댄 땅부터 번져 간다(거리가 같으면 지도의 이웃 순서).
+        // 이어진 덩어리가 모자라면 떨어져 있는 땅을 지도에서 가까운 순으로 채운다
+        private static List<int> Nearest(WorldState state, int region, int count)
+        {
+            int owner = state.Owner[region];
+            var lands = new List<int> { region };
+            for (int i = 0; i < lands.Count; i++)
+                foreach (int next in state.Graph.Links[lands[i]])
+                    if (state.Owner[next] == owner && !lands.Contains(next))
+                        lands.Add(next);
+            var reached = new List<int> { region };
+            for (int i = 0; i < reached.Count && lands.Count < count; i++)
+                foreach (int next in state.Graph.Links[reached[i]])
+                    if (!reached.Contains(next))
+                    {
+                        reached.Add(next);
+                        if (state.Owner[next] == owner && !lands.Contains(next))
+                            lands.Add(next);
+                    }
+            if (lands.Count > count)
+                lands.RemoveRange(count, lands.Count - count);
+            return lands;
         }
 
         // ③ AI 침략 — 영주를 무작위 차례로 한 명씩. 차례가 온 영주가 그 순간의 판도에서 대상을 고르고, 주사위 한 번으로 승패.
-        // 차례가 오기 전에 먹힌 영주는 건너뛴다. 방금 땅을 먹은 영주가 같은 턴에 통째로 먹힐 수 있다
+        // 차례가 오기 전에 땅을 다 잃은 영주는 건너뛴다. 한 영주가 한 턴에 여러 영주에게 땅을 하나씩 잃을 수 있다
         public static void AiPhase(WorldState state, Func<Lord, float> power, Random random)
         {
             foreach (Lord lord in AiOrder(state, random))
-                AiInvade(state, lord, power, random, out _);
+                AiInvade(state, lord, power, random, out _, out _);
         }
 
         // 이번 턴 AI 영주들의 차례(무작위)
@@ -97,17 +135,23 @@ namespace GnorpWar
             return order;
         }
 
-        // AI 영주 한 명의 차례 — 침략했으면 그 대상(쉬었으면 null), won = 이겼나
-        public static Lord AiInvade(WorldState state, Lord lord, Func<Lord, float> power, Random random, out bool won)
+        // AI 영주 한 명의 차례 — 침략했으면 그 대상(쉬었으면 null), region = 침략한 땅(대상의 땅 중 내 땅과 국경을 맞댄 것 하나를 무작위로), won = 이겼나
+        public static Lord AiInvade(WorldState state, Lord lord, Func<Lord, float> power, Random random, out int region, out bool won)
         {
+            region = -1;
             won = false;
             if (!lord.Alive)
                 return null;
             Lord target = PickTarget(state, lord, power, random);
             if (target == null)
                 return null;
+            var border = new List<int>();
+            for (int land = 0; land < state.Owner.Length; land++)
+                if (state.Owner[land] == target.Id && Array.Exists(state.Graph.Links[land], next => state.Owner[next] == lord.Id))
+                    border.Add(land);
+            region = border[random.Next(border.Count)];
             won = random.NextDouble() < WinChance(power(lord), power(target));
-            Invade(state, lord, target, won);
+            Invade(state, lord, region, won);
             return target;
         }
 
@@ -134,7 +178,8 @@ namespace GnorpWar
 
         // 최후의 연합(기획 §6-1) — ④ 정산 끝에 부른다. 내 땅이 CoalitionLands 이상이고 AI 영주가 둘 이상 남았으면, 힘이 가장 센 영주(동점은 번호가 앞선 쪽)를
         // 바탕으로 남은 AI 영주가 전부 하나로 뭉친다: 나머지의 땅이 바탕 영주의 것이 되고 나머지는 사라진다. 바탕 영주를 돌려주고 merged에 합쳐진 영주들을 담는다.
-        // 뭉치지 않았으면 null — 런에 한 번뿐이다. 연합은 남은 AI가 하나라 침략할 대상이 없고, 그래서 행복도가 깎여 쪼개질 일도 없다
+        // 뭉치지 않았으면 null — 런에 한 번뿐이다. 연합은 남은 AI가 하나라 침략할 대상이 없고, 그래서 행복도가 깎여 쪼개질 일도 없다.
+        // 뭉칠 때의 땅 수를 적어 둔다 — 연합은 여러 번 이겨야 다 먹는다(WorldState.CoalitionTake)
         public static Lord FormCoalition(WorldState state, Func<Lord, float> power, List<Lord> merged)
         {
             WorldRules rules = state.Rules;
@@ -164,6 +209,8 @@ namespace GnorpWar
                 merged.Add(lord);
             }
             state.Coalition = leader;
+            state.CoalitionStartLands = state.LandsOf(leader);
+            state.CoalitionWins = 0;
             return leader;
         }
 

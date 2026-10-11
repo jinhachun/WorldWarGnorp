@@ -124,7 +124,8 @@ namespace GnorpWar
 
             ShowLord(_lordIcon, lord);
             int lands = state.LandsOf(lord);
-            _lordTitle.text = mine ? "내 땅" : $"{(lord == state.Coalition ? "연합" : "영주")} - 땅 {lands}개";
+            // 연합은 여러 번 이겨야 다 먹는다 — 남은 승리 수를 제목에
+            _lordTitle.text = mine ? "내 땅" : lord == state.Coalition ? $"연합 - 땅 {lands}개 · 앞으로 {state.CoalitionWinsLeft}번" : $"영주 - 땅 {lands}개";
             y = Title(_lordIcon, _lordTitle, y);
             if (!mine)
             {

@@ -26,8 +26,11 @@ namespace GnorpWar
         [Tooltip("턴 수입 = 1라운드 상점 골드(BattleConfig) + 땅 수 × 이 값. 침략에 이긴 다음 턴에는 승리 보너스(BattleConfig)도 받는다")]
         [SuffixLabel("골드", true)]
         [SerializeField] private int _goldPerLand = 2;
-        [Tooltip("상점 등급 단계 = 턴 − 1, 이 값까지(단계 0 = 지금의 1라운드 진열 확률 · 9 = 10라운드)")]
+        [Tooltip("상점 등급 단계의 상한(단계 0 = 지금의 1라운드 진열 확률 · 9 = 10라운드)")]
         [SerializeField] private int _shopTierMax = 9;
+        [Tooltip("상점 등급 단계 = (턴 − 1) × 상한 ÷ 이 값(내림) — 이 턴 수가 지나면 상한에 닿는다. 상한과 같은 값이면 턴마다 한 단계")]
+        [SuffixLabel("턴", true)]
+        [SerializeField] private int _shopTierTurns = 14;
         [Tooltip("반란 뒤 들어선 새 영주가 생기자마자 보는 상점 횟수(그 턴의 수입으로) — 탑은 시작 층수(BattleConfig)")]
         [SerializeField] private int _newLordShops = 1;
 
@@ -39,6 +42,11 @@ namespace GnorpWar
         [SerializeField] private bool _coalition = true;
         [SuffixLabel("개", true)]
         [SerializeField] private int _coalitionLands = 15;
+        [Tooltip("연합을 다 먹으려면 이겨야 하는 횟수 — 한 번 이길 때마다 뭉칠 때 땅 수 ÷ 이 값(올림)만큼 넘어오고, 마지막 승리에 남은 땅 전부")]
+        [SuffixLabel("번", true)]
+        [SerializeField] private int _coalitionWins = 3;
+        [Tooltip("연합의 탑을 합칠 때 나머지 영주의 탑 · 보관함을 판 골드에 곱하는 값 — 1이면 판 골드를 전부 쓴다(남은 골드는 그대로 넘어간다)")]
+        [SerializeField] private float _coalitionGoldScale = 0.3f;
 
         [Header("약자 보정 — AI 영주가 턴 수입에 더 받는 골드 = (가장 큰 영주의 땅 수 − 자기 땅 수) × 땅당 골드, 상한까지. 플레이어는 받지 않는다")]
         [SerializeField] private bool _underdog = true;
@@ -52,6 +60,10 @@ namespace GnorpWar
         [Tooltip("AI 영주의 색 — 영주 번호마다 11칸씩 건너뛰며 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Color[] _lordColors = DefaultLordColors();
+
+        [Tooltip("국가 아이콘 — 칸 순서 = BuildingNation(공용 · 킹덤 · 티크톡). 국가를 고르는 버튼에 쓴다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _nationIcons = new Sprite[0];
 
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
@@ -69,8 +81,12 @@ namespace GnorpWar
         // 번호가 이웃한 영주(시작 때 = 이웃한 땅)의 색이 색상환에서 멀어지게 건너뛰며 고른다 — 건너뛰는 폭은 색 수(28)와 서로소여야 전부 한 번씩 돈다
         private const int ColorStride = 11;
         public Color LordColor(int lord) => _lordColors[lord * ColorStride % _lordColors.Length];
+        public Sprite NationIcon(BuildingNation nation) => _nationIcons[(int)nation];
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;
+        // round는 0부터(턴 − 1) — 그 턴의 상점 등급 단계(기술 연구는 부르는 쪽이 얹는다)
+        public int ShopTier(int round) => Mathf.Min(round * _shopTierMax / Mathf.Max(1, _shopTierTurns), _shopTierMax);
+        public float CoalitionGoldScale => _coalitionGoldScale;
         public int NewLordShops => _newLordShops;
         public float PowerPerGold => _powerPerGold;
 
@@ -83,6 +99,7 @@ namespace GnorpWar
             TemperWeights = (float[])_temperWeights.Clone(),
             Coalition = _coalition,
             CoalitionLands = _coalitionLands,
+            CoalitionWins = _coalitionWins,
             Underdog = _underdog,
             UnderdogGoldPerLand = _underdogGoldPerLand,
             UnderdogGoldMax = _underdogGoldMax,

@@ -55,7 +55,7 @@ namespace GnorpWar.Editor
                         tower.Reset(battle);
                         for (int turn = 0; turn < turns; turn++)
                         {
-                            RunState.ShopAs(tower, build, battle.ShopGold + world.GoldPerLand, Mathf.Min(turn, world.ShopTierMax));
+                            RunState.ShopAs(tower, build, battle.ShopGold + world.GoldPerLand, world.ShopTier(turn));
                             production[turn] += TowerPower.Production(tower.Field, battle);
                             support[turn] += TowerPower.SupportGold(tower.Field, battle) * world.PowerPerGold;
                             foreach (OwnedBuilding owned in tower.Field)
@@ -89,7 +89,7 @@ namespace GnorpWar.Editor
             const int Tempers = 4, Shown = 10;
 
             var clearTurns = new List<int>();
-            int over = 0, unfinished = 0, coalitions = 0;
+            int over = 0, unfinished = 0, coalitions = 0, battles = 0, coalitionBattles = 0, coalitionOver = 0;
             float coalitionTurn = 0f, coalitionMembers = 0f, coalitionLands = 0f, coalitionFloors = 0f, coalitionRatio = 0f;
             var merged = new List<Lord>();
             var lordsAfter = new float[Shown];
@@ -183,7 +183,18 @@ namespace GnorpWar.Editor
                             foreach (Lord other in neighbors)
                                 if (biggestFirst ? state.LandsOf(other) > state.LandsOf(target) : state.LandsOf(other) < state.LandsOf(target))
                                     target = other;
-                            WorldTurn.Invade(state, state.Player, target, random.NextDouble() < playerWin);
+                            // 침략하는 땅 = 그 영주의 땅 중 내 땅과 국경을 맞댄 첫 땅
+                            int region = RegionOf(state, target);
+                            bool coalitionBattle = target == state.Coalition;
+                            bool won = random.NextDouble() < playerWin;
+                            WorldTurn.Invade(state, state.Player, region, won);
+                            battles++;
+                            if (coalitionBattle)
+                            {
+                                coalitionBattles++;
+                                if (state.Player.Happiness <= 0)
+                                    coalitionOver++;
+                            }
                         }
                         if (state.Player.Happiness <= 0)
                         {
@@ -198,7 +209,7 @@ namespace GnorpWar.Editor
                             break;
                         }
 
-                        run.AiPhase((attacker, target, won) =>
+                        run.AiPhase((attacker, target, region, won) =>
                         {
                             buildAttacks[attacker.Build]++;
                             temperAttacks[(int)attacker.Temper]++;
@@ -271,7 +282,7 @@ namespace GnorpWar.Editor
             text.Append(clearTurns.Count == 0
                 ? "통일 0판\n"
                 : $"통일 {clearTurns.Count}판 — 턴 평균 {average / clearTurns.Count:0.0} · 최소 {clearTurns[0]} · 10% {clearTurns[(int)(clearTurns.Count * 0.1f)]} · 90% {clearTurns[Mathf.Min(clearTurns.Count - 1, (int)(clearTurns.Count * 0.9f))]} · 최대 {clearTurns[clearTurns.Count - 1]}\n");
-            text.Append($"게임 오버 {over}판({over * 100f / runs:0.#}%) · 미종료 {unfinished}판\n");
+            text.Append($"게임 오버 {over}판({over * 100f / runs:0.#}%, 그중 연합전 {coalitionOver}판) · 미종료 {unfinished}판 · 내 전투 판당 {battles / (float)runs:0.0}번(연합전 {coalitionBattles / (float)runs:0.0}번)\n");
             text.Append(coalitions == 0
                 ? "최후의 연합 0판\n"
                 : $"최후의 연합 {coalitions}판({coalitions * 100f / runs:0.#}%) — 뭉친 턴 평균 {coalitionTurn / coalitions:0.0} · 영주 {coalitionMembers / coalitions:0.0}명 · 땅 {coalitionLands / coalitions:0.0}개 · 탑 {coalitionFloors / coalitions:0.0}층 · 전투력 = 뭉치기 직전 가장 센 영주의 ×{coalitionRatio / coalitions:0.00}\n");
@@ -298,6 +309,17 @@ namespace GnorpWar.Editor
             for (int i = 0; i < Tempers; i++)
                 text.Append($"{temperNames[i]} | {temperStart[i]} · {Percent(temperAlive3[i], temperStart[i])} · {Percent(temperAlive5[i], temperStart[i])} · {Percent(temperWins[i], temperAttacks[i])}({temperWins[i]}/{temperAttacks[i]})\n");
             return text.ToString();
+        }
+
+        // target의 땅 중 플레이어의 땅과 국경을 맞댄 첫 땅
+        private static int RegionOf(WorldState state, Lord target)
+        {
+            for (int region = 0; region < state.Owner.Length; region++)
+                if (state.OwnerOf(region) == target)
+                    foreach (int next in state.Graph.Links[region])
+                        if (state.OwnerOf(next) == state.Player)
+                            return region;
+            return -1;
         }
 
         private static string Percent(int part, int whole) => whole > 0 ? $"{part * 100f / whole:0}%" : "-";

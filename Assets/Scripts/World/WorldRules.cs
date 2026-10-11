@@ -15,6 +15,8 @@ namespace GnorpWar
         // 최후의 연합 — 내 땅이 이 수 이상이면 남은 AI 영주들이 하나로 뭉친다(WorldTurn.FormCoalition)
         public bool Coalition = true;
         public int CoalitionLands = 15;
+        // 연합을 다 먹으려면 이겨야 하는 횟수 — 한 번 이길 때마다 뭉칠 때 땅 수 ÷ 이 값(올림)만큼 넘어오고, 마지막 승리에 남은 땅 전부
+        public int CoalitionWins = 3;
         // 약자 보정 — AI 영주가 턴마다 더 받는 골드 = (가장 큰 영주의 땅 수 − 자기 땅 수) × PerLand, Max까지(WorldTurn.UnderdogGold)
         public bool Underdog = true;
         public int UnderdogGoldPerLand = 1;

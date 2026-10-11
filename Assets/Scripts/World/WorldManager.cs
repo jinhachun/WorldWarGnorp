@@ -36,8 +36,7 @@ namespace GnorpWar
         [SerializeField] private Text _invadeLabel;
         [SerializeField] private Button _rest;
         [SerializeField] private Button _shop;
-        [SerializeField] private Text _shopLabel;
-        [Tooltip("상점 팝업(UI/ShopPanel) — 지도 영역을 덮는다. 세 번째 버튼과 판 안의 「지도로」로 여닫는다")]
+        [Tooltip("상점 팝업(UI/ShopPanel) — 지도 영역을 덮는다. 세 번째 버튼(「상점」)으로 열고 판 안의 큰 「지도로」로 닫는다")]
         [SerializeField] private ShopPanel _shopPopup;
         [Tooltip("AI 턴을 재생하는 동안 화면 전체를 덮는 투명한 판 — 누르면 재생을 건너뛴다")]
         [SerializeField] private Button _skip;
@@ -171,14 +170,14 @@ namespace GnorpWar
             SceneManager.LoadScene(BattleSceneName);
         }
 
-        // 왼쪽 아래 세 번째 버튼 — 상점 팝업을 여닫는다
+        // 왼쪽 아래 세 번째 버튼(「상점」) — 닫혀 있는 상점 팝업을 다시 연다
         private void Shop()
         {
             if (_stage == Stage.Command)
-                SetShop(!_shopOpen);
+                SetShop(true);
         }
 
-        // 상점 팝업 — 지도 영역을 덮는다. 열린 동안에는 지도를 누를 수 없고 「침략」 · 「쉬기」가 숨는다.
+        // 상점 팝업 — 지도 영역을 덮는다. 열린 동안에는 지도를 누를 수 없고 왼쪽 아래 명령 버튼이 숨는다.
         // 위에서 내려오고 위로 올라간다(SlideShop) — 다 올라간 뒤에 꺼진다
         private void SetShop(bool open)
         {
@@ -323,14 +322,13 @@ namespace GnorpWar
             _panel.Show(_selected, command, _shopOpen);
             if (!command && _shopOpen)
                 SetShop(false);
-            // 상점이 열린 동안에는 「침략」 · 「쉬기」를 숨긴다 — 상점을 닫아야 지도에서 고른다(세 번째 버튼은 제자리)
+            // 상점이 열린 동안에는 명령 버튼 셋을 다 숨긴다 — 닫는 길은 팝업 안의 큰 「지도로」 하나(사용자 10/11), 닫아야 지도에서 고른다
             foreach (Button button in new[] { _invade, _rest, _shop })
             {
-                bool shown = command && (button == _shop || !_shopOpen);
+                bool shown = command && !_shopOpen;
                 if (button.gameObject.activeSelf != shown)
                     button.gameObject.SetActive(shown);
             }
-            _shopLabel.text = _shopOpen ? "지도로" : "상점";
             _invade.interactable = command && invadable.Contains(_selected);
             _invadeLabel.color = _invade.interactable ? Color.white : DisabledText;
             _panel.ShowStatus(_topBar, _turn);

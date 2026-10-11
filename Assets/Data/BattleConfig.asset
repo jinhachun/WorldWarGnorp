@@ -79,11 +79,11 @@ MonoBehaviour:
   - 0
   - 0
   _rarityWeightsLast:
-  - 15
+  - 27
   - 25
   - 30
-  - 20
-  - 10
+  - 12
+  - 6
   _rankCooldownFactor: 0.8
   _maps:
   - {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}

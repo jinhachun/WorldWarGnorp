@@ -97,3 +97,4 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 - Canvas: `TopBar`(턴 · 골드 · 행복도 · 땅) · `SidePanel`(내 영지 요약 · 고른 땅·영주 · 영주 탑 · 「침략」「쉬기」「상점」 · 요약/통일/게임 오버 글) · `Map`(영토 지도 — `UI/WorldMapView`가 땅 번호 텍스처를 칠한다) · `SkipReplay` · `BuildingTooltip`.
 - Battle 씬에서 달라진 것: 상점의 시작 버튼 = 「지도로」, 결과 버튼 = 「지도로」, `ShopPanel/InvadePanel`은 없다.
 - **상점도 같은 틀(10/11)**: Battle 씬 `ShopPanel` 아래에 `LineSide` · `LineTop` · `TopBar` · `SidePanel`(지도와 같은 `WorldSidePanel`, 탑 기둥 없음) · `MapButton`(「지도로」). 상점 판이 켜진 동안 본진 체력바 둘과 상대 UI 탑은 꺼진다(`ShopPanel._hiddenInShop`). 옛 `StatusLine` · `MapBox`류 · `StartButton`은 없다.
+- **상점 = 지도 위 팝업(10/11 — 바로 위 「상점도 같은 틀」 줄을 대체)**: World 씬 Canvas의 `ShopSlot/ShopPopup`(프리팹 `Assets/Prefabs/UI/ShopPopup`)과 위 줄 뒤의 검은 띠 `TopBack`. Battle 씬에는 `ShopPanel`이 없고, 꺼진 `Templates/UpgradeCountTemplate`(체력바 아래 업그레이드 줄의 글자 틀)이 있다.

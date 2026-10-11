@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -6,6 +7,7 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/First Hit Invulnerable")]
     public class FirstHitInvulnerableEffect : UnitEffect
     {
+        [SuffixLabel("초", true)]
         [SerializeField] private float _seconds = 3f;
 
         public override bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks)

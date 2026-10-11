@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -6,8 +7,10 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Haste On Heal")]
     public class HasteOnHealEffect : UnitEffect
     {
+        [SuffixLabel("초", true)]
         [SerializeField] private float _seconds = 0.5f;
         [Tooltip("등급이 오를 때마다 더한다")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _secondsPerTier = 0.5f;
 
         private float Seconds(int level) => OwnedBuilding.Scaled(_seconds, _secondsPerTier, level);

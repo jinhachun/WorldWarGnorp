@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -6,6 +7,7 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/First Death Delay")]
     public class FirstDeathDelayEffect : UnitEffect
     {
+        [SuffixLabel("초", true)]
         [SerializeField] private float _seconds = 3f;
 
         public override float FirstDeathDelay => _seconds;

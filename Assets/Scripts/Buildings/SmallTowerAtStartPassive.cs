@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -8,13 +9,19 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Small Tower At Start")]
     public class SmallTowerAtStartPassive : BuildingPassive
     {
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Base _towerPrefab;
         [Tooltip("양 본진의 중간에서 내 쪽으로 물러난 거리")]
+        [SuffixLabel("칸", true)]
         [SerializeField] private float _offset = 1.5f;
         [Tooltip("내 작은 타워끼리 띄우는 거리")]
+        [SuffixLabel("칸", true)]
         [SerializeField] private float _spacing = 2.5f;
         [Tooltip("등급이 오를 때마다 이 작은 타워의 사거리에 더한다(합연산 — 0.05 = +5%). 시작 등급은 0")]
         [SerializeField] private float _rangePerTier;
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
+        private bool HideNonBalance => BalanceView.HideNonBalance;
 
         private TowerModifier Range(int level) => new TowerModifier(TowerStat.Range, StatOp.Percent, OwnedBuilding.Scaled(0f, _rangePerTier, level));
 

@@ -4,20 +4,14 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 상점 단계 화면 — 지도 씬과 같은 틀(사용자 10/11): 왼쪽 패널(내 영지 요약 · 지도에서 고른 땅과 영주 — 지도와 같은 UI/WorldSidePanel · 맨 아래 「지도로」)
-    // + 위 줄(턴 · 골드 · 행복도 · 땅) + 큰 영역(내 탑 · 진열 · 보관함 · 거래 버튼). 상대의 탑은 여기서 보이지 않는다(지도 패널에서 본다).
+    // 상점 — 지도 씬에서 지도 영역을 덮는 팝업(사용자 10/11 · 여닫기는 WorldManager): 내 탑 · 진열 · 보관함 · 거래 버튼 · 큰 「지도로」.
+    // 왼쪽 패널과 위 줄은 지도의 것이 그대로 보인다. 상대의 탑은 여기서 보이지 않는다(지도 패널에서 본다).
     // 끌어서 옮긴다: 칸 → 칸(빈 칸이면 이동, 차 있으면 맞바꿈) · 진열 → 칸(그 칸에 구매) · 칸 → 판매 버튼(판매).
     // 누르면: 칸은 선택(설명·판매 버튼), 진열은 빈 칸에 구매
     public class ShopPanel : MonoBehaviour
     {
         [SerializeField] private OfferCard _offerTemplate;
         [SerializeField] private float _offerStep = 250f;
-        [Tooltip("왼쪽 패널 — 지도 씬의 패널과 같은 것(탑 기둥 없이)")]
-        [SerializeField] private WorldSidePanel _sidePanel;
-        [Tooltip("위 줄 — 턴 · 골드 · 행복도 · 땅(지도 씬과 같은 글)")]
-        [SerializeField] private Text _topBar;
-        [Tooltip("상점 동안 숨기는 전투 화면 요소 — 본진 체력바 · 상대 UI 탑")]
-        [SerializeField] private GameObject[] _hiddenInShop = new GameObject[0];
         [SerializeField] private Button _reroll;
         [SerializeField] private Text _rerollLabel;
         [Tooltip("지금 라운드의 진열 등급 확률(RunState.OfferChance) — 등급 색 숫자 다섯 개(일반 · 고급 · 희귀 · 영웅 · 전설 순)")]
@@ -40,6 +34,9 @@ namespace GnorpWar
         [SerializeField] private Image _dragGhostWindow;
         [Tooltip("끄는 동안 탑 층 경계에 뜨는 끼워 넣기 선(가운데 기준) — 레이캐스트를 막지 않아야 한다")]
         [SerializeField] private RectTransform _insertLine;
+
+        // 「지도로」를 눌렀다 — 상점을 닫는 일은 이 판을 띄운 쪽이 한다
+        public event System.Action MapRequested;
 
         private OfferCard[] _offers;
         private ButtonHover _sellHover;
@@ -73,22 +70,13 @@ namespace GnorpWar
             _lock.onClick.AddListener(RunState.ToggleShopLock);
             _raise.onClick.AddListener(RunState.RaiseFloor);
             _sell.onClick.AddListener(SellSelected);
-            _start.onClick.AddListener(BattleManager.ToMap);
+            _start.onClick.AddListener(() => MapRequested?.Invoke());
             _dragGhost.gameObject.SetActive(false);
             _sellHover = _sell.GetComponent<ButtonHover>();
         }
 
-        private void OnEnable()
-        {
-            foreach (GameObject hidden in _hiddenInShop)
-                hidden.SetActive(false);
-        }
-
         private void OnDisable()
         {
-            foreach (GameObject hidden in _hiddenInShop)
-                if (hidden != null)
-                    hidden.SetActive(true);
             _hasSelection = false;
             _dragging = false;
             if (_dragGhost != null)
@@ -297,8 +285,6 @@ namespace GnorpWar
             for (int i = 0; i < _offers.Length; i++)
                 _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
 
-            _sidePanel.ShowStatus(_topBar, RunState.Round + 1);
-            _sidePanel.Show(RunState.PreviewRegion, true);
             _reroll.interactable = RunState.CanReroll;
             _rerollLabel.text = $"리롤 {RunState.RerollCost}G";
             _chances.text = ChanceLine();

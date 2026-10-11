@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 전투 씬 — 상점과 전투. 지도 씬(World/WorldManager)에서 「상점」으로 오면 상점이 뜨고(「지도로」로 돌아간다), 「침략」으로 오면 상점 없이 바로 전투다.
+    // 전투 씬 — 전투만. 지도 씬(World/WorldManager)에서 「침략」으로 오면 바로 전투다(상점은 지도 씬의 팝업 — UI/ShopPanel).
     // 어느 기지든 무너지면 결과 → 「지도로」(AI 영주들의 턴은 지도에서 돈다). 런 상태(골드·보드·판도)는 RunState(static)에 있어 씬을 오가도 남는다
     public class BattleManager : MonoBehaviour
     {
@@ -15,7 +15,6 @@ namespace GnorpWar
         [SerializeField] private Base _enemyBase;
         [SerializeField] private BoardRunner _allyBoard;
         [SerializeField] private BoardRunner _enemyBoard;
-        [SerializeField] private GameObject _shopPanel;
         [SerializeField] private GameObject _resultPanel;
         [SerializeField] private Text _resultText;
         [SerializeField] private Button _retryButton;
@@ -64,9 +63,7 @@ namespace GnorpWar
         // 전투력 계수(CombatPower가 읽는다) — 전투 씬 밖이면 null
         public static BattleConfig Config => _instance != null ? _instance._config : null;
 
-        // ── 치트 훅(Dev/CheatPanel만 부른다) — 상점 단계인가 · 전투 경과 시간을 이 초로 · 전투를 바로 끝낸다
-        public static bool InShop => _instance != null && !_instance._fighting && !_instance._over;
-
+        // ── 치트 훅(Dev/CheatPanel만 부른다) — 전투 경과 시간을 이 초로 · 전투를 바로 끝낸다
         public static void CheatSkipTo(float elapsed)
         {
             if (Fighting)
@@ -84,27 +81,16 @@ namespace GnorpWar
             _instance = this;
             // 결과 화면에서 멈춘 채 다음 라운드로 들어왔을 수 있다
             Time.timeScale = 1f;
-            // 지난 전투의 "전투 동안" 타워 효과(사거리 등)가 남아 있으면 상점에서 본진이 적 본진을 쏜다 — 타워는 상점에서도 돈다
+            // 지난 전투의 "전투 동안" 타워 효과(사거리 등)가 남아 있지 않게
             TowerBook.ClearBattle();
             if (!RunState.Started || RunState.IsOver)
-            {
                 RunState.StartNew(_config);
-                // 이 씬만 직접 플레이하면 국가를 고르는 화면(지도 씬)이 없다 — 무작위로 정한다
-                BuildingNation[] nations = RunState.NationChoices;
-                RunState.ChooseNation(nations[Random.Range(0, nations.Length)]);
-            }
-            // 지도에서 「침략」으로 온 씬(Phase = Battle)은 상점 없이 바로 전투다 — 땅(Ground) · 적 탑 · 영주 색이 이미 그 땅 · 그 영주 것으로 뜬다
+            // 이 씬은 지도에서 「침략」으로만 온다(Phase = Battle) — 땅(Ground) · 적 탑 · 영주 색이 이미 그 땅 · 그 영주 것으로 뜬다.
+            // 이 씬만 직접 플레이했으면 싸울 상대가 없다 — 지도 씬으로 넘긴다(국가 고르기 · 상점 · 침략은 거기서)
             bool battle = RunState.Phase == RunState.RunPhase.Battle;
-            // 그 밖에는 상점으로 뜬다 — 지도에서 「상점」으로 왔거나, 이 씬만 직접 플레이했다(그때는 런을 시작하고 턴을 여기서 연다 — 「지도로」를 누르면 지도 씬으로 이어진다)
-            if (!battle)
-            {
-                RunState.BeginTurn();
-                RunState.OpenShop();
-            }
 
             _allyBoard.Load(RunState.Field);
             _enemyBoard.Load(RunState.CheatEnemyField ?? RunState.EnemyField);
-            _shopPanel.SetActive(!battle);
             _resultPanel.SetActive(false);
             _speedButton.SetActive(false);
             _allyBase.Destroyed += OnBaseDestroyed;
@@ -112,6 +98,8 @@ namespace GnorpWar
             _retryButton.onClick.AddListener(ToMap);
             if (battle)
                 StartCoroutine(BeginNextFrame());
+            else
+                SceneManager.LoadScene(WorldManager.SceneName);
         }
 
         // 다른 오브젝트들의 Start(탑이 보드에 붙는 것 등)가 끝난 뒤에 전투를 연다
@@ -130,7 +118,6 @@ namespace GnorpWar
         // 전투를 연다 — 전투 씬이 뜬 다음 프레임(BeginNextFrame)
         private void StartBattle()
         {
-            _shopPanel.SetActive(false);
             _allyBoard.Load(RunState.Field);
             TeamEffects.Clear();
             StatBook.ClearBattle();
@@ -161,9 +148,6 @@ namespace GnorpWar
         // 그 밖에 끝나지 않는 판(양쪽 다 공격 못 하는 유닛만 · 땅에 걸린 유닛)은 교착 판정이 끝낸다
         private void Update()
         {
-            // 상점에서 층을 올리면 RunState.Field가 새 배열이 된다 — 아군 보드(탑 그림이 읽는다)를 다시 올린다
-            if (!_fighting && _allyBoard.Field != RunState.Field)
-                _allyBoard.Load(RunState.Field);
             if (!BoardsStopped || _over)
                 return;
             int allies = 0, enemies = 0, allyAttackers = 0, enemyAttackers = 0;
@@ -238,12 +222,9 @@ namespace GnorpWar
             Time.timeScale = 0f;
         }
 
-        // 지도 씬으로 — 상점의 「지도로」(UI/ShopPanel) · 결과 창의 「지도로」
+        // 지도 씬으로 — 결과 창의 「지도로」. 전투가 끝났으므로(Aftermath) 지도가 AI 턴을 돌린다
         public static void ToMap()
         {
-            // 전투가 끝난 뒤(Aftermath)면 지도가 AI 턴을 돌린다 — 상점에서 돌아가는 길이면 지도 단계로 놓는다
-            if (RunState.Phase == RunState.RunPhase.Shop)
-                RunState.OpenMap();
             SceneManager.LoadScene(WorldManager.SceneName);
         }
     }

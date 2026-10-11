@@ -3,14 +3,14 @@ using UnityEngine;
 namespace GnorpWar
 {
     // 한 런(월드맵 한 판 — 통일하거나 내 행복도가 0이 될 때까지)의 상태. 씬을 다시 불러와도 남도록 static이다.
-    // 한 턴 = 턴 시작(BeginTurn — AI 영주들의 상점 · 내 수입) → 지도와 상점을 오가며(OpenMap · OpenShop) 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest)
+    // 한 턴 = 턴 시작(BeginTurn — AI 영주들의 상점 · 내 수입) → 지도에서 상점 팝업을 여닫으며 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest)
     // → 전투 결과(FinishBattle) → AI 턴·정산(EndTurn) → 다음 턴.
     // 판도·영주·AI 영주의 탑은 World(World/WorldRun)에, 내 탑은 여기(Player)에 있다. 상점 규칙(구매·판매·리롤·자리 바꾸기)도 여기 — UI는 이 메서드만 부른다
     public static class RunState
     {
         public enum Outcome { None, Win, Lose }
-        // 씬이 뜰 때 그 씬의 매니저가 본다 — Map 지도 · Shop 상점 · Battle 상점 없이 바로 전투 · Aftermath 내 차례가 끝나 AI 턴(EndTurn)을 돌릴 차례
-        public enum RunPhase { Map, Shop, Battle, Aftermath }
+        // 씬이 뜰 때 그 씬의 매니저가 본다 — Map 지도(상점은 지도 위 팝업) · Battle 전투 · Aftermath 내 차례가 끝나 AI 턴(EndTurn)을 돌릴 차례
+        public enum RunPhase { Map, Battle, Aftermath }
 
         // 탑 한 채(TowerState) — 골드·탑·보관함·진열·영구 강화. 내 탑은 여기(Player)에 있고, 아래 규칙(구매·판매·리롤·층 올리기)은 지금 차례인 탑(_side)에 걸린다.
         // 월드맵의 영주들은 저마다 탑을 따로 들고 ShopAs로 차례를 받는다(World/WorldRun)
@@ -46,8 +46,12 @@ namespace GnorpWar
         public static MapDefinition Map { get; private set; }
 
         private static BattleConfig _config;
+        // 런의 설정 — 런을 한 번도 시작하지 않았으면 null. 전투 씬 밖(지도)에서도 읽는다
+        public static BattleConfig Config => _config;
         // 상점 골드·진열을 이미 준 턴 — 씬만 다시 불러와도 두 번 주지 않게
         private static int _shopEnteredRound;
+        // 상점 팝업이 저절로 내려온 턴 — 턴마다 한 번만(씬만 다시 불러와도 또 내려오지 않게)
+        private static int _shopCueRound;
 
         // 상대의 탑 — 침략한 영주가 상점에서 키운 탑. 상대를 고르기 전에는 빈 탑
         public static OwnedBuilding[] EnemyField => (_opponentTower ?? PreviewTower ?? NoOpponent).Field;
@@ -103,7 +107,7 @@ namespace GnorpWar
         // 턴만 바꾼다 — 상점 골드·새 진열은 주지 않는다
         public static void CheatSetRound(int round)
         {
-            Round = _shopEnteredRound = round;
+            Round = _shopEnteredRound = _shopCueRound = round;
             World.State.Turn = round + 1;
         }
 
@@ -155,7 +159,7 @@ namespace GnorpWar
                 side.Reset(config);
                 RunBook.Use(side.Team, side.Book);
             }
-            _shopEnteredRound = -1;
+            _shopEnteredRound = _shopCueRound = -1;
             StatBook.ClearRun();
             TowerBook.ClearRun();
             // 새 런 = 새 월드 — 영주가 지역마다 하나씩, 그중 무작위 한 자리가 나
@@ -194,6 +198,15 @@ namespace GnorpWar
                 RollOffers();
         }
 
+        // 이번 턴에 상점 팝업을 저절로 내릴 차례인가 — 턴마다 처음 한 번만 true(지도 씬이 턴을 열 때 묻는다)
+        public static bool TakeShopCue()
+        {
+            if (_shopCueRound == Round)
+                return false;
+            _shopCueRound = Round;
+            return true;
+        }
+
         // 내 땅과 길로 이어진 남의 땅들 — 침략할 수 있는 곳
         public static System.Collections.Generic.List<int> InvadableRegions()
         {
@@ -218,10 +231,6 @@ namespace GnorpWar
             Phase = RunPhase.Battle;
             PreviewRegion = -1;
         }
-
-        // 상점 화면으로 들어간다 · 지도 화면으로 들어간다 — 씬을 불러오는 쪽이 그 전에 부른다
-        public static void OpenShop() => Phase = RunPhase.Shop;
-        public static void OpenMap() => Phase = RunPhase.Map;
 
         // 쉬는 턴 — 침략하지 않는다. 행복도는 그대로다. 이어서 EndTurn(AI 턴)을 부른다
         public static void Rest()

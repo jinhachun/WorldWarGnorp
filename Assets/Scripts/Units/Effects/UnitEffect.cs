@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -12,7 +13,11 @@ namespace GnorpWar
         [Tooltip("이 유닛에게(기획서가 유닛 이름을 지칭할 때) — 병종 칸과 함께 비우면 전부")]
         [SerializeField] private UnitDefinition[] _units = new UnitDefinition[0];
         [TextArea]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _description = "";
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다(하위 효과의 표시용 글 칸도 읽는다)
+        protected bool HideNonBalance => BalanceView.HideNonBalance;
 
         public string Description => _description;
         // 툴팁 글 — 등급으로 크는 효과는 설명의 {0}에 지금 등급 값을 넣는다

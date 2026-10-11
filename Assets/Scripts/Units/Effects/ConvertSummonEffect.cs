@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -15,6 +16,7 @@ namespace GnorpWar
         [SerializeField] private float _perTier;
         [Tooltip("스탯이 걸리는 등급의 설명 — {0}에 스탯 표기(체력 +10%)")]
         [TextArea]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _modifierDescription = "";
 
         public override UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks)

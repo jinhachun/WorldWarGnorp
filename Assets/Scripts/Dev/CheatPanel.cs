@@ -9,7 +9,7 @@ namespace GnorpWar
 {
     // 테스트용 치트 패널 — F1로 여닫는다. 씬에 두지 않는다(게임이 켜질 때 스스로 생긴다 — 에디터 플레이·빌드 둘 다).
     // IMGUI는 그리기만 하고 클릭·글자 입력은 Input System으로 직접 읽는다 — 입력 설정이 Input System 전용이라 빌드에서는 OnGUI에 입력 이벤트가 오지 않는다.
-    // 분류 탭(기물 · 값 · 전투 · 런) 하나만 보인다. 지금 단계(상점·전투)에서 못 쓰는 것은 흐리게.
+    // 분류 탭(기물 · 값 · 전투 · 런) 하나만 보인다. 지금 단계(지도·전투)에서 못 쓰는 것은 흐리게.
     // 기물 넣기는 칸에 바로 놓는다(「구매할 때마다,」·합치기 없음). 게임 쪽 훅은 RunState·BattleManager·Base의 Cheat* 뿐 — 에셋 값은 바꾸지 않는다
     public class CheatPanel : MonoBehaviour
     {
@@ -76,7 +76,8 @@ namespace GnorpWar
         // 화면 높이 800칸 기준으로 키운다 — 패널이 어느 해상도에서도 다 들어오게
         private static float Scale => Screen.height / 800f;
 
-        private static bool Shop => BattleManager.InShop;
+        // 기물 · 런을 고칠 수 있는 때 — 지도에서 명령을 받는 중(상점 팝업이 열려 있어도)
+        private static bool Shop => WorldManager.Commanding;
         private static bool Fight => BattleManager.Fighting;
 
         // 패널 뒤의 게임 UI가 눌리지 않게 — 패널 크기의 투명한 판을 맨 위 캔버스에 둔다. 클릭 · 호버 · 카메라 끌기를 EventSystem이 평소대로 막는다
@@ -197,22 +198,7 @@ namespace GnorpWar
                 Label("치트 (F1) — 지도에서 명령을 받는 중이거나 전투 씬일 때만 쓴다");
                 return;
             }
-            // 지도 씬 — 판도 치트만(기물 · 전투 수치는 전투 씬에서)
-            if (BattleManager.Config == null)
-            {
-                Label($"치트 (F1 닫기) · 턴 {RunState.Round + 1} · 지도 · 골드 {RunState.Gold}", Lit);
-                Label($"판도 — 내 땅 {RunState.Lands}/{RunState.RegionCount} · 행복도 {RunState.Happiness}/{RunState.HappinessMax} · 남은 영주 {RunState.World.State.AiLords}명", Dim);
-                if (Button("이웃 영주 먹기", 150f)) RunState.CheatConquer();
-                Text("땅이 가장 적은 이웃 영주를 전투 없이 이긴 것으로 친다", 460f, Dim);
-                NewLine();
-                if (Button("새 런 시작", 150f))
-                {
-                    RunState.CheatNewRun();
-                    Reload();
-                }
-                return;
-            }
-            string phase = Fight ? $"전투 {BattleManager.Elapsed:0}초" : Shop ? "상점" : "결과";
+            string phase = Fight ? $"전투 {BattleManager.Elapsed:0}초" : Shop ? "지도" : "결과";
             Label($"치트 (F1 닫기) · 턴 {RunState.Round + 1} · 땅 {RunState.Lands}/{RunState.RegionCount} · {phase} · 골드 {RunState.Gold} · 맵 {MapName(RunState.Map)} · 시간 ×{Time.timeScale:0.##}", Lit);
             for (int t = 0; t < TabNames.Length; t++)
                 if (Button(TabNames[t], 120f, _tab == t))
@@ -236,7 +222,7 @@ namespace GnorpWar
         // ── 탭: 기물 — 줄 → 칸 → 칸 조작 → 국가·세력 묶음 → 기물
         private void DrawBuildings()
         {
-            Label(Shop ? "줄과 칸을 고르고, 아래 기물을 누르면 그 줄의 빈 칸에 들어간다" : "기물은 상점에서만 고친다", Shop ? Dim : Lit);
+            Label(Shop ? "줄과 칸을 고르고, 아래 기물을 누르면 그 줄의 빈 칸에 들어간다" : "기물은 지도에서만 고친다", Shop ? Dim : Lit);
             for (int r = 0; r < RowNames.Length; r++)
                 if (Button(RowNames[r], 120f, _row == r))
                     SelectRow(r);
@@ -351,7 +337,7 @@ namespace GnorpWar
             Label("맵 — 고르면 「땅의 지형」으로 풀 때까지 어느 땅을 치든 그 맵", Dim);
             if (Button("땅의 지형", 100f, RunState.CheatMap == null))
                 SetMap(null);
-            foreach (MapDefinition map in BattleManager.Config.Maps)
+            foreach (MapDefinition map in RunState.Config.Maps)
                 if (Button(MapName(map), 84f, RunState.CheatMap == map))
                     SetMap(map);
 
@@ -489,10 +475,12 @@ namespace GnorpWar
         private static OwnedBuilding[] CopyEnemyBoard()
         {
             var copy = new OwnedBuilding[RunState.MaxFloors];
+            // 지도 씬에는 돌고 있는 보드가 없다 — 고른 땅의 영주의 탑(없으면 빈 탑)
             BoardRunner board = BoardRunner.For(Team.Enemy);
-            for (int i = 0; board != null && i < board.Field.Length && i < copy.Length; i++)
-                if (!OwnedBuilding.IsEmpty(board.Field[i]))
-                    copy[i] = Copy(board.Field[i], board.Field[i].Upgrades);
+            OwnedBuilding[] field = board != null ? board.Field : RunState.EnemyField;
+            for (int i = 0; i < field.Length && i < copy.Length; i++)
+                if (!OwnedBuilding.IsEmpty(field[i]))
+                    copy[i] = Copy(field[i], field[i].Upgrades);
             return copy;
         }
 
@@ -561,7 +549,7 @@ namespace GnorpWar
                 SetEnemyOverride(true);
         }
 
-        // 켜면 다음 전투부터 적 탑 = 편집본(끌 때까지 매 라운드 — 그동안에도 적은 상점을 돌며 자기 탑을 키운다). 상점에서는 바로 적 탑에 올린다
+        // 켜면 다음 전투부터 적 탑 = 편집본(끌 때까지 매 라운드 — 그동안에도 적은 상점을 돌며 자기 탑을 키운다)
         public void SetEnemyOverride(bool on)
         {
             _enemyOn = on;
@@ -574,15 +562,6 @@ namespace GnorpWar
                 System.Array.Copy(_enemy, field, field.Length);
             }
             RunState.CheatEnemyField = field;
-            ShowEnemyBoard();
-        }
-
-        // 상점에서 적 탑이 바뀌었으면 화면의 적 탑에 다시 올린다(내 탑은 BattleManager가 스스로 따라간다)
-        private static void ShowEnemyBoard()
-        {
-            BoardRunner board = BoardRunner.For(Team.Enemy);
-            if (Shop && board != null)
-                board.Load(RunState.CheatEnemyField ?? RunState.EnemyField);
         }
 
         // ── 값 · 맵 · 라운드 · 전투
@@ -593,7 +572,7 @@ namespace GnorpWar
                 RunState.CheatSetFloors(floors);
         }
 
-        // 이웃 영주 하나를 먹는다 — 다음 상점 화면부터 수입 · 이웃이 달라진다(상점을 다시 불러온다)
+        // 이웃 영주 하나를 먹는다 — 지도를 다시 불러온다
         public void Conquer()
         {
             if (!Shop)
@@ -630,7 +609,7 @@ namespace GnorpWar
             Reload();
         }
 
-        // 땅 모양 · 적 탑 · 성 체력은 씬을 불러올 때 정해진다 — 지금 씬(상점 또는 지도)을 다시 불러온다(런 상태는 그대로)
+        // 땅 모양 · 적 탑 · 성 체력은 씬을 불러올 때 정해진다 — 지금 씬(지도)을 다시 불러온다(런 상태는 그대로)
         private static void Reload() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
 
         public void SetSpeed(float speed)

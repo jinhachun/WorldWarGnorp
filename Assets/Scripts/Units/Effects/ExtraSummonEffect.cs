@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -6,8 +7,10 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Extra Summon")]
     public class ExtraSummonEffect : UnitEffect
     {
+        [SuffixLabel("기", true)]
         [SerializeField] private int _extra = 1;
         [Tooltip("등급이 오를 때마다 더한다")]
+        [SuffixLabel("기", true)]
         [SerializeField] private int _extraPerTier = 1;
 
         public override int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level)

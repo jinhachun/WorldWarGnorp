@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -8,8 +9,10 @@ namespace GnorpWar
     {
         [SerializeField] private UnitDefinition _when;
         [SerializeField] private UnitDefinition _summon;
+        [SuffixLabel("기", true)]
         [SerializeField] private int _count = 1;
         [Tooltip("등급이 오를 때마다 더한다")]
+        [SuffixLabel("기", true)]
         [SerializeField] private int _countPerTier = 1;
 
         private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);

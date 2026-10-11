@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,10 +10,13 @@ namespace GnorpWar
     public class ConsumeSummonAction : BuildingAction
     {
         [SerializeField] private UnitDefinition _consume;
+        [SuffixLabel("기", true)]
         [SerializeField] private int _consumeCount = 10;
         [SerializeField] private UnitDefinition _summon;
+        [SuffixLabel("기", true)]
         [SerializeField] private int _summonCount = 1;
         [Tooltip("등급이 오를 때마다 소환 수에 더한다(소모 수는 그대로)")]
+        [SuffixLabel("기", true)]
         [SerializeField] private int _summonCountPerTier = 1;
 
         private int SummonCount(int level) => OwnedBuilding.Scaled(_summonCount, _summonCountPerTier, level);

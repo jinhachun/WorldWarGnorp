@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -6,8 +7,10 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Actions/Haste Neighbors")]
     public class HasteNeighborsAction : BuildingAction
     {
+        [SuffixLabel("초", true)]
         [SerializeField] private float _seconds = 1f;
         [Tooltip("등급이 오를 때마다 더한다")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _secondsPerTier = 1f;
 
         private float Seconds(int level) => OwnedBuilding.Scaled(_seconds, _secondsPerTier, level);

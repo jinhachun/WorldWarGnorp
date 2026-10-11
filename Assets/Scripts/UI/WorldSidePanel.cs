@@ -35,7 +35,9 @@ namespace GnorpWar
         [SerializeField] private Text _landTitle;
         [Tooltip("안내 글 — 고른 땅이 있으면 이 자리에 「맞닿지 않았다」는 회색 글이 뜬다")]
         [SerializeField] private Text _landBody;
-        [TextArea] [SerializeField] private string _noLandHint = "땅을 누르면 그 땅과 영주의 탑을 봅니다.";
+        [TextArea] [SerializeField] private string _noLandHint = "화살표가 가리키는 땅을 눌러 침략할 곳을 고릅니다.";
+        [Tooltip("상점 팝업이 지도를 덮고 있는 동안의 안내 글 — 그동안에는 땅을 누를 수 없다")]
+        [TextArea] [SerializeField] private string _shopHint = "지도에서 땅을 고르면 여기에 표시됩니다.";
         [Header("고른 땅의 영주")]
         [SerializeField] private Image _lordIcon;
         [SerializeField] private Text _lordTitle;
@@ -83,8 +85,9 @@ namespace GnorpWar
             _statusLands.rectTransform.anchoredPosition = new Vector2(x + StatusGap, 0f);
             _statusLands.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
         }
-        // selected = 고른 땅(없으면 WorldMapView.None). land = 고른 땅 · 영주 · 탑을 보여 주나 — 끄면 내 영지만(그 아래 자리는 WorldManager의 알림이 쓴다)
-        public void Show(int selected, bool land)
+        // selected = 고른 땅(없으면 WorldMapView.None). land = 고른 땅 · 영주 · 탑을 보여 주나 — 끄면 내 영지만(그 아래 자리는 WorldManager의 알림이 쓴다).
+        // shop = 상점 팝업이 지도를 덮고 있나(고른 땅이 없을 때의 안내 글이 달라진다)
+        public void Show(int selected, bool land, bool shop)
         {
             WorldRun world = RunState.World;
             WorldState state = world.State;
@@ -115,7 +118,7 @@ namespace GnorpWar
             if (!any)
             {
                 _landTitle.text = "고른 땅 없음";
-                _landBody.text = _noLandHint;
+                _landBody.text = shop ? _shopHint : _noLandHint;
                 _landTitle.rectTransform.anchoredPosition = new Vector2(_landTitle.rectTransform.anchoredPosition.x, y);
                 PlaceText(_landBody, left, y - _landTitle.rectTransform.sizeDelta.y - LineGap);
                 ShowTower(null, false, Color.white);

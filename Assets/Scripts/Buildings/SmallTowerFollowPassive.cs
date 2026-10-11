@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -7,8 +8,10 @@ namespace GnorpWar
     public class SmallTowerFollowPassive : BuildingPassive
     {
         [Tooltip("작은 타워가 움직이는 속도(초당 유닛)")]
+        [SuffixLabel("칸/초", true)]
         [SerializeField] private float _speed = 2f;
         [Tooltip("작은 타워가 여럿일 때 타워끼리 띄우는 거리")]
+        [SuffixLabel("칸", true)]
         [SerializeField] private float _spacing = 2.5f;
         [Tooltip("등급이 오를 때마다 속도에 더한다(합연산 — 0.5 = +50%). 시작 등급은 0")]
         [SerializeField] private float _speedPerTier;

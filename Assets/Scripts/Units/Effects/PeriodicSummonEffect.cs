@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -6,10 +7,13 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Periodic Summon")]
     public class PeriodicSummonEffect : UnitEffect
     {
+        [SuffixLabel("초", true)]
         [SerializeField] private float _interval = 3f;
         [SerializeField] private UnitDefinition _summon;
+        [SuffixLabel("기", true)]
         [SerializeField] private int _count = 1;
         [Tooltip("소환 자리 — 내 뒤로 이만큼")]
+        [SuffixLabel("칸", true)]
         [SerializeField] private float _behind = 1.5f;
 
         public override void Tick(Unit unit, int stacks)

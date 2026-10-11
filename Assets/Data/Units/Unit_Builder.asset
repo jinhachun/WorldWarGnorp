@@ -17,7 +17,7 @@ MonoBehaviour:
   _allyPrefab: {fileID: 638779955689807151, guid: 4e3adbdb1f6b69a4aaa7e99569cccc27, type: 3}
   _enemyPrefab: {fileID: 6082175181310963690, guid: 1127aaa73222cf448a5aa06c0490b160, type: 3}
   _moveSpeed: 3.375
-  _maxHp: 50
+  _maxHp: 100
   _attackDamage: 0
   _attackInterval: 0.6666667
   _attackRange: 0.8

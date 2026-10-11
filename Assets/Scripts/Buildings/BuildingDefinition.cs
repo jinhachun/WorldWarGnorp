@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -7,11 +8,14 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Building")]
     public class BuildingDefinition : ScriptableObject
     {
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _displayName = "";
         [Tooltip("칸·진열 카드에 그리는 그림 — 흰색으로 그리고 칸에서 색을 입힌다")]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _icon;
         [Tooltip("생산·액션으로 못 쓰는 발동 효과 — 툴팁에서 \"N초마다\" 뒤에 붙는 구절 (CLAUDE.md §5-2)")]
         [TextArea]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _description = "";
         [Tooltip("가격·상점 출현 확률은 등급에서 나온다 — BattleConfig")]
         [SerializeField] private BuildingRarity _rarity;
@@ -19,12 +23,14 @@ namespace GnorpWar
         [Tooltip("공용은 None")]
         [SerializeField] private BuildingFaction _faction;
         [Tooltip("발동 간격(초) — 전투 시작 후 이 시간이 지나 첫 발동. 0 = 쿨다운 없음(발동하지 않고 늘 켜진 효과만)")]
+        [SuffixLabel("초", true)]
         [SerializeField] private float _cooldown = 5f;
 
         [Header("생산")]
         [Tooltip("비우면 생산하지 않는 건물(유틸)")]
         [SerializeField] private UnitDefinition _unit;
         [Tooltip("한 번에 나오는 수 — 등급이 올라도 그대로(등급은 쿨다운을 줄인다, BattleConfig)")]
+        [SuffixLabel("기", true)]
         [SerializeField] private int _unitCount = 1;
 
         [Header("유틸")]
@@ -36,7 +42,11 @@ namespace GnorpWar
 
         [Header("툴팁")]
         [Tooltip("툴팁 글에 이름이 나오는 유닛 — 나오는 순서대로(소환 유닛 포함). 기물 판 아래로 유닛 판을 이 순서로 쌓는다. 병종 태그는 넣지 않는다")]
+        [HideIf(nameof(HideNonBalance))]
         [SerializeField] private UnitDefinition[] _mentionedUnits = new UnitDefinition[0];
+
+        // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
+        private bool HideNonBalance => BalanceView.HideNonBalance;
 
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
@@ -54,7 +64,7 @@ namespace GnorpWar
         // 그 등급의 원래 쿨다운 — 생산 기물은 등급마다 준다(BattleConfig, 8 → 6.4 → 5.12), 그 밖의 기물은 Cooldown 그대로.
         // 풍차·가속·맵 배율은 이 값 위에 곱해진다. 발동(BoardRunner)과 툴팁이 같이 읽는다
         public float CooldownAt(int level)
-            => _unit == null || BattleManager.Config == null ? _cooldown : _cooldown * BattleManager.Config.RankCooldownScale(level);
+            => _unit == null || RunState.Config == null ? _cooldown : _cooldown * RunState.Config.RankCooldownScale(level);
 
         public BuildingAction[] Actions => _actions;
         public UnitEffect[] Effects => _effects;

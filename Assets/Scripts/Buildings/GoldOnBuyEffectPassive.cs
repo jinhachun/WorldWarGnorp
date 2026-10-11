@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace GnorpWar
@@ -7,8 +8,10 @@ namespace GnorpWar
     public class GoldOnBuyEffectPassive : BuildingPassive
     {
         [Tooltip("구매 가격의 % — 50 = 절반. 골드는 반올림(.5는 올림)")]
+        [SuffixLabel("%", true)]
         [SerializeField] private int _percent = 50;
         [Tooltip("등급이 오를 때마다 더한다(%p)")]
+        [SuffixLabel("%p", true)]
         [SerializeField] private int _percentPerTier = 25;
 
         private int Percent(int level) => OwnedBuilding.Scaled(_percent, _percentPerTier, level);

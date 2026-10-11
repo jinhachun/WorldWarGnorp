@@ -33,13 +33,15 @@ namespace GnorpWar
 
         private void Start()
         {
-            int capacity = _source == Source.Storage ? RunState.Storage.Length : Mathf.Max(RunState.MaxFloors, Runner.Slots.Length);
+            // 지도 씬(상점 팝업)에는 돌고 있는 보드가 없다 — 내 탑은 런 상태에서 읽는다
+            BoardRunner runner = _source == Source.Storage ? null : Runner;
+            int capacity = _source == Source.Storage ? RunState.Storage.Length : Mathf.Max(RunState.MaxFloors, runner != null ? runner.Slots.Length : 0);
             _views = new SlotView[capacity];
             _haste = new float[capacity];
             _origin = ((RectTransform)_template.transform).anchoredPosition;
-            if (_source != Source.Storage)
+            if (runner != null)
             {
-                _subscribed = Runner;
+                _subscribed = runner;
                 _subscribed.Triggered += OnTriggered;
             }
             OwnedBuilding.EffectFired += OnEffectFired;
@@ -52,7 +54,8 @@ namespace GnorpWar
                     ((RectTransform)view.transform).anchoredPosition = _origin + new Vector2(i * _step, 0f);
                 int index = i;
                 view.Bind(_shop, _source, index);
-                view.Button.onClick.AddListener(() => _shop.OnSlotClicked(_source, index));
+                if (_shop != null)
+                    view.Button.onClick.AddListener(() => _shop.OnSlotClicked(_source, index));
                 view.gameObject.SetActive(false);
                 _views[i] = view;
             }
@@ -92,7 +95,7 @@ namespace GnorpWar
                 || !gameObject.activeInHierarchy)
                 return;
             // 칸이 켜져 있는지·Fighting이 아니라 상점이 열렸는지로 본다 — 전투 시작 시 효과는 Fighting이 서기 전, 칸이 켜지기(Update) 전에 온다
-            if (_shop.gameObject.activeInHierarchy ? _battleOnly : TowerOnScreen())
+            if (InShop ? _battleOnly : TowerOnScreen())
                 return;
             int count = Count;
             if (link.To >= count || link.From >= count)
@@ -118,7 +121,7 @@ namespace GnorpWar
         // 꺼진 줄(전투 중 상점 줄)과 상점 동안의 전투 전용 줄은 받지 않는다 — 나중에 켜질 때 늦게 튀지 않게
         private void OnEffectFired(OwnedBuilding fired)
         {
-            if (_views == null || !gameObject.activeInHierarchy || (_battleOnly && _shop.gameObject.activeInHierarchy))
+            if (_views == null || !gameObject.activeInHierarchy || (_battleOnly && InShop))
                 return;
             int count = Count;
             for (int i = 0; i < count; i++)
@@ -147,6 +150,9 @@ namespace GnorpWar
                 return RunState.Field[i];
             return Runner.Slots[i].Building;
         }
+
+        // 이 줄이 상점 판에 놓였고 그 판이 열려 있나 — 전투 화면의 줄에는 상점 판이 없다
+        private bool InShop => _shop != null && _shop.gameObject.activeInHierarchy;
 
         private BoardRunner Runner => BoardRunner.For(_source == Source.EnemyField ? Team.Enemy : Team.Ally);
 
@@ -202,7 +208,7 @@ namespace GnorpWar
                 if (haste > _haste[i])
                     _views[i].Bounce();
                 _haste[i] = haste;
-                _views[i].Show(building, running, _shop.IsSelected(_source, i), _shop.IsDragging(_source, i));
+                _views[i].Show(building, running, InShop && _shop.IsSelected(_source, i), InShop && _shop.IsDragging(_source, i));
             }
             if (_box != null && visible)
                 _box.Place(_views);

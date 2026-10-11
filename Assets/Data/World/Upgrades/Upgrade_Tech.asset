@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_Tech
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.RegionUpgradeDefinition
   _displayName: "\uAE30\uC220 \uC5F0\uAD6C"
+  _icon: {fileID: 21300000, guid: 6dda89bc6c90e42489c142133294093f, type: 3}
   _kind: 3
   _value: 1
   _scope: 0

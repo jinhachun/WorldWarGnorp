@@ -76,8 +76,8 @@ namespace GnorpWar.Editor
             return text.ToString();
         }
 
-        // runs판 — 플레이어는 매 턴 이어진 영주 중 땅이 가장 적은 영주를 치고 playerWin 확률로 이긴다
-        public static string Simulate(int runs, int maxTurns, double playerWin, int seed)
+        // runs판 — 플레이어는 매 턴 이어진 영주 중 땅이 가장 적은(biggestFirst면 가장 많은) 영주를 치고 playerWin 확률로 이긴다
+        public static string Simulate(int runs, int maxTurns, double playerWin, int seed, bool biggestFirst = false)
         {
             var world = AssetDatabase.LoadAssetAtPath<WorldConfig>(WorldConfigPath);
             var battle = AssetDatabase.LoadAssetAtPath<BattleConfig>(BattleConfigPath);
@@ -89,7 +89,9 @@ namespace GnorpWar.Editor
             const int Tempers = 4, Shown = 10;
 
             var clearTurns = new List<int>();
-            int over = 0, unfinished = 0;
+            int over = 0, unfinished = 0, coalitions = 0;
+            float coalitionTurn = 0f, coalitionMembers = 0f, coalitionLands = 0f, coalitionFloors = 0f, coalitionRatio = 0f;
+            var merged = new List<Lord>();
             var lordsAfter = new float[Shown];
             var lordsSamples = new int[Shown];
             var powerSum = new float[Shown];
@@ -179,7 +181,7 @@ namespace GnorpWar.Editor
                         {
                             Lord target = neighbors[0];
                             foreach (Lord other in neighbors)
-                                if (state.LandsOf(other) < state.LandsOf(target))
+                                if (biggestFirst ? state.LandsOf(other) > state.LandsOf(target) : state.LandsOf(other) < state.LandsOf(target))
                                     target = other;
                             WorldTurn.Invade(state, state.Player, target, random.NextDouble() < playerWin);
                         }
@@ -210,6 +212,23 @@ namespace GnorpWar.Editor
                                 buildHeld[target.Build]++;
                         });
                         run.Settle();
+                        // 최후의 연합 — 뭉친 시점 · 영주 수 · 땅 수와, 연합 탑이 뭉치기 직전 가장 센 영주의 탑보다 얼마나 센지
+                        float strongest = 0f;
+                        foreach (Lord lord in state.Lords)
+                            if (lord.Alive && !lord.IsPlayer)
+                                strongest = Mathf.Max(strongest, run.PowerOf(lord));
+                        merged.Clear();
+                        Lord coalition = run.FormCoalition(merged);
+                        if (coalition != null)
+                        {
+                            coalitions++;
+                            coalitionTurn += state.Turn;
+                            coalitionMembers += merged.Count + 1;
+                            coalitionLands += state.LandsOf(coalition);
+                            coalitionFloors += run.TowerOf(coalition).Field.Length;
+                            if (strongest > 0f)
+                                coalitionRatio += run.PowerOf(coalition) / strongest;
+                        }
 
                         if (t < Shown)
                         {
@@ -248,11 +267,14 @@ namespace GnorpWar.Editor
             float average = 0f;
             foreach (int turns in clearTurns)
                 average += turns;
-            var text = new StringBuilder($"[World] 월드 시뮬레이션 — {runs}판 · 판당 최대 {maxTurns}턴 · 플레이어 승률 {playerWin:0.##} · 씨앗 {seed} · {watch.ElapsedMilliseconds}ms(판당 {watch.ElapsedMilliseconds / (float)runs:0}ms)\n");
+            var text = new StringBuilder($"[World] 월드 시뮬레이션 — {runs}판 · 판당 최대 {maxTurns}턴 · 플레이어 승률 {playerWin:0.##}({(biggestFirst ? "큰 영주부터" : "작은 영주부터")}) · 씨앗 {seed} · {watch.ElapsedMilliseconds}ms(판당 {watch.ElapsedMilliseconds / (float)runs:0}ms)\n");
             text.Append(clearTurns.Count == 0
                 ? "통일 0판\n"
                 : $"통일 {clearTurns.Count}판 — 턴 평균 {average / clearTurns.Count:0.0} · 최소 {clearTurns[0]} · 10% {clearTurns[(int)(clearTurns.Count * 0.1f)]} · 90% {clearTurns[Mathf.Min(clearTurns.Count - 1, (int)(clearTurns.Count * 0.9f))]} · 최대 {clearTurns[clearTurns.Count - 1]}\n");
             text.Append($"게임 오버 {over}판({over * 100f / runs:0.#}%) · 미종료 {unfinished}판\n");
+            text.Append(coalitions == 0
+                ? "최후의 연합 0판\n"
+                : $"최후의 연합 {coalitions}판({coalitions * 100f / runs:0.#}%) — 뭉친 턴 평균 {coalitionTurn / coalitions:0.0} · 영주 {coalitionMembers / coalitions:0.0}명 · 땅 {coalitionLands / coalitions:0.0}개 · 탑 {coalitionFloors / coalitions:0.0}층 · 전투력 = 뭉치기 직전 가장 센 영주의 ×{coalitionRatio / coalitions:0.00}\n");
             text.Append("턴별 AI 영주 수(턴 끝):");
             for (int i = 0; i < Shown; i++)
                 text.Append(lordsSamples[i] > 0 ? $" {lordsAfter[i] / lordsSamples[i]:0.0}" : " -");

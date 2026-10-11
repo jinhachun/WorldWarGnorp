@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_Nationalism
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.RegionUpgradeDefinition
   _displayName: "\uBBFC\uC871\uC8FC\uC758"
+  _icon: {fileID: 21300000, guid: a82440e3913a1e140b44e6152fa580c6, type: 3}
   _kind: 5
   _value: 10
   _scope: 0

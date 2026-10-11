@@ -110,6 +110,15 @@ namespace GnorpWar
                     foreach (UnitEffect effect in _slots[i].Building.Definition.Effects)
                         TeamEffects.Enable(_team, effect, _slots[i].Building.Level);
             BuffLinks.ClearStanding(_team);
+            // 지역 업그레이드(보급력) — 쿨다운마다 유닛을 소환하는 기물의 쿨다운에 곱한다. 이 진영 영주의 것
+            Lord lord = !RunState.Started ? null : _team == Team.Ally ? RunState.World.State.Player : RunState.Opponent;
+            if (lord != null)
+            {
+                float supply = RunState.World.SupplyScale(lord);
+                for (int i = 0; i < _slots.Length; i++)
+                    if (HasBuilding(i) && _slots[i].Building.Definition.Unit != null && _slots[i].Building.Definition.Cooldown > 0f)
+                        _slots[i].Cooldown *= supply;
+            }
             _summonAtSmallTower = false;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))

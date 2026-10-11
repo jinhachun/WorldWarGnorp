@@ -36,9 +36,9 @@ namespace GnorpWar
 
         public float PowerOf(Lord lord) => TowerPower.Of(_towers[lord.Id].Field, _battle, _world);
 
-        // 턴 수입 = 1라운드 상점 골드 + 땅 수 × 땅당 골드, 직전 침략을 이겼으면 승리 보너스
+        // 턴 수입 = 1라운드 상점 골드 + 땅 수 × 땅당 골드 + 세금 증산 + 약자 보정(가장 큰 영주보다 땅이 적은 만큼), 직전 침략을 이겼으면 승리 보너스
         public int IncomeOf(Lord lord)
-            => _battle.ShopGold + State.LandsOf(lord) * _world.GoldPerLand + (lord.WonLastInvasion ? _battle.WinBonus : 0);
+            => _battle.ShopGold + State.LandsOf(lord) * _world.GoldPerLand + TaxGold(lord) + WorldTurn.UnderdogGold(State, lord) + (lord.WonLastInvasion ? _battle.WinBonus : 0);
 
         // ① 살아 있는 AI 영주 전원이 상점을 한 번씩
         public void ShopPhase()
@@ -74,6 +74,65 @@ namespace GnorpWar
             }
         }
 
+        // ── 지역 업그레이드(기획 §4) — 영주마다 자기 땅에 붙은 것만 받는다. 같은 종류는 겹친다(RegionUpgradeDefinition.Total)
+        // 플레이어가 고른 국가(RunState.ChooseNation) — 민족주의가 읽는다. AI 영주의 국가는 빌드 방향의 것
+        public BuildingNation PlayerNation;
+
+        public BuildingNation NationOf(Lord lord) => lord.IsPlayer ? PlayerNation : _world.Map.BuildOf(lord.Build).Nation;
+
+        public int UpgradeCount(Lord lord, RegionUpgradeKind kind) => State.UpgradeCount(lord, (int)kind);
+
+        // lord가 가진 kind의 합쳐진 값 — 하나도 없으면 none
+        private float UpgradeTotal(Lord lord, RegionUpgradeKind kind, float none)
+        {
+            int count = UpgradeCount(lord, kind);
+            return count > 0 ? _world.Map.UpgradeOfKind(kind).Total(count) : none;
+        }
+
+        // 턴 수입에 더 받는 골드(세금 증산) · 상점 등급 단계에 더하는 값(기술 연구) · 유닛을 소환하는 기물의 쿨다운에 곱하는 값(보급력)
+        public int TaxGold(Lord lord) => Mathf.RoundToInt(UpgradeTotal(lord, RegionUpgradeKind.Tax, 0f));
+        public int TechTiers(Lord lord) => Mathf.RoundToInt(UpgradeTotal(lord, RegionUpgradeKind.Tech, 0f));
+        public float SupplyScale(Lord lord) => UpgradeTotal(lord, RegionUpgradeKind.Supply, 1f);
+
+        // lord가 against와 싸울 때 유닛 스탯에 걸리는 업그레이드마다 each(업그레이드, 값) — 무기 · 방어구, 그리고 상대의 국가가 다르면 민족주의.
+        // against가 null이면(전투 밖 — 상대가 아직 없다) 상대에 달린 것은 뺀다
+        public void ForEachUnitUpgrade(Lord lord, Lord against, System.Action<RegionUpgradeDefinition, StatModifier> each)
+        {
+            foreach (RegionUpgradeKind kind in System.Enum.GetValues(typeof(RegionUpgradeKind)))
+            {
+                int count = UpgradeCount(lord, kind);
+                if (count == 0 || !_world.Map.UpgradeOfKind(kind).UnitModifier(count, out StatModifier modifier))
+                    continue;
+                if (kind == RegionUpgradeKind.Nationalism && (against == null || NationOf(against) == NationOf(lord)))
+                    continue;
+                each(_world.Map.UpgradeOfKind(kind), modifier);
+            }
+        }
+
+        // 최후의 연합(기획 §6-1) — ④ 정산 뒤에 부른다. 뭉쳤으면 바탕 영주(탑 전투력이 가장 높은 영주)를 돌려주고 merged에 합쳐진 영주들을 담는다(아니면 null).
+        // 연합의 탑 = 바탕 영주의 탑 + 나머지 영주들의 남은 골드와 탑 · 보관함을 판 값(지금 판매 규칙 — RunState.SellValue)으로 본 상점. 상점은 합쳐진 영주 수만큼 돈다
+        public Lord FormCoalition(List<Lord> merged)
+        {
+            Lord leader = WorldTurn.FormCoalition(State, PowerOf, merged);
+            if (leader == null)
+                return null;
+            int gold = 0;
+            foreach (Lord lord in merged)
+            {
+                TowerState tower = _towers[lord.Id];
+                gold += tower.Gold;
+                foreach (OwnedBuilding[] row in new[] { tower.Field, tower.Storage })
+                    foreach (OwnedBuilding building in row)
+                        if (!OwnedBuilding.IsEmpty(building))
+                            gold += RunState.SellValue(building);
+                _towers.Remove(lord.Id);
+            }
+            // 모은 골드는 상점마다 고르게 나눠 받는다(나머지는 첫 상점에) — 못 쓴 골드는 탑에 남아 다음 상점으로 넘어간다
+            for (int i = 0; i < merged.Count; i++)
+                Shop(leader, gold / merged.Count + (i == 0 ? gold % merged.Count : 0));
+            return leader;
+        }
+
         private TowerState NewTower()
         {
             var tower = new TowerState(Team.Enemy);
@@ -81,21 +140,28 @@ namespace GnorpWar
             return tower;
         }
 
+        // 턴 상점 한 번 — 턴 수입을 받고 본다
         private void Shop(Lord lord)
         {
-            int tier = System.Math.Min(State.Turn - 1, _world.ShopTierMax);
+            Shop(lord, IncomeOf(lord));
+            lord.WonLastInvasion = false;   // 승리 보너스는 이긴 다음 상점에 한 번
+        }
+
+        private void Shop(Lord lord, int gold)
+        {
+            // 등급 단계 = 턴 − 1 + 기술 연구, 상한까지
+            int tier = System.Math.Min(State.Turn - 1 + TechTiers(lord), _world.ShopTierMax);
             // 영주가 수십 명이라 상점 한 번마다의 로그는 끈다
             bool quiet = EnemyShopper.Quiet;
             EnemyShopper.Quiet = true;
             try
             {
-                RunState.ShopAs(_towers[lord.Id], _world.Map.BuildOf(lord.Build), IncomeOf(lord), tier);
+                RunState.ShopAs(_towers[lord.Id], _world.Map.BuildOf(lord.Build), gold, tier);
             }
             finally
             {
                 EnemyShopper.Quiet = quiet;
             }
-            lord.WonLastInvasion = false;   // 승리 보너스는 이긴 다음 상점에 한 번
         }
     }
 }

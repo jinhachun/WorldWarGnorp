@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 월드맵 런의 수치(기획 §5 · §6) — 규칙(WorldTurn)은 ToRules가 만든 숫자 사본을 읽는다
+    // 월드맵 런의 수치(기획 §5 · §6 · §6-1) — 규칙(WorldTurn)은 ToRules가 만든 숫자 사본을 읽는다
     [CreateAssetMenu(menuName = "GnorpWar/World Config")]
     public class WorldConfig : ScriptableObject
     {
@@ -34,6 +34,19 @@ namespace GnorpWar
         [Header("탑 전투력 — AI끼리의 승패 주사위가 읽는다(World/TowerPower)")]
         [Tooltip("유닛을 쿨다운마다 내지 않는 기물(강화 · 타워 · 패시브)은 쓴 골드(구매가 × 합쳐진 수) × 이 값을 전투력에 얹는다. 0 = 생산 기물만 센다")]
         [SerializeField] private float _powerPerGold = 1f;
+
+        [Header("최후의 연합 — 내 땅이 이 수 이상이 되면 남은 AI 영주들이 가장 센 탑의 영주 아래 하나로 뭉친다(턴의 정산 끝에)")]
+        [SerializeField] private bool _coalition = true;
+        [SuffixLabel("개", true)]
+        [SerializeField] private int _coalitionLands = 15;
+
+        [Header("약자 보정 — AI 영주가 턴 수입에 더 받는 골드 = (가장 큰 영주의 땅 수 − 자기 땅 수) × 땅당 골드, 상한까지. 플레이어는 받지 않는다")]
+        [SerializeField] private bool _underdog = true;
+        [Tooltip("땅 1개의 수입(땅당 골드)보다 작아야 땅이 많은 영주가 언제나 더 번다")]
+        [SuffixLabel("골드", true)]
+        [SerializeField] private int _underdogGoldPerLand = 1;
+        [SuffixLabel("골드", true)]
+        [SerializeField] private int _underdogGoldMax = 10;
 
         [Header("영주 색 — 유닛 그림의 파란 자리 · 탑 지붕 · 깃발(Core/LordPaint). 내 색(파랑)은 BattleConfig의 열쇠 색")]
         [Tooltip("AI 영주의 색 — 영주 번호마다 11칸씩 건너뛰며 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
@@ -68,6 +81,11 @@ namespace GnorpWar
             WinHappiness = _winHappiness,
             LossLandSteps = (int[])_lossLandSteps.Clone(),
             TemperWeights = (float[])_temperWeights.Clone(),
+            Coalition = _coalition,
+            CoalitionLands = _coalitionLands,
+            Underdog = _underdog,
+            UnderdogGoldPerLand = _underdogGoldPerLand,
+            UnderdogGoldMax = _underdogGoldMax,
         };
     }
 }

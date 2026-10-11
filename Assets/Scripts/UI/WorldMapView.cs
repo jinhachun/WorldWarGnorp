@@ -8,9 +8,9 @@ namespace GnorpWar
     // 월드 지도 — 땅 번호 지도(WorldMapDefinition.ReadCells)의 칸을 그 땅 영주의 색으로 칠해 정수배로 키워 보여 준다(RawImage · Point).
     // 남의 땅은 영주 색을 어둡게 채우고, 내 땅만 밝게 채워 굵은 흰 테두리를 두른다(지도에서 가장 먼저 보여야 한다 — 사용자 10/11).
     // 다른 영주와의 국경 · 해안선은 흰 선, 같은 영주의 땅 사이는 옅은 선. 침략할 수 있는 땅에는 내 땅에서 그 땅으로 화살표 하나
-    // (국경을 가장 길게 맞댄 내 땅에서) — _hatch를 켜면 그 땅에 그 영주 색 빗금도. 고른 땅은 노란 테두리, 가리킨 땅은 조금 밝게.
+    // (국경을 가장 길게 맞댄 내 땅에서, 여덟 방향 도트 도장) — _hatch를 켜면 그 땅에 그 영주 색 빗금도. 고른 땅은 노란 테두리, 가리킨 땅은 조금 밝게.
     // 판도 · 고른 땅 · 가리킨 땅이 바뀔 때마다 그림을 통째로 다시 칠한다(375×252칸).
-    // 땅마다 지형 아이콘과 「번호 + 업그레이드 첫 글자」는 구운 표시 자리(AnchorOf)에 한 번 놓는다.
+    // 땅마다 지형 아이콘 · 업그레이드 아이콘과 땅 번호는 구운 표시 자리(AnchorOf)에 한 번 놓는다.
     // 누름 · 가리킴은 화면 좌표를 칸으로 바꿔 땅 번호를 읽는다 — 무엇을 할지는 WorldManager가 정한다
     [RequireComponent(typeof(RawImage))]
     public class WorldMapView : MonoBehaviour, IPointerClickHandler, IPointerMoveHandler, IPointerExitHandler
@@ -27,24 +27,49 @@ namespace GnorpWar
         private const int MineBorder = 2;
         private const int HatchStep = 5;
         private const int SelectedWidth = 2;
-        // 침략 화살표(칸) — 국경에서 내 땅 쪽으로 물러난 길이 · 그 땅 안으로 들어간 길이(표시 자리까지의 거리에서 Clearance를 뺀 만큼, 이 범위 안)
-        // · 몸통 반폭 · 촉 길이 · 촉 반폭
-        private const float ArrowBack = 5f;
-        private const float ArrowMinReach = 5f;
-        private const float ArrowMaxReach = 15f;
-        private const float ArrowClearance = 14f;
-        private const float ArrowShaft = 1.6f;
-        private const float ArrowHead = 7f;
-        private const float ArrowHeadHalf = 5f;
+        // 침략 화살표 — 손으로 찍은 도장 둘(오른쪽 · 오른쪽 아래)을 90도씩 돌려 여덟 방향으로 쓴다(임의 각도로 그으면 4px 격자에서 계단이 깨진다).
+        // # = 흰 몸, 검은 테두리는 몸을 한 칸 고르게 두른다
+        private static readonly string[] ArrowEast =
+        {
+            ".......#....",
+            ".......##...",
+            ".......###..",
+            "###########.",
+            "############",
+            "###########.",
+            ".......###..",
+            ".......##...",
+            ".......#....",
+        };
+        private static readonly string[] ArrowSouthEast =
+        {
+            "##........",
+            "###.......",
+            ".###......",
+            "..###.....",
+            "...###...#",
+            "....###.##",
+            ".....#####",
+            "......####",
+            ".....#####",
+            "....######",
+        };
+        // 화살표 가운데가 국경에서 그 땅 안쪽으로 들어간 거리(칸) — 표시 자리(아이콘)와 Clearance칸을 못 띄우면 내 땅 쪽으로 물러난다(적어도 MinPoke칸은 넘어간다)
+        private const float ArrowHalf = 6f;
+        private const float ArrowAdvance = 2.5f;
+        private const float ArrowClearance = 11f;
+        private const float ArrowMinPoke = 2f;
         private static readonly Color32 SelectedColor = new Color32(255, 217, 90, 255);
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 SeaColor = new Color32(0, 0, 0, 255);
 
-        // 표시의 자리(표시 자리 기준, 화면 px — 지도 한 칸 = 4px일 때의 시안 그대로): 아이콘 뒤 검은 판 · 아이콘 · 글
+        // 표시의 자리(표시 자리 기준, 화면 px): 아이콘 뒤 검은 판(지형 · 업그레이드 둘이 나란히) · 아이콘 높이 · 땅 번호 높이
         private const float IconBack = 36f;
         private const float IconY = 12f;
         private const float LabelY = -22f;
         private const int LabelSize = 24;
+        // 표시 자리의 px 값들을 잰 기준 — 지도 한 칸 = 화면 4px
+        private const float CellPixels = 4f;
 
         [Tooltip("땅 번호 · 업그레이드 글 — 도트 폰트")]
         [SerializeField] private Font _dotFont;
@@ -118,15 +143,20 @@ namespace GnorpWar
                 mark.anchoredPosition = new Vector2(anchor.x * scale, -anchor.y * scale);
                 mark.sizeDelta = Vector2.zero;
 
-                Sprite icon = map.TerrainOf(region).Icon;
-                Image back = NewImage(mark, "Back");
-                back.color = Color.black;
-                back.rectTransform.sizeDelta = new Vector2(IconBack, IconBack);
-                back.rectTransform.anchoredPosition = new Vector2(0f, IconY);
-                Image image = NewImage(mark, "Icon");
-                image.sprite = icon;
-                image.SetNativeSize();
-                image.rectTransform.anchoredPosition = new Vector2(0f, IconY);
+                // 지형 아이콘(왼쪽) · 업그레이드 아이콘(오른쪽) — 각각 검은 판 위에, 원본 크기
+                Sprite[] icons = { map.TerrainOf(region).Icon, map.UpgradeOf(region).Icon };
+                for (int i = 0; i < icons.Length; i++)
+                {
+                    float x = (i - 0.5f) * IconBack;
+                    Image back = NewImage(mark, "Back");
+                    back.color = Color.black;
+                    back.rectTransform.sizeDelta = new Vector2(IconBack, IconBack);
+                    back.rectTransform.anchoredPosition = new Vector2(x, IconY);
+                    Image image = NewImage(mark, "Icon");
+                    image.sprite = icons[i];
+                    image.SetNativeSize();
+                    image.rectTransform.anchoredPosition = new Vector2(x, IconY);
+                }
 
                 var label = new GameObject("Label", typeof(RectTransform), typeof(Text), typeof(Outline)).GetComponent<Text>();
                 label.transform.SetParent(mark, false);
@@ -136,7 +166,7 @@ namespace GnorpWar
                 label.horizontalOverflow = HorizontalWrapMode.Overflow;
                 label.verticalOverflow = VerticalWrapMode.Overflow;
                 label.raycastTarget = false;
-                label.text = $"{region + 1:00} {map.UpgradeOf(region).DisplayName[0]}";
+                label.text = $"{region + 1:00}";
                 label.rectTransform.sizeDelta = Vector2.zero;
                 label.rectTransform.anchoredPosition = new Vector2(0f, LabelY);
                 var outline = label.GetComponent<Outline>();
@@ -189,7 +219,8 @@ namespace GnorpWar
             _texture.Apply();
         }
 
-        // 내 땅에서 region으로 화살표 하나 — 국경을 가장 길게 맞댄 내 땅과의 국경 한가운데에서, region의 표시 자리 쪽으로. 맞댄 내 땅이 없으면 false
+        // 내 땅에서 region으로 화살표 하나 — 국경을 가장 길게 맞댄 내 땅과의 국경 한가운데에서, region의 표시 자리 쪽(여덟 방향 중 가장 가까운 쪽)으로.
+        // 맞댄 내 땅이 없으면 false
         private bool DrawArrow(int region)
         {
             List<Vector2Int> border = null;
@@ -209,41 +240,53 @@ namespace GnorpWar
             foreach (Vector2Int cell in border)
                 if (((Vector2)cell - mean).sqrMagnitude < (from - mean).sqrMagnitude)
                     from = cell;
-            Vector2 to = _anchors[region];
-            float distance = (to - from).magnitude;
-            Vector2 direction = (to - from) / Mathf.Max(distance, 0.01f);
-            float reach = Mathf.Clamp(distance - ArrowClearance, ArrowMinReach, ArrowMaxReach);
-            Vector2 start = from - direction * ArrowBack;
-            float length = ArrowBack + reach;
-
-            // 흰 화살표 + 검은 테두리 한 칸 — 칸마다 화살표 안쪽인지, 한 칸 넓힌 모양의 안쪽인지 본다
-            int pad = Mathf.CeilToInt(length * 0.5f + ArrowHeadHalf) + 3;
-            Vector2 middle = start + direction * (length * 0.5f);
-            for (int y = Mathf.RoundToInt(middle.y) - pad; y <= Mathf.RoundToInt(middle.y) + pad; y++)
-                for (int x = Mathf.RoundToInt(middle.x) - pad; x <= Mathf.RoundToInt(middle.x) + pad; x++)
-                {
-                    if (x < 0 || y < 0 || x >= _width || y >= _height)
-                        continue;
-                    bool inside = InArrow(x, y, start, direction, length, 0f);
-                    if (inside || InArrow(x, y, start, direction, length, 1f))
-                        _pixels[(_height - 1 - y) * _width + x] = inside ? White : SeaColor;
-                }
+            // 겨누는 곳 = 그 땅의 아이콘 한가운데(표시 자리의 조금 위)
+            Vector2 to = _anchors[region] + new Vector2(0f, -IconY / CellPixels);
+            // 방향 — 0 오른쪽 · 1 오른쪽 아래 · 2 아래 … 시계 방향으로 45도씩(칸 좌표는 아래가 +y)
+            int direction = Mathf.RoundToInt(Mathf.Atan2(to.y - from.y, to.x - from.x) / (Mathf.PI / 4f));
+            direction = (direction % 8 + 8) % 8;
+            float angle = direction * Mathf.PI / 4f;
+            float advance = Mathf.Clamp((to - from).magnitude - ArrowClearance - ArrowHalf, ArrowMinPoke - ArrowHalf, ArrowAdvance);
+            Vector2 center = from + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * advance;
+            Stamp(direction % 2 == 0 ? ArrowEast : ArrowSouthEast, direction / 2, center);
             return true;
         }
 
-        // 화살표 좌표(along = 진행 방향, across = 그 옆)로 본다 — grow = 바깥으로 넓힌 칸 수(테두리)
-        private static bool InArrow(int x, int y, Vector2 start, Vector2 direction, float length, float grow)
+        // 도장을 시계 방향으로 90도씩 turns번 돌려 center에 찍는다 — 흰 몸과, 몸에 닿은(대각선 포함) 빈 칸의 검은 테두리
+        private void Stamp(string[] shape, int turns, Vector2 center)
         {
-            Vector2 p = new Vector2(x, y) - start;
-            float along = Vector2.Dot(p, direction);
-            float across = Mathf.Abs(p.x * direction.y - p.y * direction.x);
-            float neck = length - ArrowHead;
-            if (along < -grow || along > length + grow * 1.5f)
-                return false;
-            // 몸통은 목까지, 촉은 목에서 가장 넓고 끝에서 0
-            if (along < neck - grow)
-                return across <= ArrowShaft + grow;
-            return across <= (length + grow * 1.5f - along) * (ArrowHeadHalf / ArrowHead);
+            int rows = shape.Length, columns = shape[0].Length;
+            var body = new HashSet<Vector2Int>();
+            for (int row = 0; row < rows; row++)
+                for (int column = 0; column < columns; column++)
+                {
+                    if (shape[row][column] != '#')
+                        continue;
+                    float x = column - (columns - 1) * 0.5f, y = row - (rows - 1) * 0.5f;
+                    for (int turn = 0; turn < turns; turn++)
+                    {
+                        float swap = x;
+                        x = -y;
+                        y = swap;
+                    }
+                    body.Add(new Vector2Int(Mathf.FloorToInt(center.x + x + 0.5f), Mathf.FloorToInt(center.y + y + 0.5f)));
+                }
+            foreach (Vector2Int cell in body)
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        var near = new Vector2Int(cell.x + dx, cell.y + dy);
+                        if (!body.Contains(near))
+                            Plot(near, SeaColor);
+                    }
+            foreach (Vector2Int cell in body)
+                Plot(cell, White);
+        }
+
+        private void Plot(Vector2Int cell, Color32 color)
+        {
+            if (cell.x >= 0 && cell.y >= 0 && cell.x < _width && cell.y < _height)
+                _pixels[(_height - 1 - cell.y) * _width + cell.x] = color;
         }
 
         // cells = [y × width + x] 땅 번호(위 왼쪽이 0번 칸), pixels = 텍스처 순서(아래 줄부터). hatch = 빗금을 칠 땅(없으면 null)

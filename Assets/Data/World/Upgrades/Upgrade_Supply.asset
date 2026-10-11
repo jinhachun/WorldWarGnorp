@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61f41bc276382bc4e84d2b5518fd48e2, type: 3}
   m_Name: Upgrade_Supply
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.RegionUpgradeDefinition
-  _displayName: "\uBCF4\uAE09\uB825 \uAC15\uD654"
+  _displayName: "\uBCF4\uAE09\uB825"
+  _icon: {fileID: 21300000, guid: 61ef0ef13c367174897d4da1ac9eab98, type: 3}
   _kind: 2
   _value: 0.97
   _scope: 0

@@ -20,7 +20,8 @@ namespace GnorpWar
         // 못 누르는 버튼의 글 색(상점과 같다)
         private static readonly Color DisabledText = new Color(0.6f, 0.6f, 0.66f);
 
-        private enum Stage { Command, Replay, Summary }
+        // Choose = 런의 첫 화면 — 내 국가를 고르는 중(고르면 첫 턴이 열린다)
+        private enum Stage { Choose, Command, Replay, Summary }
 
         private static WorldManager _instance;
 
@@ -41,6 +42,10 @@ namespace GnorpWar
         [SerializeField] private Text _noticeBody;
         [SerializeField] private Button _next;
         [SerializeField] private Text _nextLabel;
+        [Tooltip("런을 시작할 때 내 국가를 고르는 판 — 국가마다 버튼 하나와 그 국가의 기물 이름 글 하나(칸 순서 = RunState.NationChoices)")]
+        [SerializeField] private GameObject _nationPanel;
+        [SerializeField] private Button[] _nationButtons;
+        [SerializeField] private Text[] _nationTexts;
 
         private Stage _stage;
         private int _selected = WorldMapView.None;
@@ -73,6 +78,7 @@ namespace GnorpWar
             _next.onClick.AddListener(Next);
             _skip.gameObject.SetActive(false);
             _notice.SetActive(false);
+            _nationPanel.SetActive(false);
 
             if (RunState.Phase == RunState.RunPhase.Aftermath)
                 PlayAiTurn();
@@ -82,8 +88,37 @@ namespace GnorpWar
             {
                 // 상점에서 돌아왔으면 고른 땅이 남아 있다
                 _selected = RunState.PreviewRegion;
-                BeginTurn();
+                if (RunState.NationChosen)
+                    BeginTurn();
+                else
+                    ShowNations();
             }
+        }
+
+        // 내 국가 고르기 — 국가 이름 버튼과 그 국가의 기물 이름들. 고르면 첫 턴이 열린다
+        private void ShowNations()
+        {
+            _stage = Stage.Choose;
+            _turn = RunState.Round + 1;
+            BuildingNation[] nations = RunState.NationChoices;
+            for (int i = 0; i < _nationButtons.Length; i++)
+            {
+                bool used = i < nations.Length;
+                _nationButtons[i].gameObject.SetActive(used);
+                _nationTexts[i].gameObject.SetActive(used);
+                if (!used)
+                    continue;
+                BuildingNation nation = nations[i];
+                _nationButtons[i].GetComponentInChildren<Text>(true).text = nation.DisplayName();
+                _nationTexts[i].text = string.Join(" · ", RunState.BuildingsOf(nation).ConvertAll(building => building.DisplayName).ToArray());
+                _nationButtons[i].onClick.AddListener(() =>
+                {
+                    RunState.ChooseNation(nation);
+                    _nationPanel.SetActive(false);
+                    BeginTurn();
+                });
+            }
+            _nationPanel.SetActive(true);
         }
 
         private void OnDestroy()
@@ -102,14 +137,12 @@ namespace GnorpWar
             _notice.SetActive(false);
         }
 
-        // 땅을 눌렀다 — 고른다(바다 · 지도 밖을 누르면 푼다). 남의 땅이면 그 영주의 탑을 미리 본다(상점에 가도 남는다)
+        // 땅을 눌렀다 — 고른다(바다 · 지도 밖을 누르면 푼다)
         private void Select(int region)
         {
             if (_stage == Stage.Command)
                 _selected = region;
         }
-
-        private bool Foreign(int region) => region >= 0 && RunState.World.State.OwnerOf(region) != RunState.World.State.Player;
 
         private void Invade()
         {
@@ -171,7 +204,7 @@ namespace GnorpWar
         }
 
         // 지도의 색이 바뀌는 사건인가 — 진 침략은 아무것도 바꾸지 않는다
-        private static bool Changes(WorldEvent e) => e.Rebellion || e.Won;
+        private static bool Changes(WorldEvent e) => e.Rebellion || e.Won || e.Coalition;
 
         // 재생을 끝낸다(건너뛰기 포함) — 실제 판도를 그리고 요약을 띄운다
         private void FinishReplay()
@@ -222,9 +255,9 @@ namespace GnorpWar
             }
 
             bool command = _stage == Stage.Command;
-            // 고른 땅이 남의 땅일 때만 미리 본다 — 치트로 그 땅이 내 것이 되면 풀린다
+            // 고른 땅은 런 상태에 둔다 — 상점에 다녀와도 남고, 상점 패널이 같은 땅을 보여 준다
             if (command)
-                RunState.Preview(Foreign(_selected) ? _selected : WorldMapView.None);
+                RunState.Preview(_selected);
             List<int> invadable = command ? RunState.InvadableRegions() : null;
             bool[] open = null;
             if (invadable != null)
@@ -241,7 +274,7 @@ namespace GnorpWar
                     button.gameObject.SetActive(command);
             _invade.interactable = command && invadable.Contains(_selected);
             _invadeLabel.color = _invade.interactable ? Color.white : DisabledText;
-            _topBar.text = $"턴 {_turn}    골드 <color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>    행복도 {RunState.Happiness}/{RunState.HappinessMax}    땅 {RunState.Lands}/{RunState.RegionCount}";
+            _panel.ShowStatus(_topBar, _turn);
         }
     }
 }

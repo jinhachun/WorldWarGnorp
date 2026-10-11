@@ -20,9 +20,9 @@ namespace GnorpWar.Editor
         // 칸 순서 = RegionUpgradeKind (기획 §4 「지금 넣는 6종」 — 전부 공용)
         private static readonly (string File, string Name, float Value, RegionUpgradeUse Use)[] Upgrades =
         {
-            ("Upgrade_Weapon", "무기 강화", 4f, RegionUpgradeUse.Battle),
-            ("Upgrade_Armor", "방어구 강화", 4f, RegionUpgradeUse.Battle),
-            ("Upgrade_Supply", "보급력 강화", 0.97f, RegionUpgradeUse.Battle),
+            ("Upgrade_Weapon", "무기", 4f, RegionUpgradeUse.Battle),
+            ("Upgrade_Armor", "방어구", 4f, RegionUpgradeUse.Battle),
+            ("Upgrade_Supply", "보급력", 0.97f, RegionUpgradeUse.Battle),
             ("Upgrade_Tech", "기술 연구", 1f, RegionUpgradeUse.Operation),
             ("Upgrade_Tax", "세금 증산", 2f, RegionUpgradeUse.Operation),
             ("Upgrade_Nationalism", "민족주의", 10f, RegionUpgradeUse.Battle),

@@ -51,12 +51,14 @@ namespace GnorpWar
         // 상대의 탑 — 침략한 영주가 상점에서 키운 탑. 상대를 고르기 전에는 빈 탑
         public static OwnedBuilding[] EnemyField => (_opponentTower ?? PreviewTower ?? NoOpponent).Field;
 
-        // 미리 보는 땅(지도에서 고른 남의 땅, 없으면 -1) — 지도 패널과 상점의 오른쪽 적 탑 자리에 그 영주의 탑이, 상점 맵 칸에 그 땅의 지형이 뜬다.
+        // 지도에서 고른 땅(없으면 -1) — 지도 패널과 상점 패널이 이 땅과 그 영주를 보여 준다. 남의 땅이면 적 탑 자리(EnemyField) · 적 진영 색이 그 영주의 것이 된다.
         // 보기만 한다: 상대(Opponent) · 전장(Map) · 영주 색은 Invade로 확정할 때 정해진다
         public static int PreviewRegion { get; private set; } = -1;
         public static void Preview(int region) => PreviewRegion = region;
         private static TowerState PreviewTower => PreviewRegion >= 0 ? World.TowerOf(World.State.OwnerOf(PreviewRegion)) : null;
-        public static MapDefinition PreviewMap => PreviewRegion >= 0 ? World.Map.TerrainOf(PreviewRegion) : Map;
+        // 고른 땅의 영주(내 땅이거나 고른 땅이 없으면 null)와 그 영주의 탑이 영구히 쌓은 강화 — 전투 밖의 유닛 카드가 읽는다(RunStats.Preview)
+        public static Lord PreviewLord => PreviewTower != null ? World.State.OwnerOf(PreviewRegion) : null;
+        public static RunBook PreviewBook => PreviewTower != null ? PreviewTower.Book : null;
         // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발 · 지도의 땅이 이 색이다. 나는 그린 그대로(열쇠 색)
         public static Color LordKeyColor => _config.LordKeyColor;
         public static Color ColorOf(Lord lord) => lord.IsPlayer ? _config.LordKeyColor : World.ColorOf(lord);
@@ -158,15 +160,18 @@ namespace GnorpWar
             // 새 런 = 새 월드 — 영주가 지역마다 하나씩, 그중 무작위 한 자리가 나
             var random = new System.Random(Random.Range(0, int.MaxValue));
             World = new WorldRun(config.World, config, random.Next(config.World.Map.RegionCount), random);
+            // 내 국가는 지도의 첫 화면에서 고른다(ChooseNation) — 그 전의 임시값은 풀의 첫 국가
+            NationChosen = false;
+            SetNation(NationChoices[0]);
             Map = CheatMap != null ? CheatMap : ShopMap;
         }
 
         // 상대를 고르기 전(상점)에 깔리는 지형 — 첫 맵(기본)
         private static MapDefinition ShopMap => _config.Maps[0];
 
-        // 이번 턴 내 수입 = 1라운드 상점 골드 + 내 땅 수 × 땅당 골드, 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 — WorldRun.IncomeOf)
+        // 이번 턴 내 수입 = 1라운드 상점 골드 + 내 땅 수 × 땅당 골드 + 세금 증산, 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 + 약자 보정 — WorldRun.IncomeOf)
         public static int Income
-            => _config.ShopGold + Lands * _config.World.GoldPerLand + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+            => _config.ShopGold + Lands * _config.World.GoldPerLand + World.TaxGold(World.State.Player) + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
 
         // 턴이 시작할 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 받는다(턴당 한 번 — 씬을 다시 불러와도 두 번 주지 않는다).
         // 지도에서 보는 영주의 탑이 이번 턴에 싸울 탑이 되도록, 상점에 들어갈 때가 아니라 턴이 열릴 때 한다
@@ -234,7 +239,7 @@ namespace GnorpWar
         // 지난 EndTurn이 판도에 남긴 일을 글 몇 줄로 — 런이 끝난 턴이면 빈 글
         public static string TurnSummary { get; private set; } = "";
 
-        // 턴을 닫는다 — AI 영주들의 침략 → 정산(반란 · 새 영주) → 다음 턴. 판도는 바로 끝 상태가 되고, 그 사이에 벌어진 일을 순서대로 돌려준다
+        // 턴을 닫는다 — AI 영주들의 침략 → 정산(반란 · 새 영주) → 최후의 연합(조건이 찼으면) → 다음 턴. 판도는 바로 끝 상태가 되고, 그 사이에 벌어진 일을 순서대로 돌려준다
         // (지도가 재생한다 — 부르기 전의 「지역 → 주인」 표에 차례로 WorldEvent.Apply하면 지금 표가 된다).
         // 내 행복도가 0이면 게임 오버(IsOver), 내가 통일했으면 클리어(Cleared) — 그때는 턴이 넘어가지 않는다
         public static System.Collections.Generic.List<WorldEvent> EndTurn()
@@ -272,15 +277,24 @@ namespace GnorpWar
             for (int i = invasions; i < events.Count; i++)
                 events[i].NewLords = System.Array.ConvertAll(events[i].Regions, region => state.Owner[region]);
             int rebels = events.Count - invasions, risen = state.Lords.Count - before, largest = 0;
+            // 최후의 연합 — 정산이 끝난 판도에서 조건이 찼으면 남은 영주들이 하나로 뭉친다(런에 한 번)
+            var merged = new System.Collections.Generic.List<Lord>();
+            Lord coalition = World.FormCoalition(merged);
+            if (coalition != null)
+                events.Add(new WorldEvent { Coalition = true, Lord = coalition.Id, Members = merged.ConvertAll(lord => lord.Id).ToArray() });
             foreach (Lord lord in state.Lords)
                 if (lord.Alive && !lord.IsPlayer)
                     largest = Mathf.Max(largest, state.LandsOf(lord));
             Round++;
             state.Turn = Round + 1;
-            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 먹힌 영주 {conquests}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명 · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
-            TurnSummary = $"영주 {conquests}명이 다른 영주에게 먹혔습니다.\n"
+            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 먹힌 영주 {conquests}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition != null ? $"(최후의 연합 — {merged.Count + 1}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
+            // 연합이 이미 뭉친 뒤의 턴에는 AI끼리 벌어지는 일이 없다
+            TurnSummary = coalition == null && state.Coalition != null ? $"최후의 연합의 땅은 {largest}개입니다."
+                : $"영주 {conquests}명이 다른 영주에게 먹혔습니다.\n"
                 + (rebels > 0 ? $"반란이 {rebels}번 일어나 새 영주 {risen}명이 들어섰습니다.\n" : "")
-                + $"남은 영주는 {state.AiLords}명이고, 가장 큰 영주의 땅은 {largest}개입니다.";
+                + (coalition != null
+                    ? $"남은 영주 {merged.Count + 1}명이 최후의 연합으로 뭉쳤습니다.\n최후의 연합의 땅은 {largest}개입니다."
+                    : $"남은 영주는 {state.AiLords}명이고, 가장 큰 영주의 땅은 {largest}개입니다.");
             return events;
         }
 
@@ -306,6 +320,54 @@ namespace GnorpWar
                 RunBook.Use(tower.Team, book);
                 Round = now;
             }
+        }
+
+        // ── 내 국가(기획 §4 「내 국가와 상점 풀」) — 런을 시작할 때 고른다. 민족주의가 상대 영주의 국가와 견준다
+        public static BuildingNation Nation => World.PlayerNation;
+        public static bool NationChosen { get; private set; }
+        // 내 상점 풀 — 공용 기물 + 내 국가를 포함한 국가 PoolNations개의 기물(국가가 그보다 적으면 전부). 다른 탑의 상점(AI 영주)은 전체 풀
+        private const int PoolNations = 3;
+        private static BuildingDefinition[] _playerPool;
+
+        // 고를 수 있는 국가 — 상점 풀에 기물이 있는 국가들(공용 제외), 풀에 나온 순서
+        public static BuildingNation[] NationChoices
+        {
+            get
+            {
+                var nations = new System.Collections.Generic.List<BuildingNation>();
+                foreach (BuildingDefinition b in _config.ShopPool)
+                    if (b.Nation != BuildingNation.Common && !nations.Contains(b.Nation))
+                        nations.Add(b.Nation);
+                return nations.ToArray();
+            }
+        }
+
+        // 그 국가의 기물(상점 풀에서) — 고르는 화면이 무엇을 쓰는 국가인지 보여 준다
+        public static System.Collections.Generic.List<BuildingDefinition> BuildingsOf(BuildingNation nation)
+        {
+            var buildings = new System.Collections.Generic.List<BuildingDefinition>();
+            foreach (BuildingDefinition b in _config.ShopPool)
+                if (b.Nation == nation)
+                    buildings.Add(b);
+            return buildings;
+        }
+
+        public static void ChooseNation(BuildingNation nation)
+        {
+            SetNation(nation);
+            NationChosen = true;
+        }
+
+        private static void SetNation(BuildingNation nation)
+        {
+            World.PlayerNation = nation;
+            // 내 국가는 늘 있고, 나머지 자리는 무작위로
+            var nations = new System.Collections.Generic.List<BuildingNation>(NationChoices);
+            nations.Remove(nation);
+            while (nations.Count > PoolNations - 1)
+                nations.RemoveAt(Random.Range(0, nations.Count));
+            nations.Add(nation);
+            _playerPool = System.Array.FindAll(_config.ShopPool, b => b.Nation == BuildingNation.Common || nations.Contains(b.Nation));
         }
 
         public static void ToggleShopLock() => ShopLocked = !ShopLocked;
@@ -372,7 +434,7 @@ namespace GnorpWar
         // 칸마다 등급을 가중치로 먼저 뽑고(풀에 없는 등급은 빼고), 그 등급의 건물 중 하나. onlyEmpty = 산 칸(빈칸)만 새로(상점 잠금)
         private static void RollOffers(bool onlyEmpty = false)
         {
-            BuildingDefinition[] pool = _config.ShopPool;
+            BuildingDefinition[] pool = Pool;
             for (int i = 0; i < Offers.Length; i++)
             {
                 if (onlyEmpty && Offers[i] != null)
@@ -396,12 +458,16 @@ namespace GnorpWar
 
         // 진열 한 칸에서 b가 뽑힐 가중치 — 뽑기(RollOffers)와 화면의 확률(OfferChance)이 같이 쓴다
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
-            => _config.RarityWeight(b.Rarity, Mathf.Min(Round, _config.World.ShopTierMax)) / CountOf(pool, b.Rarity);
+            => _config.RarityWeight(b.Rarity, ShopTier) / CountOf(pool, b.Rarity);
+
+        // 상점 등급 단계 — 내 상점은 턴 − 1 + 기술 연구(상한까지). 다른 탑의 차례(ShopAs)에는 넘겨받은 단계 그대로
+        private static int ShopTier
+            => Mathf.Min(Round + (_side == Player ? World.TechTiers(World.State.Player) : 0), _config.World.ShopTierMax);
 
         // 지금 라운드에 진열 한 칸이 rarity 등급일 확률(0~1) — 풀에 없는 등급은 0
         public static float OfferChance(BuildingRarity rarity)
         {
-            BuildingDefinition[] pool = _config.ShopPool;
+            BuildingDefinition[] pool = Pool;
             float total = 0f, mine = 0f;
             foreach (BuildingDefinition b in pool)
             {
@@ -607,7 +673,7 @@ namespace GnorpWar
         }
 
         // 이번 판에 등장하는 기물(상점 풀)
-        public static BuildingDefinition[] Pool => _config.ShopPool;
+        public static BuildingDefinition[] Pool => _side == Player ? _playerPool : _config.ShopPool;
 
         // 산 게 아니라 얻는다(판도라의 상자) — 「구매할 때마다,」·합치기 없이 필드 → 보관함 빈 칸에. 자리가 없으면 못 얻는다
         public static void Acquire(BuildingDefinition definition)

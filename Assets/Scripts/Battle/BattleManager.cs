@@ -21,8 +21,12 @@ namespace GnorpWar
         [SerializeField] private Button _retryButton;
         [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(땅 +N · 행복도 -N)")]
         [SerializeField] private Text _resultSummary;
+        [Tooltip("패배 시 내 결과 한 줄(「-1」) 바로 왼쪽에 뜨는 행복도 하트")]
+        [SerializeField] private Image _resultHeart;
         [Tooltip("전투 배속 버튼 — 전투 중에만 보인다")]
         [SerializeField] private GameObject _speedButton;
+
+        private const float ResultHeartGap = 6f;
 
         private bool _fighting;
         private bool _over;
@@ -83,7 +87,12 @@ namespace GnorpWar
             // 지난 전투의 "전투 동안" 타워 효과(사거리 등)가 남아 있으면 상점에서 본진이 적 본진을 쏜다 — 타워는 상점에서도 돈다
             TowerBook.ClearBattle();
             if (!RunState.Started || RunState.IsOver)
+            {
                 RunState.StartNew(_config);
+                // 이 씬만 직접 플레이하면 국가를 고르는 화면(지도 씬)이 없다 — 무작위로 정한다
+                BuildingNation[] nations = RunState.NationChoices;
+                RunState.ChooseNation(nations[Random.Range(0, nations.Length)]);
+            }
             // 지도에서 「침략」으로 온 씬(Phase = Battle)은 상점 없이 바로 전투다 — 땅(Ground) · 적 탑 · 영주 색이 이미 그 땅 · 그 영주 것으로 뜬다
             bool battle = RunState.Phase == RunState.RunPhase.Battle;
             // 그 밖에는 상점으로 뜬다 — 지도에서 「상점」으로 왔거나, 이 씬만 직접 플레이했다(그때는 런을 시작하고 턴을 여기서 연다 — 「지도로」를 누르면 지도 씬으로 이어진다)
@@ -134,6 +143,11 @@ namespace GnorpWar
                     StatBook.AddForBattle(Team.Ally, rule, rule.Modifier);
                     StatBook.AddForBattle(Team.Enemy, rule, rule.Modifier);
                 }
+            // 지역 업그레이드(무기 · 방어구 · 민족주의) — 양 진영이 각자 자기 영주의 것을, 전투 동안
+            WorldRun world = RunState.World;
+            Lord player = world.State.Player, opponent = RunState.Opponent;
+            world.ForEachUnitUpgrade(player, opponent, (upgrade, modifier) => StatBook.AddForBattle(Team.Ally, upgrade, modifier));
+            world.ForEachUnitUpgrade(opponent, player, (upgrade, modifier) => StatBook.AddForBattle(Team.Enemy, upgrade, modifier));
             _allyBoard.Begin();
             _enemyBoard.Begin();
             _battleStart = Time.time;
@@ -214,7 +228,11 @@ namespace GnorpWar
             // 결과 창 — 큰 글 · 내 결과 한 줄(이기면 얻은 땅, 지면 잃은 행복도) · 「지도로」. 행복도 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다.
             // AI 영주들의 턴 · 통일 · 게임 오버는 지도에서 보여 준다
             _resultText.text = won ? "승리!" : "패배...";
-            _resultSummary.text = BuildingTooltip.Highlight(won ? $"땅 +{RunState.Lands - lands}" : $"행복도 -{happiness - RunState.Happiness}");
+            _resultSummary.text = BuildingTooltip.Highlight(won ? $"땅 +{RunState.Lands - lands}" : $"-{happiness - RunState.Happiness}");
+            // 잃은 행복도는 하트 + 숫자로 — 하트는 가운데 놓인 글의 바로 왼쪽
+            _resultHeart.enabled = !won;
+            RectTransform heart = _resultHeart.rectTransform;
+            heart.anchoredPosition = new Vector2(-(_resultSummary.preferredWidth + heart.sizeDelta.x) * 0.5f - ResultHeartGap, heart.anchoredPosition.y);
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
             Time.timeScale = 0f;

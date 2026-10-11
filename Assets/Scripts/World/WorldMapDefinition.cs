@@ -44,6 +44,15 @@ namespace GnorpWar
         public MapDefinition TerrainOf(int region) => _regions[region].Terrain;
         public RegionUpgradeDefinition UpgradeOf(int region) => _regions[region].Upgrade;
         public Vector2Int AnchorOf(int region) => _regions[region].Anchor;
+
+        // 그 종류의 업그레이드 에셋 — 이 맵에 없으면 null
+        public RegionUpgradeDefinition UpgradeOfKind(RegionUpgradeKind kind)
+        {
+            foreach (Region region in _regions)
+                if (region.Upgrade != null && region.Upgrade.Kind == kind)
+                    return region.Upgrade;
+            return null;
+        }
         // build = WorldGraph.Build · Lord.Build의 번호
         public EnemyBuildProfile BuildOf(int build) => _terrainBuilds[build].Build;
 

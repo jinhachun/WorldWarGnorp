@@ -26,6 +26,11 @@ MonoBehaviour:
   _shopTierMax: 9
   _newLordShops: 1
   _powerPerGold: 1
+  _coalition: 1
+  _coalitionLands: 15
+  _underdog: 1
+  _underdogGoldPerLand: 1
+  _underdogGoldMax: 10
   _lordColors:
   - {r: 0.5916666, g: 0.3, b: 1, a: 1}
   - {r: 0.83095247, g: 0.6, b: 1, a: 1}

@@ -4,18 +4,20 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 상점 단계 화면 (The Bazaar식) — 위: 진열 · 가운데: 내 필드 · 아래: 보관함.
+    // 상점 단계 화면 — 지도 씬과 같은 틀(사용자 10/11): 왼쪽 패널(내 영지 요약 · 지도에서 고른 땅과 영주 — 지도와 같은 UI/WorldSidePanel · 맨 아래 「지도로」)
+    // + 위 줄(턴 · 골드 · 행복도 · 땅) + 큰 영역(내 탑 · 진열 · 보관함 · 거래 버튼). 상대의 탑은 여기서 보이지 않는다(지도 패널에서 본다).
     // 끌어서 옮긴다: 칸 → 칸(빈 칸이면 이동, 차 있으면 맞바꿈) · 진열 → 칸(그 칸에 구매) · 칸 → 판매 버튼(판매).
-    // 누르면: 칸은 선택(설명·판매 버튼), 진열은 빈 칸에 구매. 적 칸은 설명만
+    // 누르면: 칸은 선택(설명·판매 버튼), 진열은 빈 칸에 구매
     public class ShopPanel : MonoBehaviour
     {
         [SerializeField] private OfferCard _offerTemplate;
         [SerializeField] private float _offerStep = 250f;
-        [Tooltip("상태 줄 — 칸마다 아이콘 + 글(턴 · 골드 · 행복도 · 내 땅 수)")]
-        [SerializeField] private Text _status;
-        [SerializeField] private Text _gold;
-        [SerializeField] private Text _lives;
-        [SerializeField] private Text _wins;
+        [Tooltip("왼쪽 패널 — 지도 씬의 패널과 같은 것(탑 기둥 없이)")]
+        [SerializeField] private WorldSidePanel _sidePanel;
+        [Tooltip("위 줄 — 턴 · 골드 · 행복도 · 땅(지도 씬과 같은 글)")]
+        [SerializeField] private Text _topBar;
+        [Tooltip("상점 동안 숨기는 전투 화면 요소 — 본진 체력바 · 상대 UI 탑")]
+        [SerializeField] private GameObject[] _hiddenInShop = new GameObject[0];
         [SerializeField] private Button _reroll;
         [SerializeField] private Text _rerollLabel;
         [Tooltip("지금 라운드의 진열 등급 확률(RunState.OfferChance) — 등급 색 숫자 다섯 개(일반 · 고급 · 희귀 · 영웅 · 전설 순)")]
@@ -26,12 +28,6 @@ namespace GnorpWar
         [Tooltip("층 올리기 — 골드를 내고 탑 맨 위에 빈 층을 하나 더한다(RunState.RaiseFloor)")]
         [SerializeField] private Button _raise;
         [SerializeField] private Text _raiseLabel;
-        [Tooltip("이번 라운드 맵 이름(RunState.Map) — 도트 폰트")]
-        [SerializeField] private Text _map;
-        [Tooltip("맵 설명 — 읽는 글이라 깔끔한 폰트. 한 Text에 폰트 둘을 못 써서 이름과 나눴다")]
-        [SerializeField] private Text _mapDesc;
-        [Tooltip("맵 이름 앞 아이콘(MapDefinition.Icon) — 가로 자리는 이름 폭에 맞춰 코드가 놓는다")]
-        [SerializeField] private Image _mapIcon;
         [SerializeField] private Button _sell;
         [SerializeField] private Text _sellLabel;
         [Tooltip("「지도로」 — 지도 씬으로 돌아간다(침략할 땅은 지도에서 고른다)")]
@@ -82,8 +78,17 @@ namespace GnorpWar
             _sellHover = _sell.GetComponent<ButtonHover>();
         }
 
+        private void OnEnable()
+        {
+            foreach (GameObject hidden in _hiddenInShop)
+                hidden.SetActive(false);
+        }
+
         private void OnDisable()
         {
+            foreach (GameObject hidden in _hiddenInShop)
+                if (hidden != null)
+                    hidden.SetActive(true);
             _hasSelection = false;
             _dragging = false;
             if (_dragGhost != null)
@@ -292,31 +297,14 @@ namespace GnorpWar
             for (int i = 0; i < _offers.Length; i++)
                 _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
 
-            _status.text = $"턴 {RunState.Round + 1}";
-            _gold.text = $"골드 <color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>";
-            _lives.text = $"행복도 {RunState.Happiness}/{RunState.HappinessMax}";
-            _wins.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
+            _sidePanel.ShowStatus(_topBar, RunState.Round + 1);
+            _sidePanel.Show(RunState.PreviewRegion, true);
             _reroll.interactable = RunState.CanReroll;
             _rerollLabel.text = $"리롤 {RunState.RerollCost}G";
             _chances.text = ChanceLine();
             _lockLabel.text = RunState.ShopLocked ? "잠금 해제" : "잠금";
             _raise.interactable = RunState.CanRaiseFloor;
             _raiseLabel.text = RunState.Floors < RunState.MaxFloors ? $"층 올리기 {RunState.NextFloorCost}G" : "최고층";
-            // 지도에서 고른 땅이 있으면 그 땅의 지형(RunState.Preview), 없으면 지금 깔린 맵
-            MapDefinition map = RunState.PreviewMap;
-            // 고른 땅이 있으면 땅 번호를 같이
-            _map.text = map == null ? "" : RunState.PreviewRegion >= 0 ? $"{RunState.PreviewRegion + 1:00}번 땅 · {map.DisplayName}" : map.DisplayName;
-            _mapDesc.text = map == null ? "" : BuildingTooltip.Highlight(map.Description);
-            // 맵 아이콘은 가운데 놓인 이름의 바로 왼쪽
-            Sprite mapIcon = map != null ? map.Icon : null;
-            _mapIcon.enabled = mapIcon != null;
-            if (mapIcon != null)
-            {
-                _mapIcon.sprite = mapIcon;
-                float nameWidth = _map.preferredWidth;
-                var iconRect = _mapIcon.rectTransform;
-                iconRect.anchoredPosition = new Vector2(-nameWidth / 2f - MapIconGap - iconRect.sizeDelta.x / 2f, iconRect.anchoredPosition.y);
-            }
 
             OwnedBuilding selected = _hasSelection ? BuildingAt(_selectedSource, _selectedIndex) : null;
             if (OwnedBuilding.IsEmpty(selected))
@@ -355,7 +343,6 @@ namespace GnorpWar
         }
 
         private const string ZeroChanceAlpha = "59";   // 35%
-        private const float MapIconGap = 10f;
         private static readonly Color DropColor =new Color(1f, 0.85f, 0.35f);
         private static readonly Color DisabledText = new Color(0.6f, 0.6f, 0.66f);
 

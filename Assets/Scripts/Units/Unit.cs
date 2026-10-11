@@ -365,23 +365,42 @@ namespace GnorpWar
         {
             float oldMaxHp = _stats[(int)UnitStat.MaxHp];
             float oldAttack = _stats[(int)UnitStat.Attack];
-            _stats[(int)UnitStat.Attack] = Compute(UnitStat.Attack, _definition.AttackDamage);
+            _stats[(int)UnitStat.Attack] = Compute(UnitStat.Attack);
             // 공격력 버프를 받은 순간 — 빨간 오라(사용자 10/7: 받는 순간 반짝). 생애 첫 계산(oldAttack 0)은 버프가 아니다
             if (oldAttack > 0f && _stats[(int)UnitStat.Attack] > oldAttack + 0.0001f && IsAlive)
                 FlashAttackAura();
-            _stats[(int)UnitStat.MaxHp] = Compute(UnitStat.MaxHp, _definition.MaxHp);
-            _stats[(int)UnitStat.MoveSpeed] = Compute(UnitStat.MoveSpeed, _definition.MoveSpeed);
-            _stats[(int)UnitStat.AttackSpeed] = Compute(UnitStat.AttackSpeed, 1f);
+            _stats[(int)UnitStat.MaxHp] = Compute(UnitStat.MaxHp);
+            _stats[(int)UnitStat.MoveSpeed] = Compute(UnitStat.MoveSpeed);
+            _stats[(int)UnitStat.AttackSpeed] = Compute(UnitStat.AttackSpeed);
             _statsVersion = StatBook.Version;
             _ownModifiersChanged = false;
             if (oldMaxHp > 0f && IsAlive)
                 _hp *= _stats[(int)UnitStat.MaxHp] / oldMaxHp;
         }
 
-        private float Compute(UnitStat stat, float baseValue)
+        // 스탯의 기본값 — 공격속도는 기본 1의 배율이다(공격 간격 = UnitDefinition.AttackInterval ÷ 값). 회복 유닛은 공격력이 회복량
+        public static float BaseStat(UnitDefinition definition, UnitStat stat)
+            => stat == UnitStat.Attack ? definition.AttackDamage
+            : stat == UnitStat.MaxHp ? definition.MaxHp
+            : stat == UnitStat.MoveSpeed ? definition.MoveSpeed
+            : 1f;
+
+        // 진영에 걸린 것(전투 동안 · 영구히 · 맵)만 모은 합 — 유닛의 스탯 계산이 여기서 시작한다
+        private static StatSum TeamSum(Team team, UnitDefinition definition, UnitStat stat)
         {
             StatSum sum = StatSum.Identity;
-            StatBook.Accumulate(_team, _definition, stat, ref sum);
+            StatBook.Accumulate(team, definition, stat, ref sum);
+            return sum;
+        }
+
+        // 지금 이 진영에서 막 소환된 그 유닛의 스탯 — 유닛 하나하나에 따로 붙는 것(소환한 기물 옆의 강화 · 성장 · 무적 중 보너스)은 아직 없다.
+        // 유닛 카드(UI/BuildingTooltip)가 전투 중에 읽는다 — 유닛의 계산(Compute)과 같은 길이다
+        public static float SpawnStat(Team team, UnitDefinition definition, UnitStat stat)
+            => TeamSum(team, definition, stat).Apply(BaseStat(definition, stat));
+
+        private float Compute(UnitStat stat)
+        {
+            StatSum sum = TeamSum(_team, _definition, stat);
             foreach (StatModifier m in _ownModifiers)
                 if (m.Stat == stat)
                     sum.Add(m.Op, m.Value);
@@ -390,7 +409,7 @@ namespace GnorpWar
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     if (e.Effect.AppliesFor(_team, _definition))
                         sum.Add(StatOp.Percent, e.Effect.InvulnerableAttackBonus);
-            return sum.Apply(baseValue);
+            return sum.Apply(BaseStat(_definition, stat));
         }
 
         // 소환 — 소환 지점 칸이 (적이든 아군이든) 차 있으면 한 층씩 올라가 비어 있는 가장 낮은 층에 만든다.

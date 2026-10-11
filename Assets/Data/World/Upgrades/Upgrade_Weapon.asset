@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61f41bc276382bc4e84d2b5518fd48e2, type: 3}
   m_Name: Upgrade_Weapon
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.RegionUpgradeDefinition
-  _displayName: "\uBB34\uAE30 \uAC15\uD654"
+  _displayName: "\uBB34\uAE30"
+  _icon: {fileID: 21300000, guid: db989e9d71a990d418efe16a72a4e7a6, type: 3}
   _kind: 0
   _value: 4
   _scope: 0

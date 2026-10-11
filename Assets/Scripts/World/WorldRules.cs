@@ -12,6 +12,13 @@ namespace GnorpWar
         public int[] LossLandSteps = { 4, 10 };
         // 칸 순서 = LordTemper
         public float[] TemperWeights = { 0.40f, 0.27f, 0.23f, 0.10f };
+        // 최후의 연합 — 내 땅이 이 수 이상이면 남은 AI 영주들이 하나로 뭉친다(WorldTurn.FormCoalition)
+        public bool Coalition = true;
+        public int CoalitionLands = 15;
+        // 약자 보정 — AI 영주가 턴마다 더 받는 골드 = (가장 큰 영주의 땅 수 − 자기 땅 수) × PerLand, Max까지(WorldTurn.UnderdogGold)
+        public bool Underdog = true;
+        public int UnderdogGoldPerLand = 1;
+        public int UnderdogGoldMax = 10;
 
         public int LossDrop(int targetLands)
         {

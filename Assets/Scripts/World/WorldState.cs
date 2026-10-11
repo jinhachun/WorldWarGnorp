@@ -13,6 +13,8 @@ namespace GnorpWar
         // [번호] = 영주 — 죽은 영주도 남는다(Alive = false)
         public readonly List<Lord> Lords = new List<Lord>();
         public readonly Lord Player;
+        // 최후의 연합이 뭉쳤으면 그 영주(바탕이 된 영주 — 남은 AI 영주는 이 하나뿐이다), 아니면 null
+        public Lord Coalition;
         // 1부터
         public int Turn = 1;
 

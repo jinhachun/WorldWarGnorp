@@ -131,5 +131,53 @@ namespace GnorpWar
             }
             return created;
         }
+
+        // 최후의 연합(기획 §6-1) — ④ 정산 끝에 부른다. 내 땅이 CoalitionLands 이상이고 AI 영주가 둘 이상 남았으면, 힘이 가장 센 영주(동점은 번호가 앞선 쪽)를
+        // 바탕으로 남은 AI 영주가 전부 하나로 뭉친다: 나머지의 땅이 바탕 영주의 것이 되고 나머지는 사라진다. 바탕 영주를 돌려주고 merged에 합쳐진 영주들을 담는다.
+        // 뭉치지 않았으면 null — 런에 한 번뿐이다. 연합은 남은 AI가 하나라 침략할 대상이 없고, 그래서 행복도가 깎여 쪼개질 일도 없다
+        public static Lord FormCoalition(WorldState state, Func<Lord, float> power, List<Lord> merged)
+        {
+            WorldRules rules = state.Rules;
+            if (!rules.Coalition || state.Coalition != null || !state.Player.Alive || state.LandsOf(state.Player) < rules.CoalitionLands || state.AiLords < 2)
+                return null;
+            Lord leader = null;
+            float best = 0f;
+            foreach (Lord lord in state.Lords)
+            {
+                if (!lord.Alive || lord.IsPlayer)
+                    continue;
+                float value = power(lord);
+                if (leader == null || value > best)
+                {
+                    leader = lord;
+                    best = value;
+                }
+            }
+            foreach (Lord lord in state.Lords)
+            {
+                if (!lord.Alive || lord.IsPlayer || lord == leader)
+                    continue;
+                for (int region = 0; region < state.Owner.Length; region++)
+                    if (state.Owner[region] == lord.Id)
+                        state.Owner[region] = leader.Id;
+                lord.Alive = false;
+                merged.Add(lord);
+            }
+            state.Coalition = leader;
+            return leader;
+        }
+
+        // 약자 보정(기획 §6-1) — AI 영주가 이번 턴 수입에 더 받는 골드: 가장 큰 영주(플레이어 포함)보다 땅이 적은 만큼 × PerLand, Max까지. 플레이어는 받지 않는다
+        public static int UnderdogGold(WorldState state, Lord lord)
+        {
+            WorldRules rules = state.Rules;
+            if (!rules.Underdog || lord.IsPlayer)
+                return 0;
+            int largest = 0;
+            foreach (Lord other in state.Lords)
+                if (other.Alive)
+                    largest = Math.Max(largest, state.LandsOf(other));
+            return Math.Min(rules.UnderdogGoldMax, (largest - state.LandsOf(lord)) * rules.UnderdogGoldPerLand);
+        }
     }
 }

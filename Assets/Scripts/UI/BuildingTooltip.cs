@@ -47,6 +47,10 @@ namespace GnorpWar
             public UnitDefinition IconUnit;
             public bool IconEnemy;
             public Color IconColor;
+            // 본문을 마지막으로 쓴 때의 유닛 · 진영 · 스탯 판(StatBook.Version) — 전투 중에는 값이 바뀔 때만 글을 다시 짠다
+            public UnitDefinition BodyUnit;
+            public bool BodyEnemy;
+            public int BodyVersion = -1;
         }
 
         private readonly List<UnitCard> _cards = new List<UnitCard>();
@@ -190,17 +194,22 @@ namespace GnorpWar
             return string.Join("\n", lines);
         }
 
-        // 능력치 한 줄 — 기본값(노랑) 뒤에 이번 런의 영구 강화분을 「+1」로(BonusColor). 값은 RunStats.Preview가 준다.
-        // 적 유닛은 영구 강화가 없어 기본값만. scale = 표시 단위 환산(초당 피해)
+        // 능력치 한 줄 — 기본값(노랑) 뒤에 달라진 만큼을 정수로: 늘면 「+7」(BonusColor), 줄면 「-2」(빨강). scale = 표시 단위 환산(초당 피해).
+        // 달라진 만큼 = 반올림한 지금 값 − 반올림한 기본값 — 두 숫자를 더하면 화면의 최종값(지금 값의 반올림)이 된다
+        //   전투 중: 그 진영에서 지금 막 소환되면 갖는 값(Unit.SpawnStat — 영구히 · 전투 동안 · 맵 · 지역 업그레이드, 유닛의 계산과 같은 길). 적 기물이면 적 진영의 값
+        //   전투 밖: 전투가 시작될 때의 값(RunStats.Preview — 영구히 · 지역 업그레이드). 남의 탑이면 그 영주의 값
         private static string Stat(string label, UnitDefinition unit, UnitStat stat, bool enemy, float scale = 1f)
         {
-            RunStats.Value value = RunStats.Preview(unit, stat);
-            string text = $"{label} <color={NumberColor}>{value.Base * scale:0}</color>";
-            float bonus = enemy ? 0f : value.Bonus * scale;
-            if (Mathf.Abs(bonus) >= 0.05f)
-                text += $"<color={BonusColor}>{bonus:+0.#;-0.#}</color>";
+            float baseValue = Unit.BaseStat(unit, stat);
+            float now = BattleManager.Fighting ? Unit.SpawnStat(enemy ? Team.Enemy : Team.Ally, unit, stat) : RunStats.Preview(unit, stat, enemy).Now;
+            int shown = Whole(baseValue * scale), bonus = Whole(now * scale) - shown;
+            string text = $"{label} <color={NumberColor}>{shown}</color>";
+            if (bonus != 0)
+                text += $"<color={(bonus > 0 ? BonusColor : EnemyColor)}>{bonus:+0;-0}</color>";
             return text;
         }
+
+        private static int Whole(float value) => (int)System.Math.Round(value, System.MidpointRounding.AwayFromZero);
 
         // group을 size 글씨로 붙인다 — 묶음은 글자 크기로만 갈린다(빈 줄은 legacy Text가 본문 크기로 잡아 너무 벌어진다)
         private static void AddGroup(List<string> lines, List<string> group, int size)
@@ -336,7 +345,14 @@ namespace GnorpWar
             if (card.IconUnit != unit || card.IconEnemy != enemy || card.IconColor != RunState.LordColor(enemy ? Team.Enemy : Team.Ally))
                 BuildIcon(card, unit, enemy);
             card.Name.text = UnitName(unit);
-            card.Body.text = UnitInfo(unit, board, enemy);
+            // 전투 중에는 보드가 안 바뀐다 — 스탯이 바뀌었을 때만 다시(가리키는 동안 매 프레임 불린다). 전투 밖에서는 상점에서 보드가 바뀌므로 늘 다시
+            if (!BattleManager.Fighting || card.BodyUnit != unit || card.BodyEnemy != enemy || card.BodyVersion != StatBook.Version)
+            {
+                card.Body.text = UnitInfo(unit, board, enemy);
+                card.BodyUnit = unit;
+                card.BodyEnemy = enemy;
+                card.BodyVersion = BattleManager.Fighting ? StatBook.Version : -1;
+            }
             // 이름 · 병종은 그림 높이 가운데에
             float nameHeight = card.Name.preferredHeight;
             float header = Mathf.Max(card.Icon.sizeDelta.y, nameHeight);

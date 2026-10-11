@@ -93,6 +93,8 @@ namespace GnorpWar
         }
 
         public Team Team => _base.Team;
+        // 진영색 — 작은 타워의 깃발이 같은 색을 쓴다(Base.Build)
+        public Color FlagColor => _flag != null ? _flag.color : Color.white;
         public int FloorCount => _floors.Count;
         public TowerFloor Floor(int index) => _floors[index].Floor;
         private float Forward => _base.Team == Team.Ally ? 1f : -1f;

@@ -132,8 +132,8 @@ namespace GnorpWar
             return "";
         }
 
-        // 효과가 아닌 상태 줄(경험치·판매가) — 회색, 맨 아래
-        public static string Note(string text) => $"\n<color={NoteColor}>{text}</color>";
+        // 효과가 아닌 상태 줄(스택) — 회색, 맨 아래
+        private static string Note(string text) => $"\n<color={NoteColor}>{text}</color>";
 
         // 첫 줄 이름(크게) · 둘째 줄 등급 · 국가(작게). 세력은 쓰지 않는다(사용자 결정)
         public static string Title(BuildingDefinition building, bool enemy, BuildingRarity rarity)
@@ -214,20 +214,12 @@ namespace GnorpWar
         // 효과 글 — 숫자는 노랑, 키워드(기획서 §5 낱말 · 병종 태그)는 굵게. 색은 늘리지 않는다(CLAUDE.md §5-2 9번).
         // 「관통탄 특허국」 같은 기물 이름 속 낱말은 건너뛴다
         private static readonly Regex Keyword =
-            new Regex("「[^」]*」|아래에 있는 모든 기물|위에 있는 모든 기물|바로 위·아래 기물들|바로 위 기물|인접 기물(들|이)|전투 동안|영구히|가속|무적|고도|크기|스택|관통(?!탄)|경보병|중보병|궁병|경기병|중기병|지원병");
+            new Regex("「[^」]*」|아래에 있는 모든 기물|위에 있는 모든 기물|바로 위·아래 기물들|바로 위 기물|전투 동안|영구히|가속|무적|고도|크기|스택|관통(?!탄)|경보병|중보병|궁병|경기병|중기병|지원병");
 
         public static string Highlight(string text) => ColorNumbers(Keyword.Replace(text, "<b>$0</b>"));
 
         // 근접 0.8 · 코끼리 3 · 공룡 5 · 사제 6 · 궁수 7 · 투석기 10
         private static string RangeWord(float range) => range <= 1f ? "가까움" : range <= 5f ? "보통" : "멂";
-
-        // 다음 등급 — 같은 기물·같은 등급 하나와 합치면 오른다
-        public static string UpgradeNote(OwnedBuilding building)
-        {
-            if (!building.CanUpgrade)
-                return "";
-            return Note($"같은 등급 하나를 더 모으면 {(building.Rarity + 1).DisplayName()} 등급이 됩니다.");
-        }
 
         private void Awake()
         {
@@ -242,8 +234,9 @@ namespace GnorpWar
         {
             float cooldown = running != null ? running.Cooldown : building.Definition.CooldownAt(building.Level);
             string body = Describe(building.Definition, building.Level, cooldown);
-            if (!enemy && !BattleManager.Fighting)
-                body += (building.Stacks > 0 ? Note($"스택 {building.Stacks}") : "") + UpgradeNote(building) + Note($"팔면 {RunState.SellValue(building)}골드를 얻습니다.");
+            // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
+            if (!enemy && !BattleManager.Fighting && building.Stacks > 0)
+                body += Note($"스택 {building.Stacks}");
             OwnedBuilding[] board = enemy ? System.Array.ConvertAll(BoardRunner.For(Team.Enemy).Slots, s => s.Building) : RunState.Field;
             Show(owner, Title(building.Definition, enemy, building.Rarity), body, building.Definition.MentionedUnits, board, enemy);
         }

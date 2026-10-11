@@ -43,7 +43,7 @@ namespace GnorpWar
 
         public static bool IsEmpty(OwnedBuilding building) => building == null || building._definition == null;
 
-        // 탑은 중간 층을 비울 수 없다 — 빈 칸을 빼고 아래로 당긴 새 배열(길이 = 층수 그대로). 적 라운드 표처럼 원본을 건드리면 안 되는 보드에
+        // 탑은 중간 층을 비울 수 없다 — 빈 칸을 빼고 아래로 당긴 새 배열(길이 = 층수 그대로). 치트 패널의 편집본처럼 손으로 고친 보드에
         public static OwnedBuilding[] Compacted(OwnedBuilding[] field)
         {
             var result = new OwnedBuilding[field.Length];

@@ -23,6 +23,8 @@ namespace GnorpWar
         public int To;
         // 대상이 유닛·타워면 그 월드 자리(유닛 무리면 가운데), 기물이면 null
         public Vector2? At;
+        // 대상이 타워면 그 진영 안에서의 타워 번호(본진 1, 작은 타워 2부터), 아니면 0 — 전장 선이 타워마다 하나씩 남게(BuffLinkFx의 솎기)
+        public int Tower;
         public BuffKind Kind;
         // 늘 켜진 효과(풍차)를 대상이 발동할 때마다 다시 알리는 것 — 약하게 그린다
         public bool Weak;
@@ -43,17 +45,18 @@ namespace GnorpWar
         public static void ToPoint(Team team, int from, Vector2 at, BuffKind kind)
             => Raised?.Invoke(new BuffLink { Team = team, From = from, To = -1, At = at, Kind = kind });
 
-        // 내 타워 전부(본진 + 작은 타워)에게
+        // 내 타워 전부(본진 + 작은 타워)에게 — 선은 각 타워의 화살이 나가는 자리로
         public static void ToTowers(Team team, int from, BuffKind kind)
         {
             if (Raised == null || from < 0)
                 return;
             Base main = Base.For(team);
             if (main != null && main.IsAlive)
-                ToPoint(team, from, main.Bounds.center, kind);
+                Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = main.Muzzle, Tower = 1, Kind = kind });
+            int number = 1;
             foreach (Base small in Base.SmallTowers())
                 if (small.Team == team)
-                    ToPoint(team, from, small.Bounds.center, kind);
+                    Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = small.Muzzle, Tower = ++number, Kind = kind });
         }
 
         // 내 유닛 무리에게(진영 단위 스탯) — 선 하나를 무리 가운데로. filter를 비우면 전부

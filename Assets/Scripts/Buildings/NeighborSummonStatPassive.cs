@@ -22,6 +22,8 @@ namespace GnorpWar
                 BuffLinks.ToPoint(board.Team, slot, unit.Position, BuffLinks.KindOf(_modifiers[0].Stat));
         }
 
+        public override bool Reaches(int slot, int other, BuildingDefinition target) => other > slot && target.Unit != null;
+
         public override string Describe(int level)
             => $"위에 있는 모든 기물이 소환하는 유닛의 {string.Join(", ", System.Array.ConvertAll(_modifiers, m => m.Scaled(_perTier, level).Describe()))}";
 

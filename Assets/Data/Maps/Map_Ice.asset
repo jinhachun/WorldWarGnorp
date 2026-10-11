@@ -13,9 +13,7 @@ MonoBehaviour:
   m_Name: Map_Ice
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapDefinition
   _displayName: "\uC5BC\uC74C"
-  _description: "5\uCD08\uB9C8\uB2E4 \uCFE8\uB2E4\uC6B4\uC774 \uC788\uB294 \uBAA8\uB4E0
-    \uAE30\uBB3C\uC744 \uBC1C\uB3D9\uD569\uB2C8\uB2E4.\n\uBAA8\uB4E0 \uAE30\uBB3C\uC758
-    \uCFE8\uB2E4\uC6B4 \xD72"
+  _description: 
   _unitRules: []
   _cooldownRate: 0.5
   _fireAllInterval: 10

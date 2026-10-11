@@ -35,6 +35,9 @@ namespace GnorpWar
         public virtual void OnSell(OwnedBuilding self) { }
         public virtual void OnGoldGained(OwnedBuilding self) { }
 
+        // 자리에 따라 달라지는 효과 — 이 기물이 slot층, target이 other층에 있을 때 효과가 target에 닿는가. 닿는 자리에 놓는 판단(Run/EnemyShopper)이 읽는다
+        public virtual bool Reaches(int slot, int other, BuildingDefinition target) => false;
+
         // 툴팁의 완결 문장 — 지금 등급 값으로 (CLAUDE.md §5-2)
         public abstract string Describe(int level);
         // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null

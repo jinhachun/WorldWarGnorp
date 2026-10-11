@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f4552d00595e64486ff2cabbdc49f0, type: 3}
+  m_Name: EnemyBuild_HeavyInfantry
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
+  _displayName: "\uD0B9\uB364 \uC911\uBCF4\uBCD1 \uC131\uC7A5"
+  _picks:
+  - Building: {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 44b7fa48a69cc8245beb4a968178122b, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: fc41d2b97fbc54342a080d2fbe97a7d6, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 4502c4fd0a68ca34782444955299e923, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: b66c9a7594d68384e80c4a695b9f7155, type: 2}
+    Weight: 4
+  _producerValue: 1
+  _producerShare: 0.5
+  _commonValue: 0.5
+  _ownedScale: 1.5
+  _rerollReserve: 6
+  _raisesFloorAhead: 1

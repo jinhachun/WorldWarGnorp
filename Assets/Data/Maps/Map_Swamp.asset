@@ -13,9 +13,7 @@ MonoBehaviour:
   m_Name: Map_Swamp
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapDefinition
   _displayName: "\uB2AA\uC9C0"
-  _description: "\uCFE8\uB2E4\uC6B4\uC774 \uC5C6\uB294 \uAE30\uBB3C\uC740 \uC791\uB3D9\uD558\uC9C0
-    \uC54A\uC2B5\uB2C8\uB2E4.\n\uCFE8\uB2E4\uC6B4\uC774 \uC788\uB294 \uAE30\uBB3C\uC740
-    \uBC1C\uB3D9\uD560 \uB54C\uB9C8\uB2E4 \uD6A8\uACFC\uB97C 2\uBC88 \uB0C5\uB2C8\uB2E4."
+  _description: 
   _unitRules: []
   _cooldownRate: 1
   _fireAllInterval: 0

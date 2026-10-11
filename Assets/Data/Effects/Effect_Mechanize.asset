@@ -19,3 +19,9 @@ MonoBehaviour:
     \uB300\uC2E0 \uD1B1\uB2C8\uBCD1\uC0AC\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4."
   _into: {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
   _buildingsOnly: 0
+  _modifier:
+    Stat: 1
+    Op: 1
+    Value: 0
+  _perTier: 0.1
+  _modifierDescription: "내가 병사를 소환할 때마다, 대신 {0}인 톱니병사를 소환합니다."

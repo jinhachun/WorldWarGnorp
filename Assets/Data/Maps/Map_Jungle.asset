@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Map_Jungle
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapDefinition
   _displayName: "\uC815\uAE00"
-  _description: "\uBAA8\uB4E0 \uAE30\uBB3C\uC758 \uCFE8\uB2E4\uC6B4 \xD70.5"
+  _description: 
   _unitRules: []
   _cooldownRate: 1.5
   _fireAllInterval: 0

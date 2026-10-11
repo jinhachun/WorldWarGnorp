@@ -18,7 +18,7 @@ MonoBehaviour:
   _rarity: 0
   _nation: 2
   _faction: 3
-  _cooldown: 6
+  _cooldown: 10
   _unit: {fileID: 0}
   _unitCount: 1
   _actions:

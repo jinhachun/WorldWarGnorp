@@ -15,6 +15,12 @@ namespace GnorpWar
         [SerializeField] private Transform _muzzle;
         [Tooltip("작은 타워(건축가가 짓는다) — 공격력·체력에 정의의 작은 타워 배율. 부서져도 지지 않는다. Base.For에 안 잡힌다")]
         [SerializeField] private bool _small;
+        [Tooltip("작은 타워 꼭대기의 진영 깃발 — 지을 때 본진 깃발 색으로 칠한다(본진은 비워 둔다 — 깃발은 Tower가 맡는다)")]
+        [SerializeField] private SpriteRenderer _flag;
+        [Tooltip("작은 타워의 기계 다리 — 내 작은 타워가 걸어가는 진영(움직이는 성)에서만 보이고, 그 높이만큼 본체가 올라간다. 프리팹에서는 본체 밑에 꺼 둔다(본진은 비워 둔다)")]
+        [SerializeField] private SpriteRenderer _legs;
+        [Tooltip("다리 걸음 그림 — 걸어간 거리에 따라 번갈아 보인다")]
+        [SerializeField] private Sprite[] _legFrames;
 
         private static readonly List<Base> All = new List<Base>();
 
@@ -46,6 +52,14 @@ namespace GnorpWar
         // 계산해 둔 타워 스탯(TowerBook.Version이 바뀔 때만 다시)
         private readonly float[] _stats = new float[5];
         private int _statsVersion = -1;
+        // 이 타워 한 채의 사거리 합연산 %(조립식 감시탑의 등급 값)
+        private float _rangeBonus;
+
+        public void SetRangeBonus(float percent)
+        {
+            _rangeBonus = percent;
+            RefreshStats();
+        }
 
         public event System.Action<Base> Destroyed;
 
@@ -54,6 +68,9 @@ namespace GnorpWar
         public float Hp => _hp;
         public float MaxHp => Stat(TowerStat.MaxHp);
         public float Hp01 => Mathf.Clamp01(_hp / MaxHp);
+
+        // 치트 훅(Dev/CheatPanel만 부른다) — 지금 체력을 바로 넣는다(1 ~ 최대)
+        public void CheatSetHp(float hp) => _hp = Mathf.Clamp(hp, 1f, MaxHp);
 
         public static Base For(Team team)
         {
@@ -65,6 +82,8 @@ namespace GnorpWar
 
         public bool IsSmall => _small;
         public Bounds Bounds => _collider.bounds;
+        // 화살이 나가는 자리 — 내 타워를 강화하는 버프 선이 여기로 간다(BuffLinks.ToTowers)
+        public Vector2 Muzzle => _muzzle.position;
 
         // 진영의 살아 있는 작은 타워 — 건축가가 빈자리를 고를 때
         public static IEnumerable<Base> SmallTowers()
@@ -85,7 +104,96 @@ namespace GnorpWar
             tower.gameObject.layer = TowerLayer(team);
             if (team == Team.Enemy)
                 tower.transform.localScale = Vector3.Scale(scale, new Vector3(-1f, 1f, 1f));
+            if (tower._flag != null && Tower.For(team) is Tower main)
+                tower._flag.color = main.FlagColor;
+            // Start는 다음 프레임 — 그 전에도 살아 있는 타워로 세어지게(같은 프레임에 세우는 두 번째 타워의 자리 고르기 · 소환 자리)
+            tower.RefreshStats();
+            tower._hp = tower.MaxHp;
             return tower;
+        }
+
+        // 작은 타워를 x에 세운다 — 밑면은 타워 폭 안에서 가장 낮은 땅(비탈에서도 뜨지 않는다)
+        public static Base BuildOnGround(Base prefab, Team team, float x)
+            => Build(prefab, team, new Vector2(x, LowestGround(x, HalfWidthOf(prefab))));
+
+        public static float HalfWidthOf(Base prefab)
+            => prefab.GetComponent<BoxCollider2D>().size.x * Mathf.Abs(prefab.transform.localScale.x) * 0.5f;
+
+        private const float GroundSampleStep = 0.25f;
+
+        private static float LowestGround(float x, float half)
+        {
+            float min = float.MaxValue;
+            for (float s = x - half; s <= x + half + 0.001f; s += GroundSampleStep)
+                min = Mathf.Min(min, Ground.Instance.HeightAt(s));
+            return min;
+        }
+
+        // 진영의 살아 있는 작은 타워 중 가장 앞에 있는 것(없으면 null) — 파견 사무소
+        public static Base FrontSmallTower(Team team)
+        {
+            float forward = team == Team.Ally ? 1f : -1f;
+            Base front = null;
+            foreach (Base b in All)
+                if (b._small && b._team == team && b.IsAlive
+                    && (front == null || (b.transform.position.x - front.transform.position.x) * forward > 0f))
+                    front = b;
+            return front;
+        }
+
+        // 다리 그림이 바뀌는 걸음 폭(걸어간 거리)
+        private const float LegStride = 0.5f;
+
+        // 기계 다리를 펴거나 접는다 — 본체(그림·깃발·발사점)가 다리 그림 높이만큼 오르내리고, 충돌 박스는 아래 끝을 땅에 둔 채 위로만 늘고 준다.
+        // 다리는 프리팹에서 본체 밑에 붙어 있다(꺼 둔 채) — 본체를 올리면 다리가 땅을 딛는다
+        private void SetLegs(bool on)
+        {
+            _legs.enabled = on;
+            float lift = _legs.sprite.bounds.size.y * (on ? 1f : -1f);
+            var box = (BoxCollider2D)_collider;
+            box.size += new Vector2(0f, lift);
+            box.offset -= new Vector2(0f, lift * 0.5f);
+            transform.position += Vector3.up * (lift * transform.localScale.y);
+        }
+
+        // 움직이는 성 — 작은 타워가 적 성 앞까지 앞으로만 걸어간다(내 유닛과 상관없이). 앞선 내 타워와는 Spacing을 두고 선다.
+        // 옮길 자리에 적(유닛·타워·본진)이 닿아 있으면 이번 스텝은 서 있는다 — 타워가 적을 밀어내지 않게. 걷는 진영의 타워만 기계 다리 위에 올라선다
+        private void Follow()
+        {
+            TowerBook.FollowRule rule = TowerBook.FollowOf(_team);
+            if (rule.Speed > 0f != _legs.enabled)
+            {
+                SetLegs(rule.Speed > 0f);
+                return;   // 바뀐 충돌 박스는 다음 물리 스텝부터 bounds에 잡힌다
+            }
+            Base enemy = For(_team == Team.Ally ? Team.Enemy : Team.Ally);
+            if (rule.Speed <= 0f || enemy == null)
+                return;
+            float forward = _team == Team.Ally ? 1f : -1f;
+            Vector3 position = transform.position;
+            float half = _collider.bounds.extents.x;
+            // 갈 수 있는 끝(전방 거리) — 적 성 앞면, 앞선 내 타워가 있으면 그 Spacing 뒤
+            float room = ((forward > 0f ? enemy.Bounds.min.x : enemy.Bounds.max.x) - position.x) * forward - half;
+            foreach (Base b in All)
+                if (b != this && b._small && b._team == _team && b.IsAlive)
+                {
+                    float d = (b.transform.position.x - position.x) * forward;
+                    if (d > 0f || (d == 0f && b.GetInstanceID() < GetInstanceID()))
+                        room = Mathf.Min(room, d - rule.Spacing);
+                }
+            if (room <= 0f)
+                return;
+            float x = position.x + forward * Mathf.Min(room, rule.Speed * Time.fixedDeltaTime);
+            // 밑면을 새 자리의 땅에 — 지을 때와 같은 규칙(폭 안에서 가장 낮은 땅)
+            float bottomOffset = position.y - _collider.bounds.min.y;
+            var next = new Vector3(x, LowestGround(x, half) + bottomOffset, position.z);
+            Physics2D.OverlapBox((Vector2)(_collider.bounds.center + next - position), _collider.bounds.size, 0f, SolidOnly, _overlaps);
+            foreach (Collider2D col in _overlaps)
+                if ((col.TryGetComponent(out Unit unit) && unit.Team != _team && unit.IsAlive)
+                    || (col.TryGetComponent(out Base other) && other._team != _team && other.IsAlive))
+                    return;
+            transform.position = next;
+            _legs.sprite = _legFrames[Mathf.FloorToInt(Mathf.Abs(x) / LegStride) % _legFrames.Length];
         }
 
         // 내 타워 전부(본진 + 작은 타워)가 최대 체력 대비 비율로 회복(성채)
@@ -135,7 +243,7 @@ namespace GnorpWar
             float hpScale = _small ? _definition.SmallHpScale : 1f;
             _stats[(int)TowerStat.Attack] = TowerBook.Compute(_team, TowerStat.Attack, _definition.AttackDamage * attackScale);
             _stats[(int)TowerStat.AttackSpeed] = TowerBook.Compute(_team, TowerStat.AttackSpeed, 1f);
-            _stats[(int)TowerStat.Range] = TowerBook.Compute(_team, TowerStat.Range, _definition.AttackRange);
+            _stats[(int)TowerStat.Range] = TowerBook.Compute(_team, TowerStat.Range, _definition.AttackRange, _rangeBonus);
             _stats[(int)TowerStat.ArrowCount] = TowerBook.Compute(_team, TowerStat.ArrowCount, 1f);
             _stats[(int)TowerStat.MaxHp] = TowerBook.Compute(_team, TowerStat.MaxHp, (_definition.MaxHp + RunState.BaseHpBonus) * hpScale);
             _statsVersion = TowerBook.Version;
@@ -145,7 +253,9 @@ namespace GnorpWar
 
         private void FixedUpdate()
         {
-            if (BattleManager.TowersStopped && !TowerBook.AttacksInDeathmatch(_team))
+            if (_small)
+                Follow();
+            if (!CanAttack)
                 return;
             _attackCooldown -= Time.fixedDeltaTime;
             if (_attackCooldown > 0f || !FindTargets())
@@ -170,6 +280,18 @@ namespace GnorpWar
                     shot.Pierce();
             }
             _attackCooldown = Unit.NextCooldown(_attackCooldown, _definition.AttackInterval / Stat(TowerStat.AttackSpeed));
+        }
+
+        // 데스매치에서는 오버드라이브가 있는 진영의 타워만 쏜다
+        private bool CanAttack => !BattleManager.TowersStopped || TowerBook.AttacksInDeathmatch(_team);
+
+        // 지금 쏠 수 있는 타워(본진 · 작은 타워) 중 사거리 안에 겨눌 적이 있는 것이 하나라도 있나 — 데스매치 판정(BattleManager)
+        public static bool AnyTowerHasTarget()
+        {
+            foreach (Base b in All)
+                if (b.IsAlive && b.CanAttack && b.FindTargets())
+                    return true;
+            return false;
         }
 
         // 사거리 안의 적(유닛 · 적 본진)을 가까운 순으로 _targets에
@@ -212,6 +334,8 @@ namespace GnorpWar
                 return;
 
             _hp -= amount;
+            if (amount > 0f)
+                BattleManager.NoteProgress();
             DamageNumbers.Damage(this, _team, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), amount);
             if (!IsAlive && _small)
             {

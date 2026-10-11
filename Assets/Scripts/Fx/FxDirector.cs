@@ -18,6 +18,7 @@ namespace GnorpWar
 
         private bool _hitStopping;
         private float _hitStopEndedAt = float.NegativeInfinity;
+        private CorpseFx _corpses;
 
         public static FxDirector Instance { get; private set; }
 
@@ -26,6 +27,7 @@ namespace GnorpWar
             Instance = this;
             // 버프 선 — 파편과 같은 픽셀 재질(FX_Pixel)로 그린다
             gameObject.AddComponent<BuffLinkFx>().Init(_hitSpark.GetComponent<ParticleSystemRenderer>().sharedMaterial);
+            _corpses = gameObject.AddComponent<CorpseFx>();
         }
 
         private void OnDestroy()
@@ -47,6 +49,12 @@ namespace GnorpWar
         public void DeathPuff(Vector2 position)
         {
             GetParticle(_deathPuff, position, Quaternion.identity).Play();
+        }
+
+        // 죽은 유닛의 모습이 튕겨 날아간다(CorpseFx). back = 유닛의 후방 부호
+        public void Corpse(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back)
+        {
+            _corpses.Throw(position, bodies, weapon, back);
         }
 
         // 풀에서 꺼낸다(Pooled). 재생이 끝나면 파괴 대신 꺼져서 풀로 돌아가게 한다 — 프리팹은 끝나면 파괴(Destroy)로 돼 있다

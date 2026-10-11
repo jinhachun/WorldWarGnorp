@@ -59,16 +59,16 @@ namespace GnorpWar
         public TowerModifier Scaled(float perTier, int level) => new TowerModifier(Stat, Op, OwnedBuilding.Scaled(Value, perTier, level));
     }
 
-    // 진영 단위 타워 스탯 변경 — StatBook과 같은 규칙(전투 동안 · 영구히 아군만), 대상 고르기는 없다(내 타워 전부)
+    // 진영 단위 타워 스탯 변경 — StatBook과 같은 규칙(전투 동안 · 영구히), 대상 고르기는 없다(내 타워 전부)
     public static class TowerBook
     {
         private static readonly List<TowerModifier>[] Battle = { new List<TowerModifier>(), new List<TowerModifier>() };
-        private static readonly List<TowerModifier> Run = new List<TowerModifier>();
+        private static readonly List<TowerModifier>[] Run = { new List<TowerModifier>(), new List<TowerModifier>() };
 
         public static int Version { get; private set; }
 
         public static void AddForBattle(Team team, TowerModifier modifier) => Add(Battle[(int)team], modifier);
-        public static void AddForRun(TowerModifier modifier) => Add(Run, modifier);
+        public static void AddForRun(Team team, TowerModifier modifier) => Add(Run[(int)team], modifier);
 
         // 같은 스탯·방식은 한 줄로 합친다(+는 더하고 ×는 곱한다 — 계산 결과는 같다). 처치마다 쌓는 기물로 목록이 길어지지 않게
         private static void Add(List<TowerModifier> list, TowerModifier modifier)
@@ -92,30 +92,45 @@ namespace GnorpWar
         public static bool AttacksInDeathmatch(Team team) => Deathmatch[(int)team];
         public static void AttackInDeathmatch(Team team) => Deathmatch[(int)team] = true;
 
+        // 작은 타워가 앞으로 걸어가는 진영(움직이는 성) — 전투 동안. Speed 0 = 걷지 않는다
+        public struct FollowRule
+        {
+            public float Speed;
+            public float Spacing;
+        }
+
+        private static readonly FollowRule[] Follows = new FollowRule[2];
+
+        public static FollowRule FollowOf(Team team) => Follows[(int)team];
+        public static void SetFollow(Team team, FollowRule rule) => Follows[(int)team] = rule;
+
         public static void ClearBattle()
         {
             foreach (List<TowerModifier> list in Battle)
                 list.Clear();
             Deathmatch[0] = Deathmatch[1] = false;
+            Follows[0] = Follows[1] = default;
             Version++;
         }
 
         public static void ClearRun()
         {
-            Run.Clear();
+            foreach (List<TowerModifier> list in Run)
+                list.Clear();
             Version++;
         }
 
-        public static float Compute(Team team, TowerStat stat, float baseValue)
+        // ownPercent = 그 타워 한 채에만 걸린 합연산 %(조립식 감시탑의 등급 사거리) — 진영 %와 더해진다
+        public static float Compute(Team team, TowerStat stat, float baseValue, float ownPercent = 0f)
         {
             StatSum sum = StatSum.Identity;
+            sum.Add(StatOp.Percent, ownPercent);
             foreach (TowerModifier m in Battle[(int)team])
                 if (m.Stat == stat)
                     sum.Add(m.Op, m.Value);
-            if (team == Team.Ally)
-                foreach (TowerModifier m in Run)
-                    if (m.Stat == stat)
-                        sum.Add(m.Op, m.Value);
+            foreach (TowerModifier m in Run[(int)team])
+                if (m.Stat == stat)
+                    sum.Add(m.Op, m.Value);
             return sum.Apply(baseValue);
         }
     }
@@ -172,7 +187,7 @@ namespace GnorpWar
         public float Apply(float baseValue) => (baseValue + Flat) * (1f + Percent) * Multiply;
     }
 
-    // 진영 단위로 걸린 스탯 변경. 전투 동안 = 전투 시작마다 비움 · 영구히 = 런 동안(아군만, 기물을 팔아도 남는다).
+    // 진영 단위로 걸린 스탯 변경. 전투 동안 = 전투 시작마다 비움 · 영구히 = 런 동안(진영별 — 적도 상점을 돈다. 기물을 팔아도 남는다).
     // 적용 대상은 걸어 준 쪽(효과·기물 능력)의 AppliesTo(병종 태그·유닛 이름). 바뀔 때마다 Version이 올라 유닛이 다시 계산한다
     public static class StatBook
     {
@@ -183,12 +198,12 @@ namespace GnorpWar
         }
 
         private static readonly List<Entry>[] Battle = { new List<Entry>(), new List<Entry>() };
-        private static readonly List<Entry> Run = new List<Entry>();
+        private static readonly List<Entry>[] Run = { new List<Entry>(), new List<Entry>() };
 
         public static int Version { get; private set; }
 
         public static void AddForBattle(Team team, IUnitFilter source, StatModifier modifier) => Add(Battle[(int)team], source, modifier);
-        public static void AddForRun(IUnitFilter source, StatModifier modifier) => Add(Run, source, modifier);
+        public static void AddForRun(Team team, IUnitFilter source, StatModifier modifier) => Add(Run[(int)team], source, modifier);
 
         public static void ClearBattle()
         {
@@ -199,7 +214,8 @@ namespace GnorpWar
 
         public static void ClearRun()
         {
-            Run.Clear();
+            foreach (List<Entry> entries in Run)
+                entries.Clear();
             Version++;
         }
 
@@ -225,14 +241,13 @@ namespace GnorpWar
         public static void Accumulate(Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum)
         {
             Accumulate(Battle[(int)team], team, unit, stat, ref sum);
-            if (team == Team.Ally)
-                AccumulateRun(unit, stat, ref sum);
+            Accumulate(Run[(int)team], team, unit, stat, ref sum);
         }
 
         // 영구히 걸린 것만(아군, 런 동안) — 전투의 유닛 계산과 RunStats.Preview가 같이 쓴다.
         // alias = 전투 시작 때 걸릴 별칭(상점에서는 아직 UnitAliases에 없다 — Preview가 필드에서 찾아 넘긴다)
         public static void AccumulateRun(UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
-            => Accumulate(Run, Team.Ally, unit, stat, ref sum, alias);
+            => Accumulate(Run[(int)Team.Ally], Team.Ally, unit, stat, ref sum, alias);
 
         private static void Accumulate(List<Entry> entries, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
         {

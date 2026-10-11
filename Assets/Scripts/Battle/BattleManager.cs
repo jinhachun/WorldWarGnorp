@@ -26,6 +26,15 @@ namespace GnorpWar
         private bool _fighting;
         private bool _over;
         private float _battleStart;
+        // 마지막으로 누가 피해를 받거나 죽은 시각(유닛 · 본진 · 작은 타워) — 교착 판정
+        private float _lastProgress;
+
+        // 피해·사망이 있었다(Unit · Base가 부른다)
+        public static void NoteProgress()
+        {
+            if (_instance != null)
+                _instance._lastProgress = Time.time;
+        }
 
         public static bool Fighting => _instance != null && _instance._fighting;
         public static float Elapsed => Fighting ? Time.time - _instance._battleStart : 0f;
@@ -70,12 +79,14 @@ namespace GnorpWar
             _instance = this;
             // 결과 화면에서 멈춘 채 다음 라운드로 들어왔을 수 있다
             Time.timeScale = 1f;
+            // 지난 전투의 "전투 동안" 타워 효과(사거리 등)가 남아 있으면 상점에서 본진이 적 본진을 쏜다 — 타워는 상점에서도 돈다
+            TowerBook.ClearBattle();
             if (!RunState.Started || RunState.IsOver)
                 RunState.StartNew(_config);
             RunState.EnterShop();
 
             _allyBoard.Load(RunState.Field);
-            _enemyBoard.Load(OwnedBuilding.Compacted(RunState.CheatEnemyField ?? _config.EnemyRoundAt(RunState.Round).Field));
+            _enemyBoard.Load(RunState.CheatEnemyField ?? RunState.EnemyField);
             _shopPanel.SetActive(true);
             _resultPanel.SetActive(false);
             _speedButton.SetActive(false);
@@ -113,8 +124,9 @@ namespace GnorpWar
             Time.timeScale = SpeedButton.Current;
         }
 
-        // 데스매치 — 기물까지 멈춘 뒤 양쪽 유닛이 다 사라지면 본진 체력 비율이 높은 쪽이 이긴다. 같으면 아군 승리(사용자 결정).
-        // 한쪽만 남았는데 남은 유닛이 전부 공격 못 하는 유닛(회복 전용 · 공격력 0)이면 본진을 못 깨므로 남은 쪽 승리(사용자 결정)
+        // 데스매치 — 기물까지 멈춘 뒤 양쪽 유닛이 다 사라지고 아무것도 더 죽을 수 없으면(쏠 수 있는 타워에 겨눌 대상이 없다) 아군 승리(사용자 결정 10/11).
+        // 한쪽만 남았는데 남은 유닛이 전부 공격 못 하는 유닛(회복 전용 · 공격력 0)이면 본진을 못 깨므로 남은 쪽 승리(사용자 결정).
+        // 그 밖에 끝나지 않는 판(양쪽 다 공격 못 하는 유닛만 · 땅에 걸린 유닛)은 교착 판정이 끝낸다
         private void Update()
         {
             // 상점에서 층을 올리면 RunState.Field가 새 배열이 된다 — 아군 보드(탑 그림이 읽는다)를 다시 올린다
@@ -142,20 +154,27 @@ namespace GnorpWar
                         enemyAttackers++;
                 }
             }
-            if (allies == 0 && enemies == 0)
+            // 오버드라이브 타워가 적 본진·작은 타워를 아직 깎을 수 있으면 판을 계속 둔다 — 본진 파괴로 끝난다
+            if (allies == 0 && enemies == 0 && !Base.AnyTowerHasTarget())
             {
-                Debug.Log($"[Battle] 데스매치 — 양쪽 유닛 0 · 본진 체력 아군 {_allyBase.Hp01:P0} · 적 {_enemyBase.Hp01:P0}");
-                Finish(_allyBase.Hp01 >= _enemyBase.Hp01);
+                Debug.Log($"[Battle] 데스매치 — 양쪽 유닛 0 · 겨눌 대상이 있는 타워 없음 → 아군 승리 (본진 체력 아군 {_allyBase.Hp01:P0} · 적 {_enemyBase.Hp01:P0})");
+                Finish(true);
             }
-            else if (enemies == 0 && allyAttackers == 0)
+            else if (enemies == 0 && allies > 0 && allyAttackers == 0)
             {
                 Debug.Log($"[Battle] 데스매치 — 적 유닛 0 · 아군은 공격 못 하는 유닛 {allies}기만");
                 Finish(true);
             }
-            else if (allies == 0 && enemyAttackers == 0)
+            else if (allies == 0 && enemies > 0 && enemyAttackers == 0)
             {
                 Debug.Log($"[Battle] 데스매치 — 아군 유닛 0 · 적은 공격 못 하는 유닛 {enemies}기만");
                 Finish(false);
+            }
+            // 교착 — 위 어디에도 안 걸리고 남은 판. 기물 정지 뒤로 이 시간 동안 피해도 사망도 없으면 아군 승리(사용자 결정 10/11)
+            else if (Time.time - Mathf.Max(_lastProgress, _battleStart + _config.BoardStopSeconds) >= _config.StalemateSeconds)
+            {
+                Debug.Log($"[Battle] 데스매치 — {_config.StalemateSeconds:0}초 동안 피해·사망 없음 → 아군 승리 (유닛 아군 {allies} · 적 {enemies})");
+                Finish(true);
             }
         }
 

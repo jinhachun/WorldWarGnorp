@@ -13,8 +13,7 @@ MonoBehaviour:
   m_Name: Map_Forest
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapDefinition
   _displayName: "\uC232"
-  _description: "\uAD81\uBCD1\uC758 \uACF5\uACA9\uB825 \xD70.5\n\uBAA8\uB4E0 \uC720\uB2DB\uC758
-    \uC774\uB3D9\uC18D\uB3C4 \xD70.7"
+  _description: 
   _unitRules:
   - _categories:
     - {fileID: 11400000, guid: 728ccb888483bab4cabe8181bd3e2725, type: 2}

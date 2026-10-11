@@ -82,7 +82,7 @@ namespace GnorpWar
                 OwnedBuilding pair = RunState.FindMergeTarget(building, 0);
                 string body = BuildingTooltip.Describe(building, 1, building.Cooldown);
                 if (pair != null)
-                    body += BuildingTooltip.RankUpPreview(building, pair.Level, pair.Rarity + 1) + BuildingTooltip.Note($"사면 가진 것과 합쳐져 {(pair.Rarity + 1).DisplayName()} 등급이 됩니다.");
+                    body += BuildingTooltip.RankUpPreview(building, pair.Level, pair.Rarity + 1);
                 BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity), body, building.MentionedUnits, RunState.Field);
             }
         }

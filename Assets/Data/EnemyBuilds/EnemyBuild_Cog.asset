@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f4552d00595e64486ff2cabbdc49f0, type: 3}
+  m_Name: EnemyBuild_Cog
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
+  _displayName: "\uD2F0\uD06C\uD1A1 \uD1B1\uB2C8\uBCD1\uC0AC"
+  _picks:
+  - Building: {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 8298b349a6b182d4686af1830515e70e, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 3d90b508c6e000945a7302cdc2bff790, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 2a6312135593d354dac9861cabdca4f3, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: ae0f76242fe99714183230e25ec067d4, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 9cc222ae70a92864cb730261866c6840, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: cbeb0990b237ed242926a323177d6141, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 11b430483aebdaf418cf1a42f0f94975, type: 2}
+    Weight: 4
+  _producerValue: 1
+  _producerShare: 0.5
+  _commonValue: 0.5
+  _ownedScale: 1.5
+  _rerollReserve: 2
+  _raisesFloorAhead: 1

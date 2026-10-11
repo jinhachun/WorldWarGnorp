@@ -43,6 +43,8 @@ namespace GnorpWar
         private bool _running;
         // 얼음 — 다음 "모든 기물 발동"까지 지난 시간
         private float _fireAllTimer;
+        // 파견 사무소 — 내 유닛이 성 대신 가장 앞에 있는 내 작은 타워에서 나온다(전투 동안, 패시브가 전투 시작 때 켠다)
+        private bool _summonAtSmallTower;
 
         public Team Team => _team;
         public Slot[] Slots => _slots;
@@ -108,6 +110,7 @@ namespace GnorpWar
                     foreach (UnitEffect effect in _slots[i].Building.Definition.Effects)
                         TeamEffects.Enable(_team, effect, _slots[i].Building.Level);
             BuffLinks.ClearStanding(_team);
+            _summonAtSmallTower = false;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (BuildingPassive passive in _slots[i].Building.Definition.Passives)
@@ -124,6 +127,8 @@ namespace GnorpWar
             => HasBuilding(index) && !(Map != null && Map.PassiveBuildingsOff && _slots[index].Building.Definition.Cooldown <= 0f);
 
         public void Stop() => _running = false;
+
+        public void SummonAtSmallTower() => _summonAtSmallTower = true;
 
         private void Update()
         {
@@ -206,14 +211,21 @@ namespace GnorpWar
                     if (extra > 0 && sourceSlot >= 0)
                         BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Trigger);
                 }
+            UnitEffect converter = null;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
                 {
                     UnitDefinition converted = e.Effect.ConvertSummon(unit, sourceSlot, e.Stacks);
+                    if (converted != unit)
+                        converter = e.Effect;
                     if (converted != unit && sourceSlot >= 0)
                         BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Trigger);
                     unit = converted;
                 }
+
+            // 파견 사무소 — 자리를 정하지 않은 소환은 가장 앞에 있는 내 작은 타워의 발치에서(없으면 아래 그대로 성에서)
+            if (at == null && _summonAtSmallTower && Base.FrontSmallTower(_team) is Base outpost)
+                at = new Vector2(outpost.transform.position.x, outpost.Bounds.min.y);
 
             Unit prefab = unit.PrefabFor(_team);
             float width = prefab.GetComponent<BoxCollider2D>().size.x;
@@ -224,6 +236,8 @@ namespace GnorpWar
             for (int i = 0; i < count; i++)
             {
                 Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, point);
+                if (converter != null)
+                    converter.OnConverted(spawned);
                 spawned.NotifySummoned(sourceSlot);
                 // 다른 층의 기물이 ~를 소환할 때마다 (군기 · 성당기사단) — 어느 층을 볼지는 능력이 정한다
                 if (sourceSlot >= 0)

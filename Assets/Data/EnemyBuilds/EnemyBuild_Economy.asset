@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f4552d00595e64486ff2cabbdc49f0, type: 3}
+  m_Name: EnemyBuild_Economy
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
+  _displayName: "\uD2F0\uD06C\uD1A1 \uAD6C\uB9E4\xB7\uACBD\uC81C"
+  _picks:
+  - Building: {fileID: 11400000, guid: 813a95b6bd62ea5418e720f78c9a01ad, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: ae0f76242fe99714183230e25ec067d4, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 3aa2623e9d67b284a9916b88bb173b06, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: c9e9844df012bfe4e877d91271931b5c, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 23a6b96e745c18146913f7f52e19cecf, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 47fbfceea9179404aa37e8c8caf15397, type: 2}
+    Weight: 3
+  _producerValue: 1
+  _producerShare: 0.5
+  _commonValue: 0.5
+  _ownedScale: 1.5
+  _rerollReserve: 4
+  _raisesFloorAhead: 0

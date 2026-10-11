@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_Catapult
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uD22C\uC11D\uAE30"
+  _category: {fileID: 11400000, guid: ca2455a173fad3b4e839267c10e84147, type: 2}
+  _allyPrefab: {fileID: 0}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 6c14885eb8ead3c41b89f9501582cd9e, type: 3}
+  _moveSpeed: 1.8000001
+  _maxHp: 80
+  _attackDamage: 15
+  _attackInterval: 2.3333333
+  _attackRange: 10
+  _hitKnockback: 2
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 6
+  _stackRank: 2
+  _attackType: 1
+  _pushPower: 4
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 1
+  _chargePushMultiplier: 1
+  _projectile: {fileID: 5840658882024782479, guid: 1dbe067fa1dd696418590937fdb06100, type: 3}
+  _projectileArcHeight: 5
+  _projectileSplashRadius: 1.5
+  _flameThickness: 2
+  _healAmount: 0
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8
+  _buildPrefab: {fileID: 0}
+  _buildSeconds: 2
+  _buildFlatness: 0.25
+  _buildSpacing: 2.5
+  _buildGateClearance: 3

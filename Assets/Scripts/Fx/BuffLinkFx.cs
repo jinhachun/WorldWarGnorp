@@ -77,8 +77,8 @@ namespace GnorpWar
             if (tower == null || link.From >= tower.FloorCount || link.To >= tower.FloorCount || (link.To < 0 && link.At == null))
                 return;
 
-            // 대상이 유닛·타워면 대상 자리와 상관없이 (출발·종류)로 솎는다
-            int key = ((((int)link.Team * 64 + link.From + 1) * 64 + link.To + 1) * 16 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0);
+            // 대상이 유닛이면 대상 자리와 상관없이 (출발·종류)로 솎는다. 타워면 타워마다 하나씩 남긴다(타워 번호 — 16채부터는 번호가 겹쳐 솎인다)
+            int key = (((((int)link.Team * 64 + link.From + 1) * 64 + link.To + 1) * 16 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0)) * 16 + (link.Tower & 15);
             float now = Time.unscaledTime;
             if (_lastDrawn.TryGetValue(key, out float last) && now - last < MinGap)
                 return;

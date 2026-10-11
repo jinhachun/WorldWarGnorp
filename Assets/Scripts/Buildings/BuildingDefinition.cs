@@ -46,7 +46,6 @@ namespace GnorpWar
         public BuildingFaction Faction => _faction;
         public float Cooldown => _cooldown;
         public UnitDefinition Unit => _unit;
-        public int UnitCount => _unitCount;
         // 지금 한 번 발동에 소환하는 수(전투 가속분 포함) — 발동(BoardRunner)과 툴팁·칸 숫자가 같이 읽는다
         public int SummonCount => _unitCount + BattleManager.ExtraUnits;
 
@@ -55,8 +54,6 @@ namespace GnorpWar
         public float CooldownAt(int level)
             => _unit == null || BattleManager.Config == null ? _cooldown : _cooldown * BattleManager.Config.RankCooldownScale(level);
 
-        // 지울 자리 — 등급 보너스 줄은 없어졌다(등급업 = 쿨다운 감소). UI가 호출을 빼면 지운다
-        public string RankLine(int level) => null;
         public BuildingAction[] Actions => _actions;
         public UnitEffect[] Effects => _effects;
         public BuildingPassive[] Passives => _passives;

@@ -59,7 +59,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
  │   ├─ MapLabel ← Text   (위 가운데 — 이번 라운드 맵 이름·설명)
  │   ├─ OfferTemplate [꺼짐] ← Image(투명 — 레이캐스트 230×260) · Button · OfferCard · CanvasGroup(살 수 없으면 — `RunState.CanBuy` 거짓 — 알파 0.4) → Floor(층 조각 120×120 + FloorLook: Light · Icon ×0.6 · RarityFrame = 창틀 · Cap `UI_FloorCap`) · Name · PriceRow · Locked(잠김 표시, 회색, 가격 아래 -132) · Glow(`UI_CardGlow` 156×156, 층 조각 뒤 — 보유 = 흰 숨쉬기 · RANK UP = 금색) · RankUp(「RANK UP!」 +118, 튐 — 판정 `RunState.FindMergeTarget`)   (x 460부터 250px 간격, y -440, 진열 수만큼 복제)
  │   ├─ FieldLabel · FieldView ← BoardView(아군 필드) → SlotTemplate [꺼짐]   (가운데 x 700부터, y -680)
- │   ├─ StorageLabel(「보관함 n/6」, 상자 왼쪽 위) · StorageView ← Image(`UI_Crate` 804×276) · BoardView(보관함) · StorageBox → SlotTemplate [꺼짐] = 층 조각   (상자 (960, -778). 백팩배틀즈식 — 끌던 속도로 던져져 돌며 구르다 멈춤(`ShopPanel.DropOnBox`) — 물리는 런타임에 만든 `StorageBoxPhysics…` 씬의 전용 2D 물리 공간(플레이 중 하이어라키에 씬이 하나 더 보이는 게 정상), 자리·각도는 정적 변수로 라운드 넘어 유지, 빈 칸은 안 보임)
+ │   ├─ StorageLabel(「보관함 n/6」, 상자 왼쪽 위) · OfferChances(등급별 등장 확률 다섯 숫자, 같은 줄 오른쪽 끝 — `ShopPanel._chances`) · StorageView ← Image(`UI_Crate` 804×276) · BoardView(보관함) · StorageBox → SlotTemplate [꺼짐] = 층 조각   (상자 (960, -778). 백팩배틀즈식 — 끌던 속도로 던져져 돌며 구르다 멈춤(`ShopPanel.DropOnBox`) — 물리는 런타임에 만든 `StorageBoxPhysics…` 씬의 전용 2D 물리 공간(플레이 중 하이어라키에 씬이 하나 더 보이는 게 정상), 자리·각도는 정적 변수로 라운드 넘어 유지, 빈 칸은 안 보임)
  │   (상점 배치 10/8 UI 정리: 판 불투명 검정 · 필드 탑 = 전투 아군 탑 자리(x 75, 바닥 y -1000) · 상태 줄 y -90 · MapBox 1200×130 · 진열 x 440부터 260 간격(OfferTemplate/Name 기물 이름) · 보관함 y -680 · 버튼 y -990, 「전투 시작」만 주 버튼(`UI_ButtonMain`) · FieldLabel 꺼짐.
  │    톤: 판·칸·버튼·툴팁 = `UI_*Dark`·`UI_MapBox`·`UI_TooltipWide`(검은 속 + 흰 3px, 코드로 만든 임시 그림). 형제 순서 …ShopPanel → BaseBar ×2 → EnemyBoardView → ResultPanel → TowerHover → BuildingTooltip — 체력 바·적 탑은 상점 판 위)
  │   (StatusLine = Round·Gold·Lives·Wins 네 칸, 각 아이콘 + 글 · 버튼 글은 `LabelRow`(아이콘 + Label) 안 · OfferTemplate/PriceRow = 동전 + 가격 · 아이콘은 `UI_Icon*` 32×32 임시)
@@ -67,7 +67,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
  │   ├─ LockButton(`RunState.ToggleShopLock`) · RerollButton · RaiseButton(층 올리기 NG / 최고층) · SellButton(+ SellDropZone: 칸을 끌어 놓으면 판매) · StartButton   ← Image · Button → Label   (y -1010)
  │   └─ DragGhost      ← Image(층 조각, 벽 금색 틴트) · FloorLook · CanvasGroup(레이캐스트 안 막음) → Light · Icon · Window(등급 색) · Cap   (끄는 동안 포인터를 따라다님 — 반드시 ShopPanel의 마지막 자식)
  ├─ ResultPanel    [실행 시 꺼짐] ← Image → ResultText(한 줄) · ResultStats(`ResultStats` — 목숨·승리 아이콘 줄, y -10) · ResultTime(회색 「전투 시간 분:초」, y -50 — `RampLabel.LastElapsed`) · RetryButton(y -134) → Label("다음 라운드"/"새 런")
- └─ BuildingTooltip ← BuildingTooltip (켜 둔 채) → Panel(UI_Tooltip 420×300 · CanvasGroup 레이캐스트 안 막음, 판만 켜고 끔) → Title · Body · UnitPanel(UI_Tooltip 420×300, Panel 아래에 매달림 · 설명에 나오는 유닛마다 한 장 — 이 판이 틀, 둘째 장부터 실행 중 복제해 아래로 6px 간격으로 쌓음) → UnitBody   (칸·진열에 마우스 올리면 그 오른쪽, 자리 없으면 왼쪽 · 윗변은 칸 윗변에 맞추고 화면을 넘으면 안으로 민다 — Canvas 마지막 자식)
+ └─ BuildingTooltip ← BuildingTooltip (켜 둔 채) → Panel(UI_TooltipWide · CanvasGroup 레이캐스트 안 막음, 판만 켜고 끔) → Title · Body · UnitPanel(UI_TooltipWide, Panel 아래에 매달림 · 설명에 나오는 유닛마다 한 장 — 이 판이 틀, 둘째 장부터 실행 중 복제해 아래로 6px 간격으로 쌓음) → UnitBody   (칸·진열에 마우스 올리면 그 오른쪽, 자리 없으면 왼쪽 · 윗변은 칸 윗변에 맞추고 화면을 넘으면 안으로 민다 — Canvas 마지막 자식)
 ```
 
 - UI 그림은 **Claude가 만든 임시 PNG**(`Assets/Sprites/UI/UI_*.png` — 칸 120×120 · 게이지 120×12 · 카드 230×260 · 버튼 220×80 · 패널 1920×1080, PPU 100). §5-1대로 Simple + Native Size — 사용자 그림이 오면 같은 이름으로 교체.
@@ -84,7 +84,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 
 | 하려는 것 | 씬 작업 |
 |---|---|
-| 새 유닛 종류 | `Assets/Prefabs/`에 프리팹(`Unit` + `Rigidbody2D` + `BoxCollider2D` + 마찰 0 재질) + `Assets/Data/`에 `UnitDefinition` 에셋. 씬 구조 변경 없음 |
+| 새 유닛 종류 | `Assets/Prefabs/Units/`에 프리팹(`Unit` + `Rigidbody2D` + `BoxCollider2D` + 마찰 0 재질) + `Assets/Data/Units/`에 `UnitDefinition` 에셋. 씬 구조 변경 없음 |
 | 기지 체력 | `Assets/Data/Base_Test.asset` (씬 X) |
 | 골드·목숨·가속·적 라운드·상점 목록 | `Assets/Data/BattleConfig.asset` (씬 X) |
 | 새 건물 | 씬 X — `Assets/Data/Buildings/` 에셋 + `BattleConfig` 목록 |

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f4552d00595e64486ff2cabbdc49f0, type: 3}
+  m_Name: EnemyBuild_Priest
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
+  _displayName: "\uD0B9\uB364 \uC0AC\uC81C"
+  _picks:
+  - Building: {fileID: 11400000, guid: 0e52504e65d29db408d8de09821317cc, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: c36271f72daf49248aeece0b15cc0d6b, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: ddf80c233b7e9b543a1d4c565866a3ae, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 0a1057b84c9d51e4e87258122eda315a, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 8460ac0469b2a6240897101c50459a88, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: cccf320913cac7849a458673d20edfe2, type: 2}
+    Weight: 1.5
+  _producerValue: 1
+  _producerShare: 0.5
+  _commonValue: 0.5
+  _ownedScale: 1.5
+  _rerollReserve: 6
+  _raisesFloorAhead: 1

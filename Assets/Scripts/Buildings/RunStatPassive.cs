@@ -20,22 +20,17 @@ namespace GnorpWar
 
         public override bool HasBuyEffect => _trigger == Trigger.Buy;
 
-        // 적 보드(영악한 투자가)엔 런이 없으므로 그 전투 동안으로
         public override void OnBuy(OwnedBuilding self, Team team)
         {
-            if (_trigger != Trigger.Buy)
-                return;
-            if (team == Team.Ally)
-                StatBook.AddForRun(this, _modifier.Scaled(_perTier, self.Level));
-            else
-                StatBook.AddForBattle(team, this, _modifier.Scaled(_perTier, self.Level));
+            if (_trigger == Trigger.Buy)
+                StatBook.AddForRun(team, this, _modifier.Scaled(_perTier, self.Level));
         }
 
         public override void OnGoldGained(OwnedBuilding self)
         {
             if (_trigger != Trigger.GoldGained)
                 return;
-            StatBook.AddForRun(this, _modifier.Scaled(_perTier, self.Level));
+            StatBook.AddForRun(RunState.ActingTeam, this, _modifier.Scaled(_perTier, self.Level));
             OwnedBuilding.NotifyEffect(self);
         }
 

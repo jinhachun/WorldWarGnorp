@@ -2,15 +2,6 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 적 보드 한 라운드 — 필드 칸마다 건물과 경험치 (빈 칸은 Definition 없음)
-    [System.Serializable]
-    public class EnemyRound
-    {
-        [SerializeField] private OwnedBuilding[] _field = new OwnedBuilding[0];
-
-        public OwnedBuilding[] Field => _field;
-    }
-
     // 런·상점·전투 전체에 걸친 수치
     [CreateAssetMenu(menuName = "GnorpWar/Battle Config")]
     public class BattleConfig : ScriptableObject
@@ -20,9 +11,8 @@ namespace GnorpWar
         [SerializeField] private int _startFloors = 3;
         [Tooltip("층 올리기로 닿을 수 있는 최대 층수")]
         [SerializeField] private int _maxFloors = 8;
-        [Tooltip("층 올리기 비용 = 이 값 + 아래 값 × (지금까지 올린 횟수)")]
-        [SerializeField] private int _floorCostStart = 6;
-        [SerializeField] private int _floorCostPerRaise = 2;
+        [Tooltip("층 올리기 비용 — 칸 순서: 첫 번째 올리기 · 두 번째 … (칸 수 = 최대 층수 − 시작 층수). 칸이 모자라면 마지막 값")]
+        [SerializeField] private int[] _floorCosts = { 8, 14, 28, 44, 64 };
         [SerializeField] private int _storageSlots = 5;
 
         [Header("런")]
@@ -63,8 +53,10 @@ namespace GnorpWar
         [SerializeField] private MapDefinition[] _maps = new MapDefinition[0];
 
         [Header("적")]
-        [Tooltip("라운드별 적 보드 — 0번이 1라운드. 라운드가 목록보다 많으면 마지막 보드")]
-        [SerializeField] private EnemyRound[] _enemyRounds = new EnemyRound[0];
+        [Tooltip("적의 빌드 방향 — 런을 시작할 때 하나를 같은 확률로 뽑고, 적은 런 내내 그 방향으로 상점을 돈다(Run/EnemyShopper)")]
+        [SerializeField] private EnemyBuildProfile[] _enemyBuilds = new EnemyBuildProfile[0];
+        [Tooltip("적이 라운드마다 받는 상점 골드에 곱한다 — 1 = 플레이어와 같다(반올림)")]
+        [SerializeField] private float _enemyGoldScale = 1f;
 
         [Header("가속 — 전투가 끝나지 않는 것을 막는다 (공격력 · 생산 수)")]
         [Tooltip("이 시각(초)에 첫 증가")]
@@ -80,6 +72,8 @@ namespace GnorpWar
         [SerializeField] private float _deathmatchSeconds = 180f;
         [Tooltip("본진이 멈춘 뒤 기물이 이만큼(초) 더 발동하고 멈춘다(생산 포함)")]
         [SerializeField] private float _boardGraceSeconds = 10f;
+        [Tooltip("교착 — 기물이 멈춘 뒤 이만큼(초) 동안 아무도 피해를 받지 않고 죽지 않으면 아군 승리. 가장 느린 유닛이 가장 느린 맵에서 성에서 성까지 걷는 시간보다 길어야 한다")]
+        [SerializeField] private float _stalemateSeconds = 240f;
 
         [Header("유닛")]
         [Tooltip("유닛 크기 상한 — 1 = 기본 크기, 3 = 기본의 3배(+200%). 넘치는 성장은 버린다")]
@@ -103,10 +97,38 @@ namespace GnorpWar
         [Tooltip("초당 유닛 생산 수 표시 — 최근 이만큼(초) 동안 전장에 나온 유닛 수를 이 시간으로 나눈다")]
         [SerializeField] private float _spawnRateWindowSeconds = 10f;
 
+        [Header("시체 — 죽은 유닛의 모습이 뒤쪽(자기 성 쪽)으로 날려 보내진다(연출만 — 규칙과 무관). 화면 = 가로 71 × 세로 40칸")]
+        [Tooltip("날리는 세기(초당 칸) — 이 사이에서 무작위")]
+        [SerializeField] private float _corpseSpeedMin = 32f;
+        [SerializeField] private float _corpseSpeedMax = 40f;
+        [Tooltip("발사 각도(도) — 수평에서 위로. 방향은 언제나 유닛의 뒤쪽")]
+        [SerializeField] private float _corpseAngle = 35f;
+        [Tooltip("발사 각도 편차 — ±이 값(도) 안에서 무작위")]
+        [SerializeField] private float _corpseAngleSpread = 10f;
+        [Tooltip("시체를 끌어내리는 중력(초당 칸/초) — 낮을수록 곧게 멀리 날아간다")]
+        [SerializeField] private float _corpseGravity = 12f;
+        [Tooltip("도는 속도(초당 도) — 이 사이에서 무작위. 방향은 언제나 뒤로 구르는 쪽")]
+        [SerializeField] private float _corpseSpinMin = 360f;
+        [SerializeField] private float _corpseSpinMax = 540f;
+        [Tooltip("이만큼(게임 시간 초) 지나면 사라진다. 그 전에 화면 아래로 빠져도 사라진다")]
+        [SerializeField] private float _corpseLifetime = 5f;
+        [Tooltip("동시에 떠 있는 시체 수 상한 — 넘으면 가장 오래된 것부터 돌려 쓴다. 전투 씬을 불러올 때 읽는다")]
+        [SerializeField] private int _corpseMax = 128;
+
+        public float CorpseSpeedMin => _corpseSpeedMin;
+        public float CorpseSpeedMax => _corpseSpeedMax;
+        public float CorpseAngle => _corpseAngle;
+        public float CorpseAngleSpread => _corpseAngleSpread;
+        public float CorpseGravity => _corpseGravity;
+        public float CorpseSpinMin => _corpseSpinMin;
+        public float CorpseSpinMax => _corpseSpinMax;
+        public float CorpseLifetime => _corpseLifetime;
+        public int CorpseMax => _corpseMax;
+
         public int StartFloors => _startFloors;
         public int MaxFloors => _maxFloors;
         // raises = 지금까지 올린 횟수(0부터)
-        public int FloorCost(int raises) => _floorCostStart + _floorCostPerRaise * raises;
+        public int FloorCost(int raises) => _floorCosts[Mathf.Min(raises, _floorCosts.Length - 1)];
         public float ClimbRest => _climbRest;
         public float ClimbSlowerThan => _climbSlowerThan;
         public float ClimbJumpExtra => _climbJumpExtra;
@@ -118,6 +140,7 @@ namespace GnorpWar
         public float StompDamagePerSecond => _stompDamagePerSecond;
         public float DeathmatchSeconds => _deathmatchSeconds;
         public float BoardStopSeconds => _deathmatchSeconds + _boardGraceSeconds;
+        public float StalemateSeconds => _stalemateSeconds;
         public int StorageSlots => _storageSlots;
         public int Lives => _lives;
         // round는 0부터(RunState.Round) — 0이면 0
@@ -144,7 +167,9 @@ namespace GnorpWar
 
         public MapDefinition[] Maps => _maps;
 
-        public EnemyRound EnemyRoundAt(int round) => _enemyRounds[Mathf.Clamp(round, 0, _enemyRounds.Length - 1)];
+        public EnemyBuildProfile[] EnemyBuilds => _enemyBuilds;
+        public EnemyBuildProfile RandomEnemyBuild() => _enemyBuilds[Random.Range(0, _enemyBuilds.Length)];
+        public float EnemyGoldScale => _enemyGoldScale;
 
         // 전투 경과 시간까지 오른 가속 단계 수 — 시작 시각에 첫 증가, 이후 간격마다
         private int RampStepsAt(float elapsed)

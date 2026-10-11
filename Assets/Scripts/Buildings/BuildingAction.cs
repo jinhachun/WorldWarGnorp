@@ -10,6 +10,8 @@ namespace GnorpWar
         public abstract string Describe(int level);
         // 칸 아래에 보이는 대표 숫자(지금 등급 값, "1초"·"10%") — 없으면 null
         public virtual string Headline(int level) => null;
+        // 자리에 따라 달라지는 효과 — 이 기물이 slot층, target이 other층에 있을 때 효과가 target에 닿는가. 닿는 자리에 놓는 판단(Run/EnemyShopper)이 읽는다
+        public virtual bool Reaches(int slot, int other, BuildingDefinition target) => false;
         // 전투 동안 칸이 값을 쌓는가(허수아비 등) — 쌓으면 그 계산 방식. 쌓은 값은 Execute에서 board.AddBattleGain으로
         public virtual bool BattleGain(out StatOp op)
         {

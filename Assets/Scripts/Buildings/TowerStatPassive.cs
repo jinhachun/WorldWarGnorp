@@ -61,7 +61,7 @@ namespace GnorpWar
 
         private void Apply(Team team, int level) => Apply(team, level, out _);
 
-        // 영구히는 아군만(런) — 적 보드는 그 전투 동안으로. 상한에 막혀 아무것도 안 걸었으면 false
+        // 상한에 막혀 아무것도 안 걸었으면 false
         private bool Apply(Team team, int level, out TowerModifier modifier)
         {
             modifier = _modifier.Scaled(_perTier, level);
@@ -73,8 +73,8 @@ namespace GnorpWar
                 modifier.Value = next / _stacked[(int)team];   // 상한에 정확히 닿게 마지막 한 번은 남은 만큼만
                 _stacked[(int)team] = next;
             }
-            if (_permanent && team == Team.Ally)
-                TowerBook.AddForRun(modifier);
+            if (_permanent)
+                TowerBook.AddForRun(team, modifier);
             else
                 TowerBook.AddForBattle(team, modifier);
             return true;

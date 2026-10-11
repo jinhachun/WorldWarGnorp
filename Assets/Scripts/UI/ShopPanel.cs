@@ -19,6 +19,8 @@ namespace GnorpWar
         [SerializeField] private Text _wins;
         [SerializeField] private Button _reroll;
         [SerializeField] private Text _rerollLabel;
+        [Tooltip("지금 라운드의 진열 등급 확률(RunState.OfferChance) — 등급 색 숫자 다섯 개(일반 · 고급 · 희귀 · 영웅 · 전설 순)")]
+        [SerializeField] private Text _chances;
         [Tooltip("진열 잠금 — 잠그면 다음 라운드에 같은 진열이 나온다(RunState.ShopLocked)")]
         [SerializeField] private Button _lock;
         [SerializeField] private Text _lockLabel;
@@ -296,6 +298,7 @@ namespace GnorpWar
             _wins.text = $"승리 {RunState.Wins}";
             _reroll.interactable = RunState.CanReroll;
             _rerollLabel.text = $"리롤 {RunState.RerollCost}G";
+            _chances.text = ChanceLine();
             _lockLabel.text = RunState.ShopLocked ? "잠금 해제" : "잠금";
             _raise.interactable = RunState.CanRaiseFloor;
             _raiseLabel.text = RunState.Floors < RunState.MaxFloors ? $"층 올리기 {RunState.NextFloorCost}G" : "최고층";
@@ -335,6 +338,21 @@ namespace GnorpWar
             Grey(_sell, _sellLabel);
         }
 
+        // 등급 이름 대신 등급 색(기물 테두리 색)으로 칠한 숫자 — 안 나오는 등급(0%)도 자리는 두고 흐리게(순서가 곧 등급이라)
+        private static string ChanceLine()
+        {
+            var parts = new string[5];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var rarity = (BuildingRarity)i;
+                int percent = Mathf.RoundToInt(RunState.OfferChance(rarity) * 100f);
+                string color = ColorUtility.ToHtmlStringRGB(rarity.FrameColor()) + (percent == 0 ? ZeroChanceAlpha : "FF");
+                parts[i] = $"<color=#{color}>{percent}%</color>";
+            }
+            return string.Join("  ", parts);
+        }
+
+        private const string ZeroChanceAlpha = "59";   // 35%
         private const float MapIconGap = 10f;
         private static readonly Color DropColor =new Color(1f, 0.85f, 0.35f);
         private static readonly Color DisabledText = new Color(0.6f, 0.6f, 0.66f);

@@ -31,13 +31,11 @@ namespace GnorpWar
         public virtual int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level) => 0;
         // 소환 처리 ② — 대신 소환할 유닛(그대로면 unit)
         public virtual UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks) => unit;
+        // 이 효과가 바꿔서 소환한 유닛이 나온 직후(한 마리마다, 소환 이벤트 앞)
+        public virtual void OnConverted(Unit unit) { }
 
         // 매 물리 스텝 — 경직 중이 아닐 때
         public virtual void Tick(Unit unit, int stacks) { }
-        // 적 머리 위에 새로 내려앉은 순간
-        public virtual void OnLandedOnEnemy(Unit unit, Unit enemy, int stacks) { }
-        // 원거리 공격 한 발을 쏜 직후
-        public virtual void OnRangedShot(Unit unit, IDamageable target, int stacks) { }
         // 맞은 직후(살아 있을 때). true면 이번 피격의 밀림·경직을 받지 않는다
         public virtual bool OnHit(Unit unit, IDamageable attacker, Vector2 hitDirection, float push, int stacks) => false;
         // 이 유닛이 적 유닛을 처치한 직후(근접·투사체·화염 모두)

@@ -31,6 +31,7 @@ argument-hint: <총괄|밸런스|개발|UI>
 | 개발 | `Assets/Scripts/**`(UI 폴더 제외) · `Assets/Editor/**` · `Assets/Prefabs/**` · `Assets/Fx/**` · `ProjectSettings/**` · **새 SO 에셋 만들기** · 에셋의 설명 글 · 유닛·투사체 그림 배선 · 씬에서 Canvas 밖 오브젝트 |
 | UI | `Assets/Scripts/UI/**` · UI 그림 배선 · 씬에서 Canvas 아래 오브젝트 |
 | 기획 | `Docs/`의 기획서(`WorldWarGnorp_기물기획.md` 등) — 사용자·총괄이 시킨 반영만(사용자 10/9) |
+| 잔일 | 지시에 고칠 곳이 정해진 한두 줄 수정 — 코드·에셋·UI 어디든(사용자 10/11). 확인은 컴파일까지만, 플레이·측정 없음. 총괄이 서브에이전트 하나를 이어서 쓴다 — 조건은 `잔일.md` |
 | (총괄) | `Docs/TodoList/` · `Docs/Record/` — 절차는 `.claude/skills/testResultReview/SKILL.md`. `Docs/testResult/`는 사용자만 쓴다 |
 | 사용자 | `GDD.md` — 시키지 않으면 아무도 안 고친다 · `Docs/`의 결정 자체 |
 

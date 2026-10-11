@@ -15,7 +15,6 @@ namespace GnorpWar
         {
             int seconds = (int)RampLabel.LastElapsed;
             _time.text = $"전투 시간 {seconds / 60}:{seconds % 60:00}";
-            _time.enabled = RunState.LastOutcome != RunState.Outcome.None;   // 쉬는 턴에는 전투가 없었다
             _lives.text = $"행복도 {RunState.Happiness}/{RunState.HappinessMax}";
             _wins.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
         }

@@ -84,6 +84,9 @@ namespace GnorpWar
         [Tooltip("아래 수치에서 나오는 줄이 하나도 없을 때만 보이는 글(기본 맵) — 수치가 있는 맵의 글은 코드가 만든다(Description)")]
         [HideIf(nameof(HideNonBalance))]
         [TextArea] [SerializeField] private string _description = "";
+        [Tooltip("맵 이름 앞 아이콘(32×32) — 상점 맵 칸 · 전투 중 맵 이름 · 월드 지도의 땅 표시")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _icon;
 
         [TitleGroup("유닛 — 전투 동안 양 진영에"), ShowIf(nameof(ShowUnitRules))]
         [SerializeField] private UnitRule[] _unitRules = new UnitRule[0];
@@ -113,6 +116,7 @@ namespace GnorpWar
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
         public string DisplayName => _displayName;
+        public Sprite Icon => _icon;
         // 설명 글 — 아래 수치 필드에서 만든다(값을 고치면 글이 따라간다, CLAUDE.md §5-2 6번). 수치로 나오는 줄이 없는 맵(기본)만 _description
         public string Description
         {

@@ -64,9 +64,9 @@ namespace GnorpWar.Editor
                 });
             }
 
+            int before = made;
             WorldMapDefinition map = LoadOrCreate<WorldMapDefinition>($"{Folder}/WorldMap_Main.asset", ref made, so =>
             {
-                int[][] links = WorldMapTable.Links();
                 SerializedProperty regions = so.FindProperty("_regions");
                 regions.arraySize = WorldMapTable.RegionCount;
                 for (int i = 0; i < regions.arraySize; i++)
@@ -74,10 +74,6 @@ namespace GnorpWar.Editor
                     SerializedProperty region = regions.GetArrayElementAtIndex(i);
                     region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Terrain)).objectReferenceValue = terrains[WorldMapTable.TerrainOf(i)];
                     region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Upgrade)).objectReferenceValue = upgrades[WorldMapTable.UpgradeOf(i)];
-                    SerializedProperty to = region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Links));
-                    to.arraySize = links[i].Length;
-                    for (int k = 0; k < links[i].Length; k++)
-                        to.GetArrayElementAtIndex(k).intValue = links[i][k];
                 }
                 SerializedProperty rows = so.FindProperty("_terrainBuilds");
                 rows.arraySize = terrains.Length;
@@ -88,12 +84,79 @@ namespace GnorpWar.Editor
                     row.FindPropertyRelative(nameof(WorldMapDefinition.TerrainBuild.Build)).objectReferenceValue = builds[i];
                 }
             });
+            // 새로 만든 맵에는 땅 모양 · 이웃 · 표시 자리를 굽는다
+            if (made > before)
+                Bake(map);
 
             // 수치는 WorldConfig 클래스의 첫 값 그대로 — 맵만 잇는다
             LoadOrCreate<WorldConfig>($"{Folder}/WorldConfig.asset", ref made, so => so.FindProperty("_map").objectReferenceValue = map);
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[World] 월드 에셋 {made}개를 만들었다({Folder}) — 이미 있던 것은 그대로 뒀다");
+        }
+
+        // 땅 번호 지도(그림 한 장)를 다시 그려 저장하고, 그 그림에서 뽑은 이웃 · 표시 자리를 맵 에셋에 적는다 — 지형 · 업그레이드는 건드리지 않는다.
+        // 지도의 모양은 WorldMapBaker의 숫자가 정한다(늘 같은 그림이 나온다)
+        [MenuItem("GnorpWar/월드 지도 굽기")]
+        private static void BakeMain()
+        {
+            var map = AssetDatabase.LoadAssetAtPath<WorldMapDefinition>($"{Folder}/WorldMap_Main.asset");
+            if (map == null)
+            {
+                Debug.LogError("[World] WorldMap_Main.asset이 없다 — 「월드 에셋 만들기」를 먼저 부른다");
+                return;
+            }
+            Bake(map);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void Bake(WorldMapDefinition map)
+        {
+            var baker = new WorldMapBaker();
+            const int width = WorldMapBaker.Width, height = WorldMapBaker.Height;
+            var pixels = new Color32[width * height];
+            // 텍스처는 아래 줄부터 든다
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    byte value = (byte)((baker.At(x, y) + 1) * WorldMapDefinition.RegionMapStep);
+                    pixels[(height - 1 - y) * width + x] = new Color32(value, value, value, 255);
+                }
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            string path = $"{Folder}/{map.name}_Regions.png";
+            System.IO.File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path);
+            // 값을 그대로 읽어야 한다 — 색 공간 변환 · 압축 · 크기 보정 · 밉맵 없이, 읽기 켬
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.sRGBTexture = false;
+            importer.isReadable = true;
+            importer.mipmapEnabled = false;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            importer.filterMode = FilterMode.Point;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+
+            var so = new SerializedObject(map);
+            so.FindProperty("_regionMap").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            SerializedProperty regions = so.FindProperty("_regions");
+            for (int i = 0; i < regions.arraySize; i++)
+            {
+                SerializedProperty region = regions.GetArrayElementAtIndex(i);
+                SerializedProperty to = region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Links));
+                to.arraySize = baker.Links[i].Length;
+                for (int k = 0; k < baker.Links[i].Length; k++)
+                    to.GetArrayElementAtIndex(k).intValue = baker.Links[i][k];
+                region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Anchor)).vector2IntValue = new Vector2Int(baker.AnchorX[i], baker.AnchorY[i]);
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            int links = 0;
+            foreach (int[] row in baker.Links)
+                links += row.Length;
+            Debug.Log($"[World] 지도를 구웠다 — {path} ({width}×{height}) · 땅 {regions.arraySize}개 · 이웃 {links / 2}쌍(국경 {WorldMapBaker.MinBorder}칸 이상)");
         }
 
         // 있으면 그대로 돌려주고, 없으면 만들어 fill로 채운다

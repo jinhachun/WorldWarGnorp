@@ -945,7 +945,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &91142267
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1254,7 +1254,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uB2E4\uC2DC\uD558\uAE30"
+  m_Text: "\uC9C0\uB3C4\uB85C"
 --- !u!222 &162914707
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1497,7 +1497,6 @@ RectTransform:
   - {fileID: 879182383}
   - {fileID: 220398942}
   - {fileID: 370808446}
-  - {fileID: 1265492357}
   - {fileID: 1662421041}
   m_Father: {fileID: 939579184}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1537,7 +1536,6 @@ MonoBehaviour:
   _sell: {fileID: 1632033902}
   _sellLabel: {fileID: 676936655}
   _start: {fileID: 879182384}
-  _invade: {fileID: 1265492354}
   _dragGhost: {fileID: 1662421041}
   _dragGhostIcon: {fileID: 940029704}
   _dragGhostFloor: {fileID: 1662421045}
@@ -1673,7 +1671,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &187168222
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2110,19 +2108,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 791bc2cc4e5b3d143abfab8cc1afcc05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MapLabel
-  _icons:
-  - Map: {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
-    Icon: {fileID: 21300000, guid: ade6a645d5654959bb64c20bf5e29201, type: 3}
-  - Map: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
-    Icon: {fileID: 21300000, guid: 59ec2470dac44e1086b185d6885adcf9, type: 3}
-  - Map: {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
-    Icon: {fileID: 21300000, guid: 2c35c80c50d040ddbdf9aed2ca48f499, type: 3}
-  - Map: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
-    Icon: {fileID: 21300000, guid: 0144101e700246e19edc36fe719034fe, type: 3}
-  - Map: {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
-    Icon: {fileID: 21300000, guid: 3d6aa7b31c6344c589026e447a39b544, type: 3}
-  - Map: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
-    Icon: {fileID: 21300000, guid: c09126ed909746a899a841f8f2a81a0e, type: 3}
   _icon: {fileID: 320847420}
 --- !u!114 &297364636
 MonoBehaviour:
@@ -4705,7 +4690,6 @@ MonoBehaviour:
   _resultPanel: {fileID: 670348252}
   _resultText: {fileID: 435404411}
   _retryButton: {fileID: 1011468184}
-  _retryLabel: {fileID: 162914706}
   _resultSummary: {fileID: 2115912781}
   _speedButton: {fileID: 1215666878}
 --- !u!4 &757140042
@@ -8069,99 +8053,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1265492353
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1265492357}
-  - component: {fileID: 1265492356}
-  - component: {fileID: 1265492355}
-  - component: {fileID: 1265492354}
-  m_Layer: 0
-  m_Name: InvadePanel
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &1265492354
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1265492353}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6c10a0435fe807b4d9bc61bd65894603, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.InvadePanel
-  _battle: {fileID: 757140041}
-  _dotFont: {fileID: 12800000, guid: 65246982b394064498a921b9cc4f1cdb, type: 3}
-  _cleanFont: {fileID: 12800000, guid: e0db11984e4867b42b4728b070b1891d, type: 3}
-  _buttonTemplate: {fileID: 402560641}
-  _lordSprite: {fileID: 21300000, guid: af156caa69fd49eb85c9d0bf789c500b, type: 3}
---- !u!114 &1265492355
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1265492353}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &1265492356
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1265492353}
-  m_CullTransparentMesh: 1
---- !u!224 &1265492357
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1265492353}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 180189296}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 1}
-  m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 40, y: -270}
-  m_SizeDelta: {x: 1500, y: 780}
-  m_Pivot: {x: 0.5, y: 1}
 --- !u!1 &1304770970
 GameObject:
   m_ObjectHideFlags: 0
@@ -9150,7 +9041,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uCE68\uB7B5"
+  m_Text: "\uC9C0\uB3C4\uB85C"
 --- !u!222 &1411661755
 CanvasRenderer:
   m_ObjectHideFlags: 0

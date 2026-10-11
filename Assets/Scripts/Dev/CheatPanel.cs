@@ -192,9 +192,24 @@ namespace GnorpWar
 
         private void Draw()
         {
-            if (!RunState.Started || BattleManager.Config == null)
+            if (!RunState.Started || (BattleManager.Config == null && !WorldManager.Commanding))
             {
-                Label("치트 (F1) — 전투 씬이 아니다");
+                Label("치트 (F1) — 지도에서 명령을 받는 중이거나 전투 씬일 때만 쓴다");
+                return;
+            }
+            // 지도 씬 — 판도 치트만(기물 · 전투 수치는 전투 씬에서)
+            if (BattleManager.Config == null)
+            {
+                Label($"치트 (F1 닫기) · 턴 {RunState.Round + 1} · 지도 · 골드 {RunState.Gold}", Lit);
+                Label($"판도 — 내 땅 {RunState.Lands}/{RunState.RegionCount} · 행복도 {RunState.Happiness}/{RunState.HappinessMax} · 남은 영주 {RunState.World.State.AiLords}명", Dim);
+                if (Button("이웃 영주 먹기", 150f)) RunState.CheatConquer();
+                Text("땅이 가장 적은 이웃 영주를 전투 없이 이긴 것으로 친다", 460f, Dim);
+                NewLine();
+                if (Button("새 런 시작", 150f))
+                {
+                    RunState.CheatNewRun();
+                    Reload();
+                }
                 return;
             }
             string phase = Fight ? $"전투 {BattleManager.Elapsed:0}초" : Shop ? "상점" : "결과";
@@ -615,7 +630,7 @@ namespace GnorpWar
             Reload();
         }
 
-        // 땅 모양 · 적 탑 · 성 체력은 씬을 불러올 때 정해진다 — 상점을 다시 불러온다(런 상태는 그대로)
+        // 땅 모양 · 적 탑 · 성 체력은 씬을 불러올 때 정해진다 — 지금 씬(상점 또는 지도)을 다시 불러온다(런 상태는 그대로)
         private static void Reload() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
 
         public void SetSpeed(float speed)

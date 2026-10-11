@@ -103,6 +103,8 @@ For multi-step tasks, state a brief plan:
 - **입력**: Input System (`Assets/InputSystem_Actions.inputactions`). 구 Input Manager(`Input.GetKey` 등) 쓰지 말 것.
 - **UI 시스템**: uGUI (미정 시 기본값. 필요 시 UI Toolkit으로 전환하고 여기 갱신)
 - **테스트**: Unity Test Framework
+- **씬은 둘 — `World`(월드맵, 빌드 0번 · 플레이는 여기서 시작)와 `Battle`(상점·전투).** `Battle`만 직접 플레이해도 런이 시작된다. 씬을 고치기 전 dirty 확인은 둘 다.
+- **월드 지도는 메뉴 「GnorpWar → 월드 지도 굽기」로만 바꾼다** — `WorldMap_Main.asset`의 이웃·표시 자리를 손으로 고치면 그림(`WorldMap_Main_Regions.png`)과 어긋난다. 지도 모양(씨앗·흐트림)은 사용자가 고른 것이다.
 - **빌드 폴더 = `Builds/<프로젝트명>_<YYMMDD>/`**(예: `Builds/WorldWarGnorp_261007/WorldWarGnorp.exe`, 사용자 결정 10/7)
 - **서드파티 플러그인**:
   - **Unity MCP** (CoplayDev, `com.coplaydev.unity-mcp` v10) — Claude Code가 Unity 에디터를 직접 조작하기 위한 MCP 브릿지. §6 참고.

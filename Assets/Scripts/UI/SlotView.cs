@@ -32,6 +32,7 @@ namespace GnorpWar
         [SerializeField] private Sprite _overdriveIcon;
 
         private Color _frameColor;
+        // 상점 밖(지도 패널의 영주 탑 — UI/WorldSidePanel)에서는 null — 보기만 하고 끌지 못한다
         private ShopPanel _shop;
         private BoardView.Source _source;
         private int _index;
@@ -113,7 +114,7 @@ namespace GnorpWar
 
             if (!_hovered)
                 return;
-            if (empty || _shop.Dragging)
+            if (empty || (_shop != null && _shop.Dragging))
                 BuildingTooltip.Hide(this);
             else
                 BuildingTooltip.ShowOwned(this, building, running, _source == BoardView.Source.EnemyField);
@@ -145,9 +146,9 @@ namespace GnorpWar
             BuildingTooltip.Hide(this);
         }
 
-        public void OnBeginDrag(PointerEventData eventData) => _shop.BeginDragSlot(_source, _index, eventData);
-        public void OnDrag(PointerEventData eventData) => _shop.Drag(eventData);
-        public void OnEndDrag(PointerEventData eventData) => _shop.EndDrag();
-        public void OnDrop(PointerEventData eventData) => _shop.DropOnSlot(_source, _index);
+        public void OnBeginDrag(PointerEventData eventData) => _shop?.BeginDragSlot(_source, _index, eventData);
+        public void OnDrag(PointerEventData eventData) => _shop?.Drag(eventData);
+        public void OnEndDrag(PointerEventData eventData) => _shop?.EndDrag();
+        public void OnDrop(PointerEventData eventData) => _shop?.DropOnSlot(_source, _index);
     }
 }

@@ -4,8 +4,8 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 한 턴의 흐름 — 씬을 불러오면 상점, "전투 시작"으로 침략할 땅이 정해지고 씬을 다시 불러 바로 전투, 어느 기지든 무너지면 결과 → 다음 턴(씬 재로드).
-    // 런 상태(골드·목숨·보드)는 RunState(static)에 있어 재로드에도 남는다
+    // 전투 씬 — 상점과 전투. 지도 씬(World/WorldManager)에서 「상점」으로 오면 상점이 뜨고(「지도로」로 돌아간다), 「침략」으로 오면 상점 없이 바로 전투다.
+    // 어느 기지든 무너지면 결과 → 「지도로」(AI 영주들의 턴은 지도에서 돈다). 런 상태(골드·보드·판도)는 RunState(static)에 있어 씬을 오가도 남는다
     public class BattleManager : MonoBehaviour
     {
         private static BattleManager _instance;
@@ -19,8 +19,7 @@ namespace GnorpWar
         [SerializeField] private GameObject _resultPanel;
         [SerializeField] private Text _resultText;
         [SerializeField] private Button _retryButton;
-        [SerializeField] private Text _retryLabel;
-        [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(땅 +N · 행복도 -N)과 AI 영주들의 턴 요약")]
+        [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(땅 +N · 행복도 -N)")]
         [SerializeField] private Text _resultSummary;
         [Tooltip("전투 배속 버튼 — 전투 중에만 보인다")]
         [SerializeField] private GameObject _speedButton;
@@ -85,10 +84,14 @@ namespace GnorpWar
             TowerBook.ClearBattle();
             if (!RunState.Started || RunState.IsOver)
                 RunState.StartNew(_config);
-            // 상대를 고른 뒤 다시 불린 씬(Phase = Battle)은 상점 없이 바로 전투다 — 땅(Ground) · 적 탑 · 영주 색이 이미 그 땅 · 그 영주 것으로 뜬다
+            // 지도에서 「침략」으로 온 씬(Phase = Battle)은 상점 없이 바로 전투다 — 땅(Ground) · 적 탑 · 영주 색이 이미 그 땅 · 그 영주 것으로 뜬다
             bool battle = RunState.Phase == RunState.RunPhase.Battle;
+            // 그 밖에는 상점으로 뜬다 — 지도에서 「상점」으로 왔거나, 이 씬만 직접 플레이했다(그때는 런을 시작하고 턴을 여기서 연다 — 「지도로」를 누르면 지도 씬으로 이어진다)
             if (!battle)
-                RunState.EnterShop();
+            {
+                RunState.BeginTurn();
+                RunState.OpenShop();
+            }
 
             _allyBoard.Load(RunState.Field);
             _enemyBoard.Load(RunState.CheatEnemyField ?? RunState.EnemyField);
@@ -97,7 +100,7 @@ namespace GnorpWar
             _speedButton.SetActive(false);
             _allyBase.Destroyed += OnBaseDestroyed;
             _enemyBase.Destroyed += OnBaseDestroyed;
-            _retryButton.onClick.AddListener(NextRound);
+            _retryButton.onClick.AddListener(ToMap);
             if (battle)
                 StartCoroutine(BeginNextFrame());
         }
@@ -113,21 +116,6 @@ namespace GnorpWar
         {
             if (_instance == this)
                 _instance = null;
-        }
-
-        // 침략 목록(UI/InvadePanel)에서 땅을 확정했다 — 그 땅의 영주 · 지형으로 전투 씬을 다시 불러온다
-        public void Invade(int region)
-        {
-            RunState.Invade(region);
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
-
-        // 쉬는 턴 — 전투 없이 AI 턴으로 넘어가고, 결과 창에 그 요약을 띄운다
-        public void Rest()
-        {
-            _over = true;
-            _shopPanel.SetActive(false);
-            ShowResult("쉬는 턴", "", RunState.Rest());
         }
 
         // 전투를 연다 — 전투 씬이 뜬 다음 프레임(BeginNextFrame)
@@ -162,9 +150,6 @@ namespace GnorpWar
             // 상점에서 층을 올리면 RunState.Field가 새 배열이 된다 — 아군 보드(탑 그림이 읽는다)를 다시 올린다
             if (!_fighting && _allyBoard.Field != RunState.Field)
                 _allyBoard.Load(RunState.Field);
-            // 상점에서 침략 목록의 땅을 가리키면 적 탑 자리에 그 영주의 탑을 올린다(RunState.Preview) — 떼면 빈 탑으로
-            if (!_fighting && !_over && RunState.CheatEnemyField == null && _enemyBoard.Field != RunState.EnemyField)
-                _enemyBoard.Load(RunState.EnemyField);
             if (!BoardsStopped || _over)
                 return;
             int allies = 0, enemies = 0, allyAttackers = 0, enemyAttackers = 0;
@@ -226,33 +211,22 @@ namespace GnorpWar
             _enemyBoard.Stop();
             int lands = RunState.Lands, happiness = RunState.Happiness;
             RunState.FinishBattle(won);
-            // 내 결과 한 줄 — 이기면 얻은 땅, 지면 잃은 행복도
-            string mine = won ? $"땅 +{RunState.Lands - lands}" : $"행복도 -{happiness - RunState.Happiness}";
-            // AI 영주들의 턴과 정산이 바로 이어진다(시뮬레이션이라 즉시)
-            string summary = RunState.EndTurn();
-
-            string line = won ? "승리!" : "패배...";
-            if (RunState.Cleared)
-                line = "통일!";
-            else if (RunState.IsOver)
-                line = "게임 오버";
-            ShowResult(line, mine, summary);
-        }
-
-        // 결과 창 — 큰 글 · 내 결과 한 줄과 AI 턴 요약(읽는 글) · 다음 턴 버튼. 행복도 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다
-        private void ShowResult(string line, string mine, string summary)
-        {
-            _resultText.text = line;
-            _resultSummary.text = BuildingTooltip.Highlight(mine == "" || summary == "" ? mine + summary : mine + "\n" + summary);
-            _retryLabel.text = RunState.IsOver ? "새 런" : "다음 턴";
+            // 결과 창 — 큰 글 · 내 결과 한 줄(이기면 얻은 땅, 지면 잃은 행복도) · 「지도로」. 행복도 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다.
+            // AI 영주들의 턴 · 통일 · 게임 오버는 지도에서 보여 준다
+            _resultText.text = won ? "승리!" : "패배...";
+            _resultSummary.text = BuildingTooltip.Highlight(won ? $"땅 +{RunState.Lands - lands}" : $"행복도 -{happiness - RunState.Happiness}");
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
             Time.timeScale = 0f;
         }
 
-        private void NextRound()
+        // 지도 씬으로 — 상점의 「지도로」(UI/ShopPanel) · 결과 창의 「지도로」
+        public static void ToMap()
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            // 전투가 끝난 뒤(Aftermath)면 지도가 AI 턴을 돌린다 — 상점에서 돌아가는 길이면 지도 단계로 놓는다
+            if (RunState.Phase == RunState.RunPhase.Shop)
+                RunState.OpenMap();
+            SceneManager.LoadScene(WorldManager.SceneName);
         }
     }
 }

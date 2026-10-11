@@ -3,13 +3,14 @@ using UnityEngine;
 namespace GnorpWar
 {
     // 한 런(월드맵 한 판 — 통일하거나 내 행복도가 0이 될 때까지)의 상태. 씬을 다시 불러와도 남도록 static이다.
-    // 한 턴 = 상점(EnterShop) → 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest) → 전투 결과(FinishBattle) → AI 턴·정산(EndTurn) → 다음 턴.
+    // 한 턴 = 턴 시작(BeginTurn — AI 영주들의 상점 · 내 수입) → 지도와 상점을 오가며(OpenMap · OpenShop) 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest)
+    // → 전투 결과(FinishBattle) → AI 턴·정산(EndTurn) → 다음 턴.
     // 판도·영주·AI 영주의 탑은 World(World/WorldRun)에, 내 탑은 여기(Player)에 있다. 상점 규칙(구매·판매·리롤·자리 바꾸기)도 여기 — UI는 이 메서드만 부른다
     public static class RunState
     {
         public enum Outcome { None, Win, Lose }
-        // 씬이 뜰 때 BattleManager가 본다 — Shop이면 상점으로, Battle이면 상점 없이 바로 전투
-        public enum RunPhase { Shop, Battle }
+        // 씬이 뜰 때 그 씬의 매니저가 본다 — Map 지도 · Shop 상점 · Battle 상점 없이 바로 전투 · Aftermath 내 차례가 끝나 AI 턴(EndTurn)을 돌릴 차례
+        public enum RunPhase { Map, Shop, Battle, Aftermath }
 
         // 탑 한 채(TowerState) — 골드·탑·보관함·진열·영구 강화. 내 탑은 여기(Player)에 있고, 아래 규칙(구매·판매·리롤·층 올리기)은 지금 차례인 탑(_side)에 걸린다.
         // 월드맵의 영주들은 저마다 탑을 따로 들고 ShopAs로 차례를 받는다(World/WorldRun)
@@ -50,15 +51,23 @@ namespace GnorpWar
         // 상대의 탑 — 침략한 영주가 상점에서 키운 탑. 상대를 고르기 전에는 빈 탑
         public static OwnedBuilding[] EnemyField => (_opponentTower ?? PreviewTower ?? NoOpponent).Field;
 
-        // 상점에서 미리 보는 땅(침략 목록에서 가리키거나 고른 땅, 없으면 -1) — 오른쪽 적 탑 자리에 그 영주의 탑이, 맵 칸에 그 땅의 지형이 뜬다.
+        // 미리 보는 땅(지도에서 고른 남의 땅, 없으면 -1) — 지도 패널과 상점의 오른쪽 적 탑 자리에 그 영주의 탑이, 상점 맵 칸에 그 땅의 지형이 뜬다.
         // 보기만 한다: 상대(Opponent) · 전장(Map) · 영주 색은 Invade로 확정할 때 정해진다
         public static int PreviewRegion { get; private set; } = -1;
         public static void Preview(int region) => PreviewRegion = region;
         private static TowerState PreviewTower => PreviewRegion >= 0 ? World.TowerOf(World.State.OwnerOf(PreviewRegion)) : null;
         public static MapDefinition PreviewMap => PreviewRegion >= 0 ? World.Map.TerrainOf(PreviewRegion) : Map;
-        // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발이 이 색이다. 나는 그린 그대로(열쇠 색), 적은 침략한 영주의 색(고르기 전에는 흰색)
+        // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발 · 지도의 땅이 이 색이다. 나는 그린 그대로(열쇠 색)
+        public static Color LordKeyColor => _config.LordKeyColor;
+        public static Color ColorOf(Lord lord) => lord.IsPlayer ? _config.LordKeyColor : World.ColorOf(lord);
+        // 적 진영 = 침략한 영주, 고르기 전에는 미리 보는 땅의 영주(없으면 흰색)
         public static Color LordColor(Team team)
-            => team == Team.Ally ? _config.LordKeyColor : Opponent != null ? World.ColorOf(Opponent) : Color.white;
+        {
+            if (team == Team.Ally)
+                return _config.LordKeyColor;
+            Lord lord = Opponent ?? (PreviewRegion >= 0 ? World.State.OwnerOf(PreviewRegion) : null);
+            return lord != null ? ColorOf(lord) : Color.white;
+        }
         // 상점 효과(골드 훅 등)를 받는 진영 — 지금 상점을 도는 쪽
         public static Team ActingTeam => _side.Team;
 
@@ -133,7 +142,7 @@ namespace GnorpWar
             _config = config;
             Started = true;
             Round = 0;
-            Phase = RunPhase.Shop;
+            Phase = RunPhase.Map;
             LastOutcome = Outcome.None;
             Opponent = null;
             _opponentTower = null;
@@ -159,8 +168,9 @@ namespace GnorpWar
         public static int Income
             => _config.ShopGold + Lands * _config.World.GoldPerLand + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
 
-        // 상점 단계에 들어설 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 본다 (턴당 한 번)
-        public static void EnterShop()
+        // 턴이 시작할 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 받는다(턴당 한 번 — 씬을 다시 불러와도 두 번 주지 않는다).
+        // 지도에서 보는 영주의 탑이 이번 턴에 싸울 탑이 되도록, 상점에 들어갈 때가 아니라 턴이 열릴 때 한다
+        public static void BeginTurn()
         {
             if (_shopEnteredRound == Round)
                 return;
@@ -202,54 +212,76 @@ namespace GnorpWar
             PreviewRegion = -1;
         }
 
-        // 쉬는 턴 — 침략하지 않는다. 행복도는 그대로고 AI 턴은 돈다. 요약 글을 돌려준다(EndTurn)
-        public static string Rest()
+        // 상점 화면으로 들어간다 · 지도 화면으로 들어간다 — 씬을 불러오는 쪽이 그 전에 부른다
+        public static void OpenShop() => Phase = RunPhase.Shop;
+        public static void OpenMap() => Phase = RunPhase.Map;
+
+        // 쉬는 턴 — 침략하지 않는다. 행복도는 그대로다. 이어서 EndTurn(AI 턴)을 부른다
+        public static void Rest()
         {
             LastOutcome = Outcome.None;
-            return EndTurn();
+            Phase = RunPhase.Aftermath;
         }
 
-        // 침략의 결과 — 이기면 상대의 땅을 전부 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn을 부른다
+        // 침략의 결과 — 이기면 상대의 땅을 전부 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn(AI 턴)을 부른다
         public static void FinishBattle(bool won)
         {
             LastOutcome = won ? Outcome.Win : Outcome.Lose;
             WorldTurn.Invade(World.State, World.State.Player, Opponent, won);
+            Phase = RunPhase.Aftermath;
         }
 
-        // 턴을 닫는다 — AI 영주들의 침략 → 정산(반란 · 새 영주) → 다음 턴(상점). 이번 턴 판도에 생긴 일을 글 몇 줄로 돌려준다(결과 창이 보여 준다).
+        // 지난 EndTurn이 판도에 남긴 일을 글 몇 줄로 — 런이 끝난 턴이면 빈 글
+        public static string TurnSummary { get; private set; } = "";
+
+        // 턴을 닫는다 — AI 영주들의 침략 → 정산(반란 · 새 영주) → 다음 턴. 판도는 바로 끝 상태가 되고, 그 사이에 벌어진 일을 순서대로 돌려준다
+        // (지도가 재생한다 — 부르기 전의 「지역 → 주인」 표에 차례로 WorldEvent.Apply하면 지금 표가 된다).
         // 내 행복도가 0이면 게임 오버(IsOver), 내가 통일했으면 클리어(Cleared) — 그때는 턴이 넘어가지 않는다
-        public static string EndTurn()
+        public static System.Collections.Generic.List<WorldEvent> EndTurn()
         {
             WorldState state = World.State;
-            Phase = RunPhase.Shop;
+            var events = new System.Collections.Generic.List<WorldEvent>();
+            Phase = RunPhase.Map;
             Map = CheatMap != null ? CheatMap : ShopMap;
+            TurnSummary = "";
             if (state.Unified || state.Player.Happiness <= 0)
             {
                 World.Settle();
-                return "";
+                return events;
             }
-            int invasions = 0, conquests = 0, before = state.Lords.Count;
+            int conquests = 0, before = state.Lords.Count;
             World.AiPhase((attacker, target, won) =>
             {
-                invasions++;
+                events.Add(new WorldEvent { Lord = attacker.Id, Target = target.Id, Won = won });
                 if (won)
                     conquests++;
             });
-            int rebels = 0;
+            // 반란 — 정산 전에 누가 어느 땅을 들고 무너지는지 적어 두고, 정산 뒤에 그 땅의 새 영주를 읽는다
+            int invasions = events.Count;
             foreach (Lord lord in state.Lords)
-                if (lord.Alive && !lord.IsPlayer && lord.Happiness <= 0)
-                    rebels++;
+            {
+                if (!lord.Alive || lord.IsPlayer || lord.Happiness > 0)
+                    continue;
+                var regions = new System.Collections.Generic.List<int>();
+                for (int region = 0; region < state.Owner.Length; region++)
+                    if (state.Owner[region] == lord.Id)
+                        regions.Add(region);
+                events.Add(new WorldEvent { Rebellion = true, Lord = lord.Id, Regions = regions.ToArray() });
+            }
             World.Settle();
-            int risen = state.Lords.Count - before, largest = 0;
+            for (int i = invasions; i < events.Count; i++)
+                events[i].NewLords = System.Array.ConvertAll(events[i].Regions, region => state.Owner[region]);
+            int rebels = events.Count - invasions, risen = state.Lords.Count - before, largest = 0;
             foreach (Lord lord in state.Lords)
                 if (lord.Alive && !lord.IsPlayer)
                     largest = Mathf.Max(largest, state.LandsOf(lord));
             Round++;
             state.Turn = Round + 1;
             Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 먹힌 영주 {conquests}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명 · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
-            return $"영주 {conquests}명이 다른 영주에게 먹혔습니다.\n"
+            TurnSummary = $"영주 {conquests}명이 다른 영주에게 먹혔습니다.\n"
                 + (rebels > 0 ? $"반란이 {rebels}번 일어나 새 영주 {risen}명이 들어섰습니다.\n" : "")
                 + $"남은 영주는 {state.AiLords}명이고, 가장 큰 영주의 땅은 {largest}개입니다.";
+            return events;
         }
 
         // 탑 한 채에 상점 한 번 — gold를 받고 새 진열에서 build 방향대로 산다(Run/EnemyShopper). 그동안 상점 규칙과 그 진영의 영구 강화는 이 탑에 걸린다.

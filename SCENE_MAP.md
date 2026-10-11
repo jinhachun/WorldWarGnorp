@@ -90,3 +90,9 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 | 새 건물 | 씬 X — `Assets/Data/Buildings/` 에셋 + `BattleConfig` 목록 |
 | 필드 칸 수 | `BattleConfig`의 `Field Slots` (씬 X). 🔴 **6칸부터 아군 칸이 가운데 가속 표시(x 700~)와 겹친다** — 늘리기 전에 칸 간격·자리를 다시 계산할 것 |
 | 라운드 시작 시 도는 신규 로직 | `Battle` 오브젝트에 컴포넌트 추가 |
+
+## World 씬 (10/11 — 월드맵, 빌드 0번)
+`Assets/Scenes/World.unity`. 오브젝트는 전부 Canvas(uGUI) — 지도도 UI다. 트리·참조의 원본은 씬 파일이고, 여기엔 덩어리만 적는다.
+- `WorldManager`(`World/WorldManager`) — 턴 시작 · 씬 전환 · AI 턴 재생.
+- Canvas: `TopBar`(턴 · 골드 · 행복도 · 땅) · `SidePanel`(내 영지 요약 · 고른 땅·영주 · 영주 탑 · 「침략」「쉬기」「상점」 · 요약/통일/게임 오버 글) · `Map`(영토 지도 — `UI/WorldMapView`가 땅 번호 텍스처를 칠한다) · `SkipReplay` · `BuildingTooltip`.
+- Battle 씬에서 달라진 것: 상점의 시작 버튼 = 「지도로」, 결과 버튼 = 「지도로」, `ShopPanel/InvadePanel`은 없다.

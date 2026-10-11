@@ -12,97 +12,128 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45f10770951ec1143835bb9cdefd8067, type: 3}
   m_Name: WorldMap_Main
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.WorldMapDefinition
+  _regionMap: {fileID: 2800000, guid: 22dd304e1af498448bf3f89f225872b7, type: 3}
   _regions:
   - Terrain: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
     Upgrade: {fileID: 11400000, guid: 6fc9febdec6474b47973f511ca559d5c, type: 2}
-    Links: 0100000006000000
+    Links: 010000000600000007000000
+    Anchor: {x: 29, y: 37}
   - Terrain: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
     Upgrade: {fileID: 11400000, guid: a518e0c7aadaa434c8d70a0bf7a75c8a, type: 2}
-    Links: 0000000002000000
+    Links: 000000000200000007000000
+    Anchor: {x: 81, y: 40}
   - Terrain: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
     Upgrade: {fileID: 11400000, guid: 0125b97d95acd6e40af88a19e69b152c, type: 2}
-    Links: 010000000300000008000000
+    Links: 01000000030000000800000009000000
+    Anchor: {x: 141, y: 34}
   - Terrain: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
     Upgrade: {fileID: 11400000, guid: 53df3be29bf036745a47701943e8b5b5, type: 2}
-    Links: 020000000400000009000000
+    Links: 0200000004000000090000000a000000
+    Anchor: {x: 209, y: 29}
   - Terrain: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
     Upgrade: {fileID: 11400000, guid: 49cfd2f312cc0784b86b64ba9bf653c0, type: 2}
     Links: 03000000050000000a000000
+    Anchor: {x: 268, y: 34}
   - Terrain: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
     Upgrade: {fileID: 11400000, guid: f256a76c4d9dea4428ab3c4c2daa35c1, type: 2}
-    Links: 040000000b000000
+    Links: 040000000a0000000b000000
+    Anchor: {x: 331, y: 31}
   - Terrain: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
     Upgrade: {fileID: 11400000, guid: 0125b97d95acd6e40af88a19e69b152c, type: 2}
-    Links: 00000000070000000c000000
+    Links: 000000000c000000
+    Anchor: {x: 22, y: 65}
   - Terrain: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
     Upgrade: {fileID: 11400000, guid: 53df3be29bf036745a47701943e8b5b5, type: 2}
-    Links: 06000000080000000d000000
+    Links: 0000000001000000080000000c0000000d000000
+    Anchor: {x: 87, y: 93}
   - Terrain: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
     Upgrade: {fileID: 11400000, guid: 49cfd2f312cc0784b86b64ba9bf653c0, type: 2}
-    Links: 0200000007000000090000000e000000
+    Links: 0200000007000000090000000d0000000e00000014000000
+    Anchor: {x: 141, y: 97}
   - Terrain: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
     Upgrade: {fileID: 11400000, guid: f256a76c4d9dea4428ab3c4c2daa35c1, type: 2}
-    Links: 03000000080000000a000000
+    Links: 0200000003000000080000000e0000000f00000010000000
+    Anchor: {x: 187, y: 77}
   - Terrain: {fileID: 11400000, guid: 4bdddb72df2ed23478714cb59856cacb, type: 2}
     Upgrade: {fileID: 11400000, guid: 6fc9febdec6474b47973f511ca559d5c, type: 2}
-    Links: 04000000090000000b00000010000000
+    Links: 0300000004000000050000000b00000010000000
+    Anchor: {x: 293, y: 55}
   - Terrain: {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
     Upgrade: {fileID: 11400000, guid: a518e0c7aadaa434c8d70a0bf7a75c8a, type: 2}
-    Links: 050000000a00000011000000
+    Links: 050000000a0000001000000011000000
+    Anchor: {x: 300, y: 99}
   - Terrain: {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
     Upgrade: {fileID: 11400000, guid: 49cfd2f312cc0784b86b64ba9bf653c0, type: 2}
-    Links: 060000000d000000
+    Links: 06000000070000000d00000012000000
+    Anchor: {x: 30, y: 123}
   - Terrain: {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
     Upgrade: {fileID: 11400000, guid: f256a76c4d9dea4428ab3c4c2daa35c1, type: 2}
-    Links: 070000000c0000000e000000
+    Links: 07000000080000000c000000120000001300000014000000
+    Anchor: {x: 90, y: 142}
   - Terrain: {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
     Upgrade: {fileID: 11400000, guid: 6fc9febdec6474b47973f511ca559d5c, type: 2}
-    Links: 080000000d0000000f00000014000000
+    Links: 08000000090000000f0000001400000015000000
+    Anchor: {x: 175, y: 131}
   - Terrain: {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
     Upgrade: {fileID: 11400000, guid: a518e0c7aadaa434c8d70a0bf7a75c8a, type: 2}
-    Links: 0e0000001000000015000000
+    Links: 090000000e0000001000000015000000
+    Anchor: {x: 212, y: 116}
   - Terrain: {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
     Upgrade: {fileID: 11400000, guid: 0125b97d95acd6e40af88a19e69b152c, type: 2}
-    Links: 0a0000000f0000001100000016000000
+    Links: 090000000a0000000b0000000f000000150000001600000017000000
+    Anchor: {x: 262, y: 127}
   - Terrain: {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
     Upgrade: {fileID: 11400000, guid: 53df3be29bf036745a47701943e8b5b5, type: 2}
-    Links: 0b0000001000000017000000
+    Links: 0b00000017000000
+    Anchor: {x: 333, y: 120}
   - Terrain: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
     Upgrade: {fileID: 11400000, guid: 6fc9febdec6474b47973f511ca559d5c, type: 2}
-    Links: 1300000018000000
+    Links: 0c0000000d0000001300000018000000
+    Anchor: {x: 35, y: 177}
   - Terrain: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
     Upgrade: {fileID: 11400000, guid: a518e0c7aadaa434c8d70a0bf7a75c8a, type: 2}
-    Links: 120000001400000019000000
+    Links: 0d00000012000000140000001800000019000000
+    Anchor: {x: 81, y: 191}
   - Terrain: {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
     Upgrade: {fileID: 11400000, guid: 0125b97d95acd6e40af88a19e69b152c, type: 2}
-    Links: 0e00000013000000150000001a000000
+    Links: 080000000d0000000e00000013000000190000001a0000001b000000
+    Anchor: {x: 141, y: 169}
   - Terrain: {fileID: 11400000, guid: 6700103c0a816074c971525cb0d61907, type: 2}
     Upgrade: {fileID: 11400000, guid: 53df3be29bf036745a47701943e8b5b5, type: 2}
-    Links: 0f00000014000000160000001b000000
+    Links: 0e0000000f00000010000000160000001b000000
+    Anchor: {x: 216, y: 175}
   - Terrain: {fileID: 11400000, guid: 190d4423cb3017f4aa6337d873d10a06, type: 2}
     Upgrade: {fileID: 11400000, guid: 49cfd2f312cc0784b86b64ba9bf653c0, type: 2}
-    Links: 100000001500000017000000
+    Links: 1000000015000000170000001b0000001c000000
+    Anchor: {x: 270, y: 186}
   - Terrain: {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
     Upgrade: {fileID: 11400000, guid: f256a76c4d9dea4428ab3c4c2daa35c1, type: 2}
-    Links: 11000000160000001d000000
+    Links: 1000000011000000160000001c0000001d000000
+    Anchor: {x: 327, y: 167}
   - Terrain: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
     Upgrade: {fileID: 11400000, guid: 0125b97d95acd6e40af88a19e69b152c, type: 2}
-    Links: 1200000019000000
+    Links: 120000001300000019000000
+    Anchor: {x: 31, y: 222}
   - Terrain: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
     Upgrade: {fileID: 11400000, guid: 53df3be29bf036745a47701943e8b5b5, type: 2}
-    Links: 13000000180000001a000000
+    Links: 1300000014000000180000001a000000
+    Anchor: {x: 103, y: 223}
   - Terrain: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
     Upgrade: {fileID: 11400000, guid: 49cfd2f312cc0784b86b64ba9bf653c0, type: 2}
     Links: 14000000190000001b000000
+    Anchor: {x: 152, y: 219}
   - Terrain: {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
     Upgrade: {fileID: 11400000, guid: f256a76c4d9dea4428ab3c4c2daa35c1, type: 2}
-    Links: 150000001a0000001c000000
+    Links: 1400000015000000160000001a0000001c000000
+    Anchor: {x: 205, y: 223}
   - Terrain: {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
     Upgrade: {fileID: 11400000, guid: 6fc9febdec6474b47973f511ca559d5c, type: 2}
-    Links: 1b0000001d000000
+    Links: 16000000170000001b0000001d000000
+    Anchor: {x: 295, y: 212}
   - Terrain: {fileID: 11400000, guid: af4f2282d4bfc9345af83df7884fb3f9, type: 2}
     Upgrade: {fileID: 11400000, guid: a518e0c7aadaa434c8d70a0bf7a75c8a, type: 2}
     Links: 170000001c000000
+    Anchor: {x: 347, y: 221}
   _terrainBuilds:
   - Terrain: {fileID: 11400000, guid: 8160d03b52aba3b42b8bcbc7f0174bbe, type: 2}
     Build: {fileID: 11400000, guid: 60b9b1a6080e0444780ee2acef0f04e1, type: 2}

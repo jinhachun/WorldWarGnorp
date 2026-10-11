@@ -46,12 +46,13 @@ namespace GnorpWar
             public Text Body;
             public UnitDefinition IconUnit;
             public bool IconEnemy;
+            public Color IconColor;
         }
 
         private readonly List<UnitCard> _cards = new List<UnitCard>();
 
         public const string NumberColor = "#FFD95A";
-        private const string NoteColor = "#9A9AA8";
+        public const string NoteColor = "#9A9AA8";
         private const string EnemyColor = "#FF7A6E";
         // 유닛 판 능력치의 영구 강화분(「공격력 11+1」의 +1) · RANK UP 미리보기의 바뀐 숫자 — 버프 선의 체력 초록(BuffLinkFx)보다 밝은 초록
         private const string BonusColor = "#5AE66E";
@@ -238,7 +239,9 @@ namespace GnorpWar
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             if (!enemy && !BattleManager.Fighting && building.Stacks > 0)
                 body += Note($"스택 {building.Stacks}");
-            OwnedBuilding[] board = enemy ? System.Array.ConvertAll(BoardRunner.For(Team.Enemy).Slots, s => s.Building) : RunState.Field;
+            // 적 탑 — 전투 씬에서는 돌고 있는 보드, 지도 씬에서는 미리 보는 영주의 탑
+            BoardRunner runner = BoardRunner.For(Team.Enemy);
+            OwnedBuilding[] board = !enemy ? RunState.Field : runner != null ? System.Array.ConvertAll(runner.Slots, s => s.Building) : RunState.EnemyField;
             Show(owner, Title(building.Definition, enemy, building.Rarity), body, building.Definition.MentionedUnits, board, enemy);
         }
 
@@ -262,6 +265,7 @@ namespace GnorpWar
                     Body = panel.Find(_unitBody.name).GetComponent<Text>(),
                     IconUnit = _cards[0].IconUnit,   // 그림 부품도 함께 복제됐다
                     IconEnemy = _cards[0].IconEnemy,
+                    IconColor = _cards[0].IconColor,
                 });
             }
             return _cards[i];
@@ -328,7 +332,8 @@ namespace GnorpWar
         // 유닛 판 한 장을 채우고 높이를 돌려준다
         private static float Fill(UnitCard card, UnitDefinition unit, OwnedBuilding[] board, bool enemy)
         {
-            if (card.IconUnit != unit || card.IconEnemy != enemy)
+            // 적 진영의 영주가 바뀌면(지도에서 다른 땅을 고름) 그림의 영주 색도 다시 칠한다
+            if (card.IconUnit != unit || card.IconEnemy != enemy || card.IconColor != RunState.LordColor(enemy ? Team.Enemy : Team.Ally))
                 BuildIcon(card, unit, enemy);
             card.Name.text = UnitName(unit);
             card.Body.text = UnitInfo(unit, board, enemy);
@@ -349,6 +354,7 @@ namespace GnorpWar
         {
             card.IconUnit = unit;
             card.IconEnemy = enemy;
+            card.IconColor = RunState.LordColor(enemy ? Team.Enemy : Team.Ally);
             RectTransform icon = card.Icon;
             for (int i = icon.childCount - 1; i >= 0; i--)
                 Destroy(icon.GetChild(i).gameObject);

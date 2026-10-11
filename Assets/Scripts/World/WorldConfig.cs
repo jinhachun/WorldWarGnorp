@@ -36,7 +36,7 @@ namespace GnorpWar
         [SerializeField] private float _powerPerGold = 1f;
 
         [Header("영주 색 — 유닛 그림의 파란 자리 · 탑 지붕 · 깃발(Core/LordPaint). 내 색(파랑)은 BattleConfig의 열쇠 색")]
-        [Tooltip("AI 영주의 색 — 영주 번호 순서로 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
+        [Tooltip("AI 영주의 색 — 영주 번호마다 11칸씩 건너뛰며 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Color[] _lordColors = DefaultLordColors();
 
@@ -53,7 +53,9 @@ namespace GnorpWar
         }
 
         public WorldMapDefinition Map => _map;
-        public Color LordColor(int lord) => _lordColors[lord % _lordColors.Length];
+        // 번호가 이웃한 영주(시작 때 = 이웃한 땅)의 색이 색상환에서 멀어지게 건너뛰며 고른다 — 건너뛰는 폭은 색 수(28)와 서로소여야 전부 한 번씩 돈다
+        private const int ColorStride = 11;
+        public Color LordColor(int lord) => _lordColors[lord * ColorStride % _lordColors.Length];
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;
         public int NewLordShops => _newLordShops;

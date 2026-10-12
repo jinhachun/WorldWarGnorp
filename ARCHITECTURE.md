@@ -185,12 +185,14 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
   3. 쓴 뒤 되읽어 확인한다.
 - 🔴 **직렬화되는 enum은 맨 뒤에만 추가할 것** — 중간에 끼우면 기존 에셋의 정수 직렬화가 밀린다.
 - 🔴 **기물의 켜진 효과는 `owned.Definition.Actions/Effects/Passives`가 아니라 `owned.Actions/Effects/Passives`로 읽는다**(신화 10/12) — 신화 등급이면 정의의 `_mythicActions`/`_mythicEffects`/`_mythicPassives` 묶음이 §7 묶음 **뒤에 더해진다**(대체가 아니다). 판정은 `Rarity == Mythic`이지 **`Level`이 아니다** — `Level = 오른 횟수 + 1`이라 시작 등급마다 신화에 닿는 Level이 다르다(일반 6 · 전설 2).
-  신화 효과를 더하는 것은 **에셋 작업이다** — 기물 에셋의 `_mythic*`에 능력 에셋을 넣으면 코드는 더 고칠 것이 없다. 신화 능력은 **`OwnedBuilding.Scaled`로 값을 키우지 않는다**(기획서 §7-1 「수치는 전설과 같다」).
+  신화 효과를 더하는 것은 **에셋 작업이다** — 기물 에셋의 `_mythic*`에 능력 에셋을 넣으면 코드는 더 고칠 것이 없다. 신화 능력이 등급으로 값을 키우지 않는 것은 **코드가 보장한다** — `Level`이 전설에서 멈추므로(아래 「신화에서는 수치가 오르지 않는다」) `perTier`가 붙은 능력도 전설 값으로 고정된다.
   아직 정의(시작 등급)만 보는 곳 셋: `BuildingTooltip.Headline`(칸 아래 대표 숫자) · `BuildingPassive.HasBuyEffects` (신화에서만 생기는 「구매할 때마다,」가 칸을 튀게 하지 못한다) · `EnemyShopper`의 자리 판단 `Reaches`(AI는 신화로 늘어난 범위를 모른다).
 - 🔴 **등급 배열의 길이가 일부러 어긋나 있다**(신화 10/12) — `BuildingRarity`는 여섯이지만 `BattleConfig`의 **가격 `_rarityPrices`는 여섯 칸, 진열 확률 `_rarityWeightsFirst`/`_rarityWeightsLast`는 다섯 칸**이다.
   **신화 등급의 기물 *정의*는 만들지 않는다** — `OwnedBuilding.Rarity = 정의 등급 + 오른 횟수`라 신화는 합치기로만 도달하고, 신화 효과도 정의의 등급을 올리지 않고 `_mythic*` 묶음으로 붙는다. 그래서 **진열 확률은 영구히 다섯 칸이면 된다.** 정의를 신화로 만드는 순간 `RarityWeight`가 `(int)rarity`로 다섯 칸 배열을 읽어 `IndexOutOfRangeException`이다 — 그래서 밸런싱 창의 등급 드롭다운에서도 신화를 뺐다(`Editor/BalanceWindow.Rarities`).
   가격을 읽는 모든 경로는 **정의**의 등급을 넘기므로(`PriceOf`), 여섯째 칸 80골드는 읽히지 않는다. 신화 한 채의 판매가도 정의(시작 등급)가 × 합친 개수로 나온다.
-- 🔴 **신화에서 수치가 멈추지 않는다** — 기획서 §1은 「신화에서는 수치가 오르지 않는다」인데 **코드에 그 개념이 없다.** `BattleConfig.RankCooldownScale(level) = 0.8^(level-1)`와 `OwnedBuilding.Scaled(…, level)`에 상한이 없어 신화에서도 쿨다운이 줄고 등급별 증가량이 더해진다(실측: 병영 쿨다운 전설 3.277초 → 신화 2.621초). **사용자 답 대기** — 고칠 때 상한은 「Level 2」 같은 고정값이 아니라 **「`Rarity`가 전설을 넘지 않는 선의 Level」**이고, 두 함수가 **같은** 상한을 받아야 하며, `Level` 프로퍼티 자체에 넣으면 `Copies`(`1 << 오른 횟수`, 판매가)가 망가진다.
+- 🔴 **신화에서는 수치가 오르지 않는다**(기획서 §1) — 상한은 **`OwnedBuilding.Level`(= `LevelOf`) 한 곳**에 있다. `Level`을 쓰는 곳은 모두 수치를 키우는 용도라(쿨다운 · 효과 세기 · 소환 수 · `TeamEffects` 등급 · `TowerPower`) 여기서 막으면 전부 따라온다. 상한은 고정값이 아니라 **「`Rarity`가 전설인 선의 Level」**이다 — 시작 등급마다 다르다(일반 5 · 전설 1).
+  `Copies`(합친 개수)는 `_upgrades`를 직접 읽어 신화에서도 2배로 늘어난다 — **판매가는 계속 올라야 하므로 맞다.**
+  🔴 **상한 규칙의 사본을 만들지 말 것** — 툴팁의 RANK UP 미리보기도 같은 `LevelOf`를 부른다. `level + 1`로 다음 등급을 계산하면 상한을 넘어가 「신화가 되면 더 좋아진다」고 거짓말을 한다.
 
 ---
 

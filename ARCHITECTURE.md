@@ -71,16 +71,22 @@
 
 ## 핵심 루프 — 한 런의 흐름
 
+한 턴 = 지도에서 시작해 지도로 돌아온다. 자세한 단계는 아래 「씬 둘과 턴 흐름」·「월드맵 런」.
+
 ```
-씬 로드 ─► 상점 (RunState.EnterShop: 골드 + 새 진열 · 적도 이 라운드의 쇼핑을 끝내 둔다 — `RunState.EnemyShop` → `Run/EnemyShopper`)
-   │  구매·판매·리롤·맞바꾸기 (RunState)
+World 씬 ─► BeginTurn (AI 영주 전원 상점 + 내 수입 = 18 + 땅 × 2)
+   │  땅 고르기(Preview) · 「상점」은 지도 위 팝업 — 몇 번이든
    ▼
-"전투 시작" ─► TeamEffects 비움 → 두 BoardRunner.Begin (효과 켜기 · 게이지 0부터)
-   │  칸 게이지 참 → 생산 / 액션 / 효과 스택    · 60초부터 10초마다 공격력 +10%(단리)
+"침략" ─► March (내 영주가 그 땅까지 걸어감) ─► Battle 씬
+   │  두 BoardRunner.Begin (효과 켜기 · 게이지 0부터) · TeamEffects 비움
+   │  칸 게이지 참 → 생산 / 액션 / 효과 스택
+   │  3:00 본진 화살 정지 → 3:10부터 남은 유닛끼리(데스매치, BattleConfig)
    ▼
-어느 기지 파괴 ─► RunState.FinishBattle (승 +1 / 패 목숨 -1, 라운드 +1) → 결과 패널
+어느 기지 파괴 ─► RunState.FinishBattle (이기면 그 영주의 땅 전부 + 행복도 +1,
+   │                                      지면 상대 땅 수에 따라 −1/−2/−3)
    ▼
-"다음 라운드" = 씬 재로드 ─► 상점 …   (목숨 0 또는 승리 목표 → 다음 로드에서 새 런)
+World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에서 재생 → 다음 턴
+            (행복도 0 → 게임 오버 · 30지역 통일 → 클리어, 둘 다 지도에서)
 ```
 
 ---
@@ -142,12 +148,15 @@
 - **넘쳐흐르기 문** — 위층 근접이 발밑 적을 밟고 넘는 건 내 진영 전선 산이 적보다 `PileLeadToCross`칸 넘게 높을 때만. 산 높이는 유닛이 물리 스텝마다 보고하는 정적 값(물리 검사 없음, 한 스텝 늦음). 위층은 아래 계단 규칙이 먼저 막는다.
 - **계단 피라미드**(`Unit.StairAdvance`, 사용자 10/9) — 땅을 안 딛은 유닛은 ① 땅 선두에서 층 × 반 칸(`StairStep`) 뒤 ② 발밑 가장 앞 아군에서 반 칸 뒤 중 가까운 쪽까지만 간다 — **앞으로 가는 속도만 줄인다(유닛은 스스로 뒤로 걷지 않는다 — 사용자 10/9 "갑자기 뒤로 가는 거 어색")**, 한계까지 남은 거리 ÷ `StairBrakeTime`으로 서서히 멈춤. 반 칸 자리는 등반 점프가 뛰기 전에 착지점을 정해 맞춘다(`StartClimb`·`ClimbVx`, 공중 가로 속도는 앞으로만). 앞 아군을 밀어붙이지 않는다(`NoPress` — 맞닿은 앞 아군의 실제 속도 + `PressSpeed`까지만: 짓눌려 뒤로 튀는 걸 막음) · 머리 위가 막혔으면 등반 점프 안 함(`HeadClear`). **넉백(경직)이 아닌 살아 있는 유닛은 물리 스텝 직후 뒤로 밀린 만큼 x를 되돌리고 뒤쪽 속도를 0으로 자른다(`Unit.HoldBack` — 사용자 10/10 "뒤로 점프는 아예 하지마", 건축가 귀환 제외).** **앞에 맞닿은 아군이 없는 유닛(앞면)은 이 상한을 받지 않고 적과 맞붙을 때까지 걷는다(사용자 10/10 "제일 앞에 있는 애들은 전진해도 되는거 아니야?").** 층 = 받침 관계(`_stackLayer`, 땅 0 — 지형 기울기에 흔들리지 않게 높이 대신). 데스매치 뒤·내 산이 `StairHoldLead`(2칸) 넘게 앞설 때는 푼다 — 안 풀면 판이 교착한다. 측정 도구는 지움(위 「폴더 책임」 Dev 줄).
 - **성 최대 체력** = 성 에셋 체력 + `BattleConfig._baseHpPerRound` × 라운드(0부터) → 그 위에 기물 보너스(고정 → % → ×). 현재 체력은 `Base.Hp`.
-- **씬 둘과 턴 흐름(10/11)** — `World` 씬(매니저 `World/WorldManager`, 지도 `UI/WorldMapView`, 왼쪽 패널 `UI/WorldSidePanel`)과 `Battle` 씬(`BattleManager`). 씬이 뜰 때 매니저가 `RunState.Phase`(Map · Shop · Battle · Aftermath)를 보고 할 일을 정한다. 턴: World에서 `BeginTurn`(AI 영주 전원 상점 + 내 수입, 턴당 한 번) → 땅 고름(`Preview`) → 「상점」(Battle 씬, `OpenShop` — 「지도로」로 돌아옴, 몇 번이든) / 「침략」(Battle 씬에서 바로 전투) / 「쉬기」 → 전투 결과(`FinishBattle`) → World로 돌아와 `EndTurn`이 준 사건 목록(`World/WorldEvent`)을 지도에서 차례로 재생(판도는 이미 끝 상태 — 건너뛰어도 결과가 같다) → 다음 턴. 통일·게임 오버는 지도에서. **지도 = 영토 그림**: 땅 번호 텍스처(`WorldMap_Main_Regions.png` 375×252, 4배 확대)를 판도가 바뀔 때마다 다시 칠한다(어두운 영주 색 채움 · 침략 가능 = 빗금 · 고른 땅 = 노란 테두리), 누르기 = 화면 좌표 → 땅 번호 조회. 이웃 = 그림에서 국경을 6칸 이상 맞댄 땅(64쌍) — `Editor/WorldMapBaker`(UnityEngine 없음, 러너와 같이 쓴다)가 그림·이웃 표·표시 자리를 한꺼번에 굽는다.
+- **씬 둘과 턴 흐름(10/11)** — `World` 씬(매니저 `World/WorldManager`, 지도 `UI/WorldMapView`, 왼쪽 패널 `UI/WorldSidePanel`)과 `Battle` 씬(`BattleManager`). 씬이 뜰 때 매니저가 `RunState.Phase`(Map · Shop · Battle · Aftermath)를 보고 할 일을 정한다. 턴: World에서 `BeginTurn`(AI 영주 전원 상점 + 내 수입, 턴당 한 번) → 땅 고름(`Preview`) → 「상점」(Battle 씬, `OpenShop` — 「지도로」로 돌아옴, 몇 번이든) / 「침략」(`WorldManager` 단계 `March` — 내 영주 그림이 고른 땅까지 걸어간 뒤에야 침략이 확정되고 Battle 씬으로 넘어간다, 걷는 동안 버튼·땅 고르기를 막는다) / 「쉬기」 → 전투 결과(`FinishBattle`) → World로 돌아와 `EndTurn`이 준 사건 목록(`World/WorldEvent`)을 지도에서 차례로 재생(판도는 이미 끝 상태 — 건너뛰어도 결과가 같다) → 다음 턴. 통일·게임 오버는 지도에서. **지도 = 영토 그림**: 땅 번호 텍스처(`WorldMap_Main_Regions.png` 375×252, 4배 확대)를 판도가 바뀔 때마다 다시 칠한다(어두운 영주 색 채움 · 침략 가능 = 빗금 · 고른 땅 = 노란 테두리), 누르기 = 화면 좌표 → 땅 번호 조회. 이웃 = 그림에서 국경을 6칸 이상 맞댄 땅(64쌍) — `Editor/WorldMapBaker`(UnityEngine 없음, 러너와 같이 쓴다)가 그림·이웃 표·표시 자리를 한꺼번에 굽는다.
 - **월드맵 런(10/11 — 아래 「적 빌드」 줄의 "런당 적 하나"를 대체. 씬 전환 순서는 위 줄이 최신)** — 새 런 = 새 월드(`RunState.StartNew` → `World/WorldRun`: 판도 `WorldState` + AI 영주마다 탑 `Run/TowerState`). 탑마다 「영구히」 강화를 따로 들고(`RunBook`), 진영별 목록은 "지금 쓰는 탑의 것"을 갈아 끼운다(`RunBook.Use`). 상점 한 번 = `RunState.ShopAs(tower, build, gold, round)` — 플레이어·AI 영주가 같은 규칙. 턴: 상점(`EnterShop` — AI 영주 전원 상점 + 내 수입 18 + 땅 × 2) → `Preview(region)`(보기만) → `Invade(region)`(상대·지형·영주 색 확정, 씬 재로드 → `Phase.Battle`로 바로 전투) 또는 `Rest()` → `FinishBattle(won)`(땅 흡수·행복도) → `EndTurn()`(AI 침략 `WorldTurn.AiPhase` → 정산 `Settle`). `EnemyField`·`LordColor(적)`·`Map` = 고른 상대의 탑·색·침략한 땅의 지형(고르기 전엔 빈 탑 `NoOpponent`·기본 지형). `Round` = 턴 − 1(등급 확률·성 체력이 읽는다). AI끼리의 승패 = `World/TowerPower`(생산 항 + 쓴 골드 보정 — 실제 전투와 대조 안 함). 월드 수치는 `WorldConfig`(`BattleConfig`가 가리킨다). 규칙을 고치면 Unity 밖 러너·씬 없는 자동 플레이로 불변식을 다시 잰다.
 - **적 빌드 = 적도 상점을 돈다**(사용자 10/10 "적도 사람답게 빌드를 짰으면") — `RunState`의 골드·탑·보관함·진열·잠금·층 올린 횟수는 진영별 묶음(`Side`)이고, 기존 static 프로퍼티는 "지금 차례인 쪽"을 가리킨다(`ActingTeam`). 상점에 들어갈 때 적이 플레이어와 같은 메서드(Buy·Sell·Reroll·RaiseFloor·잠금·끼워 넣기)로 그 라운드 쇼핑을 한 번 한다(`Run/EnemyShopper`, 라운드당 한 번 — 상점을 다시 불러도 재쇼핑 없음). 런 시작 때 빌드 방향 하나를 고른다(`EnemyBuildProfile` SO — 핵심 기물과 값·생산 기물 비율·리롤 성향, `BattleConfig._enemyBuilds`; 근거는 기획서 「아키타입별 흐름」). 「구매할 때마다,」·영구 강화(`StatBook`·`TowerBook`의 "영구히")도 진영별이라 적에게 똑같이 걸린다. 자리 효과는 `BuildingAction`/`BuildingPassive.Reaches`로 읽어 닿는 대상이 늘어나는 쪽으로 배치. 난이도 손잡이 = `BattleConfig._enemyGoldScale`. 옛 고정 라운드 표는 지움 — 투석기·공룡·코끼리는 에셋만 남고 게임에 안 나온다. 전투 시작 때 `TowerBook.ClearBattle`(지난 전투의 "전투 동안" 타워 효과가 상점까지 남지 않게).
 - **작은 타워 기물**(사용자 10/10): 작은 타워를 세우는 길은 `Base.Build`/`BuildOnGround` 하나(세울 때 본진 깃발 색 `Tower.FlagColor`로 깃발을 칠한다). 건축가는 내 성문 앞에서 적 성 앞면 직전까지 가까운 순으로 빈 평지를 찾고(`Unit.FindBuildSite`), 걷다 땅 꼭짓점에 걸려 못 나아가면 살짝 뛴다(건축가 · 조립식 감시탑 `SmallTowerAtStartPassive`). 걷기 = `TowerBook.FollowRule` + `Base.Follow`(`SmallTowerFollowPassive` · 움직이는 성 — 내 작은 타워가 내 유닛과 무관하게 적 쪽으로만 걷는다. 적 유닛·적 타워·적 성에 닿거나 앞선 내 타워와 간격이 좁으면 선다. Rigidbody 없이 Transform을 옮긴다). 걷는 진영의 작은 타워는 기계 다리 위에 올라선다(`Base.SetLegs` — 루트를 다리 그림 높이만큼 올리고 충돌 박스를 아래로 그만큼 늘려 아래 끝은 땅에 둔다, 본체·깃발·`Muzzle`이 같이 오름), 소환 자리 = `Base.FrontSmallTower` + `BoardRunner.SummonAtSmallTower`(`SummonAtSmallTowerPassive` — 자리를 정하지 않은 소환만). 수치는 각 패시브 에셋.
 - **필드 = 탑**(사용자 10/8) — `RunState.Field` 칸 i = (i+1)층(0 = 성 바로 위). **중간 층은 비우지 않는다**: 빼면 위층이 내려오고, 놓으면 끼워 넣는다. 층 사이에 놓기 = `CanBuyInsert`/`BuyInsert`·`CanMoveInsert`/`MoveInsert`(`at` = 넣은 뒤 칸 번호, 탑 안 이동은 빼기 전 기준 · 빈 층 없으면 거부, 탑 안 이동은 허용 · 합치지 않음), 층 가운데 놓기 = 맞바꿈·합치기(사용자 10/8). 층 수는 `RunState.Floors`(층 올리기 `RaiseFloor`, 비용·시작·최대는 `BattleConfig`), 적 층 수 = 라운드 표 `_field` 길이. 전장 그림은 `Bases/Tower`·`TowerFloor`(양 진영 같은 코드) — 층 바닥 판은 그 진영 유닛만 위에서 딛고 적·화살은 통과. 기물이 소환한 유닛은 **자기 층에서** 나와 앞으로 걸어 나가 떨어진다(기물이 아닌 소환은 성문). 위치 효과는 소환 훅 `OnSummonedFrom(board, slot, sourceSlot, unit)`을 모든 층이 받고 각 능력이 방향(아래 전부·위 전부·바로 위·바로 위·아래)을 가린다.
 - **유닛 위 표시**(무적 노란 원 · 공격력이 오른 순간 빨간 원판)는 `Unit.MakeHalo` — 처음 필요할 때 렌더러 하나를 만들어 재사용, 그림은 전 유닛 공유.
+- **지도 위 영주 그림은 `UI/WorldLords`가 전부 그린다**(어슬렁 · 침략 걸음 · 이름표 · 죽어 날아감 · 구름 트레일). 지도는 UI라 1칸 = 24px로 환산하는 자리가 한 곳뿐이고, 전투 연출 값(`BattleConfig`의 시체 값)을 그대로 가져다 쓴다. **재생 흐름의 길이를 늘리지 않는다** — 연출은 `EndTurn`이 준 사건 재생 안에서만 돈다.
+- **유닛이 뒤를 보는 것은 그림만 뒤집는다**(`Unit.LookToward` — 뒤쪽 대상을 치거나 회복할 때, 건축가가 성으로 돌아갈 때). 판정·투사체 출발 자리는 **앞을 볼 때 그대로**다 — 화살·회복 구슬은 그림과 어긋나 나간다.
+- **늪지에서 기물이 꺼졌는지는 `BoardRunner.StoppedByMap` 하나로 판정한다**(전장 탑 · UI 탑 · `Stats`의 전투 효과 집계가 모두 이것을 부른다). 꺼짐 조건을 바꿀 때 이 메서드만 고치면 세 곳이 따라온다.
 - **칸 UI가 읽는 것** — 전투 중 칸 숫자 = `BoardRunner.Slot.BattleGainText`(새 칸 누적 기물은 `BattleGain()`을 덮어쓰고 `BoardRunner.AddBattleGain`을 부를 것). 칸 튐 = 쿨다운 발동 `BoardRunner.Triggered` + 상점·전투 시작 효과 `OwnedBuilding.EffectFired`(정적 — 구독하면 OnDestroy에서 해제).
 - 🔴 **유닛 스탯(공격력·최대 체력·이동속도·공격속도)은 `_definition`에서 바로 읽지 말고 `Unit`의 계산값(`AttackDamage`·`MaxHp`·`MoveSpeed`·`AttackInterval`)을 읽는다.** 계산 = 기획서 §6 `(기본 + 고정 합) × (1 + % 합) × 곱들`(`StatSum`).
   변경을 거는 곳은 셋: 진영 단위 전투 동안 `StatBook.AddForBattle` · 영구히(아군만, 런 동안) `StatBook.AddForRun` · 한 유닛만 `Unit.AddModifier`. 대상은 건 효과의 `AppliesTo`. 유닛은 `StatBook.Version`이 바뀔 때만 다시 계산한다. 최대 체력이 바뀌면 지금 체력도 같은 비율로.
@@ -174,6 +183,9 @@
   2. **불리언 기본값은 언제나 "기존 동작과 같은 쪽"으로.**
   3. 쓴 뒤 되읽어 확인한다.
 - 🔴 **직렬화되는 enum은 맨 뒤에만 추가할 것** — 중간에 끼우면 기존 에셋의 정수 직렬화가 밀린다.
+- 🔴 **등급 배열의 길이가 일부러 어긋나 있다**(신화 10/12) — `BuildingRarity`는 여섯이지만 `BattleConfig`의 **가격 `_rarityPrices`는 여섯 칸, 진열 확률 `_rarityWeightsFirst`/`_rarityWeightsLast`는 다섯 칸**이다. 신화는 상점에 진열되지 않으므로 확률 칸이 없는 것이 맞다(확률 0을 넣는 것이 아니다 — 기획서 전제).
+  `RarityWeight`는 배열을 `(int)rarity`로 읽고 `RunState.HomeOffer`는 enum 전체를 훑지만, 두 루프가 `CountOf(pool, rarity) > 0`으로 막혀 **신화 등급의 기물 정의가 없는 동안만** 안전하다. **기물을 신화 등급으로 만들려면 확률 배열도 여섯 칸으로 늘려야 한다** — 안 늘리면 그 기물이 상점 풀에 드는 순간 `IndexOutOfRangeException`.
+  같은 이유로 밸런싱 창의 등급 드롭다운에서 신화를 뺐다(`Editor/BalanceWindow.Rarities`). 가격을 읽는 모든 경로는 가진 기물이 아니라 **기물 정의**의 등급을 넘기므로(`PriceOf`), 신화 가격 80골드는 신화 정의가 생길 때까지 읽히지 않는다.
 
 ---
 

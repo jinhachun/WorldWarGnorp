@@ -21,7 +21,7 @@
 ## Battle.unity
 
 ```
-CameraRig        ← CameraDrag   (좌우 드래그·관성, 맵 끝 x -61~61에서 멈춤, 판은 아군 기지 쪽 화면에서 시작)
+CameraRig        ← CameraDrag   (좌우 드래그·관성, 맵 끝 x -61~61에서 멈춤, 판은 아군 기지 쪽 화면에서 시작. **끌기는 좌우만 — 세로 이동 없음**(사용자 10/12) · 스크롤 줌은 화면 아래 기준, 가장 당긴 크기는 `_closestSize`)
  └─ Main Camera  ← Camera(Orthographic, size 20, 로컬 0 · 월드 y=14, 배경 검정) · UniversalAdditionalCameraData · CameraShake   [tag=MainCamera]
 Fx               ← FxDirector   (파편·먼지 프리팹 + CameraShake 참조)
 Global Light 2D  ← Light2D(Global)
@@ -44,7 +44,7 @@ BossSpawnPoint   ← (Transform만) 적의 넓은 유닛(공룡·코끼리)이 �
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
 Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
  ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (맨 윗줄 좌·우, 각 폭 900) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준) · HpText(현재 체력 숫자, 바 가운데 24px · Outline)
- ├─ AllyBoardView  ← BoardView(아군 필드, **전투 중에만**) → SlotTemplate [꺼짐] ← Image(탑 층 벽 `UI_Floor*` 120×120) · Button · SlotView → Light(66×66 Filled 세로·아래 기준 — 창 불빛 = 쿨다운) · Icon(×0.6) · RarityFrame(창틀 `UI_Window*`, 등급 색) · Level(창 아래 15pt)
+ ├─ AllyBoardView  ← BoardView(아군 필드, **전투 중에만**) → SlotTemplate [꺼짐] ← Image(탑 층 벽 `UI_Floor*` 120×120) · Button · SlotView → Light(66×66 Filled 세로·아래 기준 — 창 불빛 = 쿨다운) · Icon(×0.6) · RarityFrame(창틀 `UI_Window*`, 등급 색) · Level(창 아래 15pt)   (늪지에서 꺼진 기물의 층은 밝기 ×0.4로 회색이 되고 가속 표시 자리에 빨간 금지 표시 `UI_IconStopped` — 판정은 `BoardRunner.StoppedByMap`, 그림 칸은 `SlotView`·`FloorLook`·`Tower`의 `_stoppedIcon`)
  ├─ EnemyBoardView ← BoardView(적 필드)   → SlotTemplate [꺼짐]   (오른쪽 기준 x -630부터 130px → 오른쪽. 칸 0이 왼쪽)
  │   (탑 칸 3곳 — FieldView · AllyBoardView · EnemyBoardView의 SlotTemplate — 은 전장 탑과 같은 층 모양(`SlotView.ShowFloor` — 벽 재질 = 기물 국가: 킹덤 `UI_FloorBrick`+아치 창 · 티크톡 `UI_FloorIron`+톱니 창 · 공용·빈 `UI_FloorPlain`). 보관함 칸은 그대로)
  │   (아군·적 줄과 상점 FieldView는 세로 탑(`_stack`) — 칸 0(1층) 바닥이 y -1000에 고정되고 위로 자란다 — 지붕 `Roof`(`UI_Roof.png` 임시, 진영색)가 맨 위 층을 따라간다(높이 비교용, 사용자 10/8). 아군 = 화면 왼쪽 끝 · 적 = 오른쪽 끝. 전투 중엔 그 진영 탑 가로 가운데가 화면 안이면 숨는다)
@@ -54,7 +54,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
  ├─ TowerHover     ← TowerHover   (마우스가 전장 탑 층(`TowerFloor`)에 있으면 `BuildingTooltip.ShowOwned` — 전투 중에만, UI가 우선)
  ├─ RampLabel      ← Text · RampLabel   (위 가운데 (65, -110) — 두 보드 사이 빈 곳 가운데라 배속 버튼보다 오른쪽, 전투 중에만: 시간 + 데스매치 단계, 글자 30 · 폭 540)
  ├─ SpeedButton    ← Image · Button · SpeedButton → Label   (위 가운데 y -190, 전투 중에만 — BattleManager가 켜고 끈다. ×1 → ×2 → ×4)
- ├─ ShopPanel      ← Image(반투명 전체) · ShopPanel   (상점 단계에만 켜짐)
+ ├─ 〈ShopPanel〉   🔴 **이 아래 트리는 Battle 씬이 아니라 프리팹 `Assets/Prefabs/UI/ShopPopup`의 것이다**(10/11 상점이 World 씬 팝업으로 옮겨감 — `Battle.unity`에 `ShopPanel`은 없다). 아래 「World 씬」 절과 같이 볼 것
  │   ├─ Status   ← Text
  │   ├─ MapLabel ← Text   (위 가운데 — 이번 라운드 맵 이름·설명)
  │   ├─ OfferTemplate [꺼짐] ← Image(투명 — 레이캐스트 230×260) · Button · OfferCard · CanvasGroup(살 수 없으면 — `RunState.CanBuy` 거짓 — 알파 0.4) → Floor(층 조각 120×120 + FloorLook: Light · Icon ×0.6 · RarityFrame = 창틀 · Cap `UI_FloorCap`) · Name · PriceRow · Locked(잠김 표시, 회색, 가격 아래 -132) · Glow(`UI_CardGlow` 156×156, 층 조각 뒤 — 보유 = 흰 숨쉬기 · RANK UP = 금색) · RankUp(「RANK UP!」 +118, 튐 — 판정 `RunState.FindMergeTarget`)   (x 460부터 250px 간격, y -440, 진열 수만큼 복제)
@@ -94,7 +94,13 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 ## World 씬 (10/11 — 월드맵, 빌드 0번)
 `Assets/Scenes/World.unity`. 오브젝트는 전부 Canvas(uGUI) — 지도도 UI다. 트리·참조의 원본은 씬 파일이고, 여기엔 덩어리만 적는다.
 - `WorldManager`(`World/WorldManager`) — 턴 시작 · 씬 전환 · AI 턴 재생.
-- Canvas: `TopBar`(턴 · 골드 · 행복도 · 땅) · `SidePanel`(내 영지 요약 · 고른 땅·영주 · 영주 탑 · 「침략」「쉬기」「상점」 · 요약/통일/게임 오버 글) · `Map`(영토 지도 — `UI/WorldMapView`가 땅 번호 텍스처를 칠한다) · `SkipReplay` · `BuildingTooltip`.
-- Battle 씬에서 달라진 것: 상점의 시작 버튼 = 「지도로」, 결과 버튼 = 「지도로」, `ShopPanel/InvadePanel`은 없다.
-- **상점도 같은 틀(10/11)**: Battle 씬 `ShopPanel` 아래에 `LineSide` · `LineTop` · `TopBar` · `SidePanel`(지도와 같은 `WorldSidePanel`, 탑 기둥 없음) · `MapButton`(「지도로」). 상점 판이 켜진 동안 본진 체력바 둘과 상대 UI 탑은 꺼진다(`ShopPanel._hiddenInShop`). 옛 `StatusLine` · `MapBox`류 · `StartButton`은 없다.
-- **상점 = 지도 위 팝업(10/11 — 바로 위 「상점도 같은 틀」 줄을 대체)**: World 씬 Canvas의 `ShopSlot/ShopPopup`(프리팹 `Assets/Prefabs/UI/ShopPopup`)과 위 줄 뒤의 검은 띠 `TopBack`. Battle 씬에는 `ShopPanel`이 없고, 꺼진 `Templates/UpgradeCountTemplate`(체력바 아래 업그레이드 줄의 글자 틀)이 있다.
+- Canvas: `TopBar`(턴 · 골드 · 행복도 · 땅 n/30 · 그 오른쪽에 **내 업그레이드 줄** — 가로 `ScrollRect`, 스크롤바 없음) · `SidePanel` · `Map`(영토 지도 — `UI/WorldMapView`가 땅 번호 텍스처를 칠한다) · `SkipReplay` · `BuildingTooltip`.
+- **`SidePanel`(10/12 — 워크래프트2식 초상화 배치, `UI/WorldSidePanel`)**: 기둥 둘이 세로 선(2px, 명령을 받는 동안만)으로 갈린다.
+  - **정보 기둥** — 고른 영주 그림(깃발 포함, 몸 64px · 몸 중심을 이름 글 중심에) · 이름 · 국가 · 그 영주의 업그레이드 줄 · 구분선 · 「지형 :」 · 「강화 :」 · 「패배시」 + 하트. 고른 땅이 없으면 나 + 안내 글, 상점이 보이는 동안은 나 + 「내 영지」 + 국가만(지형·강화 줄은 빈다).
+  - **탑 기둥**(x 348) — 그 영주의 탑. 상점 팝업이 켜지는 동안은 숨고, 그 자리에 아래 `ShopTower`가 선다.
+  - 「침략」「쉬기」「상점」 버튼 · 요약/통일/게임 오버 글.
+- **씬에 없고 실행 중에 생기는 것 둘** — 씬 파일에서 찾지 말 것.
+  - **`ShopTower`(10/12)**: `WorldManager`가 패널 바로 위에 만드는 빈 판. 상점 팝업이 켜질 때 팝업 안의 탑 판(`FieldView`)·끄는 조각·끼울 자리 선을 **이 판으로 옮겨** 패널 탑 기둥 자리에 세운다(부모만 바뀐다 — 상점 로직·프리팹은 그대로). 팝업이 미끄러지는 동안에도 제자리고, 다 닫히면 사라진다. 그래서 상점 중에 보이는 내 탑은 **하나**다.
+  - **지도 위 영주 그림**: `UI/WorldLords`가 만든다(어슬렁 · 침략 걸음 · 이름표 · 죽어 날아감 · 구름). 이름표는 마우스가 올라간 땅의 주인 한 명만 켠다.
+- **상점 = 지도 위 팝업(10/11)**: World 씬 Canvas의 `ShopSlot/ShopPopup`(프리팹 `Assets/Prefabs/UI/ShopPopup`)과 위 줄 뒤의 검은 띠 `TopBack`. 팝업 안에는 `LineSide` · `LineTop` · `MapButton`(「지도로」)이 있고, 옛 `StatusLine` · `MapBox`류 · `StartButton`은 없다.
+- Battle 씬에서 달라진 것: 결과 버튼 = 「지도로」, `ShopPanel`·`InvadePanel`은 없다. 꺼진 `Templates/UpgradeCountTemplate`(체력바 아래 업그레이드 줄의 글자 틀)이 있다.

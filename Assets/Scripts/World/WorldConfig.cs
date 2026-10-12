@@ -65,6 +65,30 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _nationIcons = new Sprite[0];
 
+        [Header("영주 닉네임 — 지도의 영주 그림 위 · 왼쪽 패널 · 승리 글(임시 이름, 사용자 10/12)")]
+        [Tooltip("이름 목록(값은 에셋에 — 흔한 외국 이름의 한글 표기, 사용자 10/12) — 한 런에서 영주마다 하나씩 겹치지 않게 돌려 쓰고, 다 쓰면 뒤에 숫자를 붙인다(제임스2)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string[] _lordNames = new string[0];
+        [Tooltip("AI 영주의 이름 뒤에 붙는 글")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _lordNameSuffix = "_AI";
+
+        // 번호가 이웃한 영주의 이름이 목록에서 나란하지 않게 건너뛰며 고른다 — 건너뛰는 폭은 이름 수와 서로소여야 전부 한 번씩 돈다(아니면 한 칸씩)
+        private const int NameStride = 7;
+
+        // index번째 영주의 닉네임(index ≥ 0) — 이름 수만큼은 서로 다르고, 그 뒤로는 숫자가 붙는다. offset = 목록에서 시작하는 자리(런마다 다르게). 규칙은 이 값을 읽지 않는다(표시용)
+        public string LordName(int index, int offset)
+        {
+            int count = _lordNames.Length;
+            if (count == 0)
+                return _lordNameSuffix;
+            int stride = Gcd(NameStride, count) == 1 ? NameStride : 1;
+            int round = index / count;
+            return _lordNames[(index + offset) % count * stride % count] + (round > 0 ? (round + 1).ToString() : "") + _lordNameSuffix;
+        }
+
+        private static int Gcd(int a, int b) => b == 0 ? a : Gcd(b, a % b);
+
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
 

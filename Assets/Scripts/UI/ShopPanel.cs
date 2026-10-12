@@ -89,6 +89,26 @@ namespace GnorpWar
                     _storageView = view;
                 else
                     _fieldView = view;
+            if (_towerLayer != null)
+            {
+                var field = (RectTransform)_fieldView.transform;
+                field.SetParent(_towerLayer, false);
+                field.anchoredPosition += new Vector2(_towerX - _fieldView.TemplateX, 0f);
+                // 끄는 조각과 끼울 자리 선도 그 층으로 — 팝업 안에 두면 왼쪽 패널 뒤에 그려진다
+                _insertLine.SetParent(_towerLayer, false);
+                _dragGhost.SetParent(_towerLayer, false);
+            }
+        }
+
+        // 내 탑을 팝업 밖에 세운다(사용자 10/12: 상점이 열리면 왼쪽 패널의 탑 기둥에 탑 하나만) — layer = 탑이 설 판(화면 전체 크기), x = 1층 가운데의 가로 자리.
+        // 판은 부르는 쪽(WorldManager)이 팝업과 같이 켜고 끈다. 팝업이 처음 켜지기 전에 부른다
+        private RectTransform _towerLayer;
+        private float _towerX;
+
+        public void PlaceTower(RectTransform layer, float x)
+        {
+            _towerLayer = layer;
+            _towerX = x;
         }
 
         private void OnEnable() => RunState.Merged += OnMerged;

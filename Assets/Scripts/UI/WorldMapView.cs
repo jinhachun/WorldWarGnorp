@@ -183,7 +183,7 @@ namespace GnorpWar
                 outline.effectDistance = new Vector2(2f, 2f);
             }
             Lords = gameObject.AddComponent<WorldLords>();
-            Lords.Init(_cells, _width, _height, scale, _anchors, _lordSprite, _lordFlag);
+            Lords.Init(_cells, _width, _height, scale, _anchors, _lordSprite, _lordFlag, _dotFont);
         }
 
         private static Image NewImage(RectTransform parent, string name)
@@ -204,6 +204,8 @@ namespace GnorpWar
         // selected = 고른 땅(없으면 None)
         public void Show(int[] owner, System.Func<int, Color> colorOf, int mine, bool[] invadable, int selected)
         {
+            // 가리킨 땅의 영주만 그림 위에 이름이 뜬다
+            Lords.Point(Hovered == None ? -1 : owner[Hovered]);
             bool changed = !_painted || selected != _selected || Hovered != _hovered || mine != _mine;
             for (int region = 0; region < _owner.Length; region++)
             {
@@ -231,7 +233,7 @@ namespace GnorpWar
                     Arrows++;
             _texture.SetPixels32(_pixels);
             _texture.Apply();
-            Lords.Sync(_owner, colorOf);
+            Lords.Sync(_owner, colorOf, _mine);
         }
 
         // 내 땅에서 region으로 화살표 하나 — 국경을 가장 길게 맞댄 내 땅과의 국경 한가운데에서, region의 표시 자리 쪽(여덟 방향 중 가장 가까운 쪽)으로.

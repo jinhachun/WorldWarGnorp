@@ -67,6 +67,9 @@ namespace GnorpWar
         // 영주 색 — 유닛 그림의 파란 자리(Core/LordPaint) · 탑 지붕 · 깃발 · 지도의 땅이 이 색이다. 나는 그린 그대로(열쇠 색)
         public static Color LordKeyColor => _config.LordKeyColor;
         public static Color ColorOf(Lord lord) => lord.IsPlayer ? _config.LordKeyColor : World.ColorOf(lord);
+        // 영주의 닉네임(표시용 — 규칙은 읽지 않는다). 런 동안 영주 번호에 고정이고, 런마다 목록의 다른 자리에서 시작한다
+        public static string NameOf(Lord lord) => _config.World.LordName(lord.Id, _nameOffset);
+        private static int _nameOffset;
         // 적 진영 = 침략한 영주, 고르기 전에는 미리 보는 땅의 영주(없으면 흰색)
         public static Color LordColor(Team team)
         {
@@ -162,6 +165,8 @@ namespace GnorpWar
             _shopEnteredRound = _shopCueRound = -1;
             StatBook.ClearRun();
             TowerBook.ClearRun();
+            // 닉네임이 시작하는 자리 — 규칙의 난수와 섞이지 않게 따로 뽑는다
+            _nameOffset = new System.Random().Next(1000);
             // 새 런 = 새 월드 — 영주가 지역마다 하나씩, 그중 무작위 한 자리가 나
             var random = new System.Random(Random.Range(0, int.MaxValue));
             World = new WorldRun(config.World, config, random.Next(config.World.Map.RegionCount), random);

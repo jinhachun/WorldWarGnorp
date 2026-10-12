@@ -20,13 +20,15 @@ namespace GnorpWar
         // 침략 걸음이 잇달아 출발하는 간격(초) · 땅 색이 도착보다 얼마나 먼저 바뀌는지(초)
         private const float MarchStagger = 0.12f;
         private const float ApplyLead = 0.02f;
+        // 내 침략 걸음 — 걸음이 끝났다는 신호 없이도 전투로 넘어가는 여유(초, 걸음의 길이에 더한다)
+        private const float MarchSlack = 0.5f;
         // 상점 팝업이 내려오는 · 올라가는 시간(초)
         private const float ShopOpenSeconds = 0.3f, ShopCloseSeconds = 0.2f;
         // 못 누르는 버튼의 글 색(상점과 같다)
         private static readonly Color DisabledText = new Color(0.6f, 0.6f, 0.66f);
 
-        // Choose = 런의 첫 화면 — 내 국가를 고르는 중(고르면 첫 턴이 열린다)
-        private enum Stage { Choose, Command, Replay, Summary }
+        // Choose = 런의 첫 화면 — 내 국가를 고르는 중(고르면 첫 턴이 열린다). March = 「침략」을 눌러 내 영주가 그 땅으로 걸어가는 중(도착하면 전투 씬)
+        private enum Stage { Choose, Command, March, Replay, Summary }
 
         private static WorldManager _instance;
 
@@ -61,6 +63,8 @@ namespace GnorpWar
         private RectTransform _shopRect;
         private Vector2 _shopHome;
         private CanvasGroup _shopGroup;
+        private RectTransform _shopTower;
+        private CanvasGroup _shopTowerGroup;
         private int _selected = WorldMapView.None;
         // 화면에 보이는 턴 번호 — AI 턴을 재생하는 동안에는 방금 끝난 턴
         private int _turn;
@@ -71,6 +75,7 @@ namespace GnorpWar
         private float[] _eventStart, _eventApply;
         private bool[] _eventStarted, _eventApplied;
         private float _replayClock, _replayEnd;
+        private float _marchClock;
 
         // 명령을 받는 중인가(치트 패널이 읽는다)
         public static bool Commanding => _instance != null && _instance._stage == Stage.Command && !RunState.IsOver;
@@ -85,6 +90,12 @@ namespace GnorpWar
                 RunState.StartNew(_config);
             _turn = RunState.Round + 1;
             _map.Build(RunState.World.Map);
+            // 영주 그림 머리 위의 닉네임 — 내 그림에는 띄우지 않는다
+            _map.Lords.NameOf = id =>
+            {
+                Lord lord = RunState.World.State.Lords[id];
+                return lord.IsPlayer ? null : RunState.NameOf(lord);
+            };
             _map.Clicked += Select;
             _invade.onClick.AddListener(Invade);
             _rest.onClick.AddListener(Rest);
@@ -100,9 +111,23 @@ namespace GnorpWar
             _shopGroup = _shopPopup.GetComponent<CanvasGroup>();
             _shopGroup.blocksRaycasts = false;
             _shopPopup.gameObject.SetActive(false);
+            // 상점의 내 탑이 설 판 — 왼쪽 패널 바로 위에 겹쳐, 패널의 탑 기둥 자리에(팝업과 같이 켜지고 꺼진다. 팝업처럼 미끄러지지는 않는다)
+            var tower = new GameObject("ShopTower", typeof(RectTransform), typeof(CanvasGroup));
+            _shopTower = (RectTransform)tower.transform;
+            _shopTower.SetParent(_panel.transform.parent, false);
+            _shopTower.SetSiblingIndex(_panel.transform.GetSiblingIndex() + 1);
+            _shopTower.anchorMin = Vector2.zero;
+            _shopTower.anchorMax = Vector2.one;
+            _shopTower.offsetMin = _shopTower.offsetMax = Vector2.zero;
+            _shopTowerGroup = tower.GetComponent<CanvasGroup>();
+            tower.SetActive(false);
+            _shopPopup.PlaceTower(_shopTower, _panel.TowerX);
 
             if (RunState.Phase == RunState.RunPhase.Aftermath)
+            {
+                FellBeaten();
                 PlayAiTurn();
+            }
             else if (RunState.IsOver)
                 ShowEnd();
             else
@@ -171,6 +196,33 @@ namespace GnorpWar
         {
             if (_stage != Stage.Command || !RunState.InvadableRegions().Contains(_selected))
                 return;
+            // 내 영주가 그 땅으로 걸어 들어간 뒤에 전투로(사용자 10/12) — AI 턴 재생의 침략 걸음(UI/WorldLords.March)과 같은 걸음이다.
+            // 걷는 동안은 명령을 받지 않는다(단계가 Command가 아니라 버튼이 숨고 땅도 못 고른다)
+            _stage = Stage.March;
+            _marchClock = 0f;
+            _map.Lords.March(RunState.World.State.Player.Id, _selected, true);
+        }
+
+        // 내가 방금 전투에서 쓰러뜨린 영주(땅을 다 빼앗겼다)는 지도로 돌아온 순간 그 땅에 서 있다가, 내 영주가 달려들어 치면 날아간다(UI/WorldLords.Fell).
+        // 최후의 연합이 멸망했으면 든 영주들도 다 같이
+        private void FellBeaten()
+        {
+            WorldState state = RunState.World.State;
+            Lord beaten = RunState.Opponent;
+            IReadOnlyList<int> gains = RunState.LastGains;
+            if (RunState.LastOutcome != RunState.Outcome.Win || beaten == null || beaten.Alive || gains.Count == 0)
+                return;
+            var fallen = new List<Lord> { beaten };
+            if (beaten == state.Coalition && state.CoalitionMembers != null)
+                foreach (int member in state.CoalitionMembers)
+                    fallen.Add(state.Lords[member]);
+            for (int i = 0; i < fallen.Count; i++)
+                _map.Lords.Fell(gains[i % gains.Count], state.Player.Id, RunState.ColorOf(fallen[i]));
+        }
+
+        // 걸음이 끝났다 — 침략을 확정하고 전투 씬으로
+        private void StartBattle()
+        {
             RunState.Invade(_selected);
             SceneManager.LoadScene(BattleSceneName);
         }
@@ -332,6 +384,16 @@ namespace GnorpWar
         {
             WorldState state = RunState.World.State;
             SlideShop();
+            if (_stage == Stage.March)
+            {
+                // 걸음이 끝나면 전투로 — 걸음이 끝났다는 신호를 못 받아도 걸음의 길이 + 여유가 지나면 넘어간다
+                _marchClock += Time.unscaledDeltaTime;
+                if (_marchClock > 0f && (!_map.Lords.AnyMarching || _marchClock >= WorldLords.MarchSeconds + MarchSlack))
+                {
+                    StartBattle();
+                    return;
+                }
+            }
             if (_stage == Stage.Replay)
             {
                 // 한 프레임이 길어도(씬을 막 불러온 프레임 등) 사건이 한꺼번에 넘어가지 않게 프레임당 진행을 묶는다
@@ -372,7 +434,12 @@ namespace GnorpWar
             _map.Lords.Group(state.Coalition != null ? state.Coalition.Id : -1, state.CoalitionMembers);
             _map.Show(_shown ?? state.Owner, lord => RunState.ColorOf(state.Lords[lord]), state.Player.Id, open, _selected);
             // 명령을 받는 동안에만 고른 땅 · 명령 버튼이 보인다 — 그 밖에는 그 자리에 알림(AI 턴 · 요약 · 끝)
-            _panel.Show(_selected, command, _shopOpen);
+            // 상점의 내 탑은 팝업이 보이는 동안(미끄러지는 동안 포함) 제자리에 서 있고, 팝업을 못 누르는 동안에는 같이 못 누른다
+            bool shopShown = _shopOpen || _shopSlide > 0f;
+            if (_shopTower.gameObject.activeSelf != shopShown)
+                _shopTower.gameObject.SetActive(shopShown);
+            _shopTowerGroup.blocksRaycasts = _shopGroup.blocksRaycasts;
+            _panel.Show(_selected, command || _stage == Stage.March, shopShown);
             if (!command && _shopOpen)
                 SetShop(false);
             // 상점이 열린 동안에는 명령 버튼 셋을 다 숨긴다 — 닫는 길은 팝업 안의 큰 「지도로」 하나(사용자 10/11), 닫아야 지도에서 고른다

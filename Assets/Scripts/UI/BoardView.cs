@@ -198,6 +198,8 @@ namespace GnorpWar
         private bool InShop => _shop != null && _shop.gameObject.activeInHierarchy;
 
         public Source Kind => _source;
+        // 틀 칸(1층)의 가로 자리 — 탑을 다른 기둥으로 옮겨 세울 때 얼마나 옮길지 잰다(UI/ShopPanel.PlaceTower)
+        public float TemplateX => ((RectTransform)_template.transform).anchoredPosition.x;
         // index칸 그림의 화면 자리(지금 그려진 모습 기준)
         public Vector3 SlotPosition(int index) => _views[index].transform.position;
 

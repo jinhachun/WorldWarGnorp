@@ -164,7 +164,11 @@ namespace GnorpWar.Editor
             {
                 var list = new ValueDropdownList<BuildingRarity>();
                 foreach (BuildingRarity rarity in System.Enum.GetValues(typeof(BuildingRarity)))
+                {
+                    // 신화는 전설 둘을 합쳐야만 나오는 등급이라 기물 정의의 등급으로 쓰지 않는다
+                    if (rarity == BuildingRarity.Mythic) continue;
                     list.Add(rarity.DisplayName(), rarity);
+                }
                 return list;
             }
 

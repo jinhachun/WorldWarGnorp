@@ -41,8 +41,10 @@ namespace GnorpWar
         [Tooltip("상점에 나오는 건물 — 등급을 먼저 뽑고 그 등급 안에서는 같은 확률")]
         [SerializeField] private BuildingDefinition[] _shopPool = new BuildingDefinition[0];
 
-        [Header("등급 — 칸 순서: 일반 · 고급 · 희귀 · 영웅 · 전설")]
-        [SerializeField] private int[] _rarityPrices = { 3, 4, 5, 10, 12 };
+        [Header("등급 — 칸 순서: 일반 · 고급 · 희귀 · 영웅 · 전설 (가격만 신화 칸이 하나 더)")]
+        [SerializeField] private int[] _rarityPrices = { 3, 4, 5, 10, 12, 24 };
+        // 가중치는 5칸 — 신화는 진열되지 않으므로 칸이 없다. RarityWeight가 (int)rarity로 읽으니
+        // 신화 기물이 상점 풀(_shopPool)에 들어가면 그때 IndexOutOfRange가 난다(지금은 풀에 없어 RunState.HomeOffer가 건너뛴다)
         [Tooltip("1라운드 진열의 등급 가중치")]
         [SerializeField] private float[] _rarityWeightsFirst = { 60, 30, 10, 0, 0 };
         [Tooltip("등급 단계 상한(WorldConfig)에 닿은 턴의 진열 등급 가중치 — 그 사이는 턴에 따라 섞고, 넘으면 이 값")]

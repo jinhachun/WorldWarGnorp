@@ -3,7 +3,7 @@ using UnityEngine;
 namespace GnorpWar
 {
     // 가진 기물 한 채 — 기물 종류와 시작 등급에서 몇 번 올랐나만 담는 순수 데이터(나중에 비동기 상대 보드로 저장·전송할 단위).
-    // 같은 기물·같은 등급 둘이 모이면 위 등급 하나가 된다(RunState). 전설이 끝
+    // 같은 기물·같은 등급 둘이 모이면 위 등급 하나가 된다(RunState). 신화가 끝
     [System.Serializable]
     public class OwnedBuilding
     {
@@ -25,7 +25,7 @@ namespace GnorpWar
         public int Level => _upgrades + 1;
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
-        public bool CanUpgrade => Rarity < BuildingRarity.Legendary;
+        public bool CanUpgrade => Rarity < BuildingRarity.Mythic;
 
         public int Stacks => _stacks;
 

@@ -72,7 +72,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 954f8df968bdf1040b61ca2d77705601, type: 2}
   - {fileID: 11400000, guid: 64f60345683ac794cb1ea3e99fa9713d, type: 2}
   - {fileID: 11400000, guid: cf8ee0368b3e93b4ba2d3d69c609c9c0, type: 2}
-  _rarityPrices: 0400000009000000100000001a00000028000000
+  _rarityPrices: 0400000009000000100000001a0000002800000050000000
   _rarityWeightsFirst:
   - 60
   - 30

@@ -18,7 +18,7 @@ namespace GnorpWar
         [SerializeField] private GameObject _resultPanel;
         [SerializeField] private Text _resultText;
         [SerializeField] private Button _retryButton;
-        [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(땅 +N · 행복도 -N)")]
+        [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(이기면 쓰러뜨린 영주의 글 · 지면 행복도 -N)")]
         [SerializeField] private Text _resultSummary;
         [Tooltip("패배 시 내 결과 한 줄(「-1」) 바로 왼쪽에 뜨는 행복도 하트")]
         [SerializeField] private Image _resultHeart;
@@ -213,12 +213,13 @@ namespace GnorpWar
             _fighting = false;
             _allyBoard.Stop();
             _enemyBoard.Stop();
-            int lands = RunState.Lands, happiness = RunState.Happiness;
+            int happiness = RunState.Happiness;
+            Lord opponent = RunState.Opponent;
             RunState.FinishBattle(won);
-            // 결과 창 — 큰 글 · 내 결과 한 줄(이기면 얻은 땅, 지면 잃은 행복도) · 「지도로」. 행복도 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다.
+            // 결과 창 — 큰 글 · 내 결과 한 줄(이기면 쓰러뜨린 영주의 글, 지면 잃은 행복도) · 「지도로」. 행복도 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다.
             // AI 영주들의 턴 · 통일 · 게임 오버는 지도에서 보여 준다
             _resultText.text = won ? "승리!" : "패배...";
-            _resultSummary.text = BuildingTooltip.Highlight(won ? $"땅 +{RunState.Lands - lands}" : $"-{happiness - RunState.Happiness}");
+            _resultSummary.text = won ? WinLine(opponent) : BuildingTooltip.Highlight($"-{happiness - RunState.Happiness}");
             // 잃은 행복도는 하트 + 숫자로 — 하트(글의 자식)는 글의 바로 왼쪽. 하트와 글이 한 덩어리로 가운데에 오게 글을 하트 몫의 절반만큼 오른쪽으로
             _resultHeart.enabled = !won;
             RectTransform heart = _resultHeart.rectTransform, summary = _resultSummary.rectTransform;
@@ -229,6 +230,15 @@ namespace GnorpWar
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
             Time.timeScale = 0f;
+        }
+
+        // 승리 글 한 줄(사용자 10/12) — 쓰러뜨린 영주의 닉네임으로. 최후의 연합은 여러 번 이겨야 멸망한다 — 그 전에는 물러났다고 하고 남은 승리 수를 붙인다
+        private static string WinLine(Lord opponent)
+        {
+            WorldState state = RunState.World.State;
+            if (opponent != state.Coalition)
+                return $"\"{RunState.NameOf(opponent)}\"의 세력은 멸망하였습니다!";
+            return opponent.Alive ? "최후의 연합이 물러났습니다! " + BuildingTooltip.Highlight($"앞으로 {state.CoalitionWinsLeft}번") : "최후의 연합은 멸망하였습니다!";
         }
 
         // 지도 씬으로 — 결과 창의 「지도로」. 전투가 끝났으므로(Aftermath) 지도가 AI 턴을 돌린다

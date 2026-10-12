@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 영주가 가진 지역 업그레이드 아이콘 줄 — 종류마다 아이콘 하나(종류 순서 고정, 원본 크기), 2개 이상이면 그 옆에 「×N」.
+    // 영주가 가진 지역 업그레이드 아이콘 줄 — 종류마다 아이콘 하나(종류 순서 고정, 원본 크기)와 그 옆에 「×N」(사용자 10/12: 1개일 때도 「×1」 — 비어 보이지 않게).
     // 아이콘에 마우스를 올리면 합쳐진 효과가 뜬다(UI/UpgradeIcon). 한 줄에 columns칸, 넘치면 아랫줄.
     // 왼쪽 패널(UI/WorldSidePanel)과 전투 화면의 본진 체력바 아래(UI/BaseUpgradeRow)가 같이 쓴다
     public class UpgradeRow
@@ -57,7 +57,7 @@ namespace GnorpWar
             rect.anchoredPosition = position;
         }
 
-        // 지금 보이는 칸들의 폭(px) — 첫 아이콘의 왼쪽부터 마지막 칸의 아이콘(「×N」이 있으면 그 글)의 오른쪽까지. 한 줄일 때만 뜻이 있다
+        // 지금 보이는 칸들의 폭(px) — 첫 아이콘의 왼쪽부터 마지막 칸의 「×N」 글의 오른쪽까지. 한 줄일 때만 뜻이 있다
         public float Width { get; private set; }
 
         // lord가 가진 것을 보여 주고 줄의 높이를 돌려준다(하나도 없으면 0)
@@ -77,8 +77,8 @@ namespace GnorpWar
                 _icons[cells].gameObject.SetActive(true);
                 _icons[cells].Set(map.UpgradeOfKind(kind), count, note);
                 _counts[cells].gameObject.SetActive(true);
-                _counts[cells].text = count > 1 ? $"×<color={BuildingTooltip.NumberColor}>{count}</color>" : "";
-                Width = Mathf.Abs(_counts[cells].rectTransform.anchoredPosition.x) + (count > 1 ? _counts[cells].preferredWidth : -LabelGap);
+                _counts[cells].text = $"×<color={BuildingTooltip.NumberColor}>{count}</color>";
+                Width = Mathf.Abs(_counts[cells].rectTransform.anchoredPosition.x) + _counts[cells].preferredWidth;
                 cells++;
             }
             for (int i = cells; i < _icons.Length; i++)

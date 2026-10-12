@@ -509,6 +509,7 @@ MonoBehaviour:
   _cooldownMark: {fileID: 1224434575}
   _cooldownText: {fileID: 168493962}
   _overdriveIcon: {fileID: 21300000, guid: a3c1585a36e0461badf782f1e860d2be, type: 3}
+  _stoppedIcon: {fileID: 21300000, guid: a5cc024f000873c4db6491fe4b7eca17, type: 3}
 --- !u!114 &40005542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1565,6 +1566,7 @@ MonoBehaviour:
   _cooldownMark: {fileID: 300154020}
   _cooldownText: {fileID: 42087266}
   _overdriveIcon: {fileID: 21300000, guid: a3c1585a36e0461badf782f1e860d2be, type: 3}
+  _stoppedIcon: {fileID: 21300000, guid: a5cc024f000873c4db6491fe4b7eca17, type: 3}
 --- !u!114 &307240396
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5459,6 +5461,7 @@ MonoBehaviour:
   _hasteIcon: {fileID: 21300000, guid: 0eebf3e2d2d2404a8263b316e84f2935, type: 3}
   _cooldownIcon: {fileID: 21300000, guid: aaf96f2132cb4eb498059915b755624b, type: 3}
   _overdriveIcon: {fileID: 21300000, guid: a3c1585a36e0461badf782f1e860d2be, type: 3}
+  _stoppedIcon: {fileID: 21300000, guid: a5cc024f000873c4db6491fe4b7eca17, type: 3}
   _badgeOffset: 1.9375
 --- !u!1 &1420610523
 GameObject:
@@ -6438,6 +6441,7 @@ MonoBehaviour:
   _camera: {fileID: 936240183}
   _minX: -61
   _maxX: 61
+  _closestSize: 10
 --- !u!1 &1690942476
 GameObject:
   m_ObjectHideFlags: 0
@@ -7022,6 +7026,7 @@ MonoBehaviour:
   _hasteIcon: {fileID: 21300000, guid: 0eebf3e2d2d2404a8263b316e84f2935, type: 3}
   _cooldownIcon: {fileID: 21300000, guid: aaf96f2132cb4eb498059915b755624b, type: 3}
   _overdriveIcon: {fileID: 21300000, guid: a3c1585a36e0461badf782f1e860d2be, type: 3}
+  _stoppedIcon: {fileID: 21300000, guid: a5cc024f000873c4db6491fe4b7eca17, type: 3}
   _badgeOffset: 1.9375
 --- !u!1 &1936945599
 GameObject:

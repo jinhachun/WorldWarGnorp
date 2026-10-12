@@ -133,7 +133,11 @@ namespace GnorpWar
 
         // 전투에서 효과를 내는 칸인가 — 늪지에서는 쿨다운 없는 기물이 아무것도 하지 않는다
         private bool IsActive(int index)
-            => HasBuilding(index) && !(Map != null && Map.PassiveBuildingsOff && _slots[index].Building.Definition.Cooldown <= 0f);
+            => HasBuilding(index) && !StoppedByMap(_slots[index].Building);
+
+        // 이번 맵이 작동을 끈 기물인가(늪지 — 쿨다운 없는 기물). 층의 정지 표시(Fx/StoppedMark)와 유닛 카드의 능력치(Units/Stats)도 이 판정을 읽는다
+        public static bool StoppedByMap(OwnedBuilding building)
+            => !OwnedBuilding.IsEmpty(building) && Map != null && Map.PassiveBuildingsOff && building.Definition.Cooldown <= 0f;
 
         public void Stop() => _running = false;
 

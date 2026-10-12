@@ -28,15 +28,21 @@ namespace GnorpWar
         [SerializeField] private Sprite _archLight;
         [SerializeField] private Sprite _roundLight;
 
-        // building = null이면 빈 층(꺼진 창). charge = 쿨다운이 찬 비율(전투 중 쿨다운 기물 — 창이 아래부터 밝아진다), 음수면 은은히 다 켜짐
-        public void Show(BuildingDefinition building, float charge = -1f)
+        // 벽의 제 색(처음 그릴 때 읽는다) — 꺼진 층은 여기에 회색을 곱한다
+        private Color? _wallColor;
+
+        // building = null이면 빈 층(꺼진 창). charge = 쿨다운이 찬 비율(전투 중 쿨다운 기물 — 창이 아래부터 밝아진다), 음수면 은은히 다 켜짐.
+        // stopped = 맵이 작동을 끈 층(Fx/StoppedMark) — 창이 꺼지고 벽이 회색이 된다
+        public void Show(BuildingDefinition building, float charge = -1f, bool stopped = false)
         {
             BuildingNation nation = building != null ? building.Nation : BuildingNation.Common;
             bool iron = nation == BuildingNation.TickTock;
             _wall.sprite = iron ? _ironWall : nation == BuildingNation.Kingdom ? _brickWall : _plainWall;
             _window.sprite = iron ? _gearWindow : _archWindow;
             _light.sprite = iron ? _roundLight : _archLight;
-            _light.enabled = building != null;
+            _light.enabled = building != null && !stopped;
+            _wallColor ??= _wall.color;
+            _wall.color = stopped ? _wallColor.Value * StoppedMark.Gray : _wallColor.Value;
             _light.fillAmount = charge >= 0f ? Mathf.Clamp01(charge) : 1f;
             _light.color = new Color(LightColor.r, LightColor.g, LightColor.b, charge >= 0f ? 1f : DimLight);
         }

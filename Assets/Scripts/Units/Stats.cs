@@ -321,7 +321,7 @@ namespace GnorpWar
             // 전투에서 효과를 내는 필드 기물만 — 보관함은 안 걸리고, 늪지에서는 쿨다운 없는 기물이 꺼진다(BoardRunner.IsActive와 같은 조건)
             var active = new List<OwnedBuilding>();
             foreach (OwnedBuilding owned in enemy ? RunState.EnemyField : RunState.Field)
-                if (!OwnedBuilding.IsEmpty(owned) && !(RunState.Map != null && RunState.Map.PassiveBuildingsOff && owned.Definition.Cooldown <= 0f))
+                if (!OwnedBuilding.IsEmpty(owned) && !BoardRunner.StoppedByMap(owned))
                     active.Add(owned);
 
             UnitDefinition alias = null;

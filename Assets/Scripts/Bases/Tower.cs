@@ -50,6 +50,8 @@ namespace GnorpWar
         [SerializeField] private Sprite _cooldownIcon;
         [Tooltip("데스매치 동안 오버드라이브 층의 번개 — 가속 표시 자리에, 숫자 없이")]
         [SerializeField] private Sprite _overdriveIcon;
+        [Tooltip("맵이 작동을 끈 층(늪지 — 쿨다운 없는 기물)의 정지 표시 — 가속 표시 자리에, 숫자 없이")]
+        [SerializeField] private Sprite _stoppedIcon;
         [Tooltip("층 가운데에서 효과 표시 가운데까지(칸) — 창과 벽 사이 빈 벽(15.5px)")]
         [SerializeField] private float _badgeOffset = 1.9375f;
 
@@ -67,6 +69,8 @@ namespace GnorpWar
             public TowerBadge Cooldown;
             // 데스매치 동안 오버드라이브 층의 번개(Fx/OverdriveMark) — 가속 표시와 같은 자리, 숫자 없이
             public TowerBadge Overdrive;
+            // 맵이 작동을 끈 층의 빨간 정지 표시(Fx/StoppedMark) — 가속 표시와 같은 자리, 숫자 없이
+            public TowerBadge Stopped;
             public float Bounce = BounceDuration;
         }
 
@@ -204,6 +208,8 @@ namespace GnorpWar
             ShowIcon(view.Icon, building != null ? building.Definition.Icon : null);
 
             // 창 불빛 — 빈 층은 꺼짐, 전투 중 쿨다운 기물은 찬 만큼 아래부터, 나머지는 은은히 다 켜짐
+            // 맵이 작동을 끈 층(전투 중에만 가른다) — 창이 꺼지고 벽 · 아이콘이 회색이 된다
+            bool stopped = running != null && BoardRunner.StoppedByMap(building);
             int rows = 0;
             float alpha = DimLight;
             if (building != null && running != null && running.Cooldown > 0f)
@@ -211,7 +217,7 @@ namespace GnorpWar
                 rows = Mathf.FloorToInt(WindowRows * Mathf.Clamp01(running.Timer / running.Cooldown));
                 alpha = 1f;
             }
-            else if (building != null)
+            else if (building != null && !stopped)
                 rows = WindowRows;
             Sprite light = lights[rows];
             if (view.Light.sprite != light)
@@ -228,6 +234,8 @@ namespace GnorpWar
             view.Haste.ShowSeconds(running != null ? running.HasteLeft : 0f);
             view.Cooldown.ShowScale(running != null ? running.CooldownScale : 1f);
             view.Overdrive.ShowIcon(OverdriveMark.On(building, _base.Team));
+            view.Stopped.ShowIcon(stopped);
+            view.Wall.color = view.Icon.color = stopped ? StoppedMark.Gray : Color.white;
         }
 
         private static Look LookOf(OwnedBuilding building)
@@ -295,6 +303,7 @@ namespace GnorpWar
             view.Cooldown = new TowerBadge(go.transform, "Cooldown", -Forward * _badgeOffset, _cooldownIcon, _badgeFont, badgeColor, wall);
 
             view.Overdrive = new TowerBadge(go.transform, "Overdrive", Forward * _badgeOffset, _overdriveIcon, _badgeFont, OverdriveMark.Color, wall);
+            view.Stopped = new TowerBadge(go.transform, "Stopped", Forward * _badgeOffset, _stoppedIcon, _badgeFont, StoppedMark.Color, wall);
 
             _floors.Add(view);
         }

@@ -667,6 +667,7 @@ namespace GnorpWar
             _cachedPatient = null;
             _aheadOnBaseUnit = false;
             _buildPhase = BuildPhase.Find;
+            _lookBack = false;
             _hammerTimer = 0f;
             _buildStallTimer = 0f;
 
@@ -914,6 +915,7 @@ namespace GnorpWar
                 if (patient != null && _attackCooldown <= 0f)
                 {
                     Vector2 toPatient = patient._rb.position - _rb.position;
+                    LookToward(toPatient.x);
                     ThrowHeal(patient);
                     foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                         if (e.Effect.AppliesFor(_team, _definition))
@@ -948,6 +950,9 @@ namespace GnorpWar
                 {
                     Vector2 toTarget = targetPoint - _rb.position;
                     Vector2 hitDirection = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
+                    // 화염 · 휩쓸기는 늘 앞으로만 나간다 — 뒤돌지 않는다
+                    if (_definition.AttackType != AttackType.Flame && _definition.AttackType != AttackType.Sweep)
+                        LookToward(toTarget.x);
                     if (_definition.AttackType == AttackType.Flame)
                     {
                         BreatheFire();
@@ -979,6 +984,8 @@ namespace GnorpWar
                 return;
             }
 
+            // 싸울 상대가 없다 — 다시 앞을 본다
+            _lookBack = false;
             _runTime = IsStopped ? 0f : _runTime + Time.fixedDeltaTime;
 
             // 기지 위는 한 층만 — 기지 위 유닛 머리로 걸어 올라가지도 않는다
@@ -1096,7 +1103,7 @@ namespace GnorpWar
             float wobble = SquashAmount * (1f - t) * Mathf.Cos(t * Mathf.PI * 3f);
             float scaleX = _squashVertical ? 1f + wobble : 1f - wobble;
             float scaleY = _squashVertical ? 1f - wobble : 1f + wobble;
-            _visual.localScale = new Vector3(scaleX * _visualScale.x, scaleY * _visualScale.y, 1f);
+            _visual.localScale = new Vector3(scaleX * _visualScale.x * Look, scaleY * _visualScale.y, 1f);
             _visual.localPosition = new Vector3(0f, (scaleY - 1f) * _halfHeight, 0f);
             _squashTime += Time.deltaTime;
 
@@ -1108,6 +1115,39 @@ namespace GnorpWar
             }
 
             UpdateThrust();
+        }
+
+        // ── 뒤돌기(사용자 10/12) — 뒤쪽의 대상을 치거나 회복할 때, 건축가가 일을 마치고 성으로 돌아갈 때 그림이 그쪽을 본다. 보이는 것만이다:
+        // 사거리 · 대상 고르기 · 판정은 그대로고, 투사체가 떠나는 자리도 앞을 볼 때의 자리(WeaponPoint)로 센다. 밀려나는 것(넉백)은 뒤돌지 않는다.
+        // 진영의 방향(뿌리의 좌우 뒤집기) 위에 그림(_visual)만 한 번 더 뒤집는다 — 무기 · 말 같은 겹친 부품도 같이 뒤집힌다
+        // 대상이 거의 바로 위 · 아래일 때 좌우로 떨리지 않게 두는 폭(칸) — 이 안이면 보던 쪽을 그대로 본다
+        private const float LookDeadZone = 0.25f;
+        private bool _lookBack;
+
+        private float Look => _lookBack || _buildPhase == BuildPhase.Returning ? -1f : 1f;
+
+        // dx = 대상까지의 가로 거리(월드). 다음에 칠 때까지 그쪽을 보고, 싸울 상대가 없어지면 다시 앞을 본다
+        private void LookToward(float dx)
+        {
+            if (Mathf.Abs(dx) < LookDeadZone)
+                return;
+            _lookBack = dx * Forward < 0f;
+            // 바로 뒤집는다 — 이어지는 찌르기(StartThrust)가 뒤집힌 몸 기준으로 방향을 잡게
+            Vector3 scale = _visual.localScale;
+            scale.x = Mathf.Abs(scale.x) * Mathf.Sign(_visualScale.x) * Look;
+            _visual.localScale = scale;
+        }
+
+        // 무기의 자리 — 그림이 뒤돌아 있으면 앞을 볼 때의 자리로 되돌려 센다(투사체가 떠나는 자리가 보는 방향에 따라 달라지지 않게)
+        private Vector2 WeaponPoint
+        {
+            get
+            {
+                Vector2 point = _weapon.position;
+                if (_visual.localScale.x * _visualScale.x < 0f)
+                    point.x = 2f * _visual.position.x - point.x;
+                return point;
+            }
         }
 
         private void StartThrust(Vector2 worldDirection)
@@ -1373,7 +1413,7 @@ namespace GnorpWar
         // 원거리 무기(화살·돌) 발사 — damageScale = 쏘는 순간의 고도 보너스
         public void FireProjectile(Vector2 targetPoint, float damageScale)
         {
-            Projectile shot = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
+            Projectile shot = Pooled.Get(_definition.Projectile, WeaponPoint, Quaternion.identity);
             shot.Launch(_team, AttackDamage * DamageScale * damageScale, _definition.PushPower, targetPoint,
                         _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -1400,7 +1440,7 @@ namespace GnorpWar
 
         public void ThrowHeal(Unit patient)
         {
-            Projectile orb = Pooled.Get(_definition.Projectile, _weapon.position, Quaternion.identity);
+            Projectile orb = Pooled.Get(_definition.Projectile, WeaponPoint, Quaternion.identity);
             // 회복량 = 공격력(버프·영구 강화·공격력 가속 포함 — 공격 피해와 같은 식, 사용자 10/10)
             orb.LaunchHeal(this, AttackDamage * DamageScale, patient._rb.position, _definition.ProjectileArcHeight);
         }

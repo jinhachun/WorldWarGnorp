@@ -30,6 +30,8 @@ namespace GnorpWar
         [SerializeField] private Text _cooldownText;
         [Tooltip("데스매치 동안 오버드라이브 칸의 번개 — 가속 표시 자리에, 숫자 없이")]
         [SerializeField] private Sprite _overdriveIcon;
+        [Tooltip("맵이 작동을 끈 칸(늪지 — 쿨다운 없는 기물)의 빨간 정지 표시 — 가속 표시 자리에, 숫자 없이")]
+        [SerializeField] private Sprite _stoppedIcon;
 
         private Color _frameColor;
         // 상점 밖(지도 패널의 영주 탑 — UI/WorldSidePanel)에서는 null — 보기만 하고 끌지 못한다
@@ -40,6 +42,8 @@ namespace GnorpWar
         private float _bounce = BounceDuration;
         // 데스매치 동안 오버드라이브 칸의 번개(Fx/OverdriveMark) — 가속 표시를 본떠 처음 뜰 때 만든다
         private GameObject _overdriveMark;
+        // 맵이 작동을 끈 칸의 정지 표시(Fx/StoppedMark) — 같은 식으로 처음 뜰 때 만든다
+        private GameObject _stoppedMark;
 
         public Button Button => _button;
         public BoardView.Source Source => _source;
@@ -79,17 +83,20 @@ namespace GnorpWar
         public void Show(OwnedBuilding building, BoardRunner.Slot running, bool selected, bool dragged)
         {
             bool empty = OwnedBuilding.IsEmpty(building);
+            // 맵이 작동을 끈 칸(전투 중에만 가른다) — 창이 꺼지고 벽 · 창틀 · 아이콘이 회색이 된다
+            bool stopped = running != null && BoardRunner.StoppedByMap(building);
             _icon.enabled = !empty;
+            _icon.color = stopped ? StoppedMark.Gray : Color.white;
             if (!empty)
                 _icon.sprite = building.Definition.Icon;
             // 등급은 테두리 색이 보여 주므로 글자는 대표 숫자(지금 등급 값). 전투 중 값을 쌓는 칸(허수아비 등)은 지금까지 쌓인 값
             _level.text = empty ? "" : running?.BattleGainText ?? BuildingTooltip.Headline(building.Definition, building.Level);
             // 탑 층은 빈 층도 꺼진 창틀을 보인다(칸 틀 색) — 보통 칸은 빈 칸이면 테두리를 숨긴다
             _rarityFrame.enabled = !empty || _floor != null;
-            _rarityFrame.color = Highlight(empty ? _frameColor : building.Rarity.FrameColor(), _hovered);
+            _rarityFrame.color = Highlight(empty ? _frameColor : building.Rarity.FrameColor(), _hovered) * (stopped ? StoppedMark.Gray : Color.white);
             // 창 불빛이 쿨다운 게이지 — 전투 중 쿨다운 기물은 찬 만큼 아래부터, 쿨다운 없는 기물·상점은 은은히
             if (_floor != null)
-                _floor.Show(empty ? null : building.Definition, running != null && running.Cooldown > 0f ? running.Timer / running.Cooldown : -1f);
+                _floor.Show(empty ? null : building.Definition, running != null && running.Cooldown > 0f ? running.Timer / running.Cooldown : -1f, stopped);
             // 탑 층 벽은 전장 탑처럼 늘 제 밝기 — 호버 강조는 창틀 밝기로만
             Color frame = selected ? SelectedColor : _floor != null ? _frameColor : Highlight(_frameColor, _hovered);
             frame.a = dragged ? DraggedAlpha : _frameColor.a;
@@ -110,7 +117,8 @@ namespace GnorpWar
                     _cooldownText.text = $"×{scale:0.##}";
             }
 
-            ShowOverdrive(_hasteMark != null && OverdriveMark.On(building, _source == BoardView.Source.EnemyField ? Team.Enemy : Team.Ally));
+            ShowMark(ref _overdriveMark, "OverdriveMark", _overdriveIcon, OverdriveMark.Color, _hasteMark != null && OverdriveMark.On(building, _source == BoardView.Source.EnemyField ? Team.Enemy : Team.Ally));
+            ShowMark(ref _stoppedMark, "StoppedMark", _stoppedIcon, StoppedMark.Color, _hasteMark != null && stopped);
 
             if (!_hovered)
                 return;
@@ -120,22 +128,23 @@ namespace GnorpWar
                 BuildingTooltip.ShowOwned(this, building, running, _source == BoardView.Source.EnemyField);
         }
 
-        private void ShowOverdrive(bool on)
+        // 가속 표시 자리의 아이콘 하나(오버드라이브 번개 · 정지 표시) — 처음 뜰 때 가속 표시를 본떠 만든다
+        private void ShowMark(ref GameObject mark, string name, Sprite sprite, Color color, bool on)
         {
-            if (_overdriveMark == null)
+            if (mark == null)
             {
                 if (!on)
                     return;
                 // 가속 표시를 그대로 본뜬다(같은 자리·같은 크기) — 그림과 색만 바꾸고 숫자는 뺀다
-                _overdriveMark = Instantiate(_hasteMark, transform);
-                _overdriveMark.name = "OverdriveMark";
-                Image icon = _overdriveMark.GetComponentInChildren<Image>(true);
-                icon.sprite = _overdriveIcon;
-                icon.color = OverdriveMark.Color;
-                _overdriveMark.GetComponentInChildren<Text>(true).gameObject.SetActive(false);
+                mark = Instantiate(_hasteMark, transform);
+                mark.name = name;
+                Image icon = mark.GetComponentInChildren<Image>(true);
+                icon.sprite = sprite;
+                icon.color = color;
+                mark.GetComponentInChildren<Text>(true).gameObject.SetActive(false);
             }
-            if (_overdriveMark.activeSelf != on)
-                _overdriveMark.SetActive(on);
+            if (mark.activeSelf != on)
+                mark.SetActive(on);
         }
 
         public void OnPointerEnter(PointerEventData eventData) => _hovered = true;

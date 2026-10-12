@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf844920960531b4296772de91007fc6, type: 3}
+  m_Name: Effect_TemplarMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathHealAroundEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: b6298655f3645eb4bb2033b8f8d1d83a, type: 2}
+  _description: "\uB0B4 \uBC29\uD328\uC218\uAC00 \uC8FD\uC73C\uBA74, \uC8FC\uBCC0
+    \uC544\uAD70\uC744 \uCD5C\uB300 \uCCB4\uB825\uC758 {0}%\uB9CC\uD07C \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _radius: 3
+  _ratio: 0.3

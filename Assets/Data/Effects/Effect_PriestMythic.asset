@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76a1a0c02daadeb47bd44f0ea992f1a8, type: 3}
+  m_Name: Effect_PriestMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HealTargetStatEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: 2db8a66f89f8778458884185910698a5, type: 2}
+  _description: "\uB0B4 \uC0AC\uC81C\uAC00 \uD68C\uBCF5\uD560 \uB54C\uB9C8\uB2E4,
+    \uC804\uD22C \uB3D9\uC548 \uD68C\uBCF5\uBC1B\uC740 \uC544\uAD70\uC758 {0}"
+  _stat:
+    Stat: 0
+    Op: 1
+    Value: 0.05

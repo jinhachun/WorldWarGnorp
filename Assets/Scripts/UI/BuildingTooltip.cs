@@ -69,10 +69,11 @@ namespace GnorpWar
         private const int UnitEffectSize = 16;
 
         // 효과 줄 — "N초마다 ~" 먼저(기획서: 쿨다운 효과는 첫 줄), 그다음 늘 켜진 것. cooldown = 지금 간격(전투 중엔 줄어든 값). 글 규칙은 CLAUDE.md §5-2
-        public static string Describe(BuildingDefinition building, int level, float cooldown)
-            => Highlight(string.Join("\n", Lines(building, level, cooldown)));
+        // mythic = 신화 등급이면 기획서 §7-1의 신화 줄을 §7 줄들 아래에 덧붙인다(구분 표시 없이)
+        public static string Describe(BuildingDefinition building, int level, float cooldown, bool mythic = false)
+            => Highlight(string.Join("\n", Lines(building, level, cooldown, mythic)));
 
-        private static List<string> Lines(BuildingDefinition building, int level, float cooldown)
+        private static List<string> Lines(BuildingDefinition building, int level, float cooldown, bool mythic)
         {
             var lines = new List<string>();
             string every = $"{cooldown:0.#}초마다 ";
@@ -87,14 +88,24 @@ namespace GnorpWar
             foreach (UnitEffect effect in building.Effects)
                 if (!string.IsNullOrEmpty(effect.Description))
                     lines.Add(effect.Describe(level));
+            if (!mythic)
+                return lines;
+            foreach (BuildingAction action in building.MythicActions)
+                lines.Add(every + action.Describe(level));
+            foreach (BuildingPassive passive in building.MythicPassives)
+                lines.Add(passive.Describe(level));
+            foreach (UnitEffect effect in building.MythicEffects)
+                if (!string.IsNullOrEmpty(effect.Description))
+                    lines.Add(effect.Describe(level));
             return lines;
         }
 
         // RANK UP 진열 카드 — 합쳐진 뒤(level + 1, next 등급)의 효과 줄 중 지금(level)과 달라지는 줄만. 바뀐 숫자는 BonusColor
         public static string RankUpPreview(BuildingDefinition building, int level, BuildingRarity next)
         {
-            List<string> now = Lines(building, level, building.CooldownAt(level));
-            List<string> after = Lines(building, level + 1, building.CooldownAt(level + 1));
+            // next는 한 등급 위이므로 지금 등급은 next - 1 — 전설 → 신화에서만 after에 신화 줄이 늘어난다
+            List<string> now = Lines(building, level, building.CooldownAt(level), next - 1 == BuildingRarity.Mythic);
+            List<string> after = Lines(building, level + 1, building.CooldownAt(level + 1), next == BuildingRarity.Mythic);
             string text = $"\n<color={NumberColor}>{next.DisplayName()} 등급이 되면</color>";
             bool any = false;
             for (int i = 0; i < after.Count; i++)
@@ -187,7 +198,7 @@ namespace GnorpWar
             var effects = new List<string>();
             foreach (OwnedBuilding owned in board)
                 if (!OwnedBuilding.IsEmpty(owned))
-                    foreach (UnitEffect effect in owned.Definition.Effects)
+                    foreach (UnitEffect effect in owned.Effects)
                         if (effect.AppliesTo(unit) && !string.IsNullOrEmpty(effect.Description))
                             effects.Add(Highlight(effect.Describe(owned.Level)));
             AddGroup(lines, effects, UnitEffectSize);
@@ -244,7 +255,7 @@ namespace GnorpWar
         public static void ShowOwned(Component owner, OwnedBuilding building, BoardRunner.Slot running, bool enemy)
         {
             float cooldown = running != null ? running.Cooldown : building.Definition.CooldownAt(building.Level);
-            string body = Describe(building.Definition, building.Level, cooldown);
+            string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic);
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             if (!enemy && !BattleManager.Fighting && building.Stacks > 0)
                 body += Note($"스택 {building.Stacks}");

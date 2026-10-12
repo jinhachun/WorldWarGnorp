@@ -390,7 +390,7 @@ namespace GnorpWar
         {
             foreach (OwnedBuilding owned in Field)
                 if (!OwnedBuilding.IsEmpty(owned))
-                    foreach (BuildingPassive passive in owned.Definition.Passives)
+                    foreach (BuildingPassive passive in owned.Passives)
                         call(passive, owned);
         }
 
@@ -723,7 +723,7 @@ namespace GnorpWar
             row[index] = null;   // 판 기물은 자기 골드 훅을 받지 않는다 · 스택도 같이 사라진다
             CompactField();
             GainGold(value);
-            foreach (BuildingPassive passive in sold.Definition.Passives)
+            foreach (BuildingPassive passive in sold.Passives)
                 passive.OnSell(sold);
         }
 

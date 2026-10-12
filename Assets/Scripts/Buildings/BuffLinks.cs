@@ -100,7 +100,7 @@ namespace GnorpWar
             if (board == null)
                 return -1;
             for (int i = start; i < board.Slots.Length; i++)
-                if (board.Slots[i].Building != null && System.Array.IndexOf(board.Slots[i].Building.Definition.Effects, effect) >= 0)
+                if (board.Slots[i].Building != null && System.Array.IndexOf(board.Slots[i].Building.Effects, effect) >= 0)
                     return i;
             return -1;
         }

@@ -62,7 +62,7 @@ namespace GnorpWar
             int repeats = 1;
             foreach (OwnedBuilding owned in board)
                 if (!OwnedBuilding.IsEmpty(owned))
-                    foreach (BuildingPassive passive in owned.Definition.Passives)
+                    foreach (BuildingPassive passive in owned.Passives)
                         repeats = Mathf.Max(repeats, passive.BuyEffectRepeat);
             return repeats;
         }
@@ -73,7 +73,7 @@ namespace GnorpWar
             if (HasBuyEffects(owned.Definition))
                 OwnedBuilding.NotifyEffect(owned);
             for (int i = 0; i < repeats; i++)
-                foreach (BuildingPassive passive in owned.Definition.Passives)
+                foreach (BuildingPassive passive in owned.Passives)
                     passive.OnBuy(owned, team);
         }
     }

@@ -26,4 +26,7 @@ MonoBehaviour:
   _effects: []
   _passives:
   - {fileID: 11400000, guid: 3ad06bae9223b3e4d9285bad3ef86377, type: 2}
+  _mythicActions: []
+  _mythicEffects: []
+  _mythicPassives: []
   _mentionedUnits: []

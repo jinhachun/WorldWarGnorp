@@ -13,7 +13,7 @@ namespace GnorpWar
         {
             if (OwnedBuilding.IsEmpty(building) || !BattleManager.TowersStopped || !TowerBook.AttacksInDeathmatch(team))
                 return false;
-            foreach (BuildingPassive passive in building.Definition.Passives)
+            foreach (BuildingPassive passive in building.Passives)
                 if (passive is TowerDeathmatchPassive)
                     return true;
             return false;

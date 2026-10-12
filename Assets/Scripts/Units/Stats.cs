@@ -326,7 +326,7 @@ namespace GnorpWar
 
             UnitDefinition alias = null;
             foreach (OwnedBuilding owned in active)
-                foreach (BuildingPassive passive in owned.Definition.Passives)
+                foreach (BuildingPassive passive in owned.Passives)
                     alias = passive.AliasOf(unit) ?? alias;
 
             StatSum sum = StatSum.Identity;
@@ -335,7 +335,7 @@ namespace GnorpWar
             else
                 StatBook.AccumulateRun(unit, stat, ref sum, alias);
             foreach (OwnedBuilding owned in active)
-                foreach (BuildingPassive passive in owned.Definition.Passives)
+                foreach (BuildingPassive passive in owned.Passives)
                     if (passive is IUnitFilter filter && (filter.AppliesTo(unit) || (alias != null && filter.AppliesTo(alias)))
                         && passive.BattleStartStat(owned, stat, out StatModifier modifier))
                         sum.Add(modifier.Op, modifier.Value);

@@ -84,9 +84,9 @@ namespace GnorpWar
         {
             StatOp op = default;
             bool gains = false;
-            foreach (BuildingAction action in slot.Building.Definition.Actions)
+            foreach (BuildingAction action in slot.Building.Actions)
                 gains = gains || action.BattleGain(out op);
-            foreach (BuildingPassive passive in slot.Building.Definition.Passives)
+            foreach (BuildingPassive passive in slot.Building.Passives)
                 gains = gains || passive.BattleGain(out op);
             slot.HasBattleGain = gains;
             slot.BattleGainOp = op;
@@ -107,7 +107,7 @@ namespace GnorpWar
         {
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
-                    foreach (UnitEffect effect in _slots[i].Building.Definition.Effects)
+                    foreach (UnitEffect effect in _slots[i].Building.Effects)
                         TeamEffects.Enable(_team, effect, _slots[i].Building.Level);
             BuffLinks.ClearStanding(_team);
             // 지역 업그레이드(보급력) — 쿨다운마다 유닛을 소환하는 기물의 쿨다운에 곱한다. 이 진영 영주의 것
@@ -122,7 +122,7 @@ namespace GnorpWar
             _summonAtSmallTower = false;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
-                    foreach (BuildingPassive passive in _slots[i].Building.Definition.Passives)
+                    foreach (BuildingPassive passive in _slots[i].Building.Passives)
                         passive.OnBattleStart(this, i, _slots[i].Building.Level);
             _fireAllTimer = 0f;
             _running = true;
@@ -202,9 +202,9 @@ namespace GnorpWar
             {
                 if (definition.Unit != null)
                     Summon(definition.Unit, definition.SummonCount, index);
-                foreach (BuildingAction action in definition.Actions)
+                foreach (BuildingAction action in building.Actions)
                     action.Execute(this, index, level);
-                foreach (UnitEffect effect in definition.Effects)
+                foreach (UnitEffect effect in building.Effects)
                     TeamEffects.AddStack(_team, effect);
             }
 
@@ -256,7 +256,7 @@ namespace GnorpWar
                 if (sourceSlot >= 0)
                     for (int other = 0; other < _slots.Length; other++)
                         if (other != sourceSlot && IsActive(other))
-                            foreach (BuildingPassive passive in _slots[other].Building.Definition.Passives)
+                            foreach (BuildingPassive passive in _slots[other].Building.Passives)
                                 passive.OnSummonedFrom(this, other, sourceSlot, spawned);
             }
         }
@@ -265,7 +265,7 @@ namespace GnorpWar
         {
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
-                    foreach (BuildingPassive passive in _slots[i].Building.Definition.Passives)
+                    foreach (BuildingPassive passive in _slots[i].Building.Passives)
                         passive.OnTowerKill(this, i, victim);
         }
 

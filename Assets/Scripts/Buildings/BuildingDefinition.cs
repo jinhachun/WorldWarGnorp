@@ -40,6 +40,13 @@ namespace GnorpWar
         [Tooltip("늘 켜진 기물 능력 — 전투 시작·인접 기물 소환 등")]
         [SerializeField] private BuildingPassive[] _passives = new BuildingPassive[0];
 
+        [Header("신화")]
+        [Tooltip("신화 등급일 때만 위 유틸에 더해지는 것 — 기획서 §7-1. §7 효과를 대체하지 않고 추가로 켜진다. " +
+                 "판정은 가진 기물의 등급(OwnedBuilding.Rarity)이다 — 등급별 Level은 시작 등급마다 다르다")]
+        [SerializeField] private BuildingAction[] _mythicActions = new BuildingAction[0];
+        [SerializeField] private UnitEffect[] _mythicEffects = new UnitEffect[0];
+        [SerializeField] private BuildingPassive[] _mythicPassives = new BuildingPassive[0];
+
         [Header("툴팁")]
         [Tooltip("툴팁 글에 이름이 나오는 유닛 — 나오는 순서대로(소환 유닛 포함). 기물 판 아래로 유닛 판을 이 순서로 쌓는다. 병종 태그는 넣지 않는다")]
         [HideIf(nameof(HideNonBalance))]
@@ -66,9 +73,14 @@ namespace GnorpWar
         public float CooldownAt(int level)
             => _unit == null || RunState.Config == null ? _cooldown : _cooldown * RunState.Config.RankCooldownScale(level);
 
+        // 시작 등급의 것 — 지금 등급에 켜진 것은 OwnedBuilding의 같은 이름 프로퍼티로 읽는다(신화면 아래 신화 묶음이 더해진다)
         public BuildingAction[] Actions => _actions;
         public UnitEffect[] Effects => _effects;
         public BuildingPassive[] Passives => _passives;
+
+        public BuildingAction[] MythicActions => _mythicActions;
+        public UnitEffect[] MythicEffects => _mythicEffects;
+        public BuildingPassive[] MythicPassives => _mythicPassives;
         public UnitDefinition[] MentionedUnits => _mentionedUnits;
     }
 }

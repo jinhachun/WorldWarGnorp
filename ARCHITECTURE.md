@@ -97,6 +97,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 |---|---|
 | **새 유닛 종류** | `Assets/Data/Units/Unit_*.asset` 하나(이름·**분류**·수치·공격 방식·밀치는 힘·화살·**진영별 프리팹 두 칸**) + `Ally_*`/`Enemy_*` 프리팹 두 개(`*_Melee` 복제 → `_definition`·`Visual/Weapon` 그림 교체) + 그 유닛을 만드는 건물. 코드 X |
 | **새 생산 건물** | `Assets/Data/Buildings/Building_*.asset`(등급·쿨다운·유닛·유닛 수) + 상점에 내려면 `BattleConfig`의 `Shop Pool`, 적은 같은 `Shop Pool`에서 산다(빌드 방향의 핵심 기물로 넣으려면 `Assets/Data/EnemyBuilds/EnemyBuild_*.asset`). 코드 X |
+| **기물의 신화 효과** | 기물 에셋의 `_mythicActions`/`_mythicEffects`/`_mythicPassives`에 능력 에셋을 넣는다(효과 모양대로 셋 중 하나). **코드 X** — `OwnedBuilding`이 등급을 보고 켠다. 글은 §7 줄들 아래에 붙는다. 문구 원본은 기획서 §7-1 |
 | **기존 효과를 건물에** | 건물의 `Effects`에 `Effect_*.asset`을 넣는다(적용 분류는 효과 에셋이). 같은 효과를 다른 분류에 쓰려면 효과 에셋을 복제해 분류만 바꾼다. 코드 X — 단 효과마다 전제가 있다: DoubleHeal은 회복 유닛에서만 동작 |
 | **새 유닛 효과** | `Units/Effects/`에 `UnitEffect` 상속 클래스 하나(있는 훅만 쓰면 `Unit` 수정 X, 수치는 필드로) + `Assets/Data/Effects/` 에셋. 새 훅이 필요하면 `UnitEffect`에 가상 메서드 + `Unit`의 해당 지점에서 `TeamEffects.For(_team)`을 돌며 부른다 |
 | **새 기물 발동 효과("N초마다")** | `Buildings/`에 `BuildingAction` 상속 클래스 하나(`Execute(board, slot, level)`, 이웃은 slot±1) + 에셋 + 기물의 `Actions`에 추가. 보드 조작은 `BoardRunner`의 `FireNow`(즉시 발동) · `ScaleCooldown` · `Haste`(가속) · `Summon` |
@@ -183,9 +184,13 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
   2. **불리언 기본값은 언제나 "기존 동작과 같은 쪽"으로.**
   3. 쓴 뒤 되읽어 확인한다.
 - 🔴 **직렬화되는 enum은 맨 뒤에만 추가할 것** — 중간에 끼우면 기존 에셋의 정수 직렬화가 밀린다.
-- 🔴 **등급 배열의 길이가 일부러 어긋나 있다**(신화 10/12) — `BuildingRarity`는 여섯이지만 `BattleConfig`의 **가격 `_rarityPrices`는 여섯 칸, 진열 확률 `_rarityWeightsFirst`/`_rarityWeightsLast`는 다섯 칸**이다. 신화는 상점에 진열되지 않으므로 확률 칸이 없는 것이 맞다(확률 0을 넣는 것이 아니다 — 기획서 전제).
-  `RarityWeight`는 배열을 `(int)rarity`로 읽고 `RunState.HomeOffer`는 enum 전체를 훑지만, 두 루프가 `CountOf(pool, rarity) > 0`으로 막혀 **신화 등급의 기물 정의가 없는 동안만** 안전하다. **기물을 신화 등급으로 만들려면 확률 배열도 여섯 칸으로 늘려야 한다** — 안 늘리면 그 기물이 상점 풀에 드는 순간 `IndexOutOfRangeException`.
-  같은 이유로 밸런싱 창의 등급 드롭다운에서 신화를 뺐다(`Editor/BalanceWindow.Rarities`). 가격을 읽는 모든 경로는 가진 기물이 아니라 **기물 정의**의 등급을 넘기므로(`PriceOf`), 신화 가격 80골드는 신화 정의가 생길 때까지 읽히지 않는다.
+- 🔴 **기물의 켜진 효과는 `owned.Definition.Actions/Effects/Passives`가 아니라 `owned.Actions/Effects/Passives`로 읽는다**(신화 10/12) — 신화 등급이면 정의의 `_mythicActions`/`_mythicEffects`/`_mythicPassives` 묶음이 §7 묶음 **뒤에 더해진다**(대체가 아니다). 판정은 `Rarity == Mythic`이지 **`Level`이 아니다** — `Level = 오른 횟수 + 1`이라 시작 등급마다 신화에 닿는 Level이 다르다(일반 6 · 전설 2).
+  신화 효과를 더하는 것은 **에셋 작업이다** — 기물 에셋의 `_mythic*`에 능력 에셋을 넣으면 코드는 더 고칠 것이 없다. 신화 능력은 **`OwnedBuilding.Scaled`로 값을 키우지 않는다**(기획서 §7-1 「수치는 전설과 같다」).
+  아직 정의(시작 등급)만 보는 곳 셋: `BuildingTooltip.Headline`(칸 아래 대표 숫자) · `BuildingPassive.HasBuyEffects` (신화에서만 생기는 「구매할 때마다,」가 칸을 튀게 하지 못한다) · `EnemyShopper`의 자리 판단 `Reaches`(AI는 신화로 늘어난 범위를 모른다).
+- 🔴 **등급 배열의 길이가 일부러 어긋나 있다**(신화 10/12) — `BuildingRarity`는 여섯이지만 `BattleConfig`의 **가격 `_rarityPrices`는 여섯 칸, 진열 확률 `_rarityWeightsFirst`/`_rarityWeightsLast`는 다섯 칸**이다.
+  **신화 등급의 기물 *정의*는 만들지 않는다** — `OwnedBuilding.Rarity = 정의 등급 + 오른 횟수`라 신화는 합치기로만 도달하고, 신화 효과도 정의의 등급을 올리지 않고 `_mythic*` 묶음으로 붙는다. 그래서 **진열 확률은 영구히 다섯 칸이면 된다.** 정의를 신화로 만드는 순간 `RarityWeight`가 `(int)rarity`로 다섯 칸 배열을 읽어 `IndexOutOfRangeException`이다 — 그래서 밸런싱 창의 등급 드롭다운에서도 신화를 뺐다(`Editor/BalanceWindow.Rarities`).
+  가격을 읽는 모든 경로는 **정의**의 등급을 넘기므로(`PriceOf`), 여섯째 칸 80골드는 읽히지 않는다. 신화 한 채의 판매가도 정의(시작 등급)가 × 합친 개수로 나온다.
+- 🔴 **신화에서 수치가 멈추지 않는다** — 기획서 §1은 「신화에서는 수치가 오르지 않는다」인데 **코드에 그 개념이 없다.** `BattleConfig.RankCooldownScale(level) = 0.8^(level-1)`와 `OwnedBuilding.Scaled(…, level)`에 상한이 없어 신화에서도 쿨다운이 줄고 등급별 증가량이 더해진다(실측: 병영 쿨다운 전설 3.277초 → 신화 2.621초). **사용자 답 대기** — 고칠 때 상한은 「Level 2」 같은 고정값이 아니라 **「`Rarity`가 전설을 넘지 않는 선의 Level」**이고, 두 함수가 **같은** 상한을 받아야 하며, `Level` 프로퍼티 자체에 넣으면 `Copies`(`1 << 오른 횟수`, 판매가)가 망가진다.
 
 ---
 

@@ -97,7 +97,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 |---|---|
 | **새 유닛 종류** | `Assets/Data/Units/Unit_*.asset` 하나(이름·**분류**·수치·공격 방식·밀치는 힘·화살·**진영별 프리팹 두 칸**) + `Ally_*`/`Enemy_*` 프리팹 두 개(`*_Melee` 복제 → `_definition`·`Visual/Weapon` 그림 교체) + 그 유닛을 만드는 건물. 코드 X |
 | **새 생산 건물** | `Assets/Data/Buildings/Building_*.asset`(등급·쿨다운·유닛·유닛 수) + 상점에 내려면 `BattleConfig`의 `Shop Pool`, 적은 같은 `Shop Pool`에서 산다(빌드 방향의 핵심 기물로 넣으려면 `Assets/Data/EnemyBuilds/EnemyBuild_*.asset`). 코드 X |
-| **기물의 신화 효과** | 기물 에셋의 `_mythicActions`/`_mythicEffects`/`_mythicPassives`에 능력 에셋을 넣는다(효과 모양대로 셋 중 하나). 글은 §7 줄들 아래에 붙고, 문구 원본은 기획서 §7-1. 등급 판정은 `OwnedBuilding`이 하니 **그 코드는 건드릴 일이 없다** — 다만 **「코드 X」가 모든 줄에 참은 아니다**: 능력 자체가 기댈 틀이 없으면 그것부터 만들어야 한다(타워가 더 쏘는 규칙 = `TowerBook` · 소환 자리 = `BoardRunner.Summon`). **기존 능력 클래스를 고쳐 신화를 끼우지 말 것** — §7(전설까지)의 동작이 함께 바뀐다. 신화 전용 클래스를 새로 만든다 |
+| **기물의 신화 효과** | 기물 에셋의 `_mythicActions`/`_mythicEffects`/`_mythicPassives`에 능력 에셋을 넣는다(효과 모양대로 셋 중 하나). 글은 §7 줄들 아래에 붙고, 문구 원본은 기획서 §7-1. 등급 판정은 `OwnedBuilding`이 하니 **그 코드는 건드릴 일이 없다** — 다만 **「코드 X」가 모든 줄에 참은 아니다**: 능력 자체가 기댈 틀이 없으면 그것부터 만들어야 한다(타워가 더 쏘는 규칙 = `TowerBook` · 소환 자리 = `BoardRunner.Summon`). **기존 능력 클래스를 고쳐 신화를 끼우지 말 것** — §7(전설까지)의 동작이 함께 바뀐다. 신화 전용 클래스를 새로 만들거나, 기존 에셋이 그대로 쓸 수 있으면 **에셋만** 만든다. §7 클래스 안에서 갈라야만 하는 것은(승천의 전당) **훅 없는 표시용 `UnitEffect`를 새로 만들고 §7 클래스가 그것이 켜졌는지 보게** 한다 — 클래스를 복제하면 §7 효과가 두 번 걸린다 |
 | **기존 효과를 건물에** | 건물의 `Effects`에 `Effect_*.asset`을 넣는다(적용 분류는 효과 에셋이). 같은 효과를 다른 분류에 쓰려면 효과 에셋을 복제해 분류만 바꾼다. 코드 X — 단 효과마다 전제가 있다: DoubleHeal은 회복 유닛에서만 동작 |
 | **새 유닛 효과** | `Units/Effects/`에 `UnitEffect` 상속 클래스 하나(있는 훅만 쓰면 `Unit` 수정 X, 수치는 필드로) + `Assets/Data/Effects/` 에셋. 새 훅이 필요하면 `UnitEffect`에 가상 메서드 + `Unit`의 해당 지점에서 `TeamEffects.For(_team)`을 돌며 부른다 |
 | **새 기물 발동 효과("N초마다")** | `Buildings/`에 `BuildingAction` 상속 클래스 하나(`Execute(board, slot, level)`, 이웃은 slot±1) + 에셋 + 기물의 `Actions`에 추가. 보드 조작은 `BoardRunner`의 `FireNow`(즉시 발동) · `ScaleCooldown` · `Haste`(가속) · `Summon` |
@@ -161,6 +161,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 - **칸 UI가 읽는 것** — 전투 중 칸 숫자 = `BoardRunner.Slot.BattleGainText`(새 칸 누적 기물은 `BattleGain()`을 덮어쓰고 `BoardRunner.AddBattleGain`을 부를 것). 칸 튐 = 쿨다운 발동 `BoardRunner.Triggered` + 상점·전투 시작 효과 `OwnedBuilding.EffectFired`(정적 — 구독하면 OnDestroy에서 해제).
 - 🔴 **유닛 스탯(공격력·최대 체력·이동속도·공격속도)은 `_definition`에서 바로 읽지 말고 `Unit`의 계산값(`AttackDamage`·`MaxHp`·`MoveSpeed`·`AttackInterval`)을 읽는다.** 계산 = 기획서 §6 `(기본 + 고정 합) × (1 + % 합) × 곱들`(`StatSum`).
   변경을 거는 곳은 셋: 진영 단위 전투 동안 `StatBook.AddForBattle` · 영구히(아군만, 런 동안) `StatBook.AddForRun` · 한 유닛만 `Unit.AddModifier`. 대상은 건 효과의 `AppliesTo`. 유닛은 `StatBook.Version`이 바뀔 때만 다시 계산한다. 최대 체력이 바뀌면 지금 체력도 같은 비율로.
+- 🔴 **`Unit.Heal`은 깎인 뒤의 양만 돌려준다** — 최대 체력을 넘은 회복은 그 자리에서 버려지므로 **넘친 양을 쓰는 효과는 훅을 넓혀야 한다**(성수 우물 신화가 걸린 자리).
 - **피해 없이 밀기는 `Unit.Shove`**. `TakeDamage(0, …)`로 밀면 파편·번쩍·경직 규칙까지 따라온다.
 - **화염(`AttackType.Flame`)은 무기 자리(`Visual/Weapon`)를 입으로 쓴다** — 그래서 화염 유닛은 찌르기 동작을 하지 않는다(입이 움직이면 불이 따라 흔들림).
 - 🔴 **`TakeDamage`의 `attacker`는 피해를 준 쪽이다**(유닛 — 근접·투사체·화염 모두, 또는 본진). 처치자 판정(`UnitEffect.OnKill`)이 이걸 읽으므로 새 공격도 반드시 넘길 것.

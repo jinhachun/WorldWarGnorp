@@ -22,7 +22,7 @@ namespace GnorpWar
                 return;
             unit.SetEffectCooldown(this, _interval);
             float x = unit.Position.x - unit.Forward * _behind;
-            BoardRunner.For(unit.Team).Summon(_summon, _count, -1, new Vector2(x, Ground.Instance.HeightAt(x)));
+            BoardRunner.For(unit.Team).Summon(_summon, _count, -1, new Vector2(x, Ground.Instance.HeightAt(x)), Source(unit.Team));
         }
     }
 }

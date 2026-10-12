@@ -25,7 +25,10 @@ namespace GnorpWar
 
         private TowerModifier Range(int level) => new TowerModifier(TowerStat.Range, StatOp.Percent, OwnedBuilding.Scaled(0f, _rangePerTier, level));
 
-        public override void OnBattleStart(BoardRunner board, int slot, int level)
+        public override void OnBattleStart(BoardRunner board, int slot, int level) => Build(board, slot, level);
+
+        // 세운다 — 전투 시작 때, 그리고 신화면 이 타워가 파괴될 때마다 같은 규칙으로 다시(SmallTowerRebuildPassive)
+        public void Build(BoardRunner board, int slot, int level)
         {
             Team team = board.Team;
             Base home = Base.For(team), enemy = Base.For(team == Team.Ally ? Team.Enemy : Team.Ally);
@@ -35,7 +38,9 @@ namespace GnorpWar
             float x = (home.transform.position.x + enemy.transform.position.x) * 0.5f - forward * _offset;
             while (IsTaken(team, x))
                 x -= forward * _spacing;
-            Base.BuildOnGround(_towerPrefab, team, x).SetRangeBonus(Range(level).Value);
+            Base tower = Base.BuildOnGround(_towerPrefab, team, x);
+            tower.SetRangeBonus(Range(level).Value);
+            tower.BuiltBy = board.Slots[slot].Building;
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
         }
 

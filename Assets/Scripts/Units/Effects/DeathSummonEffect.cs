@@ -17,7 +17,7 @@ namespace GnorpWar
         private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
 
         public override void OnDied(Unit unit, Vector2 at, int stacks)
-            => BoardRunner.For(unit.Team).Summon(_summon, Count(Level(unit.Team)), -1, new Vector2(at.x, Ground.Instance.HeightAt(at.x)));
+            => BoardRunner.For(unit.Team).Summon(_summon, Count(Level(unit.Team)), -1, new Vector2(at.x, Ground.Instance.HeightAt(at.x)), Source(unit.Team));
 
         public override string Describe(int level) => string.Format(Description, Count(level));
         public override string Headline(int level) => $"{Count(level)}기";

@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bf43c37b79b18ce4aa2c41ee1770bdb3, type: 3}
+  m_Script: {fileID: 11500000, guid: a42013c2e5c2e3341aad770fd41cab9a, type: 3}
   m_Name: Effect_AssemblyLineMythic
-  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathSummonEffect
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.OwnDeathSummonEffect
   _categories: []
   _units:
   - {fileID: 11400000, guid: b59d3b90e7994134792cb2b84c50105f, type: 2}

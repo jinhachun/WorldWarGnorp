@@ -130,6 +130,8 @@ namespace GnorpWar
         public float AttackDamage => Stat(UnitStat.Attack);
         // 생애 번호 — 풀에서 다시 꺼낼 때마다 오른다. 날아가는 투사체가 쏜 유닛이 아직 그 생애인지 가린다
         public int Life { get; private set; }
+        // 이 유닛을 낳은 기물(BoardRunner.Summon이 적는다) — 「이 기물이 소환한 ~」을 가리는 효과가 읽는다. 기물이 낳지 않았으면 null
+        public BuildingDefinition SummonedBy { get; private set; }
 
         // 효과별 이 유닛의 다음 사용 시각(톱니거인의 주기 소환 등) — 생애마다 비운다
         private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
@@ -158,23 +160,21 @@ namespace GnorpWar
         public float Hp => _hp;
 
         // 무적을 주는 모든 길이 여기를 지난다 — 지속시간 보정(충정의 맹세 신화)과 주변으로 퍼뜨리기(공주의 축복 신화)를 한 자리에서 건다.
-        // 돌려주는 값 = 보정이 붙은 실제 무적 시간(충정의 맹세의 사망 유예가 무적과 같은 길이로 가게)
-        public float GrantInvulnerable(float seconds)
+        // 돌려주는 값 = 보정이 붙은 실제 무적 시간(충정의 맹세의 사망 유예가 무적과 같은 길이로 가게).
+        // spreadRadius = 이 무적을 함께 받는 주변 아군의 반경 — 무적을 준 쪽이 넘긴다(사용자 10/13: 공주의 축복이 준 무적만 퍼진다.
+        // 루니카 첫 피격 · 충정의 맹세 사망 유예 · 친위기사의 소환 무적은 0이라 퍼지지 않는다). 지속시간 보정은 모든 무적에 붙는다
+        public float GrantInvulnerable(float seconds, float spreadRadius = 0f)
         {
             if (!IsAlive)
                 return 0f;
-            float radius = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
-                {
                     seconds += e.Effect.InvulnerableBonusSeconds;
-                    radius = Mathf.Max(radius, e.Effect.InvulnerableSpreadRadius);
-                }
             ApplyInvulnerable(seconds);
             // 퍼져서 걸린 무적은 다시 퍼지지 않는다(ApplyInvulnerable은 보정도 퍼뜨리기도 하지 않는다) — 번져 나가지 않게
-            if (radius > 0f)
+            if (spreadRadius > 0f)
             {
-                Physics2D.OverlapCircle(_rb.position, radius, _allyFilter, _overlaps);
+                Physics2D.OverlapCircle(_rb.position, spreadRadius, _allyFilter, _overlaps);
                 foreach (Collider2D col in _overlaps)
                     if (col.TryGetComponent(out Unit ally) && ally != this && ally._team == _team && ally.IsAlive)
                         ally.ApplyInvulnerable(seconds);
@@ -267,6 +267,9 @@ namespace GnorpWar
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.OnDied(this, at, e.Stacks);
+            Team foe = _team == Team.Ally ? Team.Enemy : Team.Ally;
+            foreach (TeamEffects.Entry e in TeamEffects.For(foe))
+                e.Effect.OnEnemyDied(foe, this, at, e.Stacks);
         }
 
         // 소모 — 죽음이 아니다(사망 효과 없음). 연기만 남기고 사라진다(조립 라인)
@@ -540,8 +543,9 @@ namespace GnorpWar
         public float DamageScale => BattleManager.DamageMultiplier;
 
         // 소환됐다(BoardRunner.Summon) — 소환 이벤트
-        public void NotifySummoned(int sourceSlot)
+        public void NotifySummoned(int sourceSlot, BuildingDefinition source)
         {
+            SummonedBy = source;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.OnSummoned(this, sourceSlot, e.Stacks);
@@ -647,6 +651,7 @@ namespace GnorpWar
         private void OnEnable()
         {
             Life++;
+            SummonedBy = null;
             CombatPower.NoteSpawn(_team);
             if (Size != 1f)
                 SetSize(1f);
@@ -1586,7 +1591,16 @@ namespace GnorpWar
         public float Size { get; private set; } = 1f;
 
         // 상한(BattleConfig — 기본 3배)을 넘는 성장은 버린다
-        public void Grow(float amount) => SetSize(Mathf.Min(Size + amount, BattleManager.MaxUnitSize));
+        public void Grow(float amount)
+        {
+            float before = Size;
+            SetSize(Mathf.Min(Size + amount, BattleManager.MaxUnitSize));
+            // 크기가 느는 길은 여기 하나다 — 실제로 커졌을 때만 알린다(상한에 막힌 성장은 커진 것이 아니다)
+            if (Size > before)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        e.Effect.OnGrew(this, e.Stacks);
+        }
 
         private void SetSize(float size)
         {

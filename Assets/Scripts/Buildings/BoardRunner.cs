@@ -110,7 +110,7 @@ namespace GnorpWar
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (UnitEffect effect in _slots[i].Building.Effects)
-                        TeamEffects.Enable(_team, effect, _slots[i].Building.Level);
+                        TeamEffects.Enable(_team, effect, _slots[i].Building.Level, _slots[i].Building.Definition);
             BuffLinks.ClearStanding(_team);
             // 지역 업그레이드(보급력) — 쿨다운마다 유닛을 소환하는 기물의 쿨다운에 곱한다. 이 진영 영주의 것
             Lord lord = !RunState.Started ? null : _team == Team.Ally ? RunState.World.State.Player : RunState.Opponent;
@@ -220,8 +220,11 @@ namespace GnorpWar
 
         // 이 진영의 모든 소환이 거치는 곳 — 기획서 §5 처리 순서: ① 추가 소환 ② 변환. 그다음 한 마리씩 소환 이벤트.
         // sourceSlot = 소환한 기물의 칸(기물이 아니면 -1) · at = 소환 자리(없으면 성문 — 넓은 유닛은 큰 유닛 소환 지점)
-        public void Summon(UnitDefinition unit, int count, int sourceSlot, Vector2? at = null)
+        // source = 낳은 기물(Unit.SummonedBy) — 칸에서 소환하면 그 칸의 기물이고, 칸 없이 소환하는 유닛 효과는 자기를 켠 기물을 넘긴다(UnitEffect.Source)
+        public void Summon(UnitDefinition unit, int count, int sourceSlot, Vector2? at = null, BuildingDefinition source = null)
         {
+            if (source == null && HasBuilding(sourceSlot))
+                source = _slots[sourceSlot].Building.Definition;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
                 {
@@ -267,7 +270,7 @@ namespace GnorpWar
                     Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, from);
                     if (converter != null)
                         converter.OnConverted(spawned);
-                    spawned.NotifySummoned(sourceSlot);
+                    spawned.NotifySummoned(sourceSlot, source);
                     // 다른 층의 기물이 ~를 소환할 때마다 (군기 · 성당기사단) — 어느 층을 볼지는 능력이 정한다
                     if (sourceSlot >= 0)
                         for (int other = 0; other < _slots.Length; other++)
@@ -289,6 +292,15 @@ namespace GnorpWar
                         passive.OnTowerKill(this, i, victim);
         }
 
+        // 내 작은 타워가 파괴됐다(Base가 부른다 — 사라지기 직전)
+        public void NotifySmallTowerDestroyed(Base tower)
+        {
+            for (int i = 0; i < _slots.Length; i++)
+                if (IsActive(i))
+                    foreach (BuildingPassive passive in _slots[i].Building.Passives)
+                        passive.OnSmallTowerDestroyed(this, i, tower);
+        }
+
         private bool HasBuilding(int index) => index >= 0 && index < _slots.Length && _slots[index].Building != null;
 
         // 즉시 1회 발동 — 게이지는 그대로(징집 포고문). 쿨다운 없는 기물은 발동하지 않는다(false)
@@ -298,6 +310,17 @@ namespace GnorpWar
                 return false;
             Fire(index);
             return true;
+        }
+
+        // 이 유닛 효과를 켠 기물들을 즉시 1회 발동(마구간 신화 「이 기물을 즉시 1회 발동시킵니다」) — 유닛 효과는 자기 칸을 모르므로 켠 칸을 여기서 찾는다.
+        // 전투가 끝났거나 데스매치로 기물이 멈춘 뒤에는 발동하지 않는다(Update의 발동 루프와 같은 조건)
+        public void FireOwners(UnitEffect effect)
+        {
+            if (!_running || BattleManager.BoardsStopped)
+                return;
+            for (int i = 0; i < _slots.Length; i++)
+                if (IsActive(i) && System.Array.IndexOf(_slots[i].Building.Effects, effect) >= 0 && FireNow(i))
+                    BuffLinks.EffectToSlot(_team, effect, i, BuffKind.Trigger);
         }
 
         // 쿨다운에 곱한다(풍차 ×0.8)
@@ -324,6 +347,14 @@ namespace GnorpWar
                     return i;
                 }
             return -1;
+        }
+
+        // 쿨다운이 있는 기물 전부를 가속(수도원 신화) — 쿨다운 없는 기물은 HasteRandom과 같이 뺀다
+        public void HasteAll(float seconds)
+        {
+            for (int i = 0; i < _slots.Length; i++)
+                if (HasBuilding(i) && _slots[i].Cooldown > 0f)
+                    Haste(i, seconds);
         }
 
         // 가속 — seconds 동안 게이지가 2배로 찬다. 이미 가속 중이면 더 긴 쪽

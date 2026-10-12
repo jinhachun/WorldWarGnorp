@@ -190,9 +190,18 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
   아직 정의(시작 등급)만 보는 곳 셋: `BuildingTooltip.Headline`(칸 아래 대표 숫자) · `BuildingPassive.HasBuyEffects` (신화에서만 생기는 「구매할 때마다,」가 칸을 튀게 하지 못한다) · `EnemyShopper`의 자리 판단 `Reaches`(AI는 신화로 늘어난 범위를 모른다).
 - 🔴 **등급 배열의 길이가 일부러 어긋나 있다**(신화 10/12) — `BuildingRarity`는 여섯이지만 `BattleConfig`의 **가격 `_rarityPrices`는 여섯 칸, 진열 확률 `_rarityWeightsFirst`/`_rarityWeightsLast`는 다섯 칸**이다.
   **신화 등급의 기물 *정의*는 만들지 않는다** — `OwnedBuilding.Rarity = 정의 등급 + 오른 횟수`라 신화는 합치기로만 도달하고, 신화 효과도 정의의 등급을 올리지 않고 `_mythic*` 묶음으로 붙는다. 그래서 **진열 확률은 영구히 다섯 칸이면 된다.** 정의를 신화로 만드는 순간 `RarityWeight`가 `(int)rarity`로 다섯 칸 배열을 읽어 `IndexOutOfRangeException`이다 — 그래서 밸런싱 창의 등급 드롭다운에서도 신화를 뺐다(`Editor/BalanceWindow.Rarities`).
-  가격을 읽는 모든 경로는 **정의**의 등급을 넘기므로(`PriceOf`), 여섯째 칸 80골드는 읽히지 않는다. 신화 한 채의 판매가도 정의(시작 등급)가 × 합친 개수로 나온다.
+  가격을 읽는 모든 경로는 **정의**의 등급을 넘기므로(`PriceOf`), 여섯째 칸 80골드는 읽히지 않는다.
+- 🔴 **판매가 = `OwnedBuilding.SpentGold` × `SellRatio`**(쓴 골드의 절반, 사용자 10/13 — `RunState.SellValue` 한 곳). 사서 모은 기물은 등급가 × 합친 개수와 같고, 공짜로 받은 기물(`RunState.Acquire`)만 0골드다. 바닥은 없다.
+  ⚠️ `TowerPower.SupportGold`의 「쓴 골드」는 `PriceOf × Copies`라 `SpentGold`와 **다르다**(공짜 기물도 돈 쓴 것으로 센다) — 맞추면 월드 시뮬 결과가 바뀐다.
+- 🔴 **무적은 `Unit.GrantInvulnerable` 한 함수만 지난다** — 지속시간 보정과 주변 전파가 거기 붙고, **돌려주는 값이 실제 무적 시간**이다(충정의 맹세의 사망 유예가 그 값을 쓴다). 퍼져서 걸린 무적은 `ApplyInvulnerable`로 가 다시 퍼지지 않는다.
+- 🔴 **무적으로 막힌 피해는 `UnitEffect.OnHit`에 오지 않는다** — `Unit.TakeDamage`가 무적 분기에서 먼저 돌아선다. 막은 피해를 쓰는 효과는 `ReflectsBlockedDamage`, 반사 계산은 `DamageReflect.Back`(재진입 차단)이다.
+- 🔴 **소환 출처는 둘이고 단위가 다르다**(신화 B-2, 10/13).
+  유닛: `Unit.SummonedBy`는 낳은 기물의 **종류**(정의)다 — 유닛 효과가 진영에 한 번만 켜져 같은 기물 두 채를 구분하지 못한다. 칸 소환은 `BoardRunner.Summon`이 자동으로 적고, **칸 없이 소환하는 유닛 효과는 `Source(team)`을 `Summon`에 넘겨야 한다** — 새 소환 효과에서 빠뜨리면 null이 된다.
+  작은 타워: `Base.BuiltBy`는 세운 기물 **한 채**(`OwnedBuilding`)다. 건축가가 지은 타워는 null.
+- **`UnitEffect.OnEnemyDied`는 적용 분류로 거르지 않고 상대 진영의 켜진 효과 전부에 불린다**(`Unit.Perish` 맨 끝, 내 진영 `OnDied` 뒤). 소모(`Consume`)와 건축가 귀환은 죽음이 아니라 안 불린다.
+- **작은 타워가 부서지면 `BuildingPassive.OnSmallTowerDestroyed`**(`Base.TakeDamage`의 작은 타워 분기 → `BoardRunner.NotifySmallTowerDestroyed`). 늪지로 꺼진 칸은 안 불린다. 작은 타워를 세우는 길은 감시탑(`SmallTowerAtStartPassive.Build`) · 건축가 · 움직이는 성 신화(`SmallTowerFromCastlePassive`)다.
 - 🔴 **신화에서는 수치가 오르지 않는다**(기획서 §1) — 상한은 **`OwnedBuilding.Level`(= `LevelOf`) 한 곳**에 있다. `Level`을 쓰는 곳은 모두 수치를 키우는 용도라(쿨다운 · 효과 세기 · 소환 수 · `TeamEffects` 등급 · `TowerPower`) 여기서 막으면 전부 따라온다. 상한은 고정값이 아니라 **「`Rarity`가 전설인 선의 Level」**이다 — 시작 등급마다 다르다(일반 5 · 전설 1).
-  `Copies`(합친 개수)는 `_upgrades`를 직접 읽어 신화에서도 2배로 늘어난다 — **판매가는 계속 올라야 하므로 맞다.**
+  `Copies`(합친 개수)는 `_upgrades`를 직접 읽어 신화에서도 2배로 늘어난다 — 읽는 곳은 `TowerPower.SupportGold`와 `EnemyShopper.OwnedValue`다(판매가는 `SpentGold`에서 나온다).
   🔴 **상한 규칙의 사본을 만들지 말 것** — 툴팁의 RANK UP 미리보기도 같은 `LevelOf`를 부른다. `level + 1`로 다음 등급을 계산하면 상한을 넘어가 「신화가 되면 더 좋아진다」고 거짓말을 한다.
 
 ---

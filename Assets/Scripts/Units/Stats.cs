@@ -105,6 +105,12 @@ namespace GnorpWar
         public static int ArrowsOnKillOf(Team team) => ArrowsOnKill[(int)team];
         public static void AddArrowsOnKill(Team team, int arrows) => ArrowsOnKill[(int)team] += arrows;
 
+        // 타워가 받은 피해를 공격한 쪽에 그대로 돌려주는 진영(성채 신화) — 전투 동안. 돌려주는 곳은 Base.TakeDamage
+        private static readonly bool[] Reflect = new bool[2];
+
+        public static bool ReflectsDamage(Team team) => Reflect[(int)team];
+        public static void ReflectDamage(Team team) => Reflect[(int)team] = true;
+
         // 작은 타워가 앞으로 걸어가는 진영(움직이는 성) — 전투 동안. Speed 0 = 걷지 않는다
         public struct FollowRule
         {
@@ -123,6 +129,7 @@ namespace GnorpWar
                 list.Clear();
             Deathmatch[0] = Deathmatch[1] = false;
             ArrowsOnKill[0] = ArrowsOnKill[1] = 0;
+            Reflect[0] = Reflect[1] = false;
             Follows[0] = Follows[1] = default;
             Version++;
         }

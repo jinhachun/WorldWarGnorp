@@ -26,6 +26,8 @@ namespace GnorpWar
         public virtual string Headline(int level) => null;
         // 이 효과를 켠 기물의 등급(같은 효과를 여러 기물이 켜면 가장 높은 것) — 훅 안에서 수치를 읽을 때
         protected int Level(Team team) => TeamEffects.LevelOf(team, this);
+        // 이 효과를 켠 기물 — 이 효과가 유닛을 소환할 때 출처로 넘기고(BoardRunner.Summon), 「이 기물이 소환한 ~」을 가릴 때 Unit.SummonedBy와 견준다
+        protected BuildingDefinition Source(Team team) => TeamEffects.SourceOf(team, this);
 
         public bool AppliesTo(UnitDefinition unit)
             => (_categories.Length == 0 && _units.Length == 0)
@@ -47,8 +49,12 @@ namespace GnorpWar
         public virtual void OnKill(Unit killer, Unit victim, int stacks) { }
         // 이 유닛이 회복받은 직후 — 실제로 찬 양이 있을 때만(순례지)
         public virtual void OnHealReceived(Unit unit, float amount, int stacks) { }
+        // 이 유닛의 크기가 실제로 커진 직후(Unit.Grow — 상한에 막혀 그대로면 안 불린다)
+        public virtual void OnGrew(Unit unit, int stacks) { }
         // 이 유닛이 죽은 직후(처치 효과 뒤) — at = 죽은 자리
         public virtual void OnDied(Unit unit, Vector2 at, int stacks) { }
+        // 적 유닛이 죽은 직후(위 사망 효과 뒤) — team = 이 효과를 켠 진영, at = 죽은 자리. 적용 분류와 상관없이 불린다(대상은 적이다 — 가릴 것은 효과가 가린다)
+        public virtual void OnEnemyDied(Team team, Unit victim, Vector2 at, int stacks) { }
         // 이 유닛이 공격한 직후(근접·사격·화염·휩쓸기 — 주 대상 하나)
         public virtual void OnAttack(Unit attacker, IDamageable target, int stacks) { }
         // 사거리 안에 이 병종의 적이 있으면 그쪽을 먼저 노린다(꼭두각시 왕)
@@ -57,7 +63,7 @@ namespace GnorpWar
         public virtual float InvulnerableAttackBonus => 0f;
         // 이 유닛이 받는 무적의 지속시간에 더하는 초(충정의 맹세 신화)
         public virtual float InvulnerableBonusSeconds => 0f;
-        // 이 유닛이 무적을 받을 때 같은 무적을 함께 받는 주변 아군의 반경(공주의 축복 신화). 0이면 퍼지지 않는다
+        // 이 효과를 가진 기물이 부여한 무적을 함께 받는 주변 아군의 반경(공주의 축복 신화). 0이면 퍼지지 않는다 — 읽는 곳은 무적을 주는 능력(InvulnerableLowestAction)이다
         public virtual float InvulnerableSpreadRadius => 0f;
         // 무적으로 막은 피해를 공격한 쪽에 그대로 돌려주는가(공주 루니카 신화) — attacker = 때린 쪽
         public virtual bool ReflectsBlockedDamage(IDamageable attacker) => false;

@@ -63,6 +63,9 @@ namespace GnorpWar
 
         public event System.Action<Base> Destroyed;
 
+        // 이 작은 타워를 세운 기물(조립식 감시탑이 적는다) — 「이 작은 타워」를 가리는 능력이 읽는다. 건축가가 지었으면 null
+        public OwnedBuilding BuiltBy { get; set; }
+
         public Team Team => _team;
         public bool IsAlive => _hp > 0f;
         public float Hp => _hp;
@@ -350,10 +353,14 @@ namespace GnorpWar
             if (amount > 0f)
                 BattleManager.NoteProgress();
             DamageNumbers.Damage(this, _team, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), amount);
+            // 성채 신화 — 내 타워들(본진 · 작은 타워)이 받은 피해를 공격한 쪽에 그대로. 이 한 방에 무너져도 돌려준다
+            if (TowerBook.ReflectsDamage(_team))
+                DamageReflect.Back(attacker, amount, hitDirection, this);
             if (!IsAlive && _small)
             {
                 if (FxDirector.Instance != null)
                     FxDirector.Instance.DeathPuff(_collider.bounds.center);
+                BoardRunner.For(_team).NotifySmallTowerDestroyed(this);
                 Destroy(gameObject);   // 작은 타워 — 지는 건 아니다
             }
             else if (!IsAlive)

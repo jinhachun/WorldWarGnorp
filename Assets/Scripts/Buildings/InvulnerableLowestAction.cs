@@ -23,7 +23,11 @@ namespace GnorpWar
                     lowest = unit;
             if (lowest != null)
             {
-                lowest.GrantInvulnerable(Seconds(level));
+                // 이 기물(이 칸의 한 채)에 켜진 퍼뜨리기만 읽는다 — 신화 한 채 + 일반 한 채면 신화 쪽이 준 무적만 퍼진다
+                float spread = 0f;
+                foreach (UnitEffect effect in board.Slots[slot].Building.Effects)
+                    spread = Mathf.Max(spread, effect.InvulnerableSpreadRadius);
+                lowest.GrantInvulnerable(Seconds(level), spread);
                 BuffLinks.ToPoint(board.Team, slot, lowest.Position, BuffKind.Invulnerable);
             }
         }

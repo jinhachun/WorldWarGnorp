@@ -21,6 +21,8 @@ namespace GnorpWar
         public virtual void OnSummonedFrom(BoardRunner board, int slot, int sourceSlot, Unit unit) { }
         // 내 타워(본진)의 화살이 적 유닛을 처치한 직후
         public virtual void OnTowerKill(BoardRunner board, int slot, Unit victim) { }
+        // 내 작은 타워가 파괴된 직후(사라지기 전) — 어느 타워를 볼지(이 기물이 세운 것 · 전부)는 능력이 정한다(Base.BuiltBy)
+        public virtual void OnSmallTowerDestroyed(BoardRunner board, int slot, Base tower) { }
 
         // 「구매할 때마다,」 — 이 기물을 샀을 때(합쳐졌으면 합쳐진 결과에서) · 영악한 투자가가 다시 발동시킬 때. team = 효과를 받을 진영
         public virtual void OnBuy(OwnedBuilding self, Team team) { }

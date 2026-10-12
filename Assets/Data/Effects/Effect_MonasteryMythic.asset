@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00c2ce871dc7f5d4dae05e7441ac992c, type: 3}
+  m_Name: Effect_MonasteryMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HasteAllOnHealEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: 2db8a66f89f8778458884185910698a5, type: 2}
+  _description: "\uB0B4 \uC0AC\uC81C\uAC00 \uD68C\uBCF5\uD560 \uB54C\uB9C8\uB2E4,
+    \uB0B4 \uBAA8\uB4E0 \uAE30\uBB3C\uC744 {0}\uCD08\uAC04 \uAC00\uC18D\uD569\uB2C8\uB2E4."
+  _seconds: 0.5

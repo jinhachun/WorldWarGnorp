@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__unityMCP__read_console",
+      "mcp__unityMCP__manage_camera",
+      "Bash(curl -s -m 3 -o /dev/null -w \"mcp=%{http_code}\\n\" http://localhost:8080/mcp)",
+      "Bash(git check-ignore *)"
+    ]
+  }
+}

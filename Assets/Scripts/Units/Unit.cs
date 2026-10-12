@@ -1571,6 +1571,13 @@ namespace GnorpWar
                 _hp = Mathf.Max(DoomedHp, _hp * (1f - ratio));
         }
 
+        // 최대 체력의 비율만큼 잃는다 — 피해가 아니다(죽지 않는다, 종탑 신화)
+        public void LoseMaxHpRatio(float ratio)
+        {
+            if (IsAlive)
+                _hp = Mathf.Max(DoomedHp, _hp - MaxHp * ratio);
+        }
+
         // 사거리 안 가장 가까운 적 유닛 주변 반경의 적 전부에게 피해(교황청 사제). 사거리 안에 적이 없으면 false
         public bool AreaAttackNearest(float radius, float damage)
         {

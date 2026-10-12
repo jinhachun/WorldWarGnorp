@@ -43,8 +43,10 @@ namespace GnorpWar
         private bool _running;
         // 얼음 — 다음 "모든 기물 발동"까지 지난 시간
         private float _fireAllTimer;
-        // 파견 사무소 — 내 유닛이 성 대신 가장 앞에 있는 내 작은 타워에서 나온다(전투 동안, 패시브가 전투 시작 때 켠다)
+        // 파견 사무소 — 내 유닛이 성 대신 가장 앞에 있는 내 작은 타워에서 나온다(전투 동안, 패시브가 전투 시작 때 켠다).
+        // 신화면 가장 앞 하나가 아니라 내 모든 작은 타워에서 동시에 나온다
         private bool _summonAtSmallTower;
+        private bool _summonAtEverySmallTower;
 
         public Team Team => _team;
         public Slot[] Slots => _slots;
@@ -120,6 +122,7 @@ namespace GnorpWar
                         _slots[i].Cooldown *= supply;
             }
             _summonAtSmallTower = false;
+            _summonAtEverySmallTower = false;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (BuildingPassive passive in _slots[i].Building.Passives)
@@ -142,6 +145,9 @@ namespace GnorpWar
         public void Stop() => _running = false;
 
         public void SummonAtSmallTower() => _summonAtSmallTower = true;
+
+        // 신화는 §7 능력과 함께 켜지지만, 이 하나로도 작은 타워 소환이 켜지게 둘을 같이 올린다
+        public void SummonAtEverySmallTower() => _summonAtSmallTower = _summonAtEverySmallTower = true;
 
         private void Update()
         {
@@ -237,8 +243,9 @@ namespace GnorpWar
                 }
 
             // 파견 사무소 — 자리를 정하지 않은 소환은 가장 앞에 있는 내 작은 타워의 발치에서(없으면 아래 그대로 성에서)
-            if (at == null && _summonAtSmallTower && Base.FrontSmallTower(_team) is Base outpost)
-                at = new Vector2(outpost.transform.position.x, outpost.Bounds.min.y);
+            Base outpost = at == null && _summonAtSmallTower ? Base.FrontSmallTower(_team) : null;
+            if (outpost != null)
+                at = Feet(outpost);
 
             Unit prefab = unit.PrefabFor(_team);
             float width = prefab.GetComponent<BoxCollider2D>().size.x;
@@ -246,20 +253,33 @@ namespace GnorpWar
             // 기물이 소환하면 그 기물의 층에서 나온다(탑 — 큰 유닛도 자기 층에서, 사용자 10/8). 기물이 아닌 소환·자리를 정한 소환은 그대로
             Tower tower = at == null && sourceSlot >= 0 ? Tower.For(_team) : null;
             bool fromFloor = tower != null && sourceSlot < tower.FloorCount;
-            for (int i = 0; i < count; i++)
+            SpawnGroup(point);
+            // 파견 사무소 신화 — 가장 앞 타워 말고 나머지 내 작은 타워에서도 같은 수가 동시에 나온다
+            if (outpost != null && _summonAtEverySmallTower)
+                foreach (Base small in Base.SmallTowers())
+                    if (small != outpost && small.Team == _team)
+                        SpawnGroup(Feet(small));
+
+            void SpawnGroup(Vector2 from)
             {
-                Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, point);
-                if (converter != null)
-                    converter.OnConverted(spawned);
-                spawned.NotifySummoned(sourceSlot);
-                // 다른 층의 기물이 ~를 소환할 때마다 (군기 · 성당기사단) — 어느 층을 볼지는 능력이 정한다
-                if (sourceSlot >= 0)
-                    for (int other = 0; other < _slots.Length; other++)
-                        if (other != sourceSlot && IsActive(other))
-                            foreach (BuildingPassive passive in _slots[other].Building.Passives)
-                                passive.OnSummonedFrom(this, other, sourceSlot, spawned);
+                for (int i = 0; i < count; i++)
+                {
+                    Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, from);
+                    if (converter != null)
+                        converter.OnConverted(spawned);
+                    spawned.NotifySummoned(sourceSlot);
+                    // 다른 층의 기물이 ~를 소환할 때마다 (군기 · 성당기사단) — 어느 층을 볼지는 능력이 정한다
+                    if (sourceSlot >= 0)
+                        for (int other = 0; other < _slots.Length; other++)
+                            if (other != sourceSlot && IsActive(other))
+                                foreach (BuildingPassive passive in _slots[other].Building.Passives)
+                                    passive.OnSummonedFrom(this, other, sourceSlot, spawned);
+                }
             }
         }
+
+        // 작은 타워의 발치 — 거기서 소환한다(파견 사무소)
+        private static Vector2 Feet(Base tower) => new Vector2(tower.transform.position.x, tower.Bounds.min.y);
 
         public void NotifyTowerKill(Unit victim)
         {

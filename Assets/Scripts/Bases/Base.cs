@@ -261,7 +261,13 @@ namespace GnorpWar
             if (_attackCooldown > 0f || !FindTargets())
                 return;
 
-            int arrows = Mathf.Max(1, Mathf.RoundToInt(Stat(TowerStat.ArrowCount)));
+            Shoot(Mathf.Max(1, Mathf.RoundToInt(Stat(TowerStat.ArrowCount))));
+            _attackCooldown = Unit.NextCooldown(_attackCooldown, _definition.AttackInterval / Stat(TowerStat.AttackSpeed));
+        }
+
+        // 찾아 둔 대상(_targets)에게 화살 arrows발 — 가까운 적부터 한 발씩 나눠 쏜다. 쿨다운은 부르는 쪽이 돌린다
+        private void Shoot(int arrows)
+        {
             float damage = Stat(TowerStat.Attack);
             // 타워는 늘 높은 고도 — 적 유닛에게 기름투하대 보너스(적 본진엔 없음) · 관통탄
             float highGround = 1f;
@@ -279,7 +285,6 @@ namespace GnorpWar
                 if (pierce)
                     shot.Pierce();
             }
-            _attackCooldown = Unit.NextCooldown(_attackCooldown, _definition.AttackInterval / Stat(TowerStat.AttackSpeed));
         }
 
         // 데스매치에서는 오버드라이브가 있는 진영의 타워만 쏜다
@@ -325,8 +330,16 @@ namespace GnorpWar
             DamageNumbers.Heal(this, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), _hp - before);
         }
 
-        // 이 본진의 화살이 적 유닛을 처치했다 — 조준연산코그 · 오버드라이브
-        public void NotifyKill(Unit victim) => BoardRunner.For(_team).NotifyTowerKill(victim);
+        // 이 타워의 화살이 적 유닛을 처치했다 — 조준연산코그 · 오버드라이브.
+        // 즉시 더 쏘는 효과(최신 엔진 부품·오버드라이브 신화)가 켜져 있으면 이 타워가 그만큼 더 쏜다 —
+        // 한 발이 더 처치하면 다시 돌지만, 발사는 처치 한 번마다 한 번이라 살아 있는 적 수에서 멈춘다
+        public void NotifyKill(Unit victim)
+        {
+            BoardRunner.For(_team).NotifyTowerKill(victim);
+            int extra = TowerBook.ArrowsOnKillOf(_team);
+            if (extra > 0 && IsAlive && CanAttack && FindTargets())
+                Shoot(extra);
+        }
 
         public void TakeDamage(float amount, Vector2 hitDirection, float push, IDamageable attacker)
         {

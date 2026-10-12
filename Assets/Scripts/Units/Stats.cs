@@ -99,6 +99,12 @@ namespace GnorpWar
         public static bool AttacksInDeathmatch(Team team) => Deathmatch[(int)team];
         public static void AttackInDeathmatch(Team team) => Deathmatch[(int)team] = true;
 
+        // 타워의 화살이 적을 처치할 때마다 그 타워가 즉시 더 쏘는 화살 수(최신 엔진 부품·오버드라이브 신화) — 전투 동안. 쏘는 곳은 Base.NotifyKill
+        private static readonly int[] ArrowsOnKill = new int[2];
+
+        public static int ArrowsOnKillOf(Team team) => ArrowsOnKill[(int)team];
+        public static void AddArrowsOnKill(Team team, int arrows) => ArrowsOnKill[(int)team] += arrows;
+
         // 작은 타워가 앞으로 걸어가는 진영(움직이는 성) — 전투 동안. Speed 0 = 걷지 않는다
         public struct FollowRule
         {
@@ -116,6 +122,7 @@ namespace GnorpWar
             foreach (List<TowerModifier> list in Battle)
                 list.Clear();
             Deathmatch[0] = Deathmatch[1] = false;
+            ArrowsOnKill[0] = ArrowsOnKill[1] = 0;
             Follows[0] = Follows[1] = default;
             Version++;
         }

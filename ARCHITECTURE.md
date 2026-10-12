@@ -193,7 +193,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
   가격을 읽는 모든 경로는 **정의**의 등급을 넘기므로(`PriceOf`), 여섯째 칸 80골드는 읽히지 않는다.
 - 🔴 **판매가 = `OwnedBuilding.SpentGold` × `SellRatio`**(쓴 골드의 절반, 사용자 10/13 — `RunState.SellValue` 한 곳). 사서 모은 기물은 등급가 × 합친 개수와 같고, 공짜로 받은 기물(`RunState.Acquire`)만 0골드다. 바닥은 없다.
   ⚠️ `TowerPower.SupportGold`의 「쓴 골드」는 `PriceOf × Copies`라 `SpentGold`와 **다르다**(공짜 기물도 돈 쓴 것으로 센다) — 맞추면 월드 시뮬 결과가 바뀐다.
-- 🔴 **무적은 `Unit.GrantInvulnerable` 한 함수만 지난다** — 지속시간 보정(충정의 맹세 신화)이 거기 붙고, **돌려주는 값이 실제 무적 시간**이다(충정의 맹세의 사망 유예가 그 값을 쓴다). **퍼뜨릴 반경은 무적을 준 쪽이 인자로 넘긴다** — 진영 효과에서 읽지 않는다. 넘기는 것은 공주의 축복의 발동(`InvulnerableLowestAction`이 자기 칸 기물의 효과에서 읽음)뿐이라 다른 무적은 퍼지지 않는다(사용자 10/13). 퍼져서 걸린 무적은 `ApplyInvulnerable`로 가 다시 퍼지지 않는다.
+- 🔴 **무적은 `Unit.GrantInvulnerable` 한 함수만 지난다** — 지속시간 보정(충정의 맹세 신화)이 거기 붙고, **돌려주는 값이 실제 무적 시간**이다(충정의 맹세의 사망 유예가 그 값을 쓴다). **무적은 받은 한 기에게만 걸린다 — 퍼지지 않는다**(사용자 10/13: 상시 무적은 안 된다). 공주의 축복 신화는 발동이 고르는 수를 3기로 늘릴 뿐이다(`InvulnerableLowestAction`이 자기 칸 기물의 `InvulnerableTargetsEffect`에서 읽는다 — 두 채면 각자 자기 수만큼).
 - 🔴 **무적으로 막힌 피해는 `UnitEffect.OnHit`에 오지 않는다** — `Unit.TakeDamage`가 무적 분기에서 먼저 돌아선다. 막은 피해를 쓰는 효과는 `ReflectsBlockedDamage`, 반사 계산은 `DamageReflect.Back`(재진입 차단)이다.
 - 🔴 **소환 출처는 둘이고 단위가 다르다**(신화 B-2, 10/13).
   유닛: `Unit.SummonedBy`는 낳은 기물의 **종류**(정의)다 — 유닛 효과가 진영에 한 번만 켜져 같은 기물 두 채를 구분하지 못한다. 칸 소환은 `BoardRunner.Summon`이 자동으로 적고, **칸 없이 소환하는 유닛 효과는 `Source(team)`을 `Summon`에 넘겨야 한다** — 새 소환 효과에서 빠뜨리면 null이 된다.
@@ -203,6 +203,19 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 - **유닛 효과가 자기 기물을 움직이는 길**(신화 B-3): `BoardRunner.FireOwners(효과)`는 그 효과를 가진 칸을 찾아 쿨다운 발동과 같은 길로 발동시키고(전투가 끝났거나 데스매치로 기물이 멈춘 뒤에는 안 돈다), `BoardRunner.HasteAll`은 쿨다운 있는 기물만 가속한다.
 - **크기가 느는 길은 `Unit.Grow` 하나**이고 `UnitEffect.OnGrew`는 실제로 커졌을 때만 불린다(상한에 막히면 안 불린다).
 - **타워 피해 반사**: `TowerBook.ReflectsDamage`(전투 동안, `ClearBattle`에서 비움)가 켜져 있으면 `Base.TakeDamage`가 `DamageReflect.Back`을 부른다 — 본진과 작은 타워가 같은 함수를 쓴다.
+- **직접 타격은 `Unit.Strike` 한 함수**(신화 B-4) — 고도 보너스와 `UnitEffect.OnHighGroundHit`이 거기 붙는다. 새 근접 공격도 이리로. 화살은 `Projectile.HighGround()`.
+- **지속 피해는 `Unit.Ignite` 하나**(1초 틱 · 밀림 없음 · `OnEnable`에서 비움).
+- 🔴 **「다시 일어남」은 소환이 아니다** — `BoardRunner.ReviveLater`는 `Summon`을 지나지 않는다(지나면 대량보급 · 변환 · 소환 효과가 붙어 죽을 때마다 수가 불어난다). 전투 시작마다 비운다.
+- **전투 승리 훅**: `RunState.NotifyBattleWon`이 실제 전투의 승자 탑으로 `_side`를 잠깐 바꿔 `BuildingPassive.OnBattleWon`을 부른다. AI끼리의 승패는 지나지 않는다.
+- **훈련용 허수아비 신화는 영구 목록이 아니라 기물 스택 + `BattleStartStat`이다**(`KeepBattleStatPassive` — 스패너와 같은 길). 발동마다 그 기물의 스택이 오르고 다음 전투 시작 때 스택만큼 다시 건다 — 그래서 팔면 사라지고(사용자 10/13) 유닛 카드에 보인다.
+- **원거리 공격은 `Unit.FireProjectile`** → 한 발은 `Shoot`, 더 쏘는 발은 `Burst`(FixedUpdate에서 간격을 두고, 쏘는 순간 대상을 다시 고른다 — 궁술수련관 신화).
+- **건축가는 `BuilderTowerLimit`까지 짓고 돌아간다**(기본 1 · 건축설계조합 신화 3).
+- 🔴 **「발동 1회 = 효과 1회」의 예외는 `BoardRunner.Fire`의 반복 수 한 곳**이다 — 맵(늪지)의 반복과 물레방앗간 신화(`DoubleFireWhileHasted`, 가속 중이면 ×2)가 거기서 곱해진다.
+- **상대 진영 유닛에게 거는 효과**는 `StatBook.AddForBattle(상대 진영, …)`에 직접 건다(풍차 신화 — 유닛 효과는 자기 진영에만 켜지므로).
+- **타워 스탯을 유닛이 함께 받는 자리**: `TowerBook.ShareWithUnits`(화살 강화기 신화) — 타워 스탯 다섯(공격력 · 공격속도 · 사거리 · 화살 수 · 체력)이 `Unit.TeamSum` · `AttackRange` · `Shoot`에 얹히고, 타워 스탯이 바뀌면 유닛도 다시 계산한다. 스탯이 아닌 타워 효과는 안 넘어가고, 유닛 카드 미리보기에도 안 보인다.
+- **탄이 유닛을 싣고 가는 길**: `Projectile.Carry(unit, source)` — 닿은(또는 떨어진) 자리에 `BoardRunner.Summon`으로 세운다(콜로서스 신화). 화살 프리팹을 빌려 그림만 바꾸므로 풀에서 다시 꺼낼 때 그림을 되돌린다.
+- **신화로 받는 길**: `RunState.Acquire(definition, upgrades)` — 오른 횟수를 얹어 넘긴다(판도라의 상자 신화). 신화 **정의**는 여전히 없다.
+- `UnitEffect`의 `ExtraProjectiles` · `PierceHitDamageFactor`는 타워(`Base.Shoot`)도 읽는다 — 타워는 적용 분류로 거르지 않는다.
 - 🔴 **신화에서는 수치가 오르지 않는다**(기획서 §1) — 상한은 **`OwnedBuilding.Level`(= `LevelOf`) 한 곳**에 있다. `Level`을 쓰는 곳은 모두 수치를 키우는 용도라(쿨다운 · 효과 세기 · 소환 수 · `TeamEffects` 등급 · `TowerPower`) 여기서 막으면 전부 따라온다. 상한은 고정값이 아니라 **「`Rarity`가 전설인 선의 Level」**이다 — 시작 등급마다 다르다(일반 5 · 전설 1).
   `Copies`(합친 개수)는 `_upgrades`를 직접 읽어 신화에서도 2배로 늘어난다 — 읽는 곳은 `TowerPower.SupportGold`와 `EnemyShopper.OwnedValue`다(판매가는 `SpentGold`에서 나온다).
   🔴 **상한 규칙의 사본을 만들지 말 것** — 툴팁의 RANK UP 미리보기도 같은 `LevelOf`를 부른다. `level + 1`로 다음 등급을 계산하면 상한을 넘어가 「신화가 되면 더 좋아진다」고 거짓말을 한다.

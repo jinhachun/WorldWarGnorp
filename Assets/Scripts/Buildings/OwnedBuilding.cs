@@ -22,7 +22,12 @@ namespace GnorpWar
         public int Upgrades => _upgrades;
         public BuildingRarity Rarity => (BuildingRarity)((int)_definition.Rarity + _upgrades);
         // 1 = 시작 등급. 생산 기물은 쿨다운이 줄고(BuildingDefinition.CooldownAt), 다른 수치는 Scaled로 등급마다 증가량을 더한다
-        public int Level => _upgrades + 1;
+        public int Level => LevelOf(_definition, _upgrades);
+
+        // 오른 횟수를 수치용 레벨로 — 신화에서는 수치가 오르지 않으므로(기획서 §1) Rarity가 전설인 선에서 멈춘다.
+        // 상한은 시작 등급마다 다르다(일반 시작이면 5 · 전설 시작이면 1). Copies(합친 개수)는 _upgrades를 직접 읽어 계속 늘어난다
+        public static int LevelOf(BuildingDefinition definition, int upgrades)
+            => Mathf.Min(upgrades, (int)BuildingRarity.Legendary - (int)definition.Rarity) + 1;
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
         public bool CanUpgrade => Rarity < BuildingRarity.Mythic;

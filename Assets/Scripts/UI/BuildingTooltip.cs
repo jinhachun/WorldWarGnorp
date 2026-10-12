@@ -100,12 +100,14 @@ namespace GnorpWar
             return lines;
         }
 
-        // RANK UP 진열 카드 — 합쳐진 뒤(level + 1, next 등급)의 효과 줄 중 지금(level)과 달라지는 줄만. 바뀐 숫자는 BonusColor
+        // RANK UP 진열 카드 — 합쳐진 뒤(afterLevel, next 등급)의 효과 줄 중 지금(level)과 달라지는 줄만. 바뀐 숫자는 BonusColor
         public static string RankUpPreview(BuildingDefinition building, int level, BuildingRarity next)
         {
-            // next는 한 등급 위이므로 지금 등급은 next - 1 — 전설 → 신화에서만 after에 신화 줄이 늘어난다
+            // next는 한 등급 위이므로 지금 등급은 next - 1 — 전설 → 신화에서만 after에 신화 줄이 늘어난다.
+            // 합친 뒤의 레벨은 OwnedBuilding과 같은 상한을 받는다 — 신화는 수치가 전설과 같아 숫자가 하나도 안 바뀌고 신화 줄만 늘어난다
+            int afterLevel = OwnedBuilding.LevelOf(building, (int)next - (int)building.Rarity);
             List<string> now = Lines(building, level, building.CooldownAt(level), next - 1 == BuildingRarity.Mythic);
-            List<string> after = Lines(building, level + 1, building.CooldownAt(level + 1), next == BuildingRarity.Mythic);
+            List<string> after = Lines(building, afterLevel, building.CooldownAt(afterLevel), next == BuildingRarity.Mythic);
             string text = $"\n<color={NumberColor}>{next.DisplayName()} 등급이 되면</color>";
             bool any = false;
             for (int i = 0; i < after.Count; i++)

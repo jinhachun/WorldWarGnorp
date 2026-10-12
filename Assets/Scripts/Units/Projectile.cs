@@ -125,7 +125,7 @@ namespace GnorpWar
                     if (healed > 0f)
                         foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                             if (e.Effect.AppliesFor(_team, _ownerDefinition))
-                                e.Effect.OnHealLanded(_team, ally, healed, e.Stacks);
+                                e.Effect.OnHealLanded(_team, ally, healed, _heal - healed, e.Stacks);
                 }
                 _spent = true;
                 gameObject.SetActive(false);

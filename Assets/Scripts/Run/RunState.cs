@@ -525,9 +525,11 @@ namespace GnorpWar
         }
 
         // 합쳐서 오른 결과가 또 같은 등급 짝을 만나면 계속 합친다 — 결과는 먼저 있던 짝의 칸에 남는다(플레이어가 놓은 자리).
-        // 스택은 합친다(사용자 결정: 등급이 오르면 스택 유지). 합쳐진 결과를 돌려준다
-        private static OwnedBuilding MergeInto(OwnedBuilding target)
+        // 스택은 합친다(사용자 결정: 등급이 오르면 스택 유지). 합쳐진 결과를 돌려준다.
+        // spent = 방금 산 조각에 낸 골드 — 쓴 골드도 결과 한 채에 모인다(판매가의 바탕, RunState.SellValue)
+        private static OwnedBuilding MergeInto(OwnedBuilding target, int spent)
         {
+            target.AddSpent(spent);
             // 내 상점이면 합치기를 한 번씩 적어 둔다 — 화면이 차례로 보여 준다(상태는 여기서 한 번에 끝난다)
             var steps = _side == Player && Merged != null ? new System.Collections.Generic.List<MergeStep>() : null;
             OwnedBuilding[] field = steps != null ? (OwnedBuilding[])Field.Clone() : null, storage = steps != null ? (OwnedBuilding[])Storage.Clone() : null;
@@ -539,6 +541,7 @@ namespace GnorpWar
                 Remove(target);
                 pair.Upgrade();
                 pair.AddStacks(target.Stacks);
+                pair.AddSpent(target.SpentGold);
                 target = pair;
                 steps?.Add(new MergeStep(target, field, storage));
                 pair = FindMergeTarget(target.Definition, target.Upgrades, target);
@@ -603,16 +606,18 @@ namespace GnorpWar
             if (!CanBuy(offer))
                 return;
             BuildingDefinition definition = Offers[offer];
-            Gold -= PriceOf(definition);
+            int price = PriceOf(definition);
+            Gold -= price;
             Offers[offer] = null;
 
             OwnedBuilding target = FindMergeTarget(definition, 0);
             if (target != null)
             {
-                OnBought(MergeInto(target));
+                OnBought(MergeInto(target, price));
                 return;
             }
             var bought = new OwnedBuilding(definition);
+            bought.AddSpent(price);
             int slot = FirstEmpty(Field);
             if (slot >= 0)
                 Field[slot] = bought;
@@ -638,17 +643,23 @@ namespace GnorpWar
             if (!CanBuyInto(offer, storage, index))
                 return;
             BuildingDefinition definition = Offers[offer];
-            Gold -= PriceOf(definition);
+            int price = PriceOf(definition);
+            Gold -= price;
             Offers[offer] = null;
 
             OwnedBuilding target = FindMergeTarget(definition, 0);
             OwnedBuilding bought;
             if (target != null)
-                bought = MergeInto(target);
-            else if (storage)
-                Storage[index] = bought = new OwnedBuilding(definition);
+                bought = MergeInto(target, price);
             else
-                InsertIntoField(bought = new OwnedBuilding(definition), index);
+            {
+                bought = new OwnedBuilding(definition);
+                bought.AddSpent(price);
+                if (storage)
+                    Storage[index] = bought;
+                else
+                    InsertIntoField(bought, index);
+            }
             OnBought(bought);
         }
 
@@ -665,9 +676,11 @@ namespace GnorpWar
             if (!CanBuyInsert(offer, at))
                 return;
             BuildingDefinition definition = Offers[offer];
-            Gold -= PriceOf(definition);
+            int price = PriceOf(definition);
+            Gold -= price;
             Offers[offer] = null;
             var bought = new OwnedBuilding(definition);
+            bought.AddSpent(price);
             InsertIntoField(bought, at);
             OnBought(bought);
         }
@@ -708,9 +721,11 @@ namespace GnorpWar
             Field[index] = building;
         }
 
+        // 판매가 = 그 기물을 모으는 데 쓴 골드의 절반(사용자 결정 10/13 — 바토몬 방식).
+        // 사서 모은 기물은 쓴 골드가 등급가 × 합친 개수라 전과 같은 숫자다. 공짜로 받은 기물(Acquire)만 0골드다 — 바닥을 두지 않는다
         public static int SellValue(OwnedBuilding building)
         {
-            return Mathf.Max(1, Mathf.FloorToInt(PriceOf(building.Definition) * building.Copies * _config.SellRatio));
+            return Mathf.FloorToInt(building.SpentGold * _config.SellRatio);
         }
 
         public static void Sell(bool storage, int index)
@@ -730,7 +745,8 @@ namespace GnorpWar
         // 이번 판에 등장하는 기물(상점 풀) — 내 상점도 AI 영주의 상점도 같은 풀이다(내 진열은 국가 비율을 건다 — HomeOffer)
         public static BuildingDefinition[] Pool => _config.ShopPool;
 
-        // 산 게 아니라 얻는다(판도라의 상자) — 「구매할 때마다,」·합치기 없이 필드 → 보관함 빈 칸에. 자리가 없으면 못 얻는다
+        // 산 게 아니라 얻는다(판도라의 상자) — 「구매할 때마다,」·합치기 없이 필드 → 보관함 빈 칸에. 자리가 없으면 못 얻는다.
+        // 쓴 골드가 0이라 판매가도 0골드다(사용자 결정 10/13)
         public static void Acquire(BuildingDefinition definition)
         {
             var acquired = new OwnedBuilding(definition);

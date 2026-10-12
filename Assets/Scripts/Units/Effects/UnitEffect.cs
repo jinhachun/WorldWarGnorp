@@ -55,6 +55,12 @@ namespace GnorpWar
         public virtual UnitCategory PreferredTargetCategory => null;
         // 무적 상태인 동안 공격력 +비율(합연산, 공주 루니카)
         public virtual float InvulnerableAttackBonus => 0f;
+        // 이 유닛이 받는 무적의 지속시간에 더하는 초(충정의 맹세 신화)
+        public virtual float InvulnerableBonusSeconds => 0f;
+        // 이 유닛이 무적을 받을 때 같은 무적을 함께 받는 주변 아군의 반경(공주의 축복 신화). 0이면 퍼지지 않는다
+        public virtual float InvulnerableSpreadRadius => 0f;
+        // 무적으로 막은 피해를 공격한 쪽에 그대로 돌려주는가(공주 루니카 신화) — attacker = 때린 쪽
+        public virtual bool ReflectsBlockedDamage(IDamageable attacker) => false;
         // 처음 죽을 때 대신 이 시간만큼 무적, 그 뒤 쓰러진다(충정의 맹세). 0이면 없음
         public virtual float FirstDeathDelay => 0f;
         // 관통 — 적용 대상 유닛의 화살 · 이 진영 타워의 화살이 적을 맞혀도 멈추지 않는다(관통탄 특허국)
@@ -64,8 +70,9 @@ namespace GnorpWar
         public virtual float HighGroundDamageBonus(int level) => 0f;
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
-        // 회복 투사체가 아군에 닿아 실제로 체력이 찬 직후(구슬마다, 빗나간 구슬은 안 불린다) — team = 던진 쪽. 적용 분류는 던진 유닛 기준
-        public virtual void OnHealLanded(Team team, Unit patient, float amount, int stacks) { }
+        // 회복 투사체가 아군에 닿아 실제로 체력이 찬 직후(구슬마다, 빗나간 구슬은 안 불린다) — team = 던진 쪽. 적용 분류는 던진 유닛 기준.
+        // overflow = 최대 체력을 넘어 버려진 회복량(성수 우물 신화) — amount + overflow가 던진 회복량이다
+        public virtual void OnHealLanded(Team team, Unit patient, float amount, float overflow, int stacks) { }
         // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)
         public virtual void OnSummoned(Unit unit, int sourceSlot, int stacks) { }
     }

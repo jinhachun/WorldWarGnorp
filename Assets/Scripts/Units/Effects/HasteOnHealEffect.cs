@@ -16,7 +16,7 @@ namespace GnorpWar
         private float Seconds(int level) => OwnedBuilding.Scaled(_seconds, _secondsPerTier, level);
 
         // 던진 순간이 아니라 구슬이 닿아 체력이 실제로 찼을 때(사용자 10/10 "닿으면 걸리게") — 빗나간 구슬은 가속 없음
-        public override void OnHealLanded(Team team, Unit patient, float amount, int stacks)
+        public override void OnHealLanded(Team team, Unit patient, float amount, float overflow, int stacks)
         {
             int picked = BoardRunner.For(team).HasteRandom(Seconds(Level(team)));
             if (picked >= 0)

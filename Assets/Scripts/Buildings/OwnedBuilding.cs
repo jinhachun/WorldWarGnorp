@@ -12,6 +12,8 @@ namespace GnorpWar
         [SerializeField] private int _upgrades;
         [Tooltip("이 기물이 모은 스택(스패너 등) — 팔면 같이 사라지고, 합쳐지면 더해진다")]
         [SerializeField] private int _stacks;
+        [Tooltip("이 한 채를 모으는 데 쓴 골드 — 판매가의 바탕(사용자 결정 10/13). 공짜로 얻은 기물은 0")]
+        [SerializeField] private int _spentGold;
 
         public OwnedBuilding(BuildingDefinition definition)
         {
@@ -33,6 +35,8 @@ namespace GnorpWar
         public bool CanUpgrade => Rarity < BuildingRarity.Mythic;
 
         public int Stacks => _stacks;
+        // 판매가는 여기의 절반이다(RunState.SellValue) — 살 때 낸 값을 더하고, 합쳐질 때 사라지는 쪽의 값을 받는다
+        public int SpentGold => _spentGold;
 
         // 지금 등급에 켜진 것 — 신화면 기획서 §7-1의 신화 묶음이 §7 묶음 뒤에 더해진다(대체하지 않는다).
         // 발동·훅·툴팁이 모두 이 셋을 읽는다(기물 정의의 같은 이름 프로퍼티는 시작 등급의 것뿐이다).
@@ -64,6 +68,8 @@ namespace GnorpWar
         }
 
         public void AddStacks(int count) => _stacks += count;
+
+        public void AddSpent(int gold) => _spentGold += gold;
 
         // 등급이 오를 때마다 perTier씩 — level 1(시작 등급)이면 value 그대로
         public static float Scaled(float value, float perTier, int level) => value + perTier * (level - 1);

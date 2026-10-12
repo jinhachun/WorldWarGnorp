@@ -490,6 +490,7 @@ namespace GnorpWar
             for (int i = 0; i < upgrades; i++)
                 copy.Upgrade();
             copy.AddStacks(building.Stacks);
+            copy.AddSpent(building.SpentGold);   // 판매가의 바탕(RunState.SellValue) — 사본이 공짜 기물이 되지 않게
             return copy;
         }
 

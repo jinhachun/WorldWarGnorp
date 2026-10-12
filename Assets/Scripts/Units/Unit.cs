@@ -157,7 +157,32 @@ namespace GnorpWar
         public bool IsInvulnerable => _invulnerableTimer > 0f;
         public float Hp => _hp;
 
-        public void GrantInvulnerable(float seconds)
+        // 무적을 주는 모든 길이 여기를 지난다 — 지속시간 보정(충정의 맹세 신화)과 주변으로 퍼뜨리기(공주의 축복 신화)를 한 자리에서 건다.
+        // 돌려주는 값 = 보정이 붙은 실제 무적 시간(충정의 맹세의 사망 유예가 무적과 같은 길이로 가게)
+        public float GrantInvulnerable(float seconds)
+        {
+            if (!IsAlive)
+                return 0f;
+            float radius = 0f;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                {
+                    seconds += e.Effect.InvulnerableBonusSeconds;
+                    radius = Mathf.Max(radius, e.Effect.InvulnerableSpreadRadius);
+                }
+            ApplyInvulnerable(seconds);
+            // 퍼져서 걸린 무적은 다시 퍼지지 않는다(ApplyInvulnerable은 보정도 퍼뜨리기도 하지 않는다) — 번져 나가지 않게
+            if (radius > 0f)
+            {
+                Physics2D.OverlapCircle(_rb.position, radius, _allyFilter, _overlaps);
+                foreach (Collider2D col in _overlaps)
+                    if (col.TryGetComponent(out Unit ally) && ally != this && ally._team == _team && ally.IsAlive)
+                        ally.ApplyInvulnerable(seconds);
+            }
+            return seconds;
+        }
+
+        private void ApplyInvulnerable(float seconds)
         {
             if (!IsAlive)
                 return;
@@ -1015,9 +1040,19 @@ namespace GnorpWar
 
         public void TakeDamage(float amount, Vector2 hitDirection, float push, IDamageable attacker)
         {
-            // 무적 — 피해도 밀림도 없다
-            if (!IsAlive || IsInvulnerable)
+            if (!IsAlive)
                 return;
+            // 무적 — 피해도 밀림도 없다. 막은 피해를 돌려주는 효과(공주 루니카 신화)만 여기서 돈다
+            if (IsInvulnerable)
+            {
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition) && e.Effect.ReflectsBlockedDamage(attacker))
+                    {
+                        DamageReflect.Back(attacker, amount, hitDirection, this);
+                        break;
+                    }
+                return;
+            }
 
             _hp -= amount;
             if (amount > 0f)
@@ -1033,9 +1068,9 @@ namespace GnorpWar
                     if (e.Effect.FirstDeathDelay > 0f && e.Effect.AppliesFor(_team, _definition) && UseOnce(e.Effect))
                     {
                         _hp = DoomedHp;
-                        _doomTimer = e.Effect.FirstDeathDelay;
                         _doomKiller = attacker;
-                        GrantInvulnerable(e.Effect.FirstDeathDelay);
+                        // 유예는 실제로 받은 무적과 같은 길이다 — 지속시간 보정(충정의 맹세 신화)이 붙으면 그만큼 더 버틴다
+                        _doomTimer = GrantInvulnerable(e.Effect.FirstDeathDelay);
                         BuffLinks.EffectToPoint(_team, e.Effect, _rb.position, BuffKind.Invulnerable);
                         return;
                     }

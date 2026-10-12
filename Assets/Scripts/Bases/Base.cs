@@ -275,10 +275,12 @@ namespace GnorpWar
             // 타워는 늘 높은 고도 — 적 유닛에게 기름투하대 보너스(적 본진엔 없음) · 관통탄
             float highGround = 1f;
             bool pierce = false;
+            float pierceFactor = 1f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
             {
                 highGround += e.Effect.HighGroundDamageBonus(e.Level);
                 pierce |= e.Effect.TowerArrowsPierce;
+                pierceFactor *= e.Effect.PierceHitDamageFactor;
             }
             for (int i = 0; i < arrows; i++)
             {
@@ -286,7 +288,9 @@ namespace GnorpWar
                 Projectile shot = Pooled.Get(_definition.Projectile, _muzzle.position, Quaternion.identity);
                 shot.Launch(_team, damage * (target.isUnit ? highGround : 1f), _definition.PushPower, target.point, _definition.ProjectileArcHeight, 0f, this);
                 if (pierce)
-                    shot.Pierce();
+                    shot.Pierce(pierceFactor);
+                if (target.isUnit)
+                    shot.HighGround();   // 타워는 적 유닛에게 늘 높은 고도(기름투하대)
             }
         }
 

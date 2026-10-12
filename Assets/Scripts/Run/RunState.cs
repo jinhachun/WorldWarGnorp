@@ -253,6 +253,28 @@ namespace GnorpWar
             LastOutcome = won ? Outcome.Win : Outcome.Lose;
             LastGains = WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
             Phase = RunPhase.Aftermath;
+            NotifyBattleWon(won ? Player : _opponentTower);
+        }
+
+        // 전투에서 이긴 탑의 필드 기물들에게 알린다(스팀바론 신화 「전투에서 승리할 때마다,」) — 그동안 상점 규칙(얻기)은 그 탑에 걸린다.
+        // 실제로 싸운 전투만이다 — AI 영주끼리의 승패(World/TowerPower)는 여기를 지나지 않는다
+        private static void NotifyBattleWon(TowerState tower)
+        {
+            if (tower == null)
+                return;
+            TowerState side = _side;
+            try
+            {
+                _side = tower;
+                foreach (OwnedBuilding owned in (OwnedBuilding[])tower.Field.Clone())   // 얻은 기물이 필드에 들어오며 배열이 바뀐다
+                    if (!OwnedBuilding.IsEmpty(owned))
+                        foreach (BuildingPassive passive in owned.Passives)
+                            passive.OnBattleWon(owned);
+            }
+            finally
+            {
+                _side = side;
+            }
         }
 
         // 지난 EndTurn이 판도에 남긴 일을 글 몇 줄로 — 런이 끝난 턴이면 빈 글
@@ -747,9 +769,12 @@ namespace GnorpWar
 
         // 산 게 아니라 얻는다(판도라의 상자) — 「구매할 때마다,」·합치기 없이 필드 → 보관함 빈 칸에. 자리가 없으면 못 얻는다.
         // 쓴 골드가 0이라 판매가도 0골드다(사용자 결정 10/13)
-        public static void Acquire(BuildingDefinition definition)
+        // upgrades = 시작 등급에서 올려서 준다(판도라의 상자 신화 — 신화 등급으로 온다). 정의의 등급은 그대로다
+        public static void Acquire(BuildingDefinition definition, int upgrades = 0)
         {
             var acquired = new OwnedBuilding(definition);
+            for (int i = 0; i < upgrades; i++)
+                acquired.Upgrade();
             int slot = FirstEmpty(Field);
             if (slot >= 0)
                 Field[slot] = acquired;

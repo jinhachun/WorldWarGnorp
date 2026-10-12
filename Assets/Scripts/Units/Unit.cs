@@ -159,38 +159,21 @@ namespace GnorpWar
         public bool IsInvulnerable => _invulnerableTimer > 0f;
         public float Hp => _hp;
 
-        // 무적을 주는 모든 길이 여기를 지난다 — 지속시간 보정(충정의 맹세 신화)과 주변으로 퍼뜨리기(공주의 축복 신화)를 한 자리에서 건다.
-        // 돌려주는 값 = 보정이 붙은 실제 무적 시간(충정의 맹세의 사망 유예가 무적과 같은 길이로 가게).
-        // spreadRadius = 이 무적을 함께 받는 주변 아군의 반경 — 무적을 준 쪽이 넘긴다(사용자 10/13: 공주의 축복이 준 무적만 퍼진다.
-        // 루니카 첫 피격 · 충정의 맹세 사망 유예 · 친위기사의 소환 무적은 0이라 퍼지지 않는다). 지속시간 보정은 모든 무적에 붙는다
-        public float GrantInvulnerable(float seconds, float spreadRadius = 0f)
+        // 무적을 주는 모든 길이 여기를 지난다 — 지속시간 보정(충정의 맹세 신화)을 한 자리에서 건다. 무적은 받은 유닛 한 기에게만 걸린다.
+        // 돌려주는 값 = 보정이 붙은 실제 무적 시간(충정의 맹세의 사망 유예가 무적과 같은 길이로 가게)
+        public float GrantInvulnerable(float seconds)
         {
             if (!IsAlive)
                 return 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     seconds += e.Effect.InvulnerableBonusSeconds;
-            ApplyInvulnerable(seconds);
-            // 퍼져서 걸린 무적은 다시 퍼지지 않는다(ApplyInvulnerable은 보정도 퍼뜨리기도 하지 않는다) — 번져 나가지 않게
-            if (spreadRadius > 0f)
-            {
-                Physics2D.OverlapCircle(_rb.position, spreadRadius, _allyFilter, _overlaps);
-                foreach (Collider2D col in _overlaps)
-                    if (col.TryGetComponent(out Unit ally) && ally != this && ally._team == _team && ally.IsAlive)
-                        ally.ApplyInvulnerable(seconds);
-            }
-            return seconds;
-        }
-
-        private void ApplyInvulnerable(float seconds)
-        {
-            if (!IsAlive)
-                return;
             if (!IsInvulnerable)
                 _ownModifiersChanged = true;
             _invulnerableTimer = Mathf.Max(_invulnerableTimer, seconds);
             if (_invulnerableRing == null)
                 _invulnerableRing = MakeHalo("InvulnerableRing", RingSprite(), InvulnerableRingColor, _weaponSortingOrder + 1);
+            return seconds;
         }
 
         // 무적 표시 — 몸을 감싸는 노란 원(사용자 10/7). 처음 무적이 될 때 만들고 무적 동안만 켠다(Update)
@@ -317,7 +300,10 @@ namespace GnorpWar
                     return 0f;
                 Base.BuildOnGround(_definition.BuildPrefab, _team, _buildX);
                 Builders.Remove(this);
-                _buildPhase = BuildPhase.Returning;
+                // 건축설계조합 신화 — 건축가 한 기가 정해진 수까지 짓는다. 아직 남았으면 돌아가지 않고 다음 자리를 찾는다(다음 스텝부터 · 자리가 없으면 §7처럼 돌아간다)
+                _buildPhase = ++_builtCount < BuildLimit() ? BuildPhase.Find : BuildPhase.Returning;
+                if (_buildPhase == BuildPhase.Find)
+                    return 0f;
             }
             Base home = Base.For(_team);
             float gate = home == null ? x : Forward > 0f ? home.Bounds.max.x : home.Bounds.min.x;
@@ -328,6 +314,19 @@ namespace GnorpWar
                 return 0f;
             }
             return -Forward * MoveSpeed;
+        }
+
+        // 이 생애에 지은 작은 타워 수
+        private int _builtCount;
+
+        // 건축가 한 기가 짓는 작은 타워 수 — 기본 1, 켜진 효과 중 가장 큰 값(건축설계조합 신화 3)
+        private int BuildLimit()
+        {
+            int limit = 1;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    limit = Mathf.Max(limit, e.Effect.BuilderTowerLimit);
+            return limit;
         }
 
         private float BuildHalfWidth => Base.HalfWidthOf(_definition.BuildPrefab);
@@ -418,6 +417,7 @@ namespace GnorpWar
         {
             StatSum sum = StatSum.Identity;
             StatBook.Accumulate(team, definition, stat, ref sum);
+            TowerBook.AccumulateShared(team, definition, stat, ref sum);   // 화살 강화기 신화 — 타워 효과를 함께 받는 유닛
             return sum;
         }
 
@@ -538,7 +538,8 @@ namespace GnorpWar
         public static float NextCooldown(float current, float interval) => interval + Mathf.Max(current, -Time.fixedDeltaTime);
         // 공격속도 +10% = 간격이 1.1로 나뉜다
         public float AttackInterval => _definition.AttackInterval / Stat(UnitStat.AttackSpeed);
-        private float AttackRange => _definition.AttackRange;
+        // 타워 효과를 함께 받는 유닛이면 타워의 사거리 변경이 얹힌다(화살 강화기 신화)
+        private float AttackRange => TowerBook.SharedCompute(_team, _definition, TowerStat.Range, _definition.AttackRange);
         // 전투 공격력 가속
         public float DamageScale => BattleManager.DamageMultiplier;
 
@@ -700,6 +701,12 @@ namespace GnorpWar
             _lookBack = false;
             _hammerTimer = 0f;
             _buildStallTimer = 0f;
+            _builtCount = 0;
+            _burstLeft = 0;
+            _burstAimed.Clear();
+            _burnTicksLeft = 0;
+            _burnDamage = 0f;
+            _burnAttacker = null;
 
             // 죽을 때 바꾼 물리·그림을 되돌린다(Die)
             foreach (Collider2D col in GetComponents<Collider2D>())
@@ -742,6 +749,24 @@ namespace GnorpWar
                     _invulnerableTimer = 0f;
                     Perish(_doomKiller);
                     return;
+                }
+            }
+
+            if (_burstLeft > 0)
+                Burst();
+            // 불타는 중(기름투하대 신화) — 1초마다 피해. 밀치는 힘이 0이라 밀림·경직은 없다
+            if (_burnTicksLeft > 0)
+            {
+                _burnTick -= Time.fixedDeltaTime;
+                if (_burnTick <= 0f)
+                {
+                    _burnTick += BurnInterval;
+                    float damage = _burnDamage;
+                    if (--_burnTicksLeft == 0)
+                        _burnDamage = 0f;
+                    TakeDamage(damage, Vector2.up, 0f, _burnAttacker is Unit igniter && igniter.Life != _burnAttackerLife ? null : _burnAttacker);
+                    if (!IsAlive)
+                        return;
                 }
             }
 
@@ -993,7 +1018,7 @@ namespace GnorpWar
                     }
                     else if (_definition.AttackType == AttackType.Ranged)
                     {
-                        FireProjectile(targetPoint, HighGroundScale(target));
+                        FireProjectile(target, targetPoint);
                     }
                     else
                     {
@@ -1001,7 +1026,7 @@ namespace GnorpWar
                         bool charge = _runTime >= _definition.ChargeReadySeconds;
                         float damage = AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f) * DamageScale;
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
-                        target.TakeDamage(damage * HighGroundScale(target), hitDirection, push, this);
+                        Strike(target, damage, hitDirection, push);
                     }
                     foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                         if (e.Effect.AppliesFor(_team, _definition))
@@ -1450,26 +1475,114 @@ namespace GnorpWar
             return found;
         }
 
-        // 원거리 무기(화살·돌) 발사 — damageScale = 쏘는 순간의 고도 보너스
-        public void FireProjectile(Vector2 targetPoint, float damageScale)
+        // 원거리 공격 한 번 — target = 노리는 적 · targetPoint = 그 적의 조준점. 첫 발은 바로 나가고, 더 쏘는 발(궁술수련관 신화)은 연발로 이어진다
+        public void FireProjectile(IDamageable target, Vector2 targetPoint)
         {
-            Projectile shot = Pooled.Get(_definition.Projectile, WeaponPoint, Quaternion.identity);
-            shot.Launch(_team, AttackDamage * DamageScale * damageScale, _definition.PushPower, targetPoint,
-                        _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
+            Shoot(target, targetPoint);
+            // 궁술수련관 신화 — 남은 화살을 짧은 간격으로 잇달아 쏜다(FixedUpdate의 Burst). 발마다 다른 적을 노리고, 노릴 적이 모자라면 같은 적에게(사용자 10/13).
+            // 간격은 효과의 값이되, 다음 공격 전에 다 나가도록 공격 간격을 발 수로 나눈 것보다 길지 않게
+            int extra = 0;
+            float interval = float.MaxValue;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.ProjectilesPierce && e.Effect.AppliesFor(_team, _definition))
+                if (e.Effect.ExtraProjectiles > 0 && e.Effect.AppliesFor(_team, _definition))
                 {
-                    shot.Pierce();
-                    break;
+                    extra += e.Effect.ExtraProjectiles;
+                    interval = Mathf.Min(interval, e.Effect.ExtraProjectileInterval);
                 }
+            _burstAimed.Clear();
+            _burstLeft = extra;
+            if (extra > 0)
+            {
+                _burstAimed.Add(target);
+                _burstInterval = Mathf.Min(interval, AttackInterval / (extra + 1));
+                _burstTimer = _burstInterval;
+            }
+        }
+
+        // 화살(돌) 한 발(타워 효과를 함께 받는 유닛이면 대상 하나에 그 수만큼) — 고도 보너스 · 높은 고도였나(기름투하대)는 쏘는 순간 그 적 기준,
+        // 관통 · 관통 타격마다의 피해 배율(관통탄 특허국)은 켜진 효과에서 읽는다
+        private void Shoot(IDamageable target, Vector2 targetPoint)
+        {
+            bool pierce = false;
+            float pierceFactor = 1f;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                {
+                    pierce |= e.Effect.ProjectilesPierce;
+                    pierceFactor *= e.Effect.PierceHitDamageFactor;
+                }
+            // 타워 효과를 함께 받는 유닛이면 타워의 화살 수 변경이 얹힌다(화살 강화기 신화 — 스팀바론 ×2)
+            int count = Mathf.Max(1, Mathf.RoundToInt(TowerBook.SharedCompute(_team, _definition, TowerStat.ArrowCount, 1f)));
+            float damage = AttackDamage * DamageScale * HighGroundScale(target);
+            bool above = IsAbove(target);
+            for (int i = 0; i < count; i++)
+            {
+                Projectile shot = Pooled.Get(_definition.Projectile, WeaponPoint, Quaternion.identity);
+                shot.Launch(_team, damage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
+                if (pierce)
+                    shot.Pierce(pierceFactor);
+                if (above)
+                    shot.HighGround();
+            }
+        }
+
+        // 연발(궁술수련관 신화) — 남은 발 수 · 다음 발까지 · 발 사이 간격 · 이번 연발에서 이미 노린 적
+        private int _burstLeft;
+        private float _burstTimer;
+        private float _burstInterval;
+        private readonly List<IDamageable> _burstAimed = new List<IDamageable>();
+
+        // 연발의 다음 발 — 쏘는 순간 사거리 안에서 다시 고른다(그사이 죽거나 벗어난 적은 빠진다). 이번 연발에서 아직 안 노린 적 중 조준 순서가 가장 앞선 적,
+        // 다 노렸으면 조준 순서가 가장 앞선 적. 사거리 안에 적이 하나도 없으면 남은 발은 버린다
+        private void Burst()
+        {
+            _burstTimer -= Time.fixedDeltaTime;
+            if (_burstTimer > 0f)
+                return;
+            _burstTimer += _burstInterval;
+            Physics2D.OverlapCircle(_rb.position, AttackRange, _enemyFilter, _overlaps);
+            UnitCategory preferred = PreferredTarget();
+            IDamageable pick = null;
+            Vector2 pickPoint = default;
+            float best = float.MaxValue;
+            bool bestPreferred = false, bestFresh = false;
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive || IsUnderfoot(damageable))
+                    continue;
+                bool fresh = !_burstAimed.Contains(damageable);
+                bool isPreferred = preferred != null && damageable is Unit u && u._definition.Category == preferred;
+                Vector2 point = col.ClosestPoint(_rb.position);
+                float distance = (point - _rb.position).sqrMagnitude;
+                // 아직 안 노린 적이 먼저, 그 안에서는 FindTarget과 같은 순서(우선 병종 먼저 · 가까운 순)
+                bool better = pick == null
+                              || (fresh != bestFresh ? fresh : isPreferred != bestPreferred ? isPreferred : distance < best);
+                if (!better)
+                    continue;
+                pick = damageable;
+                pickPoint = point;
+                best = distance;
+                bestPreferred = isPreferred;
+                bestFresh = fresh;
+            }
+            if (pick == null)
+            {
+                _burstLeft = 0;
+                return;
+            }
+            _burstAimed.Add(pick);
+            _burstLeft--;
+            Shoot(pick, pickPoint);
         }
 
         // 기름투하대 — 내 머리가 상대 유닛 머리보다 높으면 주는 피해 +비율(언덕·점프·크기·타고난 키 모두 고도). 상대가 본진이면 본진이 늘 높은 고도라 해당 없음
         private const float HighGroundMargin = 0.25f;
 
+        private bool IsAbove(IDamageable target) => target is Unit enemy && Top > enemy.Top + HighGroundMargin;
+
         private float HighGroundScale(IDamageable target)
         {
-            if (!(target is Unit enemy) || Top <= enemy.Top + HighGroundMargin)
+            if (!IsAbove(target))
                 return 1f;
             float bonus = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -1477,6 +1590,39 @@ namespace GnorpWar
                     bonus += e.Effect.HighGroundDamageBonus(e.Level);
             return 1f + bonus;
         }
+
+        // 직접 때린다(근접 · 화염 · 휩쓸기 · 착지 충격) — 고도 보너스를 얹고, 높은 고도에서 때렸으면 켜진 효과에 알린다(기름투하대 신화)
+        private void Strike(IDamageable target, float damage, Vector2 direction, float push)
+        {
+            bool above = IsAbove(target);
+            damage *= HighGroundScale(target);
+            target.TakeDamage(damage, direction, push, this);
+            if (above)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        e.Effect.OnHighGroundHit((Unit)target, damage, this);
+        }
+
+        // 불탄다(기름투하대 신화) — seconds초 동안 1초마다 damagePerSecond 피해. 다시 붙으면 시간은 새로, 피해는 큰 쪽.
+        // 처치자는 불을 붙인 쪽이다(유닛이면 그 생애일 때만)
+        public void Ignite(float seconds, float damagePerSecond, IDamageable attacker)
+        {
+            if (!IsAlive)
+                return;
+            if (_burnTicksLeft <= 0)
+                _burnTick = BurnInterval;
+            _burnTicksLeft = Mathf.RoundToInt(seconds / BurnInterval);
+            _burnDamage = Mathf.Max(_burnDamage, damagePerSecond);
+            _burnAttacker = attacker;
+            _burnAttackerLife = attacker is Unit unit ? unit.Life : 0;
+        }
+
+        private const float BurnInterval = 1f;
+        private int _burnTicksLeft;
+        private float _burnTick;
+        private float _burnDamage;
+        private IDamageable _burnAttacker;
+        private int _burnAttackerLife;
 
         public void ThrowHeal(Unit patient)
         {
@@ -1516,7 +1662,7 @@ namespace GnorpWar
             foreach (Collider2D col in _overlaps)
             {
                 if (col.TryGetComponent(out IDamageable damageable) && damageable.Team != _team && damageable.IsAlive)
-                    damageable.TakeDamage(AttackDamage * DamageScale * HighGroundScale(damageable), new Vector2(Forward, 0f), _definition.PushPower, this);
+                    Strike(damageable, AttackDamage * DamageScale, new Vector2(Forward, 0f), _definition.PushPower);
             }
             if (FxDirector.Instance != null)
                 FxDirector.Instance.Flame(mouth, Forward, length);
@@ -1535,7 +1681,7 @@ namespace GnorpWar
                     continue;
                 Vector2 toTarget = point - _rb.position;
                 Vector2 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
-                damageable.TakeDamage(AttackDamage * DamageScale * HighGroundScale(damageable), direction, _definition.PushPower, this);
+                Strike(damageable, AttackDamage * DamageScale, direction, _definition.PushPower);
             }
         }
 
@@ -1548,7 +1694,7 @@ namespace GnorpWar
             {
                 if (!col.TryGetComponent(out Unit enemy) || enemy._team == _team || !enemy.IsAlive)
                     continue;
-                enemy.TakeDamage(_definition.SlamDamage * DamageScale * HighGroundScale(enemy), Vector2.up, 0f, this);
+                Strike(enemy, _definition.SlamDamage * DamageScale, Vector2.up, 0f);
                 enemy.Shove(new Vector2(0f, JumpSpeed(_definition.SlamLiftHeight, enemy._rb)), _definition.SlamStun);
             }
         }

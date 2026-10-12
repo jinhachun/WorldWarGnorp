@@ -11,11 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b422935827acebb4a828c8dab501a781, type: 3}
   m_Name: Effect_BlessingMythic
-  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.InvulnerableSpreadEffect
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.InvulnerableTargetsEffect
   _categories: []
   _units: []
-  _description: "\uC774 \uAE30\uBB3C\uC774 \uBD80\uC5EC\uD55C \uBB34\uC801\uC744
-    \uBC1B\uC740 \uC544\uAD70 \uC8FC\uBCC0\uC758 \uC544\uAD70\uB4E4\uB3C4 \uD568\uAED8
-    \uBB34\uC801\uC774 \uB429\uB2C8\uB2E4. (\uD37C\uC838\uC11C \uBC1B\uC740 \uC544\uAD70\uC740
-    \uB2E4\uC2DC \uD37C\uB728\uB9AC\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4)"
-  _radius: 3
+  _description: "\uC774 \uAE30\uBB3C\uC774 \uBB34\uC801\uC744 \uBD80\uC5EC\uD558\uB294
+    \uC544\uAD70\uC774 {0}\uAE30\uAC00 \uB429\uB2C8\uB2E4."
+  _targets: 3

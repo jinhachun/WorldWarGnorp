@@ -63,8 +63,6 @@ namespace GnorpWar
         public virtual float InvulnerableAttackBonus => 0f;
         // 이 유닛이 받는 무적의 지속시간에 더하는 초(충정의 맹세 신화)
         public virtual float InvulnerableBonusSeconds => 0f;
-        // 이 효과를 가진 기물이 부여한 무적을 함께 받는 주변 아군의 반경(공주의 축복 신화). 0이면 퍼지지 않는다 — 읽는 곳은 무적을 주는 능력(InvulnerableLowestAction)이다
-        public virtual float InvulnerableSpreadRadius => 0f;
         // 무적으로 막은 피해를 공격한 쪽에 그대로 돌려주는가(공주 루니카 신화) — attacker = 때린 쪽
         public virtual bool ReflectsBlockedDamage(IDamageable attacker) => false;
         // 처음 죽을 때 대신 이 시간만큼 무적, 그 뒤 쓰러진다(충정의 맹세). 0이면 없음
@@ -72,6 +70,15 @@ namespace GnorpWar
         // 관통 — 적용 대상 유닛의 화살 · 이 진영 타워의 화살이 적을 맞혀도 멈추지 않는다(관통탄 특허국)
         public virtual bool ProjectilesPierce => false;
         public virtual bool TowerArrowsPierce => false;
+        // 관통한 화살이 적을 맞힐 때마다 그 화살의 피해에 곱하는 값(관통탄 특허국 신화) — 유닛의 화살은 적용 분류로 거르고, 타워의 화살은 거르지 않고 읽는다
+        public virtual float PierceHitDamageFactor => 1f;
+        // 적용 대상 유닛이 공격 한 번에 더 쏘는 투사체 수(궁술수련관 신화) — 짧은 간격으로 잇달아 나가고 발마다 다른 적을 노린다(Unit.Burst). 아래는 그 발 사이 간격(초)
+        public virtual int ExtraProjectiles => 0;
+        public virtual float ExtraProjectileInterval => 0f;
+        // 적용 대상 건축가 한 기가 짓는 작은 타워 수(건축설계조합 신화 3) — 기본 1
+        public virtual int BuilderTowerLimit => 1;
+        // 높은 고도에서 준 피해가 적 유닛에 들어간 직후(기름투하대 신화) — 직접 타격은 때린 유닛의 적용 분류로 거르고, 화살(유닛 · 타워)은 거르지 않는다. damage = 그 피해
+        public virtual void OnHighGroundHit(Unit victim, float damage, IDamageable attacker) { }
         // 상대보다 높은 고도에서 주는 피해 +비율(기름투하대) — 타워는 늘 높은 고도
         public virtual float HighGroundDamageBonus(int level) => 0f;
         // 회복 투사체 하나를 던진 직후

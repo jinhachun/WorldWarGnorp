@@ -123,12 +123,33 @@ namespace GnorpWar
             }
             _summonAtSmallTower = false;
             _summonAtEverySmallTower = false;
+            _doubleWhileHasted = false;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (BuildingPassive passive in _slots[i].Building.Passives)
                         passive.OnBattleStart(this, i, _slots[i].Building.Level);
             _fireAllTimer = 0f;
+            _revivals.Clear();
             _running = true;
+        }
+
+        // 다시 일어날 유닛들(노동의 기계화 신화) — 죽은 자리 · 일어날 시각(Time.time). 전투 시작마다 비운다
+        private readonly System.Collections.Generic.List<(float at, UnitDefinition unit, Vector2 point)> _revivals
+            = new System.Collections.Generic.List<(float, UnitDefinition, Vector2)>();
+
+        // seconds 뒤 point에서 unit이 다시 일어난다 — 소환이 아니다(추가 소환 · 변환 · 소환 이벤트를 지나지 않는다 — 지나면 죽을 때마다 수가 불어난다).
+        // 데스매치로 기물이 멈춘 뒤 · 전투가 끝난 뒤에는 일어나지 않는다(Update의 발동 루프와 같은 조건)
+        public void ReviveLater(UnitDefinition unit, Vector2 point, float seconds) => _revivals.Add((Time.time + seconds, unit, point));
+
+        private void Revive()
+        {
+            for (int i = _revivals.Count - 1; i >= 0; i--)
+                if (Time.time >= _revivals[i].at)
+                {
+                    var revival = _revivals[i];
+                    _revivals.RemoveAt(i);
+                    Unit.Spawn(revival.unit.PrefabFor(_team), new Vector2(revival.point.x, Ground.Instance.HeightAt(revival.point.x)));
+                }
         }
 
         // 이번 맵(양 진영 같다) — 런 밖이면 없음
@@ -144,6 +165,11 @@ namespace GnorpWar
 
         public void Stop() => _running = false;
 
+        // 물레방앗간 신화 — 이 진영의 가속 중인 기물이 발동할 때 효과를 2번 낸다(전투 동안, 패시브가 전투 시작 때 켠다). 곱하는 곳은 Fire
+        private bool _doubleWhileHasted;
+
+        public void DoubleFireWhileHasted() => _doubleWhileHasted = true;
+
         public void SummonAtSmallTower() => _summonAtSmallTower = true;
 
         // 신화는 §7 능력과 함께 켜지지만, 이 하나로도 작은 타워 소환이 켜지게 둘을 같이 올린다
@@ -155,6 +181,7 @@ namespace GnorpWar
             if (!_running || BattleManager.BoardsStopped)
                 return;
 
+            Revive();
             foreach (Slot slot in _slots)
                 slot.FiredThisFrame = false;
             // 맵의 쿨다운 진행 배율(얼음 ×0.5 · 정글 ×2)은 가속과 곱한다
@@ -204,6 +231,9 @@ namespace GnorpWar
 
             // 늪지 — 한 번 발동에 효과를 여러 번
             int repeats = Map != null ? Map.FireRepeats : 1;
+            // 물레방앗간 신화 — 가속 중인 기물은 발동할 때 효과를 2번 낸다(맵의 반복과는 곱한다)
+            if (_doubleWhileHasted && _slots[index].Haste > 0f)
+                repeats *= 2;
             for (int r = 0; r < repeats; r++)
             {
                 if (definition.Unit != null)

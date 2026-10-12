@@ -81,6 +81,8 @@ namespace GnorpWar
         private static void Add(List<TowerModifier> list, TowerModifier modifier)
         {
             Version++;
+            if (Shared[0] != null || Shared[1] != null)
+                StatBook.MarkChanged();   // 타워 효과를 함께 받는 유닛이 다시 계산하게
             for (int i = 0; i < list.Count; i++)
             {
                 TowerModifier m = list[i];
@@ -92,6 +94,36 @@ namespace GnorpWar
             }
             list.Add(modifier);
         }
+
+        // 이 진영의 타워 스탯 변경(전투 동안 · 영구히 전부)을 함께 받는 유닛들(화살 강화기 신화: 궁병) — 전투 동안. 없으면 null.
+        // 공격력 · 공격속도 · 체력은 유닛의 스탯 계산(Unit.TeamSum)에 같은 방식으로 얹히고, 사거리 · 화살 수는 스탯이 아니라 SharedCompute로 읽는다.
+        // 스탯이 아닌 타워 효과(데스매치 공격 · 처치 시 추가 화살 · 피해 반사 · 걷기)는 넘어가지 않는다
+        private static readonly IUnitFilter[] Shared = new IUnitFilter[2];
+
+        public static void ShareWithUnits(Team team, IUnitFilter units)
+        {
+            Shared[(int)team] = units;
+            StatBook.MarkChanged();
+        }
+
+        private static bool SharedWith(Team team, UnitDefinition unit) => Shared[(int)team] != null && Shared[(int)team].AppliesFor(team, unit);
+
+        public static void AccumulateShared(Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum)
+        {
+            if (stat == UnitStat.MoveSpeed || !SharedWith(team, unit))
+                return;
+            TowerStat tower = stat == UnitStat.Attack ? TowerStat.Attack : stat == UnitStat.MaxHp ? TowerStat.MaxHp : TowerStat.AttackSpeed;
+            foreach (TowerModifier m in Battle[(int)team])
+                if (m.Stat == tower)
+                    sum.Add(m.Op, m.Value);
+            foreach (TowerModifier m in Run[(int)team])
+                if (m.Stat == tower)
+                    sum.Add(m.Op, m.Value);
+        }
+
+        // 유닛 스탯이 아닌 것(사거리 · 한 번에 쏘는 수) — 함께 받는 유닛이면 타워와 같은 계산을 그 유닛의 값에, 아니면 그대로
+        public static float SharedCompute(Team team, UnitDefinition unit, TowerStat stat, float baseValue)
+            => SharedWith(team, unit) ? Compute(team, stat, baseValue) : baseValue;
 
         // 데스매치에서도 타워가 공격하는 진영(오버드라이브) — 전투 동안
         private static readonly bool[] Deathmatch = new bool[2];
@@ -130,6 +162,7 @@ namespace GnorpWar
             Deathmatch[0] = Deathmatch[1] = false;
             ArrowsOnKill[0] = ArrowsOnKill[1] = 0;
             Reflect[0] = Reflect[1] = false;
+            Shared[0] = Shared[1] = null;
             Follows[0] = Follows[1] = default;
             Version++;
         }

@@ -28,13 +28,44 @@ namespace GnorpWar
         private bool _spent;
         // 관통 — 적을 맞혀도 멈추지 않고 땅·벽에 닿을 때까지. 한 적은 한 번만
         private bool _pierce;
+        // 관통한 화살이 적을 맞힐 때마다 피해에 곱하는 값(관통탄 특허국 신화 ×2) — 1이면 그대로
+        private float _pierceHitFactor;
+        // 높은 고도에서 쏜 화살인가 — 맞은 적 유닛을 켜진 효과에 알린다(기름투하대 신화)
+        private bool _highGround;
         private readonly System.Collections.Generic.HashSet<IDamageable> _pierced = new System.Collections.Generic.HashSet<IDamageable>();
         private float _lifeTimer;
         private readonly System.Collections.Generic.List<Collider2D> _splashHits = new System.Collections.Generic.List<Collider2D>();
 
+        // 실려 날아가는 유닛(콜로서스 신화 — 톱니거인이 발사한 톱니병사) — 날아가는 동안 그 유닛 그림으로 보이고, 닿은 자리에 이 진영의 유닛으로 선다. 없으면 null
+        private UnitDefinition _carried;
+        private BuildingDefinition _carrySource;
+        private SpriteRenderer _renderer;
+        private Sprite _baseSprite;
+
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            _renderer = GetComponentInChildren<SpriteRenderer>();
+            _baseSprite = _renderer.sprite;
+        }
+
+        // Launch 뒤에 — 이 탄은 unit 한 기다. 적을 맞히든 땅에 떨어지든 그 자리에 선다(소환 — source = 낳은 기물)
+        public void Carry(UnitDefinition unit, BuildingDefinition source)
+        {
+            _carried = unit;
+            _carrySource = source;
+            _renderer.sprite = unit.PrefabFor(_team).GetComponentInChildren<SpriteRenderer>().sprite;
+        }
+
+        // 실린 유닛을 지금 자리의 땅에 세운다 — 게임 규칙상의 소환이라 BoardRunner.Summon을 지난다(빈 칸 찾기 · 소환 효과)
+        private void Land()
+        {
+            if (_carried == null)
+                return;
+            UnitDefinition unit = _carried;
+            _carried = null;
+            float x = _rb.position.x;
+            BoardRunner.For(_team).Summon(unit, 1, -1, new Vector2(x, Ground.Instance.HeightAt(x)), _carrySource);
         }
 
         // 풀에서 다시 꺼낼 때마다 — 지난번 비행의 흔적(회복 종류)을 지운다
@@ -45,6 +76,9 @@ namespace GnorpWar
             _owner = null;
             _shooter = null;
             _pierce = false;
+            _highGround = false;
+            _carried = null;
+            _renderer.sprite = _baseSprite;
             _pierced.Clear();
             _splashRadius = 0f;
             _lifeTimer = Lifetime;
@@ -72,7 +106,23 @@ namespace GnorpWar
         }
 
         // Launch 뒤에 — 이번 비행은 적을 관통한다(관통탄 특허국)
-        public void Pierce() => _pierce = true;
+        public void Pierce(float hitFactor = 1f)
+        {
+            _pierce = true;
+            _pierceHitFactor = hitFactor;
+        }
+
+        // Launch 뒤에 — 높은 고도에서 쏜 화살이다(쏘는 순간 기준 · 타워는 적 유닛에게 늘)
+        public void HighGround() => _highGround = true;
+
+        // 적에게 피해를 준다 — 높은 고도에서 쏜 화살이 적 유닛을 맞혔으면 켜진 효과에 알린다
+        private void Deal(IDamageable target, Vector2 direction)
+        {
+            target.TakeDamage(_damage, direction, _push, Shooter);
+            if (_highGround && target is Unit victim)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    e.Effect.OnHighGroundHit(victim, _damage, Shooter);
+        }
 
         // 쏜 유닛이 그사이 죽어 풀에서 다른 유닛으로 다시 쓰였으면 처치자 없음
         private IDamageable Shooter => _shooter is Unit unit && unit.Life != _shooterLife ? null : _shooter;
@@ -98,6 +148,7 @@ namespace GnorpWar
             _lifeTimer -= Time.fixedDeltaTime;
             if (_lifeTimer <= 0f)
             {
+                Land();
                 gameObject.SetActive(false);
                 return;
             }
@@ -139,11 +190,14 @@ namespace GnorpWar
                 if (_pierce)
                 {
                     if (_pierced.Add(damageable))
-                        damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, Shooter);
+                    {
+                        Deal(damageable, _rb.linearVelocity.normalized);
+                        _damage *= _pierceHitFactor;
+                    }
                     return;
                 }
                 if (_splashRadius <= 0f)
-                    damageable.TakeDamage(_damage, _rb.linearVelocity.normalized, _push, Shooter);
+                    Deal(damageable, _rb.linearVelocity.normalized);
             }
 
             if (_splashRadius > 0f)
@@ -151,6 +205,7 @@ namespace GnorpWar
 
             // 적이든 바닥·벽이든 닿으면 끝 (같은 스텝에 여러 번 불려도 한 번만)
             _spent = true;
+            Land();
             gameObject.SetActive(false);
         }
 

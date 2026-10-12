@@ -22,8 +22,25 @@ namespace GnorpWar
         {
             StatModifier modifier = _modifier.Scaled(_perTier, level);
             StatBook.AddForBattle(board.Team, this, modifier);
+            // 훈련용 허수아비 신화 — 이 기물(이 칸의 한 채)이 올린 값이 전투가 끝나도 남는다: 발동을 그 기물의 스택으로 적어 두고,
+            // 다음 전투부터는 KeepBattleStatPassive가 전투 시작 때 스택만큼 다시 건다. 기물에 딸린 값이라 팔면 같이 사라진다(사용자 10/13)
+            OwnedBuilding self = board.Slots[slot].Building;
+            foreach (BuildingPassive passive in self.Passives)
+                if (passive is KeepBattleStatPassive)
+                {
+                    self.AddStacks(1);
+                    break;
+                }
             board.AddBattleGain(slot, modifier.Op, modifier.Value);
             BuffLinks.ToUnits(board.Team, slot, BuffLinks.KindOf(modifier.Stat), this);
+        }
+
+        // 발동 stacks번이 쌓은 값(지금 등급 기준) — +는 더하고 ×는 거듭 곱한다
+        public StatModifier Stacked(int level, int stacks)
+        {
+            StatModifier modifier = _modifier.Scaled(_perTier, level);
+            modifier.Value = modifier.Op == StatOp.Multiply ? Mathf.Pow(modifier.Value, stacks) : modifier.Value * stacks;
+            return modifier;
         }
 
         public override bool BattleGain(out StatOp op)

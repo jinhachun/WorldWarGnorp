@@ -3,10 +3,12 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 합치기 보상 업그레이드 고르기 창(아웃게임기획 §4, 사용자 10/13) — 합치기 연출이 끝난 직후 상점 위에 카드 셋이 뜨고, 하나를 누르면 닫힌다.
-    // 연쇄로 합쳐져 대기가 여럿이면 하나 고를 때마다 다음 셋으로 바뀐다. 떠 있는 동안에는 화면 전체를 덮는 판이 상점 조작을 막는다.
-    // 카드 = 등급 색 외곽선(기물 등급 테두리와 같은 색 · 같은 강조 — BuildingRarity.FrameColor, UI/ButtonHover) · 아이콘(원본 크기) · 이름 · 지금 등급의 효과 한 줄.
-    // 언제 뜨는지는 UI/ShopPanel이 정한다(Show)
+    // 업그레이드 고르기 창(아웃게임기획 §4, 사용자 10/13) — 고를 것(RunState.PendingUpgrades)이 있으면 지도 씬 어디서든 카드가 뜨고, 하나를 누르면 닫힌다(대기가 남았으면 다음 것).
+    //   합치기 보상: 상점에서 합치기 연출이 끝난 직후, 카드 셋.
+    //   지역 특수 업그레이드(신화): 국가를 고른 직후(시작) · 영주를 멸망시키고 지도로 돌아와 AI 턴 재생이 끝난 뒤, 카드 1~3장 + 머리말.
+    // 떠 있는 동안에는 화면 전체를 덮는 판이 지도 · 상점 조작을 막는다.
+    // 카드 = 등급 색 외곽선(기물 등급 테두리와 같은 색 · 같은 강조 — BuildingRarity.FrameColor, UI/ButtonHover) · 아이콘(원본 크기) · 이름 · 그 등급의 효과 한 줄.
+    // 카드들은 외곽선 두께만큼 겹쳐 붙어 있다(틈으로 뒤가 비치지 않게 · 붙은 자리의 선은 한 줄)
     public class UpgradePicker : MonoBehaviour
     {
         [System.Serializable]
@@ -22,13 +24,21 @@ namespace GnorpWar
             public Text Body;
         }
 
-        [Tooltip("화면 전체를 덮는 어두운 판 — 뒤의 상점을 못 누르게 막는다")]
+        [Tooltip("화면 전체를 덮는 어두운 판 — 뒤의 지도 · 상점을 못 누르게 막는다. 카드와 머리말은 이 판의 자식이다")]
         [SerializeField] private Image _dim;
         [SerializeField] private RectTransform _cardRow;
         [SerializeField] private Card[] _cards;
+        [Tooltip("머리말 — 지역 특수 업그레이드를 고를 때만 보인다(도트 폰트)")]
+        [SerializeField] private Text _header;
+        [Tooltip("상점 — 합치기 연출이 도는 동안에는 막기만 하고 카드는 연출이 끝난 뒤에 보인다")]
+        [SerializeField] private ShopPanel _shop;
+        [Tooltip("AI 턴 재생 동안 켜져 있는 판(SkipReplay) — 그동안에는 뜨지 않는다(재생이 끝난 뒤에 고른다)")]
+        [SerializeField] private GameObject _replay;
 
-        // 카드 셋이 바뀐 직후 이만큼(초)은 누르기를 받지 않는다 — 연쇄 합치기에서 더블클릭이 다음 셋까지 고르지 않게
+        // 카드 셋이 바뀐 직후 이만큼(초)은 누르기를 받지 않는다 — 더블클릭이 다음 것까지 고르지 않게
         private const float ClickGuard = 0.2f;
+        // 카드 외곽선의 두께(px) — 이만큼 겹쳐 놓는다
+        private const float Outline = 4f;
 
         private float _dimAlpha;
         private RunState.UpgradeOffer _shown;
@@ -50,39 +60,44 @@ namespace GnorpWar
             }
         }
 
-        // 카드 셋은 외곽선 두께만큼 겹쳐 붙어 있다(틈으로 뒤가 비치지 않게 · 붙은 자리의 선은 한 줄) — 올린 카드를 맨 위에 그려 그 카드의 외곽선이 네 변 다 제 색으로 보이게
         private void Update()
         {
-            foreach (Card card in _cards)
-                if (card.Hover.Hovered)
-                    card.Button.transform.SetAsLastSibling();
-        }
-
-        // block = 고를 것이 남았다(상점 조작을 막는다) · cards = 카드를 보인다(합치기 연출이 끝났다). 막기만 하는 동안에는 판이 투명하다
-        public void Show(bool block, bool cards)
-        {
-            if (gameObject.activeSelf != block)
-                gameObject.SetActive(block);
+            bool block = RunState.PendingUpgrades.Count > 0 && !_replay.activeInHierarchy;
+            if (_dim.gameObject.activeSelf != block)
+                _dim.gameObject.SetActive(block);
             if (!block)
             {
                 _shown = null;
                 return;
             }
+            // 막기만 하는 동안(합치기 연출)에는 판이 투명하다
+            bool cards = !_shop.MergePlaying;
             _dim.color = new Color(_dim.color.r, _dim.color.g, _dim.color.b, cards ? _dimAlpha : 0f);
             if (_cardRow.gameObject.activeSelf != cards)
                 _cardRow.gameObject.SetActive(cards);
+            if (!cards)
+                return;
+            // 올린 카드를 맨 위에 그린다 — 겹친 변까지 그 카드의 외곽선이 네 변 다 제 색으로 보이게
+            foreach (Card card in _cards)
+                if (card.Hover.Hovered)
+                    card.Button.transform.SetAsLastSibling();
             RunState.UpgradeOffer offer = RunState.PendingUpgrades[0];
-            if (!cards || offer == _shown)
+            if (offer == _shown)
                 return;
             _shown = offer;
             _shownAt = Time.unscaledTime;
+            _header.enabled = offer.Rarity == BuildingRarity.Mythic;
+            int count = offer.Choices.Length;
             for (int i = 0; i < _cards.Length; i++)
             {
                 Card card = _cards[i];
-                bool used = i < offer.Choices.Length;
+                bool used = i < count;
                 card.Button.gameObject.SetActive(used);
                 if (!used)
                     continue;
+                // 후보 수만큼만, 묶음째 가운데로
+                var rect = (RectTransform)card.Button.transform;
+                rect.anchoredPosition = new Vector2((i - (count - 1) * 0.5f) * (rect.sizeDelta.x - Outline), 0f);
                 UpgradeDefinition choice = offer.Choices[i];
                 card.Hover.Base = offer.Rarity.FrameColor();
                 card.Icon.sprite = choice.Icon;

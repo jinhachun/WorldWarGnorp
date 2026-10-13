@@ -88,6 +88,29 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1f29994fd802ed14d8cfe0cb25808844, type: 2}
   - {fileID: 11400000, guid: 74e7225e7591e0f4ba8cfd9b84a3524b, type: 2}
   - {fileID: 11400000, guid: 4094bd79313084e4fb167ce9386c2b43, type: 2}
+  - {fileID: 11400000, guid: 5a69a9d1ff96e20418147fa8d498ed51, type: 2}
+  - {fileID: 11400000, guid: d233327f0ef5c284dbc09c4df737ef3b, type: 2}
+  _specialUpgrades:
+  - {fileID: 11400000, guid: 05b66e1e26c83164697ae11f2ba2b32b, type: 2}
+  - {fileID: 11400000, guid: a35d46e5673819746b8df1e5cfe9595e, type: 2}
+  - {fileID: 11400000, guid: a83369441615f994092ef7acc367560e, type: 2}
+  - {fileID: 11400000, guid: 04e9d9f25552c804b9cdd64033812766, type: 2}
+  - {fileID: 11400000, guid: 415ad5449d8a2554c85cda8519a7f638, type: 2}
+  - {fileID: 11400000, guid: d318e3c96deeaaf4ca67b8329ca32973, type: 2}
+  - {fileID: 11400000, guid: d430c60ca7ed0bf4387711d3064c1532, type: 2}
+  - {fileID: 11400000, guid: d68a2410b97e1dc4089295dd955187e1, type: 2}
+  - {fileID: 11400000, guid: 121594b68de2b86419c568a321bbe233, type: 2}
+  - {fileID: 11400000, guid: 1697e549d3eea54468f686a8109e9322, type: 2}
+  - {fileID: 11400000, guid: efd928f1e7b510b40b768af8730593e5, type: 2}
+  - {fileID: 11400000, guid: 59a1747b8ea2481438a0f6e4bf4008bb, type: 2}
+  - {fileID: 11400000, guid: b5d8eaa9af800aa4eb1db19571724bf1, type: 2}
+  - {fileID: 11400000, guid: 96151829f6d469c45af0fb81c6335401, type: 2}
+  - {fileID: 11400000, guid: 28d6566054ba6834a8af9c2f8698779a, type: 2}
+  - {fileID: 11400000, guid: 86e5628365999be45a8e38d0612c8aa6, type: 2}
+  - {fileID: 11400000, guid: 7bea593e64f6198439658d93de6fdc6b, type: 2}
+  - {fileID: 11400000, guid: d3fa06da461e984408a30a8fa439b846, type: 2}
+  - {fileID: 11400000, guid: f63ed14b8618da049b6448236c8b87f5, type: 2}
+  _specialRegions: 10
   _rarityPrices: 0400000009000000100000001a0000002800000050000000
   _rarityWeightsFirst:
   - 60

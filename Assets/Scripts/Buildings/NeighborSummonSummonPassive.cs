@@ -19,7 +19,7 @@ namespace GnorpWar
 
         public override void OnSummonedFrom(BoardRunner board, int slot, int sourceSlot, Unit unit)
         {
-            if (sourceSlot == slot + 1 && unit.Definition == _when)
+            if (board.Linked(slot, sourceSlot, sourceSlot == slot + 1) && unit.Definition == _when)
             {
                 board.Summon(_summon, Count(board.Slots[slot].Building.Level), slot);
                 BuffLinks.ToSlot(board.Team, sourceSlot, slot, BuffKind.Trigger);

@@ -18,7 +18,7 @@ namespace GnorpWar
         {
             Unit smallest = null;
             foreach (Unit unit in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
-                if (unit.IsAlive && unit.Team == board.Team && unit.Definition.Category == _category && (smallest == null || unit.Size < smallest.Size))
+                if (unit.IsAlive && unit.Team == board.Team && UnitAliases.Is(unit.Team, unit.Definition, _category) && (smallest == null || unit.Size < smallest.Size))
                     smallest = unit;
             if (smallest != null)
             {

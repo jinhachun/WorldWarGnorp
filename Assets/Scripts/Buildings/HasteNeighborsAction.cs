@@ -17,8 +17,10 @@ namespace GnorpWar
 
         public override void Execute(BoardRunner board, int slot, int level)
         {
-            for (int i = 0; i < slot; i++)
+            for (int i = 0; i < board.Slots.Length; i++)
             {
+                if (!board.Linked(slot, i, i < slot))
+                    continue;
                 board.Haste(i, Seconds(level));
                 // 쿨다운 없는 기물은 가속해도 달라지는 게 없다 — 알리지 않는다
                 if (board.Slots[i].Building != null && board.Slots[i].Cooldown > 0f)

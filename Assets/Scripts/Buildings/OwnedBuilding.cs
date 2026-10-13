@@ -36,7 +36,12 @@ namespace GnorpWar
         public static int CooldownLevelOf(BuildingDefinition definition, int upgrades)
             => LevelOf(definition, upgrades) + ((int)definition.Rarity + upgrades >= (int)BuildingRarity.Mythic ? 1 : 0);
         // 지금 등급의 원래 쿨다운(풍차 · 가속 · 맵 배율을 곱하기 전) — 발동(BoardRunner)과 툴팁이 같이 읽는다
-        public float Cooldown => _definition.CooldownAt(CooldownLevel);
+        public float Cooldown => _definition.CooldownAt(CooldownLevel) * _cooldownScale;
+
+        // 이 한 채에 영구히 붙은 쿨다운 배율(계몽주의 — 전투에서 질 때마다 무작위 기물 하나에 ×0.8) — 팔면 사라지고, 합쳐지면 곱해진다
+        [SerializeField] private float _cooldownScale = 1f;
+        public float CooldownScale => _cooldownScale;
+        public void ScaleCooldown(float factor) => _cooldownScale *= factor;
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
         public bool CanUpgrade => Rarity < BuildingRarity.Mythic;

@@ -27,6 +27,39 @@ namespace GnorpWar
             foreach (Lord lord in State.Lords)
                 if (!lord.IsPlayer)
                     _towers[lord.Id] = NewTower();
+
+            // 지역 특수 업그레이드 — 전체에서 무작위로 뽑아 지역마다 하나씩(겹침 없음), 내 시작 땅은 뺀다. 남은 것은 시작 때 고를 후보가 된다
+            RegionSpecial = new UpgradeDefinition[State.Owner.Length];
+            UnplacedSpecials.AddRange(battle.SpecialUpgrades);
+            var lands = new List<int>();
+            for (int region = 0; region < RegionSpecial.Length; region++)
+                if (region != playerRegion)
+                    lands.Add(region);
+            for (int i = 0; i < battle.SpecialRegions && UnplacedSpecials.Count > 0 && lands.Count > 0; i++)
+            {
+                int pick = random.Next(UnplacedSpecials.Count), land = random.Next(lands.Count);
+                RegionSpecial[lands[land]] = UnplacedSpecials[pick];
+                UnplacedSpecials.RemoveAt(pick);
+                lands.RemoveAt(land);
+            }
+        }
+
+        // 지역 특수 업그레이드(아웃게임기획 §4) — [지역] = 그 땅에 놓인 것(없으면 null). 런마다 새로 놓는다(지도 에셋에 굽지 않는다).
+        // AI 영주는 그 땅을 가진 동안 쓴다(SyncSpecials). 내가 그 땅에서 싸워 이기면 내 것이 되고 땅에서는 사라진다(RunState.FinishBattle)
+        public readonly UpgradeDefinition[] RegionSpecial;
+        // 지도에 놓이지 않은 것 — 시작 때 고르는 후보가 여기서 나온다(RunState.ChooseNation)
+        public readonly List<UpgradeDefinition> UnplacedSpecials = new List<UpgradeDefinition>();
+
+        // lord의 탑에 「지금 가진 땅의 지역 특수 업그레이드」를 다시 적는다 — 상점 · 전투 · 표시 앞에 부른다(땅은 턴마다 넘어간다). 탑이 없으면(나 · 사라진 영주) 아무것도 안 한다
+        public void SyncSpecials(Lord lord)
+        {
+            TowerState tower = TowerOf(lord);
+            if (tower == null)
+                return;
+            tower.LandSpecials.Clear();
+            for (int region = 0; region < RegionSpecial.Length; region++)
+                if (RegionSpecial[region] != null && State.Owner[region] == lord.Id)
+                    tower.LandSpecials.Add(RegionSpecial[region]);
         }
 
         public WorldMapDefinition Map => _world.Map;
@@ -36,10 +69,9 @@ namespace GnorpWar
 
         public float PowerOf(Lord lord) => TowerPower.Of(_towers[lord.Id].Field, _battle, _world);
 
-        // 턴 수입 = 1라운드 상점 골드 + 땅 수 × 땅당 골드 + 업그레이드(곡창) + 약자 보정(가장 큰 영주보다 땅이 적은 만큼), 직전 침략을 이겼으면 승리 보너스
+        // 턴 수입 = 턴마다 얻는 골드(RunState.TurnGold — 기본 + 땅 + 곡창, 중상주의면 ×N) + 약자 보정(가장 큰 영주보다 땅이 적은 만큼), 직전 침략을 이겼으면 승리 보너스
         public int IncomeOf(Lord lord)
-            => _battle.ShopGold + State.LandsOf(lord) * _world.GoldPerLand + Mathf.RoundToInt(UpgradeDefinition.TotalOf(_towers[lord.Id].Upgrades, UpgradeKind.TurnGold))
-               + WorldTurn.UnderdogGold(State, lord) + (lord.WonLastInvasion ? _battle.WinBonus : 0);
+            => RunState.TurnGold(_towers[lord.Id], State.LandsOf(lord)) + WorldTurn.UnderdogGold(State, lord) + (lord.WonLastInvasion ? _battle.WinBonus : 0);
 
         // ① 살아 있는 AI 영주 전원이 상점을 한 번씩
         public void ShopPhase()
@@ -55,8 +87,13 @@ namespace GnorpWar
             foreach (Lord lord in WorldTurn.AiOrder(State, _random))
             {
                 Lord target = WorldTurn.AiInvade(State, lord, PowerOf, _random, out int region, out bool won);
-                if (target != null)
-                    report?.Invoke(lord, target, region, won);
+                if (target == null)
+                    continue;
+                // 승패에 걸린 지역 특수 업그레이드(제국주의 · 계몽주의) — 이긴 탑 · 진 탑
+                SyncSpecials(lord);
+                SyncSpecials(target);
+                RunState.ApplyBattleResult(TowerOf(won ? lord : target), TowerOf(won ? target : lord));
+                report?.Invoke(lord, target, region, won);
             }
         }
 
@@ -114,12 +151,16 @@ namespace GnorpWar
         // 턴 상점 한 번 — 턴 수입을 받고 본다
         private void Shop(Lord lord)
         {
+            SyncSpecials(lord);
             Shop(lord, IncomeOf(lord));
             lord.WonLastInvasion = false;   // 승리 보너스는 이긴 다음 상점에 한 번
         }
 
         private void Shop(Lord lord, int gold)
         {
+            // 가진 땅의 지역 특수 업그레이드를 탑에 적고, 얻는 순간 한 번뿐인 것(절대왕정)을 처음 가진 영주면 받는다
+            SyncSpecials(lord);
+            RunState.GrantLandSpecials(_towers[lord.Id]);
             // 등급 단계 = 그 턴의 단계(턴 수만으로 오른다)
             int tier = _world.ShopTier(State.Turn - 1);
             // 영주가 수십 명이라 상점 한 번마다의 로그는 끈다

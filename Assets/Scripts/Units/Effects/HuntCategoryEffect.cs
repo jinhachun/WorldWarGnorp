@@ -17,7 +17,7 @@ namespace GnorpWar
 
         public override void OnAttack(Unit attacker, IDamageable target, int stacks)
         {
-            if (target is Unit enemy && enemy.Definition.Category == _prey)
+            if (target is Unit enemy && UnitAliases.Is(enemy.Team, enemy.Definition, _prey))
             {
                 attacker.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Multiply, Factor(Level(attacker.Team))));
                 BuffLinks.EffectToPoint(attacker.Team, this, attacker.Position, BuffKind.Attack);

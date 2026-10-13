@@ -180,13 +180,22 @@ namespace GnorpWar
         // 상대를 고르기 전(상점)에 깔리는 지형 — 첫 맵(기본)
         private static MapDefinition ShopMap => _config.Maps[0];
 
-        // 이번 턴 내 수입 = 1라운드 상점 골드 + 내 땅 수 × 땅당 골드 + 업그레이드(곡창), 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 + 약자 보정 — WorldRun.IncomeOf)
-        public static int Income
-            => _config.ShopGold + Lands * _config.World.GoldPerLand + Mathf.RoundToInt(UpgradeDefinition.TotalOf(Player.Upgrades, UpgradeKind.TurnGold))
-               + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+        // 이번 턴 내 수입 = 턴마다 얻는 골드(TurnGold), 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 + 약자 보정 — WorldRun.IncomeOf)
+        public static int Income => TurnGold(Player, Lands) + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+
+        // 턴마다 얻는 골드 = 1라운드 상점 골드 + 땅 수 × 땅당 골드 + 업그레이드(곡창). 중상주의면 통째로 ×N(승리 보너스 · 약자 보정은 여기 밖이라 안 곱한다)
+        public static int TurnGold(TowerState tower, int lands)
+        {
+            float gold = _config.ShopGold + lands * _config.World.GoldPerLand + UpgradeDefinition.TotalOf(tower.Upgrades, UpgradeKind.TurnGold);
+            UpgradeDefinition mercantilism = tower.Special(SpecialKind.Mercantilism);
+            return Mathf.RoundToInt(mercantilism != null ? gold * mercantilism.ValueAt(BuildingRarity.Mythic) : gold);
+        }
 
         // 턴이 시작할 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 받는다(턴당 한 번 — 씬을 다시 불러와도 두 번 주지 않는다).
         // 지도에서 보는 영주의 탑이 이번 턴에 싸울 탑이 되도록, 상점에 들어갈 때가 아니라 턴이 열릴 때 한다
+        // 이번 턴이 이미 열렸나(수입 · 진열을 받았나) — 지도가 시작 업그레이드를 고르기 전에 첫 턴을 열지 않으려고 묻는다
+        public static bool TurnOpened => _shopEnteredRound == Round;
+
         public static void BeginTurn()
         {
             if (_shopEnteredRound == Round)
@@ -237,6 +246,7 @@ namespace GnorpWar
             Opponent = World.State.OwnerOf(region);
             _invadedRegion = region;
             _opponentTower = World.TowerOf(Opponent);
+            World.SyncSpecials(Opponent);   // 그 영주가 지금 가진 땅의 지역 특수 업그레이드로 싸운다
             RunBook.Use(Team.Enemy, _opponentTower.Book);
             Map = CheatMap != null ? CheatMap : World.Map.TerrainOf(region);
             Phase = RunPhase.Battle;
@@ -260,7 +270,107 @@ namespace GnorpWar
             LastGains = WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
             Phase = RunPhase.Aftermath;
             NotifyBattleWon(won ? Player : _opponentTower);
+            // 지역 특수 업그레이드 — 영주를 멸망시키면(땅을 전부 차지하면) 그 영주가 가졌던 것 중 최대 셋에서 하나를 고른다(사용자 결정 10/13).
+            // 고르지 않은 것 · 멸망이 아닌 승리(연합의 땅 일부)로 넘어온 땅의 것은 사라진다 — 내 땅에는 놓이지 않는다
+            var fallen = new System.Collections.Generic.List<UpgradeDefinition>();
+            foreach (int land in LastGains)
+            {
+                if (World.RegionSpecial[land] != null)
+                    fallen.Add(World.RegionSpecial[land]);
+                World.RegionSpecial[land] = null;
+            }
+            if (won && !Opponent.Alive && fallen.Count > 0)
+            {
+                while (fallen.Count > UpgradeChoices)
+                    fallen.RemoveAt(Random.Range(0, fallen.Count));
+                Pending.Add(new UpgradeOffer { Rarity = BuildingRarity.Mythic, Choices = fallen.ToArray() });
+                UpgradesChanged?.Invoke();
+            }
+            ApplyBattleResult(won ? Player : _opponentTower, won ? _opponentTower : Player);
         }
+
+        // 이 탑이 차례인 것처럼 action을 한다 — 얻기(Acquire) 같은 상점 규칙이 그 탑에 걸린다
+        private static void As(TowerState tower, System.Action action)
+        {
+            TowerState side = _side;
+            try
+            {
+                _side = tower;
+                action();
+            }
+            finally
+            {
+                _side = side;
+            }
+        }
+
+        // 전투 한 번의 승패에 걸린 지역 특수 업그레이드 — 내 전투도 AI 영주끼리의 침략(World/WorldRun.AiPhase)도 여기를 지난다. 탑이 없는 쪽은 null
+        //   제국주의: 이긴 탑이 진 탑의 필드 기물 중 무작위 하나를 등급 그대로 얻는다(공짜로 — Acquire)
+        //   계몽주의: 진 탑의 쿨다운 있는 필드 기물 중 무작위 하나의 쿨다운이 영구히 ×N
+        public static void ApplyBattleResult(TowerState winner, TowerState loser)
+        {
+            if (winner != null && loser != null && winner.Special(SpecialKind.Imperialism) != null)
+            {
+                OwnedBuilding[] spoils = System.Array.FindAll(loser.Field, b => !OwnedBuilding.IsEmpty(b));
+                if (spoils.Length > 0)
+                {
+                    OwnedBuilding spoil = spoils[Random.Range(0, spoils.Length)];
+                    As(winner, () => Acquire(spoil.Definition, spoil.Upgrades));
+                }
+            }
+            UpgradeDefinition enlightenment = loser != null ? loser.Special(SpecialKind.Enlightenment) : null;
+            if (enlightenment != null)
+            {
+                OwnedBuilding[] cooling = System.Array.FindAll(loser.Field, b => !OwnedBuilding.IsEmpty(b) && b.Definition.Cooldown > 0f);
+                if (cooling.Length > 0)
+                {
+                    OwnedBuilding picked = cooling[Random.Range(0, cooling.Length)];
+                    picked.ScaleCooldown(enlightenment.ValueAt(BuildingRarity.Mythic));
+                    OwnedBuilding.NotifyEffect(picked);
+                }
+            }
+        }
+
+        // 가진 땅의 지역 특수 업그레이드 중 얻는 순간 한 번뿐인 것(절대왕정)을 이 탑이 처음 가졌으면 지금 받는다 — AI 영주의 상점 앞(World/WorldRun.Shop)
+        public static void GrantLandSpecials(TowerState tower)
+        {
+            foreach (UpgradeDefinition upgrade in tower.LandSpecials)
+                if (upgrade.Special == SpecialKind.MythicBuilding && tower.GrantedOnce.Add(upgrade))
+                    As(tower, AcquireMythic);
+        }
+
+        // 절대왕정 — 이번 판에 등장하는 무작위 기물 1개를 신화 등급으로 얻는다(공짜 — 판매가 0골드 · 놓을 자리가 없으면 못 얻는다, 판도라의 상자와 같다)
+        private static void AcquireMythic()
+        {
+            BuildingDefinition pick = Pool[Random.Range(0, Pool.Length)];
+            Acquire(pick, BuildingRarity.Mythic - pick.Rarity);
+        }
+
+        // 기물 툴팁용(보드 없이 — 상점 · 지도에서도) — building이 든 탑(내 탑 · 침략했거나 보고 있는 영주의 탑)이 쓰는 지역 특수 업그레이드를 읽는다.
+        // 징병제: 쿨다운마다 유닛을 소환하는 기물이 한 번에 더 소환하는 수 / 군주제: 이 기물이 그 탑의 맨 위층이라 발동할 때마다 효과를 2번 내는가
+        public static int ExtraSummonsFor(OwnedBuilding building)
+            => TowerHolding(building)?.Special(SpecialKind.Conscription) is UpgradeDefinition conscription ? Mathf.RoundToInt(conscription.ValueAt(BuildingRarity.Mythic)) : 0;
+
+        public static bool FiresTwice(OwnedBuilding building)
+        {
+            TowerState tower = TowerHolding(building);
+            if (tower == null || tower.Special(SpecialKind.Monarchy) == null)
+                return false;
+            return System.Array.FindLast(tower.Field, b => !OwnedBuilding.IsEmpty(b)) == building;
+        }
+
+        // building이 필드에 든 탑 — 내 탑, 아니면 상대(침략한 영주 · 지도에서 보는 영주)의 탑. 보관함 · 진열의 기물이면 null
+        private static TowerState TowerHolding(OwnedBuilding building)
+        {
+            foreach (TowerState tower in new[] { Player, _opponentTower ?? PreviewTower })
+                if (tower != null && System.Array.IndexOf(tower.Field, building) >= 0)
+                    return tower;
+            return null;
+        }
+
+        // 국가주의가 읽는 행복도 — 나는 지금 행복도, AI 영주는 고정값으로 친다
+        private const int AiHappinessForUpgrades = 3;
+        public static int HappinessFor(Team team) => team == Team.Ally ? Happiness : AiHappinessForUpgrades;
 
         // 전투에서 이긴 탑의 필드 기물들에게 알린다(스팀바론 신화 「전투에서 승리할 때마다,」) — 그동안 상점 규칙(얻기)은 그 탑에 걸린다.
         // 실제로 싸운 전투만이다 — AI 영주끼리의 승패(World/TowerPower)는 여기를 지나지 않는다
@@ -400,8 +510,31 @@ namespace GnorpWar
         public static void ChooseNation(BuildingNation nation)
         {
             SetNation(nation);
+            if (!NationChosen)
+                OfferStartSpecial();
             NationChosen = true;
         }
+
+        // 게임을 시작할 때 지역 특수 업그레이드 하나를 고른다(사용자 결정 10/13) — 지도에 놓이지 않은 것 중 셋이 후보다.
+        // 합치기 보상과 같은 대기열의 맨 앞에 신화 등급으로 싣는다(화면이 같은 고르기 창을 쓴다 — PendingUpgrades · ChooseUpgrade)
+        private static void OfferStartSpecial()
+        {
+            var pool = new System.Collections.Generic.List<UpgradeDefinition>(World.UnplacedSpecials);
+            var choices = new UpgradeDefinition[Mathf.Min(UpgradeChoices, pool.Count)];
+            for (int i = 0; i < choices.Length; i++)
+            {
+                int pick = Random.Range(0, pool.Count);
+                choices[i] = pool[pick];
+                pool.RemoveAt(pick);
+            }
+            if (choices.Length == 0)
+                return;
+            Pending.Insert(0, new UpgradeOffer { Rarity = BuildingRarity.Mythic, Choices = choices });
+            UpgradesChanged?.Invoke();
+        }
+
+        // region에 놓인 지역 특수 업그레이드(없으면 null) — 지도 표시 · 툴팁. 이름 · 아이콘 · 설명은 그 정의에서(Describe(ValueAt(신화)))
+        public static UpgradeDefinition SpecialAt(int region) => World.RegionSpecial[region];
 
         private static void SetNation(BuildingNation nation) => World.PlayerNation = nation;
 
@@ -453,7 +586,10 @@ namespace GnorpWar
 
         // 무료 리롤(업그레이드 「암시장」)이 남아 있으면 그것부터 쓴다 — 그동안 리롤 값은 0골드
         public static int FreeRerolls => _side.FreeRerolls;
-        public static int RerollCost => FreeRerolls > 0 ? 0 : _config.RerollCost;
+        public static int RerollCost => FreeRerolls > 0 ? 0 : CommunismPrice ?? _config.RerollCost;
+        // 공산주의 — 지금 차례인 탑이 가졌으면 상점의 모든 기물과 리롤이 이 값(아니면 null). 층 올리기 값 · 판매가는 그대로
+        private static int? CommunismPrice
+            => _side.Special(SpecialKind.Communism) is UpgradeDefinition communism ? Mathf.RoundToInt(communism.ValueAt(BuildingRarity.Mythic)) : (int?)null;
         public static bool CanReroll => Gold >= RerollCost;
 
         // 턴 상점이 열릴 때 — 남은 무료 리롤을 그 탑의 「턴마다 +N회」로 다시 채운다(지난 턴에 안 쓴 것은 넘어가지 않는다)
@@ -464,16 +600,18 @@ namespace GnorpWar
         {
             if (!CanReroll)
                 return;
+            Gold -= RerollCost;
             if (FreeRerolls > 0)
                 _side.FreeRerolls--;
-            else
-                Gold -= _config.RerollCost;
             ShopLocked = false;
             RollOffers();
             ForEachFieldPassive((passive, owned) => passive.OnReroll(owned));
         }
 
-        public static int PriceOf(BuildingDefinition definition) => _config.PriceOf(definition.Rarity);
+        public static int PriceOf(BuildingDefinition definition) => CommunismPrice ?? _config.PriceOf(definition.Rarity);
+
+        // 진열 칸마다 그 기물이 시작 등급에서 오른 횟수(중립외교 — 보통 0, 한 등급 오른 칸은 1). 값은 시작 등급 값 그대로고, 사면 그 등급으로 들어온다(합치기는 같은 등급끼리)
+        public static int[] OfferUpgrades => _side.OfferUpgrades;
 
         // 칸마다 등급을 가중치로 먼저 뽑고(풀에 없는 등급은 빼고), 그 등급의 건물 중 하나. onlyEmpty = 산 칸(빈칸)만 새로(상점 잠금).
         // 내 상점도 AI 영주의 상점도 그 등급 안에서 국가 비율을 건다(HomeOffer)
@@ -485,6 +623,9 @@ namespace GnorpWar
                 if (onlyEmpty && Offers[i] != null)
                     continue;
                 Offers[i] = HomeOffer(pool);
+                // 중립외교 — 일정 확률로 한 등급 오른 채 나온다. 전설은 오르지 않는다(신화는 상점에 나오지 않는다 — 사용자 결정 10/12)
+                OfferUpgrades[i] = _side.Special(SpecialKind.NeutralDiplomacy) is UpgradeDefinition diplomacy && Offers[i].Rarity < BuildingRarity.Legendary
+                                   && Random.value * 100f < diplomacy.ValueAt(BuildingRarity.Mythic) ? 1 : 0;
             }
         }
 
@@ -571,21 +712,24 @@ namespace GnorpWar
             // 내 상점이면 합치기를 한 번씩 적어 둔다 — 화면이 차례로 보여 준다(상태는 여기서 한 번에 끝난다)
             var steps = _side == Player && Merged != null ? new System.Collections.Generic.List<MergeStep>() : null;
             OwnedBuilding[] field = steps != null ? (OwnedBuilding[])Field.Clone() : null, storage = steps != null ? (OwnedBuilding[])Storage.Clone() : null;
-            OfferUpgrade(target.Rarity);
+            // 합치기 보상은 연쇄가 이어져도 하나 — 마지막 단계의 재료 등급으로(사용자 결정 10/13: 일반 → 고급 → 희귀로 이어지면 고급 하나)
+            BuildingRarity material = target.Rarity;
             target.Upgrade();
             steps?.Add(new MergeStep(target, field, storage));
             OwnedBuilding pair = FindMergeTarget(target.Definition, target.Upgrades, target);
             while (pair != null && target.CanUpgrade)
             {
                 Remove(target);
-                OfferUpgrade(pair.Rarity);
+                material = pair.Rarity;
                 pair.Upgrade();
                 pair.AddStacks(target.Stacks);
                 pair.AddSpent(target.SpentGold);
+                pair.ScaleCooldown(target.CooldownScale);
                 target = pair;
                 steps?.Add(new MergeStep(target, field, storage));
                 pair = FindMergeTarget(target.Definition, target.Upgrades, target);
             }
+            OfferUpgrade(material);
             if (steps != null)
                 Merged(steps);
             if (_side == Player)
@@ -593,7 +737,7 @@ namespace GnorpWar
             return target;
         }
 
-        // ── 합치기 보상 업그레이드(아웃게임기획 §4) — 합치기 한 단계마다 재료 등급의 업그레이드 셋 중 하나. 얻은 것은 그 탑에 런 동안 남는다(TowerState.Upgrades)
+        // ── 합치기 보상 업그레이드(아웃게임기획 §4) — 합치기 한 번(연쇄는 통틀어 한 번)마다 재료 등급의 업그레이드 셋 중 하나. 얻은 것은 그 탑에 런 동안 남는다(TowerState.Upgrades)
         // 고르기를 기다리는 한 번 — 합친 재료의 등급과 후보(서로 다른 종, 많아야 UpgradeChoices개)
         public class UpgradeOffer
         {
@@ -630,13 +774,16 @@ namespace GnorpWar
                 GainGold(value);
             else if (upgrade.Kind == UpgradeKind.FreeReroll)
                 _side.FreeRerolls += value;
+            else if (upgrade.Special == SpecialKind.MythicBuilding)
+                AcquireMythic();
         }
 
         // lord의 탑이 가진 업그레이드 — 종류별로 얻은 횟수 · 합쳐진 값 · 설명(처음 얻은 순서). 탑이 없는 영주면 빈 목록
         public static System.Collections.Generic.List<UpgradeHolding> UpgradesOf(Lord lord)
         {
+            World.SyncSpecials(lord);
             TowerState tower = lord.IsPlayer ? Player : World.TowerOf(lord);
-            return tower != null ? UpgradeDefinition.Summarize(tower.Upgrades) : new System.Collections.Generic.List<UpgradeHolding>();
+            return tower != null ? tower.Holdings() : new System.Collections.Generic.List<UpgradeHolding>();
         }
 
         // 전투 시작 — team의 탑(내 탑 · 침략한 영주의 탑)이 가진 업그레이드를 건다. spawns = 보드가 돈 뒤의 차례(소환 · 작은 타워), 아니면 그 앞(스탯 · 효과)
@@ -645,14 +792,14 @@ namespace GnorpWar
             TowerState tower = team == Team.Ally ? Player : _opponentTower;
             if (tower == null)
                 return;
-            foreach (UpgradeHolding holding in UpgradeDefinition.Summarize(tower.Upgrades))
+            foreach (UpgradeHolding holding in tower.Holdings())
                 if (spawns)
-                    holding.Definition.Spawn(team, holding.Value);
+                    holding.Definition.Spawn(team, holding.Value, holding.Count);
                 else
                     holding.Definition.Apply(team, holding.Value);
         }
 
-        // 합치기 한 단계 — material = 합친 재료의 등급. 내 탑이면 대기열에 쌓고(화면이 고르게 한다), 다른 탑(AI 영주)은 셋 중 무작위로 바로 얻는다.
+        // 합치기 한 번(연쇄 포함) — material = 마지막으로 합친 재료의 등급. 내 탑이면 대기열에 쌓고(화면이 고르게 한다), 다른 탑(AI 영주)은 셋 중 무작위로 바로 얻는다.
         // 공짜로 받은 기물(Acquire)은 합치기가 아니라 여기를 지나지 않는다
         private static void OfferUpgrade(BuildingRarity material)
         {
@@ -669,7 +816,11 @@ namespace GnorpWar
             }
             if (choices.Length == 0)
                 return;
-            if (_side == Player)
+            // 공화정 — 고르지 않고 후보를 모두 얻는다
+            if (_side.Special(SpecialKind.Republic) != null)
+                foreach (UpgradeDefinition choice in choices)
+                    GainUpgrade(choice, material);
+            else if (_side == Player)
                 Pending.Add(new UpgradeOffer { Rarity = material, Choices = choices });
             else
                 GainUpgrade(choices[Random.Range(0, choices.Length)], material);
@@ -722,7 +873,7 @@ namespace GnorpWar
             BuildingDefinition definition = Offers[offer];
             if (definition == null || Gold < PriceOf(definition))
                 return false;
-            return FindMergeTarget(definition, 0) != null || FirstEmpty(Field) >= 0 || FirstEmpty(Storage) >= 0;
+            return FindMergeTarget(definition, OfferUpgrades[offer]) != null || FirstEmpty(Field) >= 0 || FirstEmpty(Storage) >= 0;
         }
 
         public static void Buy(int offer)
@@ -734,14 +885,13 @@ namespace GnorpWar
             Gold -= price;
             Offers[offer] = null;
 
-            OwnedBuilding target = FindMergeTarget(definition, 0);
+            OwnedBuilding target = FindMergeTarget(definition, OfferUpgrades[offer]);
             if (target != null)
             {
                 OnBought(MergeInto(target, price));
                 return;
             }
-            var bought = new OwnedBuilding(definition);
-            bought.AddSpent(price);
+            OwnedBuilding bought = NewBought(definition, offer, price);
             int slot = FirstEmpty(Field);
             if (slot >= 0)
                 Field[slot] = bought;
@@ -757,7 +907,7 @@ namespace GnorpWar
             BuildingDefinition definition = Offers[offer];
             if (definition == null || Gold < PriceOf(definition))
                 return false;
-            if (FindMergeTarget(definition, 0) != null)
+            if (FindMergeTarget(definition, OfferUpgrades[offer]) != null)
                 return true;
             return storage ? OwnedBuilding.IsEmpty(Storage[index]) : FirstEmpty(Field) >= 0;
         }
@@ -771,14 +921,13 @@ namespace GnorpWar
             Gold -= price;
             Offers[offer] = null;
 
-            OwnedBuilding target = FindMergeTarget(definition, 0);
+            OwnedBuilding target = FindMergeTarget(definition, OfferUpgrades[offer]);
             OwnedBuilding bought;
             if (target != null)
                 bought = MergeInto(target, price);
             else
             {
-                bought = new OwnedBuilding(definition);
-                bought.AddSpent(price);
+                bought = NewBought(definition, offer, price);
                 if (storage)
                     Storage[index] = bought;
                 else
@@ -803,10 +952,19 @@ namespace GnorpWar
             int price = PriceOf(definition);
             Gold -= price;
             Offers[offer] = null;
-            var bought = new OwnedBuilding(definition);
-            bought.AddSpent(price);
+            OwnedBuilding bought = NewBought(definition, offer, price);
             InsertIntoField(bought, at);
             OnBought(bought);
+        }
+
+        // 방금 산 진열 칸의 기물 한 채 — 그 칸이 오른 채 나왔으면(중립외교) 그 등급으로. 낸 골드를 적는다
+        private static OwnedBuilding NewBought(BuildingDefinition definition, int offer, int price)
+        {
+            var bought = new OwnedBuilding(definition);
+            for (int i = 0; i < OfferUpgrades[offer]; i++)
+                bought.Upgrade();
+            bought.AddSpent(price);
+            return bought;
         }
 
         // 보관함이나 탑의 다른 층에서 옮겨 끼워 넣기 — 탑 안 이동은 원래 자리를 빼고 넣는다(빈 층이 없어도 된다).

@@ -15,8 +15,10 @@ namespace GnorpWar
         public override void OnBattleStart(BoardRunner board, int slot, int level)
         {
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
-            for (int i = 0; i < slot; i++)
+            for (int i = 0; i < board.Slots.Length; i++)
             {
+                if (!board.Linked(slot, i, i < slot))
+                    continue;
                 board.ScaleCooldown(i, Factor(level));
                 if (board.Slots[i].Building != null)
                     OwnedBuilding.NotifyEffect(board.Slots[i].Building);

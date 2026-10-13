@@ -17,7 +17,7 @@ namespace GnorpWar
 
         public override void OnSummonedFrom(BoardRunner board, int slot, int sourceSlot, Unit unit)
         {
-            if (_doubling || sourceSlot <= slot || _multiply <= 1)
+            if (_doubling || !board.Linked(slot, sourceSlot, sourceSlot > slot) || _multiply <= 1)
                 return;
             _doubling = true;
             board.Summon(unit.Definition, _multiply - 1, sourceSlot);

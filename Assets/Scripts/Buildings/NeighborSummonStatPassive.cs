@@ -12,7 +12,7 @@ namespace GnorpWar
 
         public override void OnSummonedFrom(BoardRunner board, int slot, int sourceSlot, Unit unit)
         {
-            if (sourceSlot <= slot)
+            if (!board.Linked(slot, sourceSlot, sourceSlot > slot))
                 return;
             int level = board.Slots[slot].Building.Level;
             foreach (StatModifier m in _modifiers)

@@ -6,10 +6,10 @@ namespace GnorpWar
     // 지도 씬의 왼쪽 패널 — 고른 땅의 영주가 주인공인 초상화 배치(사용자가 준 그림 10/12), 글 기둥 안에서 전부 가운데 정렬. 위에서부터:
     //   [영주 그림 — 지도와 같은 깃발 든 유닛, 크게] / 닉네임(나는 「내 영지」, 최후의 연합은 「연합」 + 「땅 N개 · 앞으로 k번」) / 국가 / 그 영주가 가진 업그레이드 아이콘 줄(「×N」)
     //   ─ 가로 구분선 ─
-    //   지형 : [아이콘] 이름 / 패배시 · [하트] -N
+    //   지형 : [아이콘] 이름 / (지역 특수 업그레이드가 놓인 땅이면) [아이콘] 이름 + 효과 글 / 패배시 · [하트] -N
     // 고른 땅이 없으면 같은 배치로 나(구분선 아래는 안내 글만), 내 땅을 고르면 나 + 그 땅의 지형.
     // 내가 가진 업그레이드는 여기가 아니라 위 줄의 「땅 n/30」 오른쪽에 늘어놓는다(ShowStatus — 넘치면 좌우로 끌어서 민다).
-    // 지형 · 업그레이드의 효과는 글로 쓰지 않는다 — 아이콘에 마우스를 올리면 뜬다(UI/UpgradeIcon). 행복도는 하트 아이콘이다.
+    // 지형 · 가진 업그레이드의 효과는 글로 쓰지 않는다 — 아이콘에 마우스를 올리면 뜬다(UI/UpgradeIcon). 고른 땅의 지역 특수 업그레이드만 효과를 글로도 쓴다. 행복도는 하트 아이콘이다.
     // 오른쪽 기둥에는 그 영주의 탑이 선다 — 상점 탑과 같은 층 그림(SlotView)이고 층에 마우스를 올리면 기물 설명 창이 뜬다. 내 땅을 고르면 내 탑.
     // 무엇을 고를지 · 명령 버튼은 WorldManager가 정한다
     public class WorldSidePanel : MonoBehaviour
@@ -73,7 +73,8 @@ namespace GnorpWar
         private Text _share;
         private UpgradeRow _owned;
         private Image _divider, _pillar;
-        private IconLine _terrainLine, _loseLine;
+        private IconLine _terrainLine, _specialLine, _loseLine;
+        private Text _specialBody;
         private Text _loseTitle;
         private HeartRow _hearts;
         private Text _statusLands;
@@ -179,6 +180,9 @@ namespace GnorpWar
                 _pillar.enabled = land;
             _divider.enabled = any;
             _terrainLine.Root.gameObject.SetActive(any);
+            UpgradeDefinition special = any ? RunState.SpecialAt(selected) : null;
+            _specialLine.Root.gameObject.SetActive(special != null);
+            _specialBody.gameObject.SetActive(special != null);
             _loseTitle.gameObject.SetActive(any && !mine);
             _loseLine.Root.gameObject.SetActive(any && !mine);
             if (!any)
@@ -198,6 +202,16 @@ namespace GnorpWar
             _terrainLine.Tip.Set(terrain.Icon, terrain.DisplayName, BuildingTooltip.Highlight(terrain.Description));
             _terrainLine.Name.text = terrain.DisplayName;
             y = Line(_terrainLine, center, y);
+            // 그 땅에 놓인 지역 특수 업그레이드 — 이름 줄과 그 아래 효과 글(이것만은 글로 쓴다 — 땅을 고르는 이유라서)
+            if (special != null)
+            {
+                string effect = BuildingTooltip.Highlight(special.Describe(special.ValueAt(BuildingRarity.Mythic)));
+                _specialLine.Tip.Set(special.Icon, special.DisplayName, effect);
+                _specialLine.Name.text = special.DisplayName;
+                y = Line(_specialLine, center, y);
+                _specialBody.text = effect;
+                y = PlaceText(_specialBody, center, y) - LineGap;
+            }
             if (!mine)
             {
                 y -= BlockGap * 0.5f;
@@ -237,6 +251,9 @@ namespace GnorpWar
                 pillar.rectTransform.sizeDelta = new Vector2(DividerHeight, ((RectTransform)transform).rect.height);
             }
             _terrainLine = NewLine("Terrain", "지형 :", true);
+            _specialLine = NewLine("Special", "", true);
+            _specialBody = Instantiate(_nation, transform);
+            _specialBody.name = "SpecialBody";
             _loseTitle = Instantiate(_title, transform);
             _loseTitle.name = "LoseTitle";
             _loseTitle.text = "패배시";

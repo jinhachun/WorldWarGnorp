@@ -66,7 +66,8 @@ namespace GnorpWar
             var pieces = new RectTransform[steps.Count];
             for (int i = 0; i < steps.Count; i++)
                 pieces[i] = Piece(definition, steps[i].After - 1, targets[i]);
-            RectTransform mover = Piece(definition, definition.Rarity, from);
+            // 들어오는 조각은 첫 짝과 같은 등급이다(중립외교로 오른 채 산 조각이면 시작 등급보다 높다)
+            RectTransform mover = Piece(definition, steps[0].After - 1, from);
             for (int i = 0; i < steps.Count; i++)
             {
                 mover.SetAsLastSibling();

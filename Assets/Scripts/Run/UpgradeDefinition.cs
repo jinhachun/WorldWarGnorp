@@ -14,10 +14,36 @@ namespace GnorpWar
         SmallTower,  // 전투 시작 시 전장 가운데에 작은 타워 — 체력 = 내 본진의 N%
         TurnGold,    // 턴마다 골드 +N
         FreeReroll,  // 턴마다 무료 리롤 +N회
+        BuildingCooldown,  // 전투 시작 시 쿨다운이 있는 내 기물 중 무작위 하나의 쿨다운 ×N — 얻은 것마다 따로 뽑는다
+        BaseHp,      // 내 본진(작은 타워 아님)의 체력 +N%(합연산)
+        Special,     // 지역 특수 업그레이드(신화 등급) — 무엇을 하는지는 SpecialKind
     }
 
-    // 같은 업그레이드를 여러 번 얻었을 때 — 값을 더한다 / 가장 높은 등급의 값 하나만(사냥꾼의 활)
-    public enum UpgradeStack { Sum, Strongest }
+    // 지역 특수 업그레이드(아웃게임기획 §4 — 신화 등급, 합치기 후보에 안 나온다). 직렬화되는 enum — 값은 맨 뒤에만 추가할 것.
+    // 전투에 거는 것은 UpgradeDefinition.Apply · Spawn, 상점 · 턴 · 승패에 거는 것은 RunState · WorldRun이 TowerState.Special로 묻는다
+    public enum SpecialKind
+    {
+        None,
+        Conscription,      // 징병제 — 쿨다운이 있는 내 기물이 유닛을 N기 더 소환
+        CategoryAlias,     // 군제 개혁 — 내 A 병종은 B 병종으로도 취급(_categories → _alsoAs)
+        MythicBuilding,    // 절대왕정 — 얻을 때 무작위 신화 기물 1개
+        Enlightenment,     // 계몽주의 — 전투에서 패배하면 무작위 내 기물 1개의 쿨다운이 영구히 ×N
+        Monarchy,          // 군주제 — 내 맨 위층 기물이 2번 발동
+        Militarism,        // 군국주의 — 전투 시작 시 쿨다운이 가장 긴 내 기물이 즉시 발동
+        Guillotine,        // 단두대 혁명 — N초마다 무작위 적 유닛 1기 즉사
+        Republic,          // 공화정 — 합칠 때 나오는 업그레이드 후보 셋을 모두 얻는다
+        Mercantilism,      // 중상주의 — 턴마다 얻는 골드 ×N
+        Communism,         // 공산주의 — 상점의 모든 기물과 리롤이 N골드
+        Theocracy,         // 신정 — 내 유닛은 처음 죽을 때 체력을 모두 회복하고 다시 일어난다(_effect)
+        Imperialism,       // 제국주의 — 영주를 이길 때마다 그 영주의 기물 1개를 얻는다
+        Nationalism,       // 민족주의 — 행복도 1마다 내 유닛의 공격력 +N%
+        Industrial,        // 산업혁명 — 전투 시작 후 N초 동안 내 모든 기물이 가속
+        Federation,        // 연방제 — 내 모든 기물은 서로 인접한 것으로 취급
+        NeutralDiplomacy,  // 중립외교 — 진열 칸이 N% 확률로 한 등급 오른 기물
+    }
+
+    // 같은 업그레이드를 여러 번 얻었을 때 — 값을 더한다 / 가장 높은 등급의 값 하나만(사냥꾼의 활) / 얻은 것마다 따로 건다(기름칠 — 가진 목록에 등급별로 한 줄씩)
+    public enum UpgradeStack { Sum, Strongest, Each }
 
     // 얻은 업그레이드 한 번 — 종류와 그때의 등급(합친 재료의 등급)
     public struct UpgradeGain
@@ -39,7 +65,7 @@ namespace GnorpWar
     // 합치기 보상 업그레이드 한 종(아웃게임기획 §4) — 기물을 합칠 때마다 셋 중 하나를 고르고(RunState 「합치기 보상 업그레이드」), 런 동안 그 탑에 남는다.
     // 같은 업그레이드가 등급마다 수치만 다르다. 전투에 거는 곳은 Apply · Spawn(BattleManager.StartBattle), 운영(골드 · 무료 리롤)은 RunState가 값을 읽는다
     [CreateAssetMenu(menuName = "GnorpWar/Upgrade")]
-    public class UpgradeDefinition : ScriptableObject, IUnitFilter
+    public class UpgradeDefinition : ScriptableObject, IUnitFilter, ICategoryFilter
     {
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _displayName = "";
@@ -74,6 +100,10 @@ namespace GnorpWar
         [Tooltip("SmallTower — 세우는 자리 · 프리팹을 이 능력(조립식 감시탑)에서 빌린다")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private SmallTowerAtStartPassive _smallTower;
+        [Tooltip("Special — 지역 특수 업그레이드의 종류. 값은 「등급별 값」의 첫 칸 하나만 쓴다(칸을 하나만 둔다)")]
+        [SerializeField] private SpecialKind _special;
+        [Tooltip("Special · CategoryAlias — 위 「병종」의 유닛을 이 병종으로도 취급한다")]
+        [SerializeField] private UnitCategory _alsoAs;
 
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
@@ -82,6 +112,7 @@ namespace GnorpWar
         public Sprite Icon => _icon;
         public UpgradeKind Kind => _kind;
         public bool InPool => _inPool;
+        public SpecialKind Special => _kind == UpgradeKind.Special ? _special : SpecialKind.None;
 
         // 그 등급의 값 — 신화 등급 업그레이드는 없다(전설 둘을 합쳐도 전설 값)
         public float ValueAt(BuildingRarity rarity) => _values[Mathf.Min((int)rarity, _values.Length - 1)];
@@ -89,7 +120,10 @@ namespace GnorpWar
         // 설명 글 — 숫자는 지금 값 하나(CLAUDE.md §5-2 6번)
         public string Describe(float value) => string.Format(_description, value.ToString("0.##"));
 
-        public bool AppliesTo(UnitDefinition unit) => _categories.Length == 0 || System.Array.IndexOf(_categories, unit.Category) >= 0;
+        // 지역 특수 업그레이드의 병종 칸(군제 개혁의 「원래 병종」)은 대상 고르기가 아니다 — 특수 업그레이드는 유닛 전부에 건다(국가주의)
+        public bool AppliesTo(UnitDefinition unit)
+            => _kind == UpgradeKind.Special || _categories.Length == 0 || System.Array.IndexOf(_categories, unit.Category) >= 0;
+        public bool AppliesTo(UnitCategory category) => _kind != UpgradeKind.Special && System.Array.IndexOf(_categories, category) >= 0;
 
         // 유닛 스탯에 거는 종류면 그 값 — 전투 시작(Apply)과 유닛 카드 미리 보기(RunStats.Preview)가 같이 읽는다
         public bool UnitModifier(float value, out StatModifier modifier)
@@ -107,12 +141,41 @@ namespace GnorpWar
                 TowerBook.AddForBattle(team, new TowerModifier(_towerStat, StatOp.Percent, value / 100f));
             else if (_kind == UpgradeKind.UnitEffect)
                 TeamEffects.Enable(team, _effect, 1).Value = value;
+            else if (_kind == UpgradeKind.BaseHp && Base.For(team) is Base home)
+                home.SetHpBonus(value / 100f);
+            else if (_kind == UpgradeKind.Special)
+                ApplySpecial(team, value);
         }
 
-        // 전투 시작 ② — 양쪽 보드가 돈 뒤에: 유닛 · 작은 타워를 전장에 낸다
-        public void Spawn(Team team, float value)
+        // 지역 특수 업그레이드 중 전투에 거는 것 — 보드가 돌기 전에(기물의 전투 시작 능력이 인접 · 병종 취급을 읽는다)
+        private void ApplySpecial(Team team, float value)
         {
-            if (_kind == UpgradeKind.Summon)
+            BoardRunner board = BoardRunner.For(team);
+            if (_effect != null)
+                TeamEffects.Enable(team, _effect, 1).Value = value;
+            switch (_special)
+            {
+                case SpecialKind.Conscription: board.ExtraSummons += Mathf.RoundToInt(value); break;
+                case SpecialKind.CategoryAlias:
+                    foreach (UnitCategory category in _categories)
+                        UnitAliases.AddCategory(team, category, _alsoAs);
+                    break;
+                case SpecialKind.Monarchy: board.TopFiresTwice = true; break;
+                case SpecialKind.Federation: board.AllAdjacent = true; break;
+                case SpecialKind.Guillotine: board.GuillotineInterval = value; break;
+                case SpecialKind.Nationalism:
+                    StatBook.AddForBattle(team, this, new StatModifier(UnitStat.Attack, StatOp.Percent, value / 100f * RunState.HappinessFor(team)));
+                    break;
+            }
+        }
+
+        // 전투 시작 ② — 양쪽 보드가 돈 뒤에: 유닛 · 작은 타워를 전장에 내고, 기물의 쿨다운을 줄인다. count = 이 줄에 든 개수(Each만 1보다 클 수 있다)
+        public void Spawn(Team team, float value, int count)
+        {
+            if (_kind == UpgradeKind.BuildingCooldown)
+                for (int i = 0; i < count; i++)
+                    BoardRunner.For(team).ScaleRandomCooldown(value);
+            else if (_kind == UpgradeKind.Summon)
                 BoardRunner.For(team).Summon(_unit, Mathf.RoundToInt(value), -1);
             else if (_kind == UpgradeKind.SmallTower)
             {
@@ -120,16 +183,21 @@ namespace GnorpWar
                 if (tower != null)
                     tower.SetHpOfHome(value / 100f);
             }
+            else if (Special == SpecialKind.Militarism)
+                BoardRunner.For(team).FireLongest();
+            else if (Special == SpecialKind.Industrial)
+                BoardRunner.For(team).HasteAll(value);
         }
 
-        // 얻은 목록을 종류별로 — 처음 얻은 순서. 값 = 더한 값(상한까지) 또는 가장 높은 등급의 값
+        // 얻은 목록을 종류별로 — 처음 얻은 순서. 값 = 더한 값(상한까지) 또는 가장 높은 등급의 값.
+        // 얻은 것마다 따로 거는 종류(Each)는 등급별로 한 줄씩이다 — 값 = 그 등급의 값, Count = 그 등급으로 얻은 수(그 수만큼 따로 걸린다)
         public static List<UpgradeHolding> Summarize(List<UpgradeGain> gains)
         {
             var holdings = new List<UpgradeHolding>();
             foreach (UpgradeGain gain in gains)
             {
                 UpgradeDefinition definition = gain.Definition;
-                int at = holdings.FindIndex(h => h.Definition == definition);
+                int at = holdings.FindIndex(h => h.Definition == definition && (definition._stack != UpgradeStack.Each || h.Rarity == gain.Rarity));
                 if (at < 0)
                 {
                     holdings.Add(new UpgradeHolding { Definition = definition, Count = 1, Rarity = gain.Rarity, Value = definition.ValueAt(gain.Rarity) });
@@ -139,7 +207,7 @@ namespace GnorpWar
                 holding.Count++;
                 if (definition._stack == UpgradeStack.Sum)
                     holding.Value += definition.ValueAt(gain.Rarity);
-                else if (gain.Rarity > holding.Rarity)
+                else if (definition._stack == UpgradeStack.Strongest && gain.Rarity > holding.Rarity)
                     holding.Value = definition.ValueAt(gain.Rarity);
                 if (gain.Rarity > holding.Rarity)
                     holding.Rarity = gain.Rarity;

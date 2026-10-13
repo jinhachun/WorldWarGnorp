@@ -16,7 +16,7 @@ namespace GnorpWar
 
         public override void OnEnemyDied(Team team, Unit victim, Vector2 at, int stacks)
         {
-            if (_victims.Length == 0 || System.Array.IndexOf(_victims, victim.Definition.Category) >= 0)
+            if (_victims.Length == 0 || UnitAliases.IsAny(victim.Team, victim.Definition, _victims))
                 BoardRunner.For(team).Summon(_summon, _count, -1, new Vector2(at.x, Ground.Instance.HeightAt(at.x)), Source(team));
         }
 

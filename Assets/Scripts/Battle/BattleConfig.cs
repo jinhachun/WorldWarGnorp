@@ -42,6 +42,10 @@ namespace GnorpWar
         [SerializeField] private BuildingDefinition[] _shopPool = new BuildingDefinition[0];
         [Tooltip("합치기 보상 업그레이드 전부 — 기물을 합칠 때마다 이 중 「후보에 나옴」이 켜진 것에서 셋이 나온다")]
         [SerializeField] private UpgradeDefinition[] _upgrades = new UpgradeDefinition[0];
+        [Tooltip("지역 특수 업그레이드 전부(신화 등급) — 런마다 이 중 「특수 지역 수」만큼을 지역에 하나씩 놓고, 남은 것에서 시작 때 고를 셋이 나온다")]
+        [SerializeField] private UpgradeDefinition[] _specialUpgrades = new UpgradeDefinition[0];
+        [Tooltip("지역 특수 업그레이드가 놓이는 지역 수")]
+        [SerializeField] private int _specialRegions = 10;
 
         [Header("등급 — 칸 순서: 일반 · 고급 · 희귀 · 영웅 · 전설 (가격만 신화 칸이 하나 더)")]
         [SerializeField] private int[] _rarityPrices = { 3, 4, 5, 10, 12, 24 };
@@ -189,6 +193,8 @@ namespace GnorpWar
         public float HomeNationShare => _homeNationShare;
         public BuildingDefinition[] ShopPool => _shopPool;
         public UpgradeDefinition[] Upgrades => _upgrades;
+        public UpgradeDefinition[] SpecialUpgrades => _specialUpgrades;
+        public int SpecialRegions => _specialRegions;
         public int PriceOf(BuildingRarity rarity) => _rarityPrices[(int)rarity];
         // level = OwnedBuilding.Level(1 = 시작 등급 → 1)
         public float RankCooldownScale(int level) => Mathf.Pow(_rankCooldownFactor, level - 1);

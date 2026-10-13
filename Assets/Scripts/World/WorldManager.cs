@@ -134,14 +134,20 @@ namespace GnorpWar
             {
                 // 씬만 다시 불러왔으면(치트) 고른 땅이 남아 있다
                 _selected = RunState.PreviewRegion;
-                if (RunState.NationChosen)
-                    BeginTurn();
-                else
+                if (!RunState.NationChosen)
                     ShowNations();
+                else if (WaitingToStart)
+                    _stage = Stage.Choose;
+                else
+                    BeginTurn();
             }
         }
 
-        // 내 국가 고르기 — 국가마다 아이콘과 이름이 든 버튼 하나. 고르면 첫 턴이 열린다
+        // 국가는 골랐지만 시작 때 고르는 지역 특수 업그레이드가 아직 대기 중이다 — 다 고를 때까지 첫 턴을 열지 않는다(Update).
+        // 고른 것이 첫 턴의 수입 · 값 · 진열부터 걸리게(사용자 10/13 "업그레이드를 하나 고르고 시작해"). 고르기 창은 화면(UI)이 대기열을 보고 띄운다
+        private static bool WaitingToStart => RunState.NationChosen && !RunState.TurnOpened && RunState.PendingUpgrades.Count > 0;
+
+        // 내 국가 고르기 — 국가마다 아이콘과 이름이 든 버튼 하나. 고르면 시작 업그레이드를 고른 뒤 첫 턴이 열린다
         private void ShowNations()
         {
             _stage = Stage.Choose;
@@ -161,7 +167,8 @@ namespace GnorpWar
                 {
                     RunState.ChooseNation(nation);
                     _nationPanel.SetActive(false);
-                    BeginTurn();
+                    if (!WaitingToStart)
+                        BeginTurn();
                 });
             }
             _nationPanel.SetActive(true);
@@ -384,6 +391,9 @@ namespace GnorpWar
         {
             WorldState state = RunState.World.State;
             SlideShop();
+            // 시작 업그레이드를 다 골랐다 — 첫 턴을 연다
+            if (_stage == Stage.Choose && RunState.NationChosen && !WaitingToStart)
+                BeginTurn();
             if (_stage == Stage.March)
             {
                 // 걸음이 끝나면 전투로 — 걸음이 끝났다는 신호를 못 받아도 걸음의 길이 + 여유가 지나면 넘어간다

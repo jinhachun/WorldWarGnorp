@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Special_Republic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uACF5\uD654\uC815"
+  _icon: {fileID: 21300000, guid: cb76e0d137302fe42867638a15dc43f9, type: 3}
+  _description: "\uD569\uCE60 \uB54C \uB098\uC624\uB294 \uC5C5\uADF8\uB808\uC774\uB4DC
+    \uD6C4\uBCF4 \uC14B\uC744 \uBAA8\uB450 \uC5BB\uC2B5\uB2C8\uB2E4."
+  _values:
+  - 0
+  _stack: 0
+  _max: 0
+  _inPool: 0
+  _kind: 9
+  _categories: []
+  _unitStat: 0
+  _towerStat: 0
+  _effect: {fileID: 0}
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 8
+  _alsoAs: {fileID: 0}

@@ -18,8 +18,8 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);   // 발동된 이웃은 TriggerBuyEffects가 알린다
             OwnedBuilding[] field = System.Array.ConvertAll(board.Slots, s => s.Building);
             int repeats = BuyRepeats(field) * Times(level);
-            foreach (int neighbor in new[] { slot - 1, slot + 1 })
-                if (neighbor >= 0 && neighbor < field.Length && !OwnedBuilding.IsEmpty(field[neighbor]))
+            for (int neighbor = 0; neighbor < field.Length; neighbor++)
+                if (board.Linked(slot, neighbor, Mathf.Abs(neighbor - slot) == 1) && !OwnedBuilding.IsEmpty(field[neighbor]))
                 {
                     TriggerBuyEffects(field[neighbor], board.Team, repeats);
                     if (HasBuyEffects(field[neighbor].Definition))

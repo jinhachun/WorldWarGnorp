@@ -156,6 +156,54 @@ namespace GnorpWar
 
         public void Stop() => _running = false;
 
+        // ── 지역 특수 업그레이드가 전투 시작 때 켜는 것(UpgradeDefinition.ApplySpecial) — 전투 씬마다 보드가 새로 뜨므로 끄는 곳은 없다
+        // 징병제 — 쿨다운마다 유닛을 소환하는 기물이 한 번에 더 소환하는 수
+        public int ExtraSummons;
+        // 군주제 — 맨 위층(기물이 있는 가장 높은 층) 기물은 발동할 때마다 효과를 2번(맵 · 물레방앗간 신화의 반복과 곱한다)
+        public bool TopFiresTwice;
+        // 연방제 — 자리 효과(바로 위 · 아래 · 위에 있는 · 아래에 있는)가 내 다른 모든 기물에 걸린다
+        public bool AllAdjacent;
+        // 단두대 혁명 — 이 간격(초)마다 내 본진이 무작위 적 유닛 1기를 즉사시킨다(0 = 없음)
+        public float GuillotineInterval;
+        private float _guillotineTimer;
+
+        // 자리 효과가 slot층의 기물에서 other층의 기물에 닿는가 — byPosition = 그 능력의 원래 자리 규칙(바로 위 · 아래에 있는 …). 연방제면 내 다른 모든 기물
+        public bool Linked(int slot, int other, bool byPosition) => other != slot && (AllAdjacent || byPosition);
+
+        private int TopIndex
+        {
+            get
+            {
+                for (int i = _slots.Length - 1; i >= 0; i--)
+                    if (HasBuilding(i))
+                        return i;
+                return -1;
+            }
+        }
+
+        // 군국주의 — 쿨다운이 가장 긴 기물을 즉시 1회 발동(같으면 아래층 먼저). 쿨다운 있는 기물이 없으면 아무 일도 없다
+        public void FireLongest()
+        {
+            int longest = -1;
+            for (int i = 0; i < _slots.Length; i++)
+                if (HasBuilding(i) && _slots[i].Cooldown > 0f && (longest < 0 || _slots[i].Cooldown > _slots[longest].Cooldown))
+                    longest = i;
+            FireNow(longest);
+        }
+
+        // 단두대 혁명 — 살아 있는 적 유닛 중 무작위 하나에게 그 체력만큼의 피해(내 본진의 처치). 무적인 유닛은 피해를 받지 않는다(기존 무적 규칙)
+        private void Guillotine()
+        {
+            var targets = new System.Collections.Generic.List<Unit>();
+            foreach (Unit unit in FindObjectsByType<Unit>(FindObjectsSortMode.None))
+                if (unit.IsAlive && unit.Team != _team)
+                    targets.Add(unit);
+            if (targets.Count == 0)
+                return;
+            Unit victim = targets[Random.Range(0, targets.Count)];
+            victim.TakeDamage(victim.MaxHp, new Vector2(_team == Team.Ally ? 1f : -1f, 0f), 0f, Base.For(_team));
+        }
+
         // 물레방앗간 신화 — 이 진영의 가속 중인 기물이 발동할 때 효과를 2번 낸다(전투 동안, 패시브가 전투 시작 때 켠다). 곱하는 곳은 Fire
         private bool _doubleWhileHasted;
 
@@ -185,6 +233,16 @@ namespace GnorpWar
                 slot.Timer += Time.deltaTime * (slot.Haste > 0f ? HasteRate : 1f) * rate;
                 slot.Haste -= Time.deltaTime;
                 TryFire(i);
+            }
+
+            if (GuillotineInterval > 0f)
+            {
+                _guillotineTimer += Time.deltaTime;
+                if (_guillotineTimer >= GuillotineInterval)
+                {
+                    _guillotineTimer -= GuillotineInterval;
+                    Guillotine();
+                }
             }
 
             // 얼음 — 정해진 간격마다 쿨다운이 있는 기물을 전부 발동(게이지는 그대로)
@@ -225,10 +283,12 @@ namespace GnorpWar
             // 물레방앗간 신화 — 가속 중인 기물은 발동할 때 효과를 2번 낸다(맵의 반복과는 곱한다)
             if (_doubleWhileHasted && _slots[index].Haste > 0f)
                 repeats *= 2;
+            if (TopFiresTwice && index == TopIndex)
+                repeats *= 2;
             for (int r = 0; r < repeats; r++)
             {
                 if (definition.Unit != null)
-                    Summon(definition.Unit, definition.SummonCount, index);
+                    Summon(definition.Unit, definition.SummonCount + ExtraSummons, index);
                 foreach (BuildingAction action in building.Actions)
                     action.Execute(this, index, level);
                 foreach (UnitEffect effect in building.Effects)
@@ -354,6 +414,23 @@ namespace GnorpWar
         // 쿨다운이 있는 기물 중 무작위 하나를 가속(수도원 — 사용자 결정: 쿨다운 없는 기물은 고르지 않는다). 고른 칸을 돌려준다(없으면 -1)
         public int HasteRandom(float seconds)
         {
+            int index = RandomCooling();
+            if (index >= 0)
+                Haste(index, seconds);
+            return index;
+        }
+
+        // 쿨다운이 있는 기물 중 무작위 하나의 쿨다운에 곱한다(합치기 보상 업그레이드 「기름칠」). 고른 칸을 돌려준다(없으면 -1)
+        public int ScaleRandomCooldown(float factor)
+        {
+            int index = RandomCooling();
+            ScaleCooldown(index, factor);
+            return index;
+        }
+
+        // 쿨다운이 있는 기물의 칸 중 무작위 하나(없으면 -1)
+        private int RandomCooling()
+        {
             int count = 0;
             for (int i = 0; i < _slots.Length; i++)
                 if (HasBuilding(i) && _slots[i].Cooldown > 0f)
@@ -363,10 +440,7 @@ namespace GnorpWar
             int pick = Random.Range(0, count);
             for (int i = 0; i < _slots.Length; i++)
                 if (HasBuilding(i) && _slots[i].Cooldown > 0f && pick-- == 0)
-                {
-                    Haste(i, seconds);
                     return i;
-                }
             return -1;
         }
 

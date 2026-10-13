@@ -16,12 +16,9 @@ namespace GnorpWar
         {
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);   // 발동된 이웃은 BoardRunner.Triggered로
             for (int i = 0; i < Times(level); i++)
-            {
-                if (board.FireNow(slot - 1))
-                    BuffLinks.ToSlot(board.Team, slot, slot - 1, BuffKind.Trigger);
-                if (board.FireNow(slot + 1))
-                    BuffLinks.ToSlot(board.Team, slot, slot + 1, BuffKind.Trigger);
-            }
+                for (int other = 0; other < board.Slots.Length; other++)
+                    if (board.Linked(slot, other, Mathf.Abs(other - slot) == 1) && board.FireNow(other))
+                        BuffLinks.ToSlot(board.Team, slot, other, BuffKind.Trigger);
         }
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => Mathf.Abs(other - slot) == 1 && target.Cooldown > 0f;

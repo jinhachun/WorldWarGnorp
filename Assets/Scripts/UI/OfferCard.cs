@@ -42,6 +42,9 @@ namespace GnorpWar
 
         public Button Button => _button;
 
+        // 이 칸의 기물이 시작 등급에서 오른 횟수(중립외교 — 보통 0). 창틀 색 · 설명의 수치 · RANK UP 판정이 오른 등급을 따른다
+        private int Upgrades => RunState.OfferUpgrades[_index];
+
         private void OnDisable()
         {
             _hovered = false;
@@ -64,7 +67,7 @@ namespace GnorpWar
             {
                 _floor.Show(building);
                 _icon.sprite = building.Icon;
-                _rarityFrame.color = SlotView.Highlight(building.Rarity.FrameColor(), _hovered);
+                _rarityFrame.color = SlotView.Highlight((building.Rarity + Upgrades).FrameColor(), _hovered);
             }
             _price.text = empty ? "" : $"{RunState.PriceOf(building)}";
             _coin.enabled = !empty;
@@ -79,18 +82,18 @@ namespace GnorpWar
                 BuildingTooltip.Hide(this);
             else
             {
-                OwnedBuilding pair = RunState.FindMergeTarget(building, 0);
-                string body = BuildingTooltip.Describe(building, 1, building.Cooldown);
+                OwnedBuilding pair = RunState.FindMergeTarget(building, Upgrades);
+                string body = BuildingTooltip.Describe(building, OwnedBuilding.LevelOf(building, Upgrades), building.CooldownAt(OwnedBuilding.CooldownLevelOf(building, Upgrades)));
                 if (pair != null)
                     body += BuildingTooltip.RankUpPreview(building, pair.Level, pair.Rarity + 1);
-                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity), body, building.MentionedUnits, RunState.Field);
+                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity + Upgrades), body, building.MentionedUnits, RunState.Field);
             }
         }
 
         // RANK UP = 사면 바로 합쳐져 등급이 오른다(구매와 같은 판정 RunState.FindMergeTarget). 보유 = 탑·보관함에 같은 기물이 있지만 바로 오르지는 않는다
         private void ShowOwnership(BuildingDefinition building)
         {
-            bool rankUp = building != null && RunState.FindMergeTarget(building, 0) != null;
+            bool rankUp = building != null && RunState.FindMergeTarget(building, Upgrades) != null;
             bool owned = !rankUp && building != null && Owns(building);
             _glow.enabled = rankUp || owned;
             _rankUp.enabled = rankUp;

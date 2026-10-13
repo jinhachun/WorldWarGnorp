@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Special_ReformHeavyCavalry
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uAD70\uC81C \uAC1C\uD601 \xB7 \uC911\uC7A5\uAE30\uBCD1"
+  _icon: {fileID: 21300000, guid: 6dda89bc6c90e42489c142133294093f, type: 3}
+  _description: "\uB0B4 \uACBD\uAE30\uBCD1\uC740 \uC911\uAE30\uBCD1\uC73C\uB85C\uB3C4
+    \uCDE8\uAE09\uD569\uB2C8\uB2E4."
+  _values:
+  - 0
+  _stack: 0
+  _max: 0
+  _inPool: 0
+  _kind: 9
+  _categories:
+  - {fileID: 11400000, guid: 85153d7df66545344b8f09cebb62a3f9, type: 2}
+  _unitStat: 0
+  _towerStat: 0
+  _effect: {fileID: 0}
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 2
+  _alsoAs: {fileID: 11400000, guid: e9fd260e0fdfa214f96601ed00f1f26d, type: 2}

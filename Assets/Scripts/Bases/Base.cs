@@ -71,6 +71,15 @@ namespace GnorpWar
             _hp = MaxHp;
         }
 
+        // 이 타워 한 채의 체력 합연산 %(성벽 보강 — 본진에만 건다). '내 타워' 효과(TowerBook)의 %와 한 번에 더해진다
+        private float _hpBonus;
+
+        public void SetHpBonus(float percent)
+        {
+            _hpBonus = percent;
+            RefreshStats();
+        }
+
         public event System.Action<Base> Destroyed;
 
         // 이 작은 타워를 세운 기물(조립식 감시탑이 적는다) — 「이 작은 타워」를 가리는 능력이 읽는다. 건축가가 지었으면 null
@@ -258,7 +267,7 @@ namespace GnorpWar
             _stats[(int)TowerStat.AttackSpeed] = TowerBook.Compute(_team, TowerStat.AttackSpeed, 1f);
             _stats[(int)TowerStat.Range] = TowerBook.Compute(_team, TowerStat.Range, _definition.AttackRange, _rangeBonus);
             _stats[(int)TowerStat.ArrowCount] = TowerBook.Compute(_team, TowerStat.ArrowCount, 1f);
-            _stats[(int)TowerStat.MaxHp] = TowerBook.Compute(_team, TowerStat.MaxHp, (_definition.MaxHp + RunState.BaseHpBonus) * hpScale);
+            _stats[(int)TowerStat.MaxHp] = TowerBook.Compute(_team, TowerStat.MaxHp, (_definition.MaxHp + RunState.BaseHpBonus) * hpScale, _hpBonus);
             _statsVersion = TowerBook.Version;
             if (oldMaxHp > 0f && IsAlive)
                 _hp *= _stats[(int)TowerStat.MaxHp] / oldMaxHp;

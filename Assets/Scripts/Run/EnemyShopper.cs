@@ -33,10 +33,10 @@ namespace GnorpWar
                 if (offer >= 0)
                 {
                     BuildingDefinition definition = RunState.Offers[offer];
-                    if (NeedsRoom(definition))
+                    if (NeedsRoom(offer))
                     {
                         MakeRoom(build, definition, log);
-                        if (NeedsRoom(definition))
+                        if (NeedsRoom(offer))
                             continue;
                     }
                     log.Append($" 구매 {definition.DisplayName}({RunState.PriceOf(definition)})");
@@ -89,7 +89,7 @@ namespace GnorpWar
                 if (value <= 0f)
                     continue;
                 int cost = RunState.PriceOf(definition);
-                if (NeedsRoom(definition))
+                if (NeedsRoom(i))
                 {
                     if (CanRaiseFor(cost))
                         cost += RunState.NextFloorCost;
@@ -174,7 +174,8 @@ namespace GnorpWar
         }
 
         // 사면 탑에 새 칸이 필요한가 — 합쳐지면 필요 없다
-        private static bool NeedsRoom(BuildingDefinition definition) => RunState.FindMergeTarget(definition, 0) == null && FirstEmpty() < 0;
+        private static bool NeedsRoom(int offer)
+            => RunState.FindMergeTarget(RunState.Offers[offer], RunState.OfferUpgrades[offer]) == null && FirstEmpty() < 0;
 
         // 기물 값(price)에 층 올리기 값까지 지금 낼 수 있나 — 못 내면 층을 기다리며 골드를 쌓지 않고 가장 낮은 기물과 바꾼다
         private static bool CanRaiseFor(int price) => RunState.Floors < RunState.MaxFloors && RunState.Gold >= price + RunState.NextFloorCost;

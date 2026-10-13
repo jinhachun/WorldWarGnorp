@@ -10,7 +10,7 @@ namespace GnorpWar
     {
         // 병종 태그로 고른 유닛의 스탯 하나에 곱한다(기획서 §6 곱연산)
         [System.Serializable]
-        public class UnitRule : IUnitFilter
+        public class UnitRule : IUnitFilter, ICategoryFilter
         {
             [Tooltip("이 병종 태그의 유닛만 — 비우면 모든 유닛")]
             [SerializeField] private UnitCategory[] _categories = new UnitCategory[0];
@@ -21,6 +21,8 @@ namespace GnorpWar
 
             public bool AppliesTo(UnitDefinition unit)
                 => _categories.Length == 0 || System.Array.IndexOf(_categories, unit.Category) >= 0;
+
+            public bool AppliesTo(UnitCategory category) => System.Array.IndexOf(_categories, category) >= 0;
 
             // "궁병의 공격력 ×0.5" · "경기병과 중기병의 이동속도 ×1.5" · "모든 유닛의 이동속도 ×0.7"
             public string Describe()

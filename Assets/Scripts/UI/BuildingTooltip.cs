@@ -70,15 +70,15 @@ namespace GnorpWar
 
         // 효과 줄 — "N초마다 ~" 먼저(기획서: 쿨다운 효과는 첫 줄), 그다음 늘 켜진 것. cooldown = 지금 간격(전투 중엔 줄어든 값). 글 규칙은 CLAUDE.md §5-2
         // mythic = 신화 등급이면 기획서 §7-1의 신화 줄을 §7 줄들 아래에 덧붙인다(구분 표시 없이)
-        public static string Describe(BuildingDefinition building, int level, float cooldown, bool mythic = false)
-            => Highlight(string.Join("\n", Lines(building, level, cooldown, mythic)));
+        public static string Describe(BuildingDefinition building, int level, float cooldown, bool mythic = false, int extraSummons = 0)
+            => Highlight(string.Join("\n", Lines(building, level, cooldown, mythic, extraSummons)));
 
-        private static List<string> Lines(BuildingDefinition building, int level, float cooldown, bool mythic)
+        private static List<string> Lines(BuildingDefinition building, int level, float cooldown, bool mythic, int extraSummons = 0)
         {
             var lines = new List<string>();
             string every = $"{cooldown:0.#}초마다 ";
             if (building.Unit != null)
-                lines.Add(every + $"{building.Unit.DisplayName} {building.SummonCount}기를 소환합니다.");
+                lines.Add(every + $"{building.Unit.DisplayName} {building.SummonCount + extraSummons}기를 소환합니다.");
             foreach (BuildingAction action in building.Actions)
                 lines.Add(every + action.Describe(level));
             if (!string.IsNullOrEmpty(building.Description))
@@ -258,7 +258,12 @@ namespace GnorpWar
         public static void ShowOwned(Component owner, OwnedBuilding building, BoardRunner.Slot running, bool enemy)
         {
             float cooldown = running != null ? running.Cooldown : building.Cooldown;
-            string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic);
+            // 징병제(지역 특수 업그레이드) — 쿨다운마다 유닛을 소환하는 기물의 소환 수에 더해 보인다(숫자는 지금 실제 값 하나)
+            int extra = building.Definition.Unit != null && building.Definition.Cooldown > 0f ? RunState.ExtraSummonsFor(building) : 0;
+            string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic, extra);
+            // 군주제 — 그 탑의 맨 위층 기물이면 회색 한 줄
+            if (RunState.FiresTwice(building))
+                body += Note("군주제로 발동할 때마다 효과를 2번 냅니다.");
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             if (!enemy && !BattleManager.Fighting && building.Stacks > 0)
                 body += Note($"스택 {building.Stacks}");

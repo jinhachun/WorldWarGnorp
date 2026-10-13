@@ -12,6 +12,6 @@ namespace GnorpWar
 
         public override bool ReflectsBlockedDamage(IDamageable attacker)
             => _attackerCategories.Length == 0
-               || (attacker is Unit enemy && System.Array.IndexOf(_attackerCategories, enemy.Definition.Category) >= 0);
+               || (attacker is Unit enemy && UnitAliases.IsAny(enemy.Team, enemy.Definition, _attackerCategories));
     }
 }

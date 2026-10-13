@@ -6,7 +6,7 @@ namespace GnorpWar
     // 유닛 효과 하나 — 전투 동안 한 진영에 켜지고(TeamEffects), 적용 분류에 드는 그 진영 유닛의 훅 지점에서 불린다.
     // 효과마다 파일 하나. 이미 있는 훅만 쓰는 새 효과는 Unit을 고치지 않고 클래스·에셋만 추가하면 된다.
     // stacks = 켜 준 건물이 이번 전투에서 발동한 횟수(켜진 직후 0) — 쓰는 효과만 쓴다
-    public abstract class UnitEffect : ScriptableObject, IUnitFilter
+    public abstract class UnitEffect : ScriptableObject, IUnitFilter, ICategoryFilter
     {
         [Tooltip("이 병종 태그의 유닛에게 — 유닛 칸과 함께 비우면 전부")]
         [SerializeField] private UnitCategory[] _categories = new UnitCategory[0];
@@ -35,6 +35,8 @@ namespace GnorpWar
             => (_categories.Length == 0 && _units.Length == 0)
                || System.Array.IndexOf(_categories, unit.Category) >= 0
                || System.Array.IndexOf(_units, unit) >= 0;
+
+        public bool AppliesTo(UnitCategory category) => System.Array.IndexOf(_categories, category) >= 0;
 
         // 소환 처리 ① — 이 유닛을 count기 소환할 때 더 소환할 수(BoardRunner.Summon). sourceSlot = 소환한 기물 칸(아니면 -1)
         public virtual int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level) => 0;
@@ -91,6 +93,8 @@ namespace GnorpWar
         public virtual float FirstAttackDamageBonus(Team team) => 0f;
         // 적용 대상 유닛이 쏜 화살이 적 유닛에 피해를 준 직후(사냥꾼의 활) — team = 쏜 쪽. 타워의 화살은 안 불린다
         public virtual void OnArrowHit(Team team, Unit victim) { }
+        // 처음 죽을 때 죽는 대신 최대 체력의 이 비율을 회복한다(신정 — 1 = 100%). 0이면 없음. 충정의 맹세(FirstDeathDelay)보다 먼저 쓰인다
+        public virtual float FirstDeathHealRatio(Team team) => 0f;
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
         // 회복 투사체가 아군에 닿아 실제로 체력이 찬 직후(구슬마다, 빗나간 구슬은 안 불린다) — team = 던진 쪽. 적용 분류는 던진 유닛 기준.

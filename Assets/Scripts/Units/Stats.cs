@@ -195,6 +195,12 @@ namespace GnorpWar
         bool AppliesTo(UnitDefinition unit);
     }
 
+    // 병종 태그로 거르는 유닛 필터 — 그 병종을 대상으로 적어 두었나. 「~로도 취급」(UnitAliases.AddCategory)이 이것으로 묻는다
+    public interface ICategoryFilter
+    {
+        bool AppliesTo(UnitCategory category);
+    }
+
     // "A는 B에게 적용되는 효과를 함께 받는다"(조립 라인: 톱니거인 → 톱니병사). 전투 시작마다 비우고(BattleManager) 패시브가 건다.
     // 🔴 효과·스탯이 유닛에게 적용되는지는 AppliesTo가 아니라 AppliesFor(진영 포함)로 본다
     public static class UnitAliases
@@ -202,11 +208,53 @@ namespace GnorpWar
         private static readonly Dictionary<UnitDefinition, UnitDefinition>[] ByTeam =
             { new Dictionary<UnitDefinition, UnitDefinition>(), new Dictionary<UnitDefinition, UnitDefinition>() };
 
+        // 병종 단위의 「~로도 취급」(지역 특수 업그레이드 「군제 개혁」 — 내 경보병은 중기병으로도 취급) — [진영] = (원래 병종, 함께 취급하는 병종)들
+        private static readonly List<(UnitCategory from, UnitCategory alsoAs)>[] CategoriesByTeam =
+            { new List<(UnitCategory, UnitCategory)>(), new List<(UnitCategory, UnitCategory)>() };
+
         public static void Clear()
         {
             foreach (Dictionary<UnitDefinition, UnitDefinition> aliases in ByTeam)
                 aliases.Clear();
+            foreach (List<(UnitCategory, UnitCategory)> aliases in CategoriesByTeam)
+                aliases.Clear();
             StatBook.MarkChanged();
+        }
+
+        public static void AddCategory(Team team, UnitCategory from, UnitCategory alsoAs)
+        {
+            CategoriesByTeam[(int)team].Add((from, alsoAs));
+            StatBook.MarkChanged();
+        }
+
+        // team의 unit이 category 병종인가 — 원래 병종이거나 그 진영에서 그 병종으로도 취급되거나. 병종을 직접 견주는 곳은 모두 이것으로 묻는다
+        public static bool Is(Team team, UnitDefinition unit, UnitCategory category)
+        {
+            if (unit.Category == category)
+                return true;
+            foreach ((UnitCategory from, UnitCategory alsoAs) in CategoriesByTeam[(int)team])
+                if (from == unit.Category && alsoAs == category)
+                    return true;
+            return false;
+        }
+
+        public static bool IsAny(Team team, UnitDefinition unit, UnitCategory[] categories)
+        {
+            foreach (UnitCategory category in categories)
+                if (Is(team, unit, category))
+                    return true;
+            return false;
+        }
+
+        // 병종으로 거르는 것(ICategoryFilter)이 그 진영에서 unit이 함께 취급되는 병종을 받는가
+        private static bool AppliesToAlias(IUnitFilter filter, Team team, UnitDefinition unit)
+        {
+            if (!(filter is ICategoryFilter byCategory))
+                return false;
+            foreach ((UnitCategory from, UnitCategory alsoAs) in CategoriesByTeam[(int)team])
+                if (from == unit.Category && byCategory.AppliesTo(alsoAs))
+                    return true;
+            return false;
         }
 
         public static void Add(Team team, UnitDefinition unit, UnitDefinition alsoAs)
@@ -216,7 +264,7 @@ namespace GnorpWar
         }
 
         public static bool AppliesFor(this IUnitFilter filter, Team team, UnitDefinition unit)
-            => filter.AppliesTo(unit) || (ByTeam[(int)team].TryGetValue(unit, out UnitDefinition alias) && filter.AppliesTo(alias));
+            => filter.AppliesTo(unit) || (ByTeam[(int)team].TryGetValue(unit, out UnitDefinition alias) && filter.AppliesTo(alias)) || AppliesToAlias(filter, team, unit);
     }
 
     // 스탯 하나에 걸린 값을 모아 기획서 §6 순서로 계산 — (기본 + 고정 합) × (1 + % 합) × 곱들

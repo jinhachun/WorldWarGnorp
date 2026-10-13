@@ -1152,6 +1152,13 @@ namespace GnorpWar
                 FxDirector.Instance.HitSpark(_rb.position - hitDirection * SparkSurfaceOffset, hitDirection, SparkColor);
             if (!IsAlive)
             {
+                // 신정 — 처음 죽을 때 죽는 대신 최대 체력의 일부를 회복한다(유닛마다 한 번 · 처치가 아니다)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition) && e.Effect.FirstDeathHealRatio(_team) > 0f && UseOnce(e.Effect))
+                    {
+                        _hp = MaxHp * e.Effect.FirstDeathHealRatio(_team);
+                        return;
+                    }
                 // 충정의 맹세 — 처음 죽을 때 대신 N초 무적, 그 뒤 쓰러진다(처치자는 그때 정해진 대로)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     if (e.Effect.FirstDeathDelay > 0f && e.Effect.AppliesFor(_team, _definition) && UseOnce(e.Effect))
@@ -1311,7 +1318,7 @@ namespace GnorpWar
                 if (IsUnderfoot(damageable))
                     continue;
 
-                bool isPreferred = preferred != null && damageable is Unit u && u._definition.Category == preferred;
+                bool isPreferred = preferred != null && damageable is Unit u && UnitAliases.Is(u._team, u._definition, preferred);
                 if (bestPreferred && !isPreferred)
                     continue;
                 Vector2 point = col.ClosestPoint(_rb.position);
@@ -1601,7 +1608,7 @@ namespace GnorpWar
                 if (!col.TryGetComponent(out IDamageable damageable) || damageable.Team == _team || !damageable.IsAlive || IsUnderfoot(damageable))
                     continue;
                 bool fresh = !_burstAimed.Contains(damageable);
-                bool isPreferred = preferred != null && damageable is Unit u && u._definition.Category == preferred;
+                bool isPreferred = preferred != null && damageable is Unit u && UnitAliases.Is(u._team, u._definition, preferred);
                 Vector2 point = col.ClosestPoint(_rb.position);
                 float distance = (point - _rb.position).sqrMagnitude;
                 // 아직 안 노린 적이 먼저, 그 안에서는 FindTarget과 같은 순서(우선 병종 먼저 · 가까운 순)

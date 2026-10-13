@@ -86,6 +86,11 @@ namespace GnorpWar
         private int[] _cells;
         private int _width, _height;
         private Vector2Int[] _anchors;
+        // 땅마다 — 지형 아이콘의 검은 판 · 지역 특수 업그레이드 표시(외곽선 칸 · 아이콘) · 지금 그려 둔 특수 업그레이드(없으면 null)
+        private Image[] _terrains, _specialFrames;
+        private UpgradeIcon[] _specialIcons;
+        private UpgradeDefinition[] _specials;
+        private const float SpecialOutline = 2f;
         // [작은 땅 번호 × 땅 수 + 큰 땅 번호] = 두 땅이 맞댄 국경의 칸들 — 화살표가 여기서 나온다
         private readonly Dictionary<int, List<Vector2Int>> _borders = new Dictionary<int, List<Vector2Int>>();
 
@@ -120,6 +125,10 @@ namespace GnorpWar
             _colors = new Color32[regions];
             _invadable = new bool[regions];
             _anchors = new Vector2Int[regions];
+            _terrains = new Image[regions];
+            _specialFrames = new Image[regions];
+            _specialIcons = new UpgradeIcon[regions];
+            _specials = new UpgradeDefinition[regions];
             // 맞댄 국경 — 오른쪽 · 아래 칸과 땅이 다른 칸
             for (int y = 0; y < _height; y++)
                 for (int x = 0; x < _width; x++)
@@ -151,16 +160,29 @@ namespace GnorpWar
                 mark.anchoredPosition = new Vector2(anchor.x * scale, -anchor.y * scale);
                 mark.sizeDelta = Vector2.zero;
 
-                // 지형 아이콘 — 검은 판 위에, 원본 크기
-                Image back = NewImage(mark, "Back");
+                // 지형 아이콘 — 검은 판 위에, 원본 크기. 지역 특수 업그레이드가 놓인 땅이면 왼쪽으로 비키고 오른쪽에 그 표시가 선다(ShowSpecials)
+                Image back = _terrains[region] = NewImage(mark, "Back");
                 back.color = Color.black;
                 back.rectTransform.sizeDelta = new Vector2(IconBack, IconBack);
                 back.rectTransform.anchoredPosition = new Vector2(0f, IconY);
-                Image image = NewImage(mark, "Icon");
+                Image image = NewImage(back.rectTransform, "Icon");
                 image.sprite = map.TerrainOf(region).Icon;
                 image.SetNativeSize();
                 image.preserveAspect = true;   // 지도 확대가 localScale을 쓴다(CLAUDE.md §5-1)
-                image.rectTransform.anchoredPosition = new Vector2(0f, IconY);
+
+                // 지역 특수 업그레이드 표시 — 신화 등급 색 외곽선 칸(가진 업그레이드 줄 UI/UpgradeRow의 칸과 같은 모양) 안에 아이콘. 마우스를 올리면 이름과 효과(UI/UpgradeIcon)
+                Image frame = _specialFrames[region] = NewImage(mark, "Special");
+                frame.color = BuildingRarity.Mythic.FrameColor();
+                frame.rectTransform.sizeDelta = new Vector2(IconBack, IconBack);
+                frame.rectTransform.anchoredPosition = new Vector2(IconBack * 0.5f, IconY);
+                Image fill = NewImage(frame.rectTransform, "Fill");
+                fill.color = Color.black;
+                fill.rectTransform.sizeDelta = new Vector2(IconBack - SpecialOutline * 2f, IconBack - SpecialOutline * 2f);
+                var tip = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(UpgradeIcon)).GetComponent<UpgradeIcon>();
+                tip.transform.SetParent(frame.transform, false);
+                tip.GetComponent<Image>().preserveAspect = true;
+                _specialIcons[region] = tip;
+                frame.gameObject.SetActive(false);
 
                 var label = new GameObject("Label", typeof(RectTransform), typeof(Text), typeof(Outline)).GetComponent<Text>();
                 label.transform.SetParent(mark, false);
@@ -179,6 +201,22 @@ namespace GnorpWar
             }
             Lords = gameObject.AddComponent<WorldLords>();
             Lords.Init(_cells, _width, _height, scale, _anchors, _lordSprite, _lordFlag, _dotFont);
+        }
+
+        // 지역 특수 업그레이드가 놓인 땅에만 표시가 선다 — 내가 얻었거나 사라지면(RunState.SpecialAt이 null) 없어지고 지형 아이콘이 가운데로 돌아온다
+        private void ShowSpecials()
+        {
+            for (int region = 0; region < _specials.Length; region++)
+            {
+                UpgradeDefinition special = RunState.SpecialAt(region);
+                if (special == _specials[region])
+                    continue;
+                _specials[region] = special;
+                _specialFrames[region].gameObject.SetActive(special != null);
+                _terrains[region].rectTransform.anchoredPosition = new Vector2(special != null ? -IconBack * 0.5f : 0f, IconY);
+                if (special != null)
+                    _specialIcons[region].Set(special.Icon, special.DisplayName, BuildingTooltip.Highlight(special.Describe(special.ValueAt(BuildingRarity.Mythic))));
+            }
         }
 
         private static Image NewImage(RectTransform parent, string name)
@@ -201,6 +239,7 @@ namespace GnorpWar
         {
             // 가리킨 땅의 영주만 그림 위에 이름이 뜬다
             Lords.Point(Hovered == None ? -1 : owner[Hovered]);
+            ShowSpecials();
             // 확대한 채 침략하면 걸어가는 내 영주가 화면 밖일 수 있다 — 걷는 동안 지도가 내 영주를 가운데에 두고 따라간다(끌기 한계 안에서, 배율은 그대로)
             if (_zoom > 1 && Lords.MarchingAt(mine, out Vector2 at))
             {

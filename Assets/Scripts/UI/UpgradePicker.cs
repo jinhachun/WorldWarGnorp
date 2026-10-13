@@ -50,6 +50,14 @@ namespace GnorpWar
             }
         }
 
+        // 카드 셋은 외곽선 두께만큼 겹쳐 붙어 있다(틈으로 뒤가 비치지 않게 · 붙은 자리의 선은 한 줄) — 올린 카드를 맨 위에 그려 그 카드의 외곽선이 네 변 다 제 색으로 보이게
+        private void Update()
+        {
+            foreach (Card card in _cards)
+                if (card.Hover.Hovered)
+                    card.Button.transform.SetAsLastSibling();
+        }
+
         // block = 고를 것이 남았다(상점 조작을 막는다) · cards = 카드를 보인다(합치기 연출이 끝났다). 막기만 하는 동안에는 판이 투명하다
         public void Show(bool block, bool cards)
         {

@@ -387,7 +387,8 @@ namespace GnorpWar
             if (_stage == Stage.March)
             {
                 // 걸음이 끝나면 전투로 — 걸음이 끝났다는 신호를 못 받아도 걸음의 길이 + 여유가 지나면 넘어간다
-                _marchClock += Time.unscaledDeltaTime;
+                // 프레임 시간을 묶는다(걸음 그림 — UI/WorldLords와 같은 상한) — 한 프레임이 길게 멈춰도 걸음을 건너뛰고 전투로 넘어가지 않게
+                _marchClock += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
                 if (_marchClock > 0f && (!_map.Lords.AnyMarching || _marchClock >= WorldLords.MarchSeconds + MarchSlack))
                 {
                     StartBattle();

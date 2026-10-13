@@ -19,7 +19,7 @@ namespace GnorpWar
                 if (IsProducer(owned))
                 {
                     BuildingDefinition definition = owned.Definition;
-                    power += UnitPower(definition.Unit, battle) * definition.UnitCount / (definition.Cooldown * battle.RankCooldownScale(owned.Level));
+                    power += UnitPower(definition.Unit, battle) * definition.UnitCount / (definition.Cooldown * battle.RankCooldownScale(owned.CooldownLevel));
                 }
             return power;
         }

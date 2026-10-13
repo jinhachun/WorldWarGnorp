@@ -30,6 +30,13 @@ namespace GnorpWar
         // 상한은 시작 등급마다 다르다(일반 시작이면 5 · 전설 시작이면 1). Copies(합친 개수)는 _upgrades를 직접 읽어 계속 늘어난다
         public static int LevelOf(BuildingDefinition definition, int upgrades)
             => Mathf.Min(upgrades, (int)BuildingRarity.Legendary - (int)definition.Rarity) + 1;
+        // 쿨다운을 정하는 레벨 — 신화는 수치가 멈추지만 생산 기물의 등급업 쿨다운 배율만은 한 번 더 받는다(사용자 결정 10/13): 신화면 Level + 1.
+        // 쿨다운 계산(BuildingDefinition.CooldownAt)에만 쓴다 — 다른 수치는 Level 그대로
+        public int CooldownLevel => CooldownLevelOf(_definition, _upgrades);
+        public static int CooldownLevelOf(BuildingDefinition definition, int upgrades)
+            => LevelOf(definition, upgrades) + ((int)definition.Rarity + upgrades >= (int)BuildingRarity.Mythic ? 1 : 0);
+        // 지금 등급의 원래 쿨다운(풍차 · 가속 · 맵 배율을 곱하기 전) — 발동(BoardRunner)과 툴팁이 같이 읽는다
+        public float Cooldown => _definition.CooldownAt(CooldownLevel);
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
         public bool CanUpgrade => Rarity < BuildingRarity.Mythic;

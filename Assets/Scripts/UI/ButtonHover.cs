@@ -18,6 +18,8 @@ namespace GnorpWar
         // 판의 제 색 — 색을 바꾸는 쪽(판매 칸의 놓는 자리 노랑)은 판 색을 직접 쓰지 말고 여기에 쓴다
         public Color Base { get; set; } = Color.white;
 
+        public bool Hovered => _hovered;
+
         private void Awake() => _button = GetComponent<Button>();
 
         private void OnDisable() => _hovered = false;

@@ -19,7 +19,7 @@ namespace GnorpWar
             // 층·칸 표시용(전장 탑 · UI 탑) — 남은 가속(초, 기물이 멈췄거나 쿨다운 없는 기물이면 0) · 지금 쿨다운 ÷ 원래 쿨다운(풍차 ×0.8 → 0.8, 받은 게 없으면 1).
             // 원래 쿨다운 = 그 등급의 쿨다운(CooldownAt) — 등급으로 준 몫은 받은 효과가 아니다
             public float HasteLeft => Cooldown > 0f && !BattleManager.BoardsStopped ? Mathf.Max(0f, Haste) : 0f;
-            public float CooldownScale => Building != null && Building.Definition.Cooldown > 0f ? Cooldown / Building.Definition.CooldownAt(Building.Level) : 1f;
+            public float CooldownScale => Building != null && Building.Definition.Cooldown > 0f ? Cooldown / Building.Cooldown : 1f;
             // 이번 프레임에 이미 발동했나 — 서로 발동시키는 기물끼리 한 프레임에 끝없이 발동하지 않게
             public bool FiredThisFrame;
             // 전투 동안 이 칸이 쌓은 값(허수아비 · 화살 강화기 · 처치 발동) — 아직 안 터졌으면 0(+0% · ×1)
@@ -76,7 +76,7 @@ namespace GnorpWar
                 if (!OwnedBuilding.IsEmpty(field[i]))
                 {
                     _slots[i].Building = field[i];
-                    _slots[i].Cooldown = field[i].Definition.CooldownAt(field[i].Level);
+                    _slots[i].Cooldown = field[i].Cooldown;
                     InitBattleGain(_slots[i]);
                 }
             }

@@ -104,10 +104,11 @@ namespace GnorpWar
         public static string RankUpPreview(BuildingDefinition building, int level, BuildingRarity next)
         {
             // next는 한 등급 위이므로 지금 등급은 next - 1 — 전설 → 신화에서만 after에 신화 줄이 늘어난다.
-            // 합친 뒤의 레벨은 OwnedBuilding과 같은 상한을 받는다 — 신화는 수치가 전설과 같아 숫자가 하나도 안 바뀌고 신화 줄만 늘어난다
-            int afterLevel = OwnedBuilding.LevelOf(building, (int)next - (int)building.Rarity);
-            List<string> now = Lines(building, level, building.CooldownAt(level), next - 1 == BuildingRarity.Mythic);
-            List<string> after = Lines(building, afterLevel, building.CooldownAt(afterLevel), next == BuildingRarity.Mythic);
+            // 합친 뒤의 레벨은 OwnedBuilding과 같은 상한을 받는다 — 신화는 수치가 전설과 같고 신화 줄만 늘어난다. 쿨다운만은 신화에서도 한 단계 더 준다(OwnedBuilding.CooldownLevelOf)
+            int upgrades = (int)next - (int)building.Rarity;
+            int afterLevel = OwnedBuilding.LevelOf(building, upgrades);
+            List<string> now = Lines(building, level, building.CooldownAt(OwnedBuilding.CooldownLevelOf(building, upgrades - 1)), next - 1 == BuildingRarity.Mythic);
+            List<string> after = Lines(building, afterLevel, building.CooldownAt(OwnedBuilding.CooldownLevelOf(building, upgrades)), next == BuildingRarity.Mythic);
             string text = $"\n<color={NumberColor}>{next.DisplayName()} 등급이 되면</color>";
             bool any = false;
             for (int i = 0; i < after.Count; i++)
@@ -256,7 +257,7 @@ namespace GnorpWar
         // 가진 기물(필드·보관함 칸, 전장 탑 층) — running = 전투 중 돌고 있는 칸(상점에선 null)
         public static void ShowOwned(Component owner, OwnedBuilding building, BoardRunner.Slot running, bool enemy)
         {
-            float cooldown = running != null ? running.Cooldown : building.Definition.CooldownAt(building.Level);
+            float cooldown = running != null ? running.Cooldown : building.Cooldown;
             string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic);
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             if (!enemy && !BattleManager.Fighting && building.Stacks > 0)

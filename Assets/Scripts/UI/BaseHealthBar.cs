@@ -13,6 +13,9 @@ namespace GnorpWar
 
         private int _shownHp = -1;
 
+        // 채움은 그 진영 영주의 색(사용자 10/13) — 전장의 탑 지붕 · 깃발과 같은 색(RunState.LordColor)
+        private void Start() => _fill.color = RunState.LordColor(_base.Team);
+
         private void Update()
         {
             _fill.fillAmount = _base.Hp01;

@@ -238,6 +238,8 @@ namespace GnorpWar
                 // 지붕은 맨 위 층 바로 위를 따라간다
                 float slotHalf = ((RectTransform)_template.transform).rect.height * 0.5f;
                 _roof.anchoredPosition = _origin + new Vector2(0f, (count - 1) * _step + slotHalf);
+                // 지붕은 그 탑 영주의 색(사용자 10/13) — 전장의 탑 지붕과 같은 색
+                _roof.GetComponent<Image>().color = RunState.LordColor(_source == Source.EnemyField ? Team.Enemy : Team.Ally);
             }
             for (int i = 0; i < _views.Length; i++)
             {

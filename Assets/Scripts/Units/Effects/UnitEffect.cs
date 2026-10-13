@@ -28,6 +28,8 @@ namespace GnorpWar
         protected int Level(Team team) => TeamEffects.LevelOf(team, this);
         // 이 효과를 켠 기물 — 이 효과가 유닛을 소환할 때 출처로 넘기고(BoardRunner.Summon), 「이 기물이 소환한 ~」을 가릴 때 Unit.SummonedBy와 견준다
         protected BuildingDefinition Source(Team team) => TeamEffects.SourceOf(team, this);
+        // 이 효과를 켠 합치기 보상 업그레이드의 합쳐진 값(글에 보이는 숫자 그대로 — 10 = 10%) — 업그레이드용 효과가 읽는다
+        protected float Value(Team team) => TeamEffects.ValueOf(team, this);
 
         public bool AppliesTo(UnitDefinition unit)
             => (_categories.Length == 0 && _units.Length == 0)
@@ -81,6 +83,14 @@ namespace GnorpWar
         public virtual void OnHighGroundHit(Unit victim, float damage, IDamageable attacker) { }
         // 상대보다 높은 고도에서 주는 피해 +비율(기름투하대) — 타워는 늘 높은 고도
         public virtual float HighGroundDamageBonus(int level) => 0f;
+        // 지금 공격한 적보다 높은 고도였으면 그 공격 뒤의 간격에 얹는 공격속도 +비율(합연산, 고지 점령)
+        public virtual float HighGroundAttackSpeedBonus(Team team) => 0f;
+        // 받은 피해 중 공격한 쪽에 돌려주는 비율(가시 갑옷) — 죽는 타격도 돌려준다
+        public virtual float DamageReflectRatio(Team team) => 0f;
+        // 이 생애의 첫 공격에 얹는 피해 +비율(돌격 나팔)
+        public virtual float FirstAttackDamageBonus(Team team) => 0f;
+        // 적용 대상 유닛이 쏜 화살이 적 유닛에 피해를 준 직후(사냥꾼의 활) — team = 쏜 쪽. 타워의 화살은 안 불린다
+        public virtual void OnArrowHit(Team team, Unit victim) { }
         // 회복 투사체 하나를 던진 직후
         public virtual void OnHealed(Unit healer, Unit patient, int stacks) { }
         // 회복 투사체가 아군에 닿아 실제로 체력이 찬 직후(구슬마다, 빗나간 구슬은 안 불린다) — team = 던진 쪽. 적용 분류는 던진 유닛 기준.

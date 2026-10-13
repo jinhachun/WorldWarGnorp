@@ -23,7 +23,8 @@ namespace GnorpWar.Editor
             ("전투·경제 설정", new[] { nameof(BattleConfig), nameof(BaseDefinition) }),
             ("맵", new[] { nameof(MapDefinition) }),
             ("적 빌드", new[] { nameof(EnemyBuildProfile) }),
-            ("월드", new[] { nameof(WorldConfig), nameof(RegionUpgradeDefinition) }),
+            ("월드", new[] { nameof(WorldConfig) }),
+            ("업그레이드", new[] { nameof(UpgradeDefinition) }),
         };
 
         // 유닛 표 — 유닛을 줄로, 자주 고치는 수치를 칸으로. 칸에서 고치면 그 유닛 에셋에 바로 쓴다

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_BlackMarket
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uC554\uC2DC\uC7A5"
+  _icon: {fileID: 21300000, guid: cb76e0d137302fe42867638a15dc43f9, type: 3}
+  _description: "\uD134\uB9C8\uB2E4 \uBB34\uB8CC \uB9AC\uB864 +{0}\uD68C"
+  _values:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  _stack: 0
+  _max: 0
+  _inPool: 1
+  _kind: 6
+  _categories: []
+  _unitStat: 0
+  _towerStat: 0
+  _effect: {fileID: 0}
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}

@@ -10,7 +10,7 @@ namespace GnorpWar
     // 다른 영주와의 국경 · 해안선은 흰 선, 같은 영주의 땅 사이는 옅은 선. 침략할 수 있는 땅에는 내 땅에서 그 땅으로 화살표 하나
     // (국경을 가장 길게 맞댄 내 땅에서, 여덟 방향 도트 도장) — _hatch를 켜면 그 땅에 그 영주 색 빗금도. 고른 땅은 노란 테두리, 가리킨 땅은 조금 밝게.
     // 판도 · 고른 땅 · 가리킨 땅이 바뀔 때마다 그림을 통째로 다시 칠한다(375×252칸).
-    // 땅마다 지형 아이콘 · 업그레이드 아이콘과 땅 번호는 구운 표시 자리(AnchorOf)에 한 번 놓는다.
+    // 땅마다 지형 아이콘과 땅 번호는 구운 표시 자리(AnchorOf)에 한 번 놓는다.
     // 누름 · 가리킴은 화면 좌표를 칸으로 바꿔 땅 번호를 읽는다 — 무엇을 할지는 WorldManager가 정한다
     [RequireComponent(typeof(RawImage))]
     public class WorldMapView : MonoBehaviour, IPointerClickHandler, IPointerMoveHandler, IPointerExitHandler, IScrollHandler, IDragHandler
@@ -63,7 +63,7 @@ namespace GnorpWar
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 SeaColor = new Color32(0, 0, 0, 255);
 
-        // 표시의 자리(표시 자리 기준, 화면 px): 아이콘 뒤 검은 판(지형 · 업그레이드 둘이 나란히) · 아이콘 높이 · 땅 번호 높이
+        // 표시의 자리(표시 자리 기준, 화면 px): 지형 아이콘 뒤 검은 판의 한 변 · 아이콘 높이 · 땅 번호 높이
         private const float IconBack = 36f;
         private const float IconY = 12f;
         private const float LabelY = -22f;
@@ -151,21 +151,16 @@ namespace GnorpWar
                 mark.anchoredPosition = new Vector2(anchor.x * scale, -anchor.y * scale);
                 mark.sizeDelta = Vector2.zero;
 
-                // 지형 아이콘(왼쪽) · 업그레이드 아이콘(오른쪽) — 각각 검은 판 위에, 원본 크기
-                Sprite[] icons = { map.TerrainOf(region).Icon, map.UpgradeOf(region).Icon };
-                for (int i = 0; i < icons.Length; i++)
-                {
-                    float x = (i - 0.5f) * IconBack;
-                    Image back = NewImage(mark, "Back");
-                    back.color = Color.black;
-                    back.rectTransform.sizeDelta = new Vector2(IconBack, IconBack);
-                    back.rectTransform.anchoredPosition = new Vector2(x, IconY);
-                    Image image = NewImage(mark, "Icon");
-                    image.sprite = icons[i];
-                    image.SetNativeSize();
-                    image.preserveAspect = true;   // 지도 확대가 localScale을 쓴다(CLAUDE.md §5-1)
-                    image.rectTransform.anchoredPosition = new Vector2(x, IconY);
-                }
+                // 지형 아이콘 — 검은 판 위에, 원본 크기
+                Image back = NewImage(mark, "Back");
+                back.color = Color.black;
+                back.rectTransform.sizeDelta = new Vector2(IconBack, IconBack);
+                back.rectTransform.anchoredPosition = new Vector2(0f, IconY);
+                Image image = NewImage(mark, "Icon");
+                image.sprite = map.TerrainOf(region).Icon;
+                image.SetNativeSize();
+                image.preserveAspect = true;   // 지도 확대가 localScale을 쓴다(CLAUDE.md §5-1)
+                image.rectTransform.anchoredPosition = new Vector2(0f, IconY);
 
                 var label = new GameObject("Label", typeof(RectTransform), typeof(Text), typeof(Outline)).GetComponent<Text>();
                 label.transform.SetParent(mark, false);
@@ -206,6 +201,12 @@ namespace GnorpWar
         {
             // 가리킨 땅의 영주만 그림 위에 이름이 뜬다
             Lords.Point(Hovered == None ? -1 : owner[Hovered]);
+            // 확대한 채 침략하면 걸어가는 내 영주가 화면 밖일 수 있다 — 걷는 동안 지도가 내 영주를 가운데에 두고 따라간다(끌기 한계 안에서, 배율은 그대로)
+            if (_zoom > 1 && Lords.MarchingAt(mine, out Vector2 at))
+            {
+                Vector2 size = ((RectTransform)transform).rect.size;
+                Place(_home + new Vector2(size.x, -size.y) * 0.5f - at * _zoom);
+            }
             bool changed = !_painted || selected != _selected || Hovered != _hovered || mine != _mine;
             for (int region = 0; region < _owner.Length; region++)
             {

@@ -13,6 +13,8 @@ namespace GnorpWar
             public int Level = 1;
             // 켜 준 기물 — 이 효과가 소환한 유닛의 출처(Unit.SummonedBy)가 된다. 같은 기물 여럿이 켜도 종류는 하나다
             public BuildingDefinition Source;
+            // 합치기 보상 업그레이드가 켠 효과의 합쳐진 값(UpgradeDefinition.Apply) — 기물이 켠 효과는 0
+            public float Value;
         }
 
         private static readonly List<Entry>[] ByTeam = { new List<Entry>(), new List<Entry>() };
@@ -47,6 +49,14 @@ namespace GnorpWar
                 if (entry.Effect == effect)
                     return entry.Source;
             return null;
+        }
+
+        public static float ValueOf(Team team, UnitEffect effect)
+        {
+            foreach (Entry entry in For(team))
+                if (entry.Effect == effect)
+                    return entry.Value;
+            return 0f;
         }
 
         public static int LevelOf(Team team, UnitEffect effect)

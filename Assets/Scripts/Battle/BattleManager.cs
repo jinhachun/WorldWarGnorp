@@ -22,8 +22,6 @@ namespace GnorpWar
         [SerializeField] private Text _resultSummary;
         [Tooltip("패배 시 내 결과 한 줄(「-1」) 바로 왼쪽에 뜨는 행복도 하트")]
         [SerializeField] private Image _resultHeart;
-        [Tooltip("결과 창 — 이번 승리로 얻은 지역 업그레이드 아이콘 줄(내 결과 한 줄 아래)")]
-        [SerializeField] private ResultGains _resultGains;
         [Tooltip("전투 배속 버튼 — 전투 중에만 보인다")]
         [SerializeField] private GameObject _speedButton;
 
@@ -136,13 +134,13 @@ namespace GnorpWar
                     StatBook.AddForBattle(Team.Ally, rule, rule.Modifier);
                     StatBook.AddForBattle(Team.Enemy, rule, rule.Modifier);
                 }
-            // 지역 업그레이드(무기 · 방어구 · 민족주의) — 양 진영이 각자 자기 영주의 것을, 전투 동안
-            WorldRun world = RunState.World;
-            Lord player = world.State.Player, opponent = RunState.Opponent;
-            world.ForEachUnitUpgrade(player, opponent, (upgrade, modifier) => StatBook.AddForBattle(Team.Ally, upgrade, modifier));
-            world.ForEachUnitUpgrade(opponent, player, (upgrade, modifier) => StatBook.AddForBattle(Team.Enemy, upgrade, modifier));
+            // 합치기 보상 업그레이드 — 양 진영이 각자 자기 탑의 것을, 전투 동안. 스탯 · 효과는 보드가 돌기 전에, 소환 · 작은 타워는 돈 뒤에
+            RunState.ApplyUpgrades(Team.Ally, false);
+            RunState.ApplyUpgrades(Team.Enemy, false);
             _allyBoard.Begin();
             _enemyBoard.Begin();
+            RunState.ApplyUpgrades(Team.Ally, true);
+            RunState.ApplyUpgrades(Team.Enemy, true);
             _battleStart = Time.time;
             _fighting = true;
             _speedButton.SetActive(true);
@@ -225,8 +223,6 @@ namespace GnorpWar
             RectTransform heart = _resultHeart.rectTransform, summary = _resultSummary.rectTransform;
             summary.anchoredPosition = new Vector2(won ? 0f : (heart.sizeDelta.x + ResultHeartGap) * 0.5f, summary.anchoredPosition.y);
             heart.anchoredPosition = new Vector2(-(_resultSummary.preferredWidth + heart.sizeDelta.x) * 0.5f - ResultHeartGap, heart.anchoredPosition.y);
-            // 이번 승리로 넘어온 땅들의 업그레이드(졌으면 없다)
-            _resultGains.Show(RunState.LastGains);
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
             Time.timeScale = 0f;

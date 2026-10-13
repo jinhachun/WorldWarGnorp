@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_Outpost
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uC804\uCD08 \uAE30\uC9C0"
+  _icon: {fileID: 21300000, guid: 61ef0ef13c367174897d4da1ac9eab98, type: 3}
+  _description: "\uC804\uD22C \uC2DC\uC791 \uC2DC, \uC804\uC7A5 \uAC00\uC6B4\uB370\uC5D0
+    \uC791\uC740 \uD0C0\uC6CC\uB97C \uC138\uC6C1\uB2C8\uB2E4. \uC774 \uC791\uC740
+    \uD0C0\uC6CC\uC758 \uCCB4\uB825\uC740 \uB0B4 \uBCF8\uC9C4\uC758 {0}%\uC785\uB2C8\uB2E4."
+  _values:
+  - 10
+  - 15
+  - 20
+  - 30
+  - 40
+  _stack: 0
+  _max: 0
+  _inPool: 1
+  _kind: 4
+  _categories: []
+  _unitStat: 0
+  _towerStat: 0
+  _effect: {fileID: 0}
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 11400000, guid: c6392197761071546876a162e33f1c95, type: 2}

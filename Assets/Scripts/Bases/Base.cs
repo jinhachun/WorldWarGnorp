@@ -61,6 +61,16 @@ namespace GnorpWar
             RefreshStats();
         }
 
+        // 이 타워 한 채의 최대 체력을 본진의 비율로 정한다(전초 기지 — 0.2 = 본진의 20%). 0이면 정의의 작은 타워 배율 그대로
+        private float _hpOfHome;
+
+        public void SetHpOfHome(float ratio)
+        {
+            _hpOfHome = ratio;
+            RefreshStats();
+            _hp = MaxHp;
+        }
+
         public event System.Action<Base> Destroyed;
 
         // 이 작은 타워를 세운 기물(조립식 감시탑이 적는다) — 「이 작은 타워」를 가리는 능력이 읽는다. 건축가가 지었으면 null
@@ -243,7 +253,7 @@ namespace GnorpWar
             float oldMaxHp = _stats[(int)TowerStat.MaxHp];
             // 작은 타워 = 본진 수치 × 배율(정의) — 그 위에 '내 타워' 효과(TowerBook)를 본진과 똑같이
             float attackScale = _small ? _definition.SmallAttackScale : 1f;
-            float hpScale = _small ? _definition.SmallHpScale : 1f;
+            float hpScale = _hpOfHome > 0f ? _hpOfHome : _small ? _definition.SmallHpScale : 1f;
             _stats[(int)TowerStat.Attack] = TowerBook.Compute(_team, TowerStat.Attack, _definition.AttackDamage * attackScale);
             _stats[(int)TowerStat.AttackSpeed] = TowerBook.Compute(_team, TowerStat.AttackSpeed, 1f);
             _stats[(int)TowerStat.Range] = TowerBook.Compute(_team, TowerStat.Range, _definition.AttackRange, _rangeBonus);

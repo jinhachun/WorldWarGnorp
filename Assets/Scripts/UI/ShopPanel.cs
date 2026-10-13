@@ -34,6 +34,8 @@ namespace GnorpWar
         [SerializeField] private Image _dragGhostWindow;
         [Tooltip("끄는 동안 탑 층 경계에 뜨는 끼워 넣기 선(가운데 기준) — 레이캐스트를 막지 않아야 한다")]
         [SerializeField] private RectTransform _insertLine;
+        [Tooltip("합치기 보상 업그레이드 고르기 창 — 고를 것이 남은 동안 화면 전체를 덮어 상점 조작을 막는다")]
+        [SerializeField] private UpgradePicker _picker;
 
         // 「지도로」를 눌렀다 — 상점을 닫는 일은 이 판을 띄운 쪽이 한다
         public event System.Action MapRequested;
@@ -97,6 +99,9 @@ namespace GnorpWar
                 // 끄는 조각과 끼울 자리 선도 그 층으로 — 팝업 안에 두면 왼쪽 패널 뒤에 그려진다
                 _insertLine.SetParent(_towerLayer, false);
                 _dragGhost.SetParent(_towerLayer, false);
+                // 고르기 창은 그 층 바로 위로 — 팝업 밖에 선 내 탑까지 덮어야 탑의 기물도 못 끈다
+                _picker.transform.SetParent(_towerLayer.parent, false);
+                _picker.transform.SetSiblingIndex(_towerLayer.GetSiblingIndex() + 1);
             }
         }
 
@@ -140,6 +145,8 @@ namespace GnorpWar
             _insertAt = -1;
             if (_insertLine != null)
                 _insertLine.gameObject.SetActive(false);
+            if (_picker != null)
+                _picker.Show(false, false);
         }
 
         public bool Dragging => _dragging;
@@ -345,6 +352,10 @@ namespace GnorpWar
 
         private void Update()
         {
+            // 합치기 보상 — 고를 것이 생기면 바로 조작을 막고, 합치기 연출이 끝나면 카드를 보인다
+            bool choosing = RunState.PendingUpgrades.Count > 0;
+            _picker.Show(choosing, choosing && !_merge.Playing);
+
             for (int i = 0; i < _offers.Length; i++)
                 _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
 

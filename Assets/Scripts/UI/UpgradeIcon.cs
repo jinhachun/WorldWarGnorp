@@ -5,8 +5,8 @@ using UnityEngine.UI;
 namespace GnorpWar
 {
     // 패널의 아이콘 한 개 — 마우스를 올리면 설명 창(BuildingTooltip)에 이름과 효과.
-    // 지역 업그레이드(가진 업그레이드 줄 · 고른 땅의 강화)와 고른 땅의 지형이 쓴다.
-    // 업그레이드를 여러 개 가졌으면 효과 글의 숫자는 합쳐진 실제 값이고, 회색 줄로 「N개 보유」
+    // 가진 업그레이드 줄(UI/UpgradeRow)과 고른 땅의 지형이 쓴다.
+    // 업그레이드를 여러 번 얻었으면 효과 글의 숫자는 합쳐진 실제 값이고, 회색 줄로 「N개 보유」
     [RequireComponent(typeof(Image))]
     public class UpgradeIcon : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
@@ -15,13 +15,12 @@ namespace GnorpWar
         private string _title;
         private string _body;
 
-        // note = 여러 개일 때 회색 줄의 글({0} = 개수)
-        public void Set(RegionUpgradeDefinition upgrade, int count, string note = "{0}개 보유")
+        public void Set(UpgradeHolding holding)
         {
-            string body = BuildingTooltip.Highlight(upgrade.Describe(count));
-            if (count > 1)
-                body += $"\n<color={BuildingTooltip.NoteColor}>{string.Format(note, count)}</color>";
-            Set(upgrade.Icon, upgrade.DisplayName, body);
+            string body = BuildingTooltip.Highlight(holding.Description);
+            if (holding.Count > 1)
+                body += $"\n<color={BuildingTooltip.NoteColor}>{holding.Count}개 보유</color>";
+            Set(holding.Definition.Icon, holding.Definition.DisplayName, body);
         }
 
         // 그림은 원본 크기 그대로

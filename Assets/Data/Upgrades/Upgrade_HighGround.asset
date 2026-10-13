@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_HighGround
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uACE0\uC9C0 \uC810\uB839"
+  _icon: {fileID: 21300000, guid: db989e9d71a990d418efe16a72a4e7a6, type: 3}
+  _description: "\uB0B4 \uACBD\uBCF4\uBCD1\uC774 \uC0C1\uB300\uBCF4\uB2E4 \uB192\uC740
+    \uACE0\uB3C4\uC5D0 \uC788\uC73C\uBA74, \uACF5\uACA9\uC18D\uB3C4 +{0}%"
+  _values:
+  - 10
+  - 15
+  - 20
+  - 30
+  - 40
+  _stack: 0
+  _max: 0
+  _inPool: 1
+  _kind: 2
+  _categories: []
+  _unitStat: 0
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: 663ab738c4def8146a77d9f789dce153, type: 2}
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}

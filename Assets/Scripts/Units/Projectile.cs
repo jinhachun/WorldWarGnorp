@@ -25,6 +25,8 @@ namespace GnorpWar
         // 쏜 쪽(처치자 판정) — 유닛은 풀에서 다시 쓰이므로 쏠 때의 생애 번호가 맞을 때만 그 유닛으로 친다
         private IDamageable _shooter;
         private int _shooterLife;
+        // 쏜 유닛의 종류(타워의 화살이면 null) — 화살이 맞았을 때의 효과(OnArrowHit)의 적용 분류는 쏠 때 기준
+        private UnitDefinition _shooterDefinition;
         private bool _spent;
         // 관통 — 적을 맞혀도 멈추지 않고 땅·벽에 닿을 때까지. 한 적은 한 번만
         private bool _pierce;
@@ -96,6 +98,7 @@ namespace GnorpWar
             _splashRadius = splashRadius;
             _shooter = shooter;
             _shooterLife = shooter is Unit unit ? unit.Life : 0;
+            _shooterDefinition = shooter is Unit archer ? archer.Definition : null;
 
             Vector2 origin = _rb.position;
             float gravity = -Physics2D.gravity.y * _rb.gravityScale;
@@ -119,6 +122,10 @@ namespace GnorpWar
         private void Deal(IDamageable target, Vector2 direction)
         {
             target.TakeDamage(_damage, direction, _push, Shooter);
+            if (_shooterDefinition != null && target is Unit hit && hit.IsAlive)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _shooterDefinition))
+                        e.Effect.OnArrowHit(_team, hit);
             if (_highGround && target is Unit victim)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     e.Effect.OnHighGroundHit(victim, _damage, Shooter);

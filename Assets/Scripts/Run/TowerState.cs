@@ -13,12 +13,17 @@ namespace GnorpWar
         public bool ShopLocked;
         public int FloorRaises;
         public readonly RunBook Book = new RunBook();
+        // 이 탑이 합치기로 얻은 업그레이드(얻은 순서) · 이번 턴에 남은 무료 리롤(암시장 — 턴 상점이 열릴 때 채운다)
+        public readonly System.Collections.Generic.List<UpgradeGain> Upgrades = new System.Collections.Generic.List<UpgradeGain>();
+        public int FreeRerolls;
 
         public TowerState(Team team) => Team = team;
 
         // 빈 시작 탑으로 — 영구 강화(Book)는 건드리지 않는다
         public void Reset(BattleConfig config)
         {
+            Upgrades.Clear();
+            FreeRerolls = 0;
             Gold = 0;
             Field = new OwnedBuilding[config.StartFloors];
             FloorRaises = 0;

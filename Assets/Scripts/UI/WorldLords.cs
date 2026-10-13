@@ -300,6 +300,8 @@ namespace GnorpWar
             public RectTransform Rect;
             public Vector2 Origin, Velocity;
             public float Spin, Age;
+            // 궤적을 따라가는 빠르기(1 = 전투 값 그대로) — 지도 가장자리에서 맞으면 느려진다(FellMinSeconds)
+            public float Slow;
             // 다음 구름 조각까지 남은 시간
             public float Puff;
         }
@@ -313,6 +315,8 @@ namespace GnorpWar
 
         // 죽이는 침략에서 진 영주의 어느 쪽 옆에 서서 치나(칸) — 두 그림이 맞닿는 거리
         private const float StrikeReach = 5f;
+        // 날아가는 그림이 지도 밖(옆 · 위)으로 나가기까지 적어도 이만큼(초) 보인다 — 가장자리에서 맞은 그림은 같은 궤적을 그만큼 느리게 난다. 가운데에서 맞으면 전투 값 그대로
+        private const float FellMinSeconds = 0.5f;
         // 구름 — 남기는 간격(초) · 수명(초) · 조각 크기(구름 그림 1px이 화면 몇 px인지 — 작은 것 · 큰 것) · 맞는 순간 터지는 조각 수 · 동시에 떠 있는 상한
         private const float CloudInterval = 0.025f;
         private const float CloudSeconds = 0.6f;
@@ -342,12 +346,17 @@ namespace GnorpWar
             float side = away > 0f ? 1f : away < 0f ? -1f : _random.Next(2) == 0 ? -1f : 1f;
             float angle = (config.CorpseAngle + Range(-config.CorpseAngleSpread, config.CorpseAngleSpread)) * Mathf.Deg2Rad;
             float speed = Range(config.CorpseSpeedMin, config.CorpseSpeedMax) * UnitPixels;
+            Vector2 velocity = new Vector2(side * Mathf.Cos(angle), Mathf.Sin(angle)) * speed;
+            // 날아가는 쪽 옆 끝 · 위 끝까지의 거리(px) — 전투 값으로 FellMinSeconds 안에 넘어가면 넘어가지 않을 만큼 느리게
+            Vector2 at = rect.anchoredPosition;
+            float aside = side > 0f ? _width * _scale - at.x : at.x, above = -at.y;
             _flyers.Add(new Flyer
             {
                 Rect = rect,
-                Origin = rect.anchoredPosition,
-                Velocity = new Vector2(side * Mathf.Cos(angle), Mathf.Sin(angle)) * speed,
+                Origin = at,
+                Velocity = velocity,
                 Spin = -side * Range(config.CorpseSpinMin, config.CorpseSpinMax),
+                Slow = Mathf.Min(1f, aside / (Mathf.Abs(velocity.x) * FellMinSeconds), above / (velocity.y * FellMinSeconds)),
             });
             if (!struck)
                 return;
@@ -452,7 +461,8 @@ namespace GnorpWar
             {
                 Flyer flyer = _flyers[i];
                 flyer.Age += dt;
-                Vector2 position = flyer.Origin + flyer.Velocity * flyer.Age + new Vector2(0f, -0.5f * gravity * flyer.Age * flyer.Age);
+                float t = flyer.Age * flyer.Slow;
+                Vector2 position = flyer.Origin + flyer.Velocity * t + new Vector2(0f, -0.5f * gravity * t * t);
                 if (flyer.Age >= config.CorpseLifetime || position.y < floor || position.x < -UnitPixels * 2f || position.x > _width * _scale + UnitPixels * 2f)
                 {
                     Destroy(flyer.Rect.gameObject);
@@ -557,6 +567,14 @@ namespace GnorpWar
                         strays++;
                 return strays;
             }
+        }
+
+        // lord의 그림이 침략 걸음 중이면 그 자리(지도 그림 안, px) — 확대한 지도가 내 영주를 따라간다(UI/WorldMapView.Show)
+        public bool MarchingAt(int lord, out Vector2 at)
+        {
+            bool marching = _walkers.TryGetValue(lord, out Walker walker) && walker.Marching;
+            at = marching ? walker.Rect.anchoredPosition : Vector2.zero;
+            return marching;
         }
 
         public bool AnyMarching

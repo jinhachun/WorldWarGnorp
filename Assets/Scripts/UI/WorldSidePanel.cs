@@ -6,8 +6,8 @@ namespace GnorpWar
     // 지도 씬의 왼쪽 패널 — 고른 땅의 영주가 주인공인 초상화 배치(사용자가 준 그림 10/12), 글 기둥 안에서 전부 가운데 정렬. 위에서부터:
     //   [영주 그림 — 지도와 같은 깃발 든 유닛, 크게] / 닉네임(나는 「내 영지」, 최후의 연합은 「연합」 + 「땅 N개 · 앞으로 k번」) / 국가 / 그 영주가 가진 업그레이드 아이콘 줄(「×N」)
     //   ─ 가로 구분선 ─
-    //   지형 : [아이콘] 이름 / 강화 : [아이콘] 이름 / 패배시 · [하트] -N
-    // 고른 땅이 없으면 같은 배치로 나(구분선 아래는 안내 글만), 내 땅을 고르면 나 + 그 땅의 지형 · 강화.
+    //   지형 : [아이콘] 이름 / 패배시 · [하트] -N
+    // 고른 땅이 없으면 같은 배치로 나(구분선 아래는 안내 글만), 내 땅을 고르면 나 + 그 땅의 지형.
     // 내가 가진 업그레이드는 여기가 아니라 위 줄의 「땅 n/30」 오른쪽에 늘어놓는다(ShowStatus — 넘치면 좌우로 끌어서 민다).
     // 지형 · 업그레이드의 효과는 글로 쓰지 않는다 — 아이콘에 마우스를 올리면 뜬다(UI/UpgradeIcon). 행복도는 하트 아이콘이다.
     // 오른쪽 기둥에는 그 영주의 탑이 선다 — 상점 탑과 같은 층 그림(SlotView)이고 층에 마우스를 올리면 기물 설명 창이 뜬다. 내 땅을 고르면 내 탑.
@@ -22,7 +22,7 @@ namespace GnorpWar
         private const float PortraitTop = 28f;
         // 초상화가 차지하는 높이(원본 px, 몸 한가운데에서) — 깃발 든 그림의 위 · 아래 끝
         private const float FigureUp = 7f, FigureDown = -4f;
-        // 아이콘 줄(px) — 아이콘 한 변 · 아이콘과 그 옆 글 사이 · 줄 높이 · 「지형 :」 · 「강화 :」 머리말의 폭
+        // 아이콘 줄(px) — 아이콘 한 변 · 아이콘과 그 옆 글 사이 · 줄 높이 · 「지형 :」 머리말의 폭
         private const float IconSize = 32f;
         private const float LabelGap = 4f;
         private const float CellHeight = 36f;
@@ -30,7 +30,7 @@ namespace GnorpWar
         // 가진 업그레이드 줄 — 한 칸의 폭 · 한 줄의 칸 수(패널) · 한 칸에서 아이콘과 글이 차지하는 폭(가운데 정렬용)
         private const float CellWidth = 84f;
         private const int RowColumns = 3;
-        private const float CellInk = 64f;
+        private const float CellInk = 68f;
         // 구분선의 두께(px)
         private const float DividerHeight = 2f;
         // 위 줄 — 글과 하트 사이(px)
@@ -73,7 +73,7 @@ namespace GnorpWar
         private Text _share;
         private UpgradeRow _owned;
         private Image _divider, _pillar;
-        private IconLine _terrainLine, _upgradeLine, _loseLine;
+        private IconLine _terrainLine, _loseLine;
         private Text _loseTitle;
         private HeartRow _hearts;
         private Text _statusLands;
@@ -97,7 +97,7 @@ namespace GnorpWar
                 Anchor(_mineView, new Vector2(0f, 0.5f));
                 // 끌기를 받는 투명한 판
                 view.GetComponent<Image>().color = Color.clear;
-                _mine = new UpgradeRow(_mineView, _title, CellWidth, System.Enum.GetValues(typeof(RegionUpgradeKind)).Length, false);
+                _mine = new UpgradeRow(_mineView, _title, CellWidth, int.MaxValue, false);
                 var scroll = view.GetComponent<ScrollRect>();
                 scroll.viewport = _mineView;
                 scroll.content = _mine.Root;
@@ -111,10 +111,10 @@ namespace GnorpWar
             _statusLands.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
             x += StatusGap + _statusLands.preferredWidth + StatusGap;
             _mineView.anchoredPosition = new Vector2(x, 0f);
-            _mineView.sizeDelta = new Vector2(Mathf.Max(0f, bar.rectTransform.rect.width - x), IconSize);
-            _mine.Show(RunState.World, RunState.World.State.Player);
+            _mineView.sizeDelta = new Vector2(Mathf.Max(0f, bar.rectTransform.rect.width - x), UpgradeRow.BoxSize);
+            _mine.Show(RunState.UpgradesOf(RunState.World.State.Player));
             // 밀 수 있는 폭 = 줄의 폭(끈 자리는 그대로 둔다)
-            _mine.Root.sizeDelta = new Vector2(_mine.Width, IconSize);
+            _mine.Root.sizeDelta = new Vector2(_mine.Width, UpgradeRow.BoxSize);
         }
 
         // 탑 기둥의 가로 자리(1층 틀 칸의 가운데)
@@ -163,12 +163,9 @@ namespace GnorpWar
             _nation.text = (mine ? RunState.Nation : world.Map.BuildOf(lord.Build).Nation).DisplayName();
             y = PlaceText(_nation, center, y);
             // 그 영주가 가진 업그레이드 — 내 것은 위 줄에 있다
-            int kinds = 0;
-            if (!mine)
-                foreach (RegionUpgradeKind kind in System.Enum.GetValues(typeof(RegionUpgradeKind)))
-                    if (world.UpgradeCount(lord, kind) > 0)
-                        kinds++;
-            float rowHeight = _owned.Show(world.Map, kind => mine ? 0 : world.UpgradeCount(lord, kind), "{0}개 보유");
+            var holdings = mine ? new System.Collections.Generic.List<UpgradeHolding>() : RunState.UpgradesOf(lord);
+            int kinds = holdings.Count;
+            float rowHeight = _owned.Show(holdings);
             if (kinds > 0)
             {
                 y -= LineGap;
@@ -182,7 +179,6 @@ namespace GnorpWar
                 _pillar.enabled = land;
             _divider.enabled = any;
             _terrainLine.Root.gameObject.SetActive(any);
-            _upgradeLine.Root.gameObject.SetActive(any);
             _loseTitle.gameObject.SetActive(any && !mine);
             _loseLine.Root.gameObject.SetActive(any && !mine);
             if (!any)
@@ -202,10 +198,6 @@ namespace GnorpWar
             _terrainLine.Tip.Set(terrain.Icon, terrain.DisplayName, BuildingTooltip.Highlight(terrain.Description));
             _terrainLine.Name.text = terrain.DisplayName;
             y = Line(_terrainLine, center, y);
-            RegionUpgradeDefinition upgrade = world.Map.UpgradeOf(selected);
-            _upgradeLine.Tip.Set(upgrade, 1);
-            _upgradeLine.Name.text = upgrade.DisplayName;
-            y = Line(_upgradeLine, center, y);
             if (!mine)
             {
                 y -= BlockGap * 0.5f;
@@ -245,7 +237,6 @@ namespace GnorpWar
                 pillar.rectTransform.sizeDelta = new Vector2(DividerHeight, ((RectTransform)transform).rect.height);
             }
             _terrainLine = NewLine("Terrain", "지형 :", true);
-            _upgradeLine = NewLine("Upgrade", "강화 :", true);
             _loseTitle = Instantiate(_title, transform);
             _loseTitle.name = "LoseTitle";
             _loseTitle.text = "패배시";

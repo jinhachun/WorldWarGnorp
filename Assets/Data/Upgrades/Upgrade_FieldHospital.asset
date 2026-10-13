@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_FieldHospital
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uC57C\uC804 \uBCD1\uC6D0"
+  _icon: {fileID: 21300000, guid: df125b14532a7e242964c16e50fe9691, type: 3}
+  _description: "\uB0B4 \uC9C0\uC6D0\uBCD1\uC774 \uCC98\uC74C \uACF5\uACA9\uBC1B\uC73C\uBA74
+    {0}\uCD08\uAC04 \uBB34\uC801 \uC0C1\uD0DC\uAC00 \uB429\uB2C8\uB2E4."
+  _values:
+  - 1
+  - 1.5
+  - 2
+  - 3
+  - 4
+  _stack: 0
+  _max: 0
+  _inPool: 1
+  _kind: 2
+  _categories: []
+  _unitStat: 0
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: 0f94b16244bf4bf46a725f5ca53f143d, type: 2}
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}

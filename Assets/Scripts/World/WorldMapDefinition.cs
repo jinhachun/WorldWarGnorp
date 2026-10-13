@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 손으로 짠 월드맵 한 장(기획 §3) — 지역마다 지형 · 업그레이드 · 이어진 지역, 그리고 지형마다 그 땅 영주의 빌드 방향.
+    // 손으로 짠 월드맵 한 장(기획 §3) — 지역마다 지형 · 이어진 지역, 그리고 지형마다 그 땅 영주의 빌드 방향.
     // 땅의 모양은 그림 한 장(_regionMap — 칸마다 땅 번호)이고, 이어진 지역 · 표시 자리는 그 그림에서 뽑아 같이 구운 값이다
     // (메뉴 GnorpWar/월드 지도 굽기 — Editor/WorldMapBaker. 손으로 고치면 그림과 어긋난다).
     // 규칙(WorldTurn)은 에셋을 모른다 — ToGraph가 번호만 든 WorldGraph로 바꿔 준다
@@ -18,7 +18,6 @@ namespace GnorpWar
         {
             [Tooltip("이 땅을 침략하면 전투가 벌어지는 맵")]
             public MapDefinition Terrain;
-            public RegionUpgradeDefinition Upgrade;
             [Tooltip("국경을 맞댄 지역의 칸 번호(0부터) — 침략할 수 있는 이웃. 양쪽 지역에 서로 적는다")]
             public int[] Links = new int[0];
             [Tooltip("땅 번호 지도에서 이 땅의 아이콘 · 번호를 놓을 칸(위 왼쪽이 0, 0) — 경계에서 가장 먼 자리")]
@@ -42,17 +41,8 @@ namespace GnorpWar
 
         public int RegionCount => _regions.Length;
         public MapDefinition TerrainOf(int region) => _regions[region].Terrain;
-        public RegionUpgradeDefinition UpgradeOf(int region) => _regions[region].Upgrade;
         public Vector2Int AnchorOf(int region) => _regions[region].Anchor;
 
-        // 그 종류의 업그레이드 에셋 — 이 맵에 없으면 null
-        public RegionUpgradeDefinition UpgradeOfKind(RegionUpgradeKind kind)
-        {
-            foreach (Region region in _regions)
-                if (region.Upgrade != null && region.Upgrade.Kind == kind)
-                    return region.Upgrade;
-            return null;
-        }
         // build = WorldGraph.Build · Lord.Build의 번호
         public EnemyBuildProfile BuildOf(int build) => _terrainBuilds[build].Build;
 
@@ -70,20 +60,19 @@ namespace GnorpWar
             return cells;
         }
 
-        // 지형 번호 · 빌드 방향 번호 = 지형 표(_terrainBuilds)의 칸, 업그레이드 번호 = RegionUpgradeKind
+        // 지형 번호 · 빌드 방향 번호 = 지형 표(_terrainBuilds)의 칸
         public WorldGraph ToGraph()
         {
             int count = _regions.Length;
             var links = new int[count][];
-            int[] terrain = new int[count], upgrade = new int[count], build = new int[count];
+            int[] terrain = new int[count], build = new int[count];
             for (int i = 0; i < count; i++)
             {
                 Region region = _regions[i];
                 links[i] = (int[])region.Links.Clone();
                 terrain[i] = build[i] = System.Array.FindIndex(_terrainBuilds, row => row.Terrain == region.Terrain);
-                upgrade[i] = (int)region.Upgrade.Kind;
             }
-            return new WorldGraph(links, terrain, upgrade, build);
+            return new WorldGraph(links, terrain, build);
         }
     }
 }

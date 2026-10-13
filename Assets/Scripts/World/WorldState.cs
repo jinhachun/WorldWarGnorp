@@ -84,16 +84,6 @@ namespace GnorpWar
             return neighbors;
         }
 
-        // lord가 가진 땅 중 그 업그레이드(WorldGraph.Upgrade의 번호)가 붙은 땅의 수
-        public int UpgradeCount(Lord lord, int upgrade)
-        {
-            int count = 0;
-            for (int region = 0; region < Owner.Length; region++)
-                if (Owner[region] == lord.Id && Graph.Upgrade[region] == upgrade)
-                    count++;
-            return count;
-        }
-
         // 살아 있는 AI 영주 수
         public int AiLords
         {

@@ -426,9 +426,11 @@ namespace GnorpWar
         public static float SpawnStat(Team team, UnitDefinition definition, UnitStat stat)
             => TeamSum(team, definition, stat).Apply(BaseStat(definition, stat));
 
-        private float Compute(UnitStat stat)
+        // extraPercent = 이번 계산에만 얹는 합연산 %(고지 점령 — 높은 고도에서 한 공격 뒤의 공격속도)
+        private float Compute(UnitStat stat, float extraPercent = 0f)
         {
             StatSum sum = TeamSum(_team, _definition, stat);
+            sum.Add(StatOp.Percent, extraPercent);
             foreach (StatModifier m in _ownModifiers)
                 if (m.Stat == stat)
                     sum.Add(m.Op, m.Value);
@@ -532,7 +534,50 @@ namespace GnorpWar
         // 같이 걸어가는 앞 유닛은 막은 게 아니다.
         // 속도값은 매 스텝 전진 속도로 덮어쓰므로 못 믿는다 — 실제로 움직인 거리로 판정
         private bool IsStopped => _advanceSpeed < MoveSpeed * 0.5f;
-        private float MoveSpeed => Stat(UnitStat.MoveSpeed);
+        private float MoveSpeed => Stat(UnitStat.MoveSpeed) * (Time.fixedTime < _slowUntil ? _slowFactor : 1f);
+
+        // 잠깐 느려진다(사냥꾼의 활) — 이동속도 ×factor. 느려진 동안 다시 걸리면 시간은 새로, 배율은 더 센 쪽
+        private float _slowFactor = 1f;
+        private float _slowUntil;
+
+        public void Slow(float factor, float seconds)
+        {
+            _slowFactor = Time.fixedTime < _slowUntil ? Mathf.Min(_slowFactor, factor) : factor;
+            _slowUntil = Time.fixedTime + seconds;
+        }
+
+        // 고지 점령 — 방금 공격한 적보다 높은 고도였으면 다음 공격까지의 간격에 공격속도 +%(합연산)를 얹는다
+        private float IntervalAfter(IDamageable target)
+        {
+            if (!IsAbove(target))
+                return AttackInterval;
+            float bonus = 0f;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    bonus += e.Effect.HighGroundAttackSpeedBonus(_team);
+            return bonus > 0f ? _definition.AttackInterval / Compute(UnitStat.AttackSpeed, bonus) : AttackInterval;
+        }
+
+        // 돌격 나팔 — 이 생애의 첫 공격에 곱하는 피해 배율(1 + 켜진 효과들의 +%). 한 번 읽으면 그 효과는 썼다
+        private float FirstAttackScale()
+        {
+            float scale = 1f;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                {
+                    float bonus = e.Effect.FirstAttackDamageBonus(_team);
+                    if (bonus > 0f && UseOnce(e.Effect))
+                        scale += bonus;
+                }
+            return scale;
+        }
+
+        // 연사 — 사거리 안의 적에게 화살 한 발을 바로 더 쏜다(공격 간격과 무관). 노릴 적이 없으면 쏘지 않는다
+        public void ShootExtra()
+        {
+            if (_definition.AttackType == AttackType.Ranged && FindTarget(out IDamageable target, out Vector2 targetPoint))
+                Shoot(target, targetPoint);
+        }
         // 다음 공격까지 — 이번 스텝에 넘친 시간(한 스텝까지)을 이월한다. 안 하면 간격이 물리 스텝 배수로 올림돼 공격이 느려진다
         // (0.033초 스텝에서 0.167초 간격이 0.2초가 되는 식). 오래 쉬다 쏜 첫 발은 한 스텝까지만 이월해 연사가 몰리지 않는다
         public static float NextCooldown(float current, float interval) => interval + Mathf.Max(current, -Time.fixedDeltaTime);
@@ -541,7 +586,9 @@ namespace GnorpWar
         // 타워 효과를 함께 받는 유닛이면 타워의 사거리 변경이 얹힌다(화살 강화기 신화)
         private float AttackRange => TowerBook.SharedCompute(_team, _definition, TowerStat.Range, _definition.AttackRange);
         // 전투 공격력 가속
-        public float DamageScale => BattleManager.DamageMultiplier;
+        public float DamageScale => BattleManager.DamageMultiplier * _attackScale;
+        // 지금 하는 공격 한 번에만 곱하는 배율(돌격 나팔의 첫 공격) — 공격이 끝나면 1
+        private float _attackScale = 1f;
 
         // 소환됐다(BoardRunner.Summon) — 소환 이벤트
         public void NotifySummoned(int sourceSlot, BuildingDefinition source)
@@ -662,7 +709,8 @@ namespace GnorpWar
             _doomTimer = 0f;
             _doomKiller = null;
             _usedOnce.Clear();
-            _stats[(int)UnitStat.MaxHp] = 0f;   // 지난 생애의 최대 체력으로 비율을 맞추지 않게
+            _slowUntil = 0f;
+            _stats[(int)UnitStat.MaxHp] = 0f;  // 지난 생애의 최대 체력으로 비율을 맞추지 않게
             _stats[(int)UnitStat.Attack] = 0f;  // 지난 생애의 공격력과 비교해 오라가 켜지지 않게
             _attackAuraTimer = 0f;
             _hp = 0f;
@@ -1008,6 +1056,7 @@ namespace GnorpWar
                     // 화염 · 휩쓸기는 늘 앞으로만 나간다 — 뒤돌지 않는다
                     if (_definition.AttackType != AttackType.Flame && _definition.AttackType != AttackType.Sweep)
                         LookToward(toTarget.x);
+                    _attackScale = FirstAttackScale();
                     if (_definition.AttackType == AttackType.Flame)
                     {
                         BreatheFire();
@@ -1028,13 +1077,14 @@ namespace GnorpWar
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
                         Strike(target, damage, hitDirection, push);
                     }
+                    _attackScale = 1f;
                     foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                         if (e.Effect.AppliesFor(_team, _definition))
                             e.Effect.OnAttack(this, target, e.Stacks);
                     _runTime = 0f;
                     if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
                         StartThrust(hitDirection);
-                    _attackCooldown = NextCooldown(_attackCooldown, AttackInterval);
+                    _attackCooldown = NextCooldown(_attackCooldown, IntervalAfter(target));
                 }
                 return;
             }
@@ -1086,7 +1136,16 @@ namespace GnorpWar
 
             _hp -= amount;
             if (amount > 0f)
+            {
                 BattleManager.NoteProgress();
+                // 가시 갑옷 — 받은 피해의 일부를 공격한 쪽에 돌려준다
+                float reflect = 0f;
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        reflect += e.Effect.DamageReflectRatio(_team);
+                if (reflect > 0f)
+                    DamageReflect.Back(attacker, amount * reflect, hitDirection, this);
+            }
             DamageNumbers.Damage(this, _team, new Vector2(_rb.position.x, Top), amount);
             // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다
             if (FxDirector.Instance != null)
@@ -1183,7 +1242,7 @@ namespace GnorpWar
         }
 
         // ── 뒤돌기(사용자 10/12) — 뒤쪽의 대상을 치거나 회복할 때, 건축가가 일을 마치고 성으로 돌아갈 때 그림이 그쪽을 본다. 보이는 것만이다:
-        // 사거리 · 대상 고르기 · 판정은 그대로고, 투사체가 떠나는 자리도 앞을 볼 때의 자리(WeaponPoint)로 센다. 밀려나는 것(넉백)은 뒤돌지 않는다.
+        // 사거리 · 대상 고르기 · 판정은 그대로다. 투사체는 뒤돈 그림의 무기 자리(WeaponPoint)에서 떠난다. 밀려나는 것(넉백)은 뒤돌지 않는다.
         // 진영의 방향(뿌리의 좌우 뒤집기) 위에 그림(_visual)만 한 번 더 뒤집는다 — 무기 · 말 같은 겹친 부품도 같이 뒤집힌다
         // 대상이 거의 바로 위 · 아래일 때 좌우로 떨리지 않게 두는 폭(칸) — 이 안이면 보던 쪽을 그대로 본다
         private const float LookDeadZone = 0.25f;
@@ -1203,17 +1262,8 @@ namespace GnorpWar
             _visual.localScale = scale;
         }
 
-        // 무기의 자리 — 그림이 뒤돌아 있으면 앞을 볼 때의 자리로 되돌려 센다(투사체가 떠나는 자리가 보는 방향에 따라 달라지지 않게)
-        private Vector2 WeaponPoint
-        {
-            get
-            {
-                Vector2 point = _weapon.position;
-                if (_visual.localScale.x * _visualScale.x < 0f)
-                    point.x = 2f * _visual.position.x - point.x;
-                return point;
-            }
-        }
+        // 투사체가 떠나는 자리 = 지금 그림의 무기 자리 — 뒤돌아 있으면 뒤쪽 무기 자리에서 나간다(사용자 10/13)
+        private Vector2 WeaponPoint => _weapon.position;
 
         private void StartThrust(Vector2 worldDirection)
         {

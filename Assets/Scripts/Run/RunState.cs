@@ -163,6 +163,7 @@ namespace GnorpWar
                 RunBook.Use(side.Team, side.Book);
             }
             _shopEnteredRound = _shopCueRound = -1;
+            Pending.Clear();
             StatBook.ClearRun();
             TowerBook.ClearRun();
             // 닉네임이 시작하는 자리 — 규칙의 난수와 섞이지 않게 따로 뽑는다
@@ -179,9 +180,10 @@ namespace GnorpWar
         // 상대를 고르기 전(상점)에 깔리는 지형 — 첫 맵(기본)
         private static MapDefinition ShopMap => _config.Maps[0];
 
-        // 이번 턴 내 수입 = 1라운드 상점 골드 + 내 땅 수 × 땅당 골드 + 세금 증산, 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 + 약자 보정 — WorldRun.IncomeOf)
+        // 이번 턴 내 수입 = 1라운드 상점 골드 + 내 땅 수 × 땅당 골드 + 업그레이드(곡창), 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 + 약자 보정 — WorldRun.IncomeOf)
         public static int Income
-            => _config.ShopGold + Lands * _config.World.GoldPerLand + World.TaxGold(World.State.Player) + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+            => _config.ShopGold + Lands * _config.World.GoldPerLand + Mathf.RoundToInt(UpgradeDefinition.TotalOf(Player.Upgrades, UpgradeKind.TurnGold))
+               + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
 
         // 턴이 시작할 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 받는다(턴당 한 번 — 씬을 다시 불러와도 두 번 주지 않는다).
         // 지도에서 보는 영주의 탑이 이번 턴에 싸울 탑이 되도록, 상점에 들어갈 때가 아니라 턴이 열릴 때 한다
@@ -196,6 +198,7 @@ namespace GnorpWar
             PreviewRegion = -1;
             RunBook.Use(Team.Enemy, NoOpponent.Book);
             World.ShopPhase();
+            ChargeFreeRerolls(Player);
             GainGold(Income);
             if (ShopLocked)
                 RollOffers(onlyEmpty: true);
@@ -228,6 +231,9 @@ namespace GnorpWar
         // region을 침략한다 — 그 땅의 영주가 상대, 그 땅의 지형이 전장. 씬은 부른 쪽이 다시 불러온다(Phase = Battle이라 상점 없이 전투로 뜬다)
         public static void Invade(int region)
         {
+            // 고르지 않은 합치기 보상은 전투 전에 무작위로 고른 것으로 친다
+            while (Pending.Count > 0)
+                ChooseUpgrade(Random.Range(0, Pending[0].Choices.Length));
             Opponent = World.State.OwnerOf(region);
             _invadedRegion = region;
             _opponentTower = World.TowerOf(Opponent);
@@ -245,7 +251,7 @@ namespace GnorpWar
         }
 
         // 침략의 결과 — 이기면 상대의 땅을 전부(연합이면 몫만큼 — 침략한 땅부터) 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn(AI 턴)을 부른다
-        // 지난 전투로 넘어온 땅들(졌으면 빈 목록) — 결과 창이 그 땅들의 업그레이드를 보여 준다
+        // 지난 전투로 넘어온 땅들(졌으면 빈 목록) — 지도가 쓰러진 영주를 그 땅에 세웠다가 날린다(World/WorldManager.FellBeaten)
         public static System.Collections.Generic.IReadOnlyList<int> LastGains { get; private set; } = new int[0];
 
         public static void FinishBattle(bool won)
@@ -361,6 +367,7 @@ namespace GnorpWar
                 RunBook.Use(tower.Team, tower.Book);
                 Round = round;
                 _shopNation = build.Nation;
+                ChargeFreeRerolls(tower);
                 GainGold(gold);
                 RollOffers(onlyEmpty: ShopLocked);
                 EnemyShopper.Shop(build);
@@ -444,14 +451,23 @@ namespace GnorpWar
             Field = raised;
         }
 
-        public static int RerollCost => _config.RerollCost;
-        public static bool CanReroll => Gold >= _config.RerollCost;
+        // 무료 리롤(업그레이드 「암시장」)이 남아 있으면 그것부터 쓴다 — 그동안 리롤 값은 0골드
+        public static int FreeRerolls => _side.FreeRerolls;
+        public static int RerollCost => FreeRerolls > 0 ? 0 : _config.RerollCost;
+        public static bool CanReroll => Gold >= RerollCost;
+
+        // 턴 상점이 열릴 때 — 남은 무료 리롤을 그 탑의 「턴마다 +N회」로 다시 채운다(지난 턴에 안 쓴 것은 넘어가지 않는다)
+        private static void ChargeFreeRerolls(TowerState tower)
+            => tower.FreeRerolls = Mathf.RoundToInt(UpgradeDefinition.TotalOf(tower.Upgrades, UpgradeKind.FreeReroll));
 
         public static void Reroll()
         {
             if (!CanReroll)
                 return;
-            Gold -= _config.RerollCost;
+            if (FreeRerolls > 0)
+                _side.FreeRerolls--;
+            else
+                Gold -= _config.RerollCost;
             ShopLocked = false;
             RollOffers();
             ForEachFieldPassive((passive, owned) => passive.OnReroll(owned));
@@ -508,9 +524,9 @@ namespace GnorpWar
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
             => _config.RarityWeight(b.Rarity, ShopTier) / CountOf(pool, b.Rarity);
 
-        // 상점 등급 단계 — 내 상점은 그 턴의 단계(WorldConfig.ShopTier) + 기술 연구(상한까지). 다른 탑의 차례(ShopAs)에는 넘겨받은 단계 그대로
+        // 상점 등급 단계 — 내 상점은 그 턴의 단계(WorldConfig.ShopTier — 턴 수만으로 오른다). 다른 탑의 차례(ShopAs)에는 넘겨받은 단계 그대로(상한까지)
         private static int ShopTier
-            => Mathf.Min(_side == Player ? _config.World.ShopTier(Round) + World.TechTiers(World.State.Player) : Round, _config.World.ShopTierMax);
+            => Mathf.Min(_side == Player ? _config.World.ShopTier(Round) : Round, _config.World.ShopTierMax);
 
         // 지금 라운드에 진열 한 칸이 rarity 등급일 확률(0~1) — 풀에 없는 등급은 0
         public static float OfferChance(BuildingRarity rarity)
@@ -555,12 +571,14 @@ namespace GnorpWar
             // 내 상점이면 합치기를 한 번씩 적어 둔다 — 화면이 차례로 보여 준다(상태는 여기서 한 번에 끝난다)
             var steps = _side == Player && Merged != null ? new System.Collections.Generic.List<MergeStep>() : null;
             OwnedBuilding[] field = steps != null ? (OwnedBuilding[])Field.Clone() : null, storage = steps != null ? (OwnedBuilding[])Storage.Clone() : null;
+            OfferUpgrade(target.Rarity);
             target.Upgrade();
             steps?.Add(new MergeStep(target, field, storage));
             OwnedBuilding pair = FindMergeTarget(target.Definition, target.Upgrades, target);
             while (pair != null && target.CanUpgrade)
             {
                 Remove(target);
+                OfferUpgrade(pair.Rarity);
                 pair.Upgrade();
                 pair.AddStacks(target.Stacks);
                 pair.AddSpent(target.SpentGold);
@@ -570,7 +588,91 @@ namespace GnorpWar
             }
             if (steps != null)
                 Merged(steps);
+            if (_side == Player)
+                UpgradesChanged?.Invoke();
             return target;
+        }
+
+        // ── 합치기 보상 업그레이드(아웃게임기획 §4) — 합치기 한 단계마다 재료 등급의 업그레이드 셋 중 하나. 얻은 것은 그 탑에 런 동안 남는다(TowerState.Upgrades)
+        // 고르기를 기다리는 한 번 — 합친 재료의 등급과 후보(서로 다른 종, 많아야 UpgradeChoices개)
+        public class UpgradeOffer
+        {
+            public BuildingRarity Rarity;
+            public UpgradeDefinition[] Choices;
+        }
+
+        private const int UpgradeChoices = 3;
+        private static readonly System.Collections.Generic.List<UpgradeOffer> Pending = new System.Collections.Generic.List<UpgradeOffer>();
+
+        // 내가 아직 고르지 않은 합치기 보상 — 일어난 순서대로. 화면은 맨 앞([0])부터 하나씩 고르게 한다(ChooseUpgrade)
+        public static System.Collections.Generic.IReadOnlyList<UpgradeOffer> PendingUpgrades => Pending;
+        // 대기열이나 내가 가진 업그레이드가 바뀌었다 — 내 상점의 합치기(연쇄 포함)가 끝난 뒤(Merged 다음) · 고른 뒤
+        public static event System.Action UpgradesChanged;
+
+        // 맨 앞 대기의 choice번째 후보를 고른다 — 내 탑이 그 등급으로 얻는다
+        public static void ChooseUpgrade(int choice)
+        {
+            if (Pending.Count == 0 || choice < 0 || choice >= Pending[0].Choices.Length)
+                return;
+            UpgradeOffer offer = Pending[0];
+            Pending.RemoveAt(0);
+            GainUpgrade(offer.Choices[choice], offer.Rarity);
+            UpgradesChanged?.Invoke();
+        }
+
+        // 지금 차례인 탑이 업그레이드 하나를 얻는다 — 운영 계열은 얻은 그 턴부터다(사용자 결정 10/13): 곡창은 그 등급의 골드를 바로 받고(골드를 얻은 것이라 골드 훅도 울린다),
+        // 암시장은 그 등급의 횟수가 이번 턴 남은 무료 리롤에 더해진다. 다음 턴부터는 턴 수입 · 턴 시작 충전에 합쳐진 값으로 붙는다
+        private static void GainUpgrade(UpgradeDefinition upgrade, BuildingRarity rarity)
+        {
+            _side.Upgrades.Add(new UpgradeGain { Definition = upgrade, Rarity = rarity });
+            int value = Mathf.RoundToInt(upgrade.ValueAt(rarity));
+            if (upgrade.Kind == UpgradeKind.TurnGold)
+                GainGold(value);
+            else if (upgrade.Kind == UpgradeKind.FreeReroll)
+                _side.FreeRerolls += value;
+        }
+
+        // lord의 탑이 가진 업그레이드 — 종류별로 얻은 횟수 · 합쳐진 값 · 설명(처음 얻은 순서). 탑이 없는 영주면 빈 목록
+        public static System.Collections.Generic.List<UpgradeHolding> UpgradesOf(Lord lord)
+        {
+            TowerState tower = lord.IsPlayer ? Player : World.TowerOf(lord);
+            return tower != null ? UpgradeDefinition.Summarize(tower.Upgrades) : new System.Collections.Generic.List<UpgradeHolding>();
+        }
+
+        // 전투 시작 — team의 탑(내 탑 · 침략한 영주의 탑)이 가진 업그레이드를 건다. spawns = 보드가 돈 뒤의 차례(소환 · 작은 타워), 아니면 그 앞(스탯 · 효과)
+        public static void ApplyUpgrades(Team team, bool spawns)
+        {
+            TowerState tower = team == Team.Ally ? Player : _opponentTower;
+            if (tower == null)
+                return;
+            foreach (UpgradeHolding holding in UpgradeDefinition.Summarize(tower.Upgrades))
+                if (spawns)
+                    holding.Definition.Spawn(team, holding.Value);
+                else
+                    holding.Definition.Apply(team, holding.Value);
+        }
+
+        // 합치기 한 단계 — material = 합친 재료의 등급. 내 탑이면 대기열에 쌓고(화면이 고르게 한다), 다른 탑(AI 영주)은 셋 중 무작위로 바로 얻는다.
+        // 공짜로 받은 기물(Acquire)은 합치기가 아니라 여기를 지나지 않는다
+        private static void OfferUpgrade(BuildingRarity material)
+        {
+            var pool = new System.Collections.Generic.List<UpgradeDefinition>();
+            foreach (UpgradeDefinition upgrade in _config.Upgrades)
+                if (upgrade.InPool)
+                    pool.Add(upgrade);
+            var choices = new UpgradeDefinition[Mathf.Min(UpgradeChoices, pool.Count)];
+            for (int i = 0; i < choices.Length; i++)
+            {
+                int pick = Random.Range(0, pool.Count);
+                choices[i] = pool[pick];
+                pool.RemoveAt(pick);
+            }
+            if (choices.Length == 0)
+                return;
+            if (_side == Player)
+                Pending.Add(new UpgradeOffer { Rarity = material, Choices = choices });
+            else
+                GainUpgrade(choices[Random.Range(0, choices.Length)], material);
         }
 
         // 합치기 한 번 — 들어온 조각(첫 단계는 방금 산 것, 그다음은 앞 단계의 결과)이 Into에 합쳐져 Into가 After 등급이 됐다.

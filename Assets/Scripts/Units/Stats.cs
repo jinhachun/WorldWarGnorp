@@ -342,7 +342,7 @@ namespace GnorpWar
     }
 
     // 유닛 카드의 「공격력 11+1」용(전투 밖) — 유닛의 스탯 기본값과, 전투가 시작될 때 갖게 될 값. 내 유닛, 또는 지도에서 고른 영주의 유닛.
-    // 넣는 것: 영구히 붙은 것 + 필드 기물이 런 동안 쌓아 전투 시작 때 거는 것(스패너 — BuildingPassive.BattleStartStat, 사용자 10/10) + 지역 업그레이드.
+    // 넣는 것: 영구히 붙은 것 + 필드 기물이 런 동안 쌓아 전투 시작 때 거는 것(스패너 — BuildingPassive.BattleStartStat, 사용자 10/10) + 합치기 보상 업그레이드의 스탯(철벽 · 조련장).
     // 조립 라인의 별칭(톱니거인 → 톱니병사)도 필드에 있으면 따른다. 전투 중에 쌓이는 것·버프·맵은 넣지 않는다. 계산은 전투의 유닛과 같은 길(StatSum)
     public static class RunStats
     {
@@ -354,8 +354,8 @@ namespace GnorpWar
         }
 
         // 기본값은 유닛의 계산과 같은 곳에서(Unit.BaseStat)
-        // enemy = 지도에서 고른 땅의 영주의 유닛(RunState.PreviewLord) — 그 영주의 탑 · 그 탑이 영구히 쌓은 강화 · 그 영주의 지역 업그레이드로 계산한다.
-        // 지역 업그레이드는 전투가 시작될 때 걸리는 값 그대로다(상대가 정해져 있으면 민족주의까지). 맵 효과는 넣지 않는다 — 어느 땅에서 싸울지는 침략할 때 정해진다
+        // enemy = 지도에서 고른 땅의 영주의 유닛(RunState.PreviewLord) — 그 영주의 탑 · 그 탑이 영구히 쌓은 강화 · 그 탑의 업그레이드로 계산한다.
+        // 맵 효과는 넣지 않는다 — 어느 땅에서 싸울지는 침략할 때 정해진다
         public static Value Preview(UnitDefinition unit, UnitStat stat, bool enemy = false)
         {
             float baseValue = Unit.BaseStat(unit, stat);
@@ -386,11 +386,10 @@ namespace GnorpWar
                     if (passive is IUnitFilter filter && (filter.AppliesTo(unit) || (alias != null && filter.AppliesTo(alias)))
                         && passive.BattleStartStat(owned, stat, out StatModifier modifier))
                         sum.Add(modifier.Op, modifier.Value);
-            RunState.World.ForEachUnitUpgrade(lord, enemy ? player : other, (upgrade, modifier) =>
-            {
-                if (modifier.Stat == stat)
+            foreach (UpgradeHolding holding in RunState.UpgradesOf(lord))
+                if ((holding.Definition.AppliesTo(unit) || (alias != null && holding.Definition.AppliesTo(alias)))
+                    && holding.Definition.UnitModifier(holding.Value, out StatModifier modifier) && modifier.Stat == stat)
                     sum.Add(modifier.Op, modifier.Value);
-            });
             return new Value { Base = baseValue, Now = sum.Apply(baseValue) };
         }
     }

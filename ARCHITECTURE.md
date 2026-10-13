@@ -27,7 +27,7 @@
 | `Assets/Scripts/Units/Effects/` | 유닛 효과 — 효과마다 파일 하나(`UnitEffect` 상속) + 진영별 켜진 효과 `TeamEffects` | 새 유닛 효과 |
 | `Assets/Scripts/Buildings/` | 건물 (`BuildingDefinition` · `BuildingAction`과 액션들 · `OwnedBuilding` · `BoardRunner`) | 건물·발동 액션 |
 | `Assets/Scripts/Run/` | 런 상태·상점 규칙 (`RunState`) | 골드·목숨·구매/판매 규칙 |
-| `Assets/Scripts/World/` | 월드맵 규칙 — 판도·영주·턴 (스펙 `Docs/WorldWarGnorp_아웃게임기획.md`). 규칙 6파일(`WorldGraph` · `Lord` · `LordTemper` · `WorldRules` · `WorldState` · `WorldTurn`)은 **`UnityEngine`을 쓰지 않는다** — Unity 밖에서 수천 판을 돌려 검증하려고(영주의 힘·난수는 밖에서 받는다). SO = `WorldMapDefinition`(손으로 짠 맵 한 장) · `RegionUpgradeDefinition` · `WorldConfig` | 지역·영주·턴 규칙 |
+| `Assets/Scripts/World/` | 월드맵 규칙 — 판도·영주·턴 (스펙 `Docs/WorldWarGnorp_아웃게임기획.md`). 규칙 6파일(`WorldGraph` · `Lord` · `LordTemper` · `WorldRules` · `WorldState` · `WorldTurn`)은 **`UnityEngine`을 쓰지 않는다** — Unity 밖에서 수천 판을 돌려 검증하려고(영주의 힘·난수는 밖에서 받는다). SO = `WorldMapDefinition`(손으로 짠 맵 한 장) · `WorldConfig` | 지역·영주·턴 규칙 |
 | `Assets/Scripts/Bases/` | 본진 (`Base` · `BaseDefinition`) — 본진은 화살을 쏘는 타워 | 본진 로직과 SO 정의 |
 | `Assets/Scripts/Battle/` | 라운드 흐름·전장 (`BattleManager` · `BattleConfig` · `Ground`) | 라운드 단위 규칙 |
 | `Assets/Scripts/UI/` | HUD·상점 화면 (`BoardView` · `SlotView` · `ShopPanel` · `OfferCard` · `RampLabel` · `BaseHealthBar` · `CameraDrag`) | 화면 표시·버튼 |
@@ -99,6 +99,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 | **새 생산 건물** | `Assets/Data/Buildings/Building_*.asset`(등급·쿨다운·유닛·유닛 수) + 상점에 내려면 `BattleConfig`의 `Shop Pool`, 적은 같은 `Shop Pool`에서 산다(빌드 방향의 핵심 기물로 넣으려면 `Assets/Data/EnemyBuilds/EnemyBuild_*.asset`). 코드 X |
 | **기물의 신화 효과** | 기물 에셋의 `_mythicActions`/`_mythicEffects`/`_mythicPassives`에 능력 에셋을 넣는다(효과 모양대로 셋 중 하나). 글은 §7 줄들 아래에 붙고, 문구 원본은 기획서 §7-1. 등급 판정은 `OwnedBuilding`이 하니 **그 코드는 건드릴 일이 없다** — 다만 **「코드 X」가 모든 줄에 참은 아니다**: 능력 자체가 기댈 틀이 없으면 그것부터 만들어야 한다(타워가 더 쏘는 규칙 = `TowerBook` · 소환 자리 = `BoardRunner.Summon`). **기존 능력 클래스를 고쳐 신화를 끼우지 말 것** — §7(전설까지)의 동작이 함께 바뀐다. 신화 전용 클래스를 새로 만들거나, 기존 에셋이 그대로 쓸 수 있으면 **에셋만** 만든다. §7 클래스 안에서 갈라야만 하는 것은(승천의 전당) **훅 없는 표시용 `UnitEffect`를 새로 만들고 §7 클래스가 그것이 켜졌는지 보게** 한다 — 클래스를 복제하면 §7 효과가 두 번 걸린다 |
 | **기존 효과를 건물에** | 건물의 `Effects`에 `Effect_*.asset`을 넣는다(적용 분류는 효과 에셋이). 같은 효과를 다른 분류에 쓰려면 효과 에셋을 복제해 분류만 바꾼다. 코드 X — 단 효과마다 전제가 있다: DoubleHeal은 회복 유닛에서만 동작 |
+| **새 합치기 보상 업그레이드** | `Assets/Data/Upgrades/Upgrade_*.asset` 하나(`UpgradeDefinition` — 종류 `_kind` · 등급별 값 다섯 `_values` · 겹치는 방식 `_stack` · 상한 `_max` · 후보에 나옴 `_inPool`) + `BattleConfig`의 `_upgrades`에 추가. 유닛 행동이면 `UnitEffect` 에셋을 `_effect`에 넣는다 — 그 효과는 값을 등급이 아니라 `Value(team)`으로 읽는다. 글·수치의 원본은 아웃게임기획 §4 |
 | **새 유닛 효과** | `Units/Effects/`에 `UnitEffect` 상속 클래스 하나(있는 훅만 쓰면 `Unit` 수정 X, 수치는 필드로) + `Assets/Data/Effects/` 에셋. 새 훅이 필요하면 `UnitEffect`에 가상 메서드 + `Unit`의 해당 지점에서 `TeamEffects.For(_team)`을 돌며 부른다 |
 | **새 기물 발동 효과("N초마다")** | `Buildings/`에 `BuildingAction` 상속 클래스 하나(`Execute(board, slot, level)`, 이웃은 slot±1) + 에셋 + 기물의 `Actions`에 추가. 보드 조작은 `BoardRunner`의 `FireNow`(즉시 발동) · `ScaleCooldown` · `Haste`(가속) · `Summon` |
 | **새 기물 늘 켜진 능력** | `Buildings/`에 `BuildingPassive` 상속 클래스 하나(쓰는 훅만 — `OnBattleStart` · `OnNeighborSummoned`, 새 훅이 필요하면 `BuildingPassive`에 가상 메서드 + `BoardRunner`의 그 지점) + 에셋 + 기물의 `Passives`에 추가 |
@@ -121,6 +122,8 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 - 🔴 **칸·사거리 검사는 트리거를 무시한다**(`Unit.SolidOnly`). 화살이 트리거라서, 무시하지 않으면 날아가는 화살 때문에 "머리 위가 막혔다"로 오판한다.
   새 물리 검사를 추가할 때도 같은 필터를 쓸 것.
 - 🔴 **죽은 유닛은 즉시 충돌에서 빠져야 한다.** 튕겨나가는 동안 다른 유닛을 밀거나 받치면 안 된다(그래야 위의 산이 무너진다).
+- 🔴 **합치기 보상 업그레이드는 기물이 아니라 탑(영주)에 붙는다** — `TowerState.Upgrades`(얻은 것의 목록, 런 동안 유지 · `Reset`이 비운다). 얻는 자리는 `RunState.MergeInto`의 합치기 한 단계마다 한 번이고(`Acquire`는 안 지난다), 내 탑이면 대기열(`RunState.PendingUpgrades` → `ChooseUpgrade`), AI 탑이면 셋 중 무작위로 즉시다. 침략할 때 남은 대기는 무작위로 골라진다.
+  효과는 전투 시작에 `RunState.ApplyUpgrades`가 건다 — 같은 업그레이드는 `UpgradeDefinition.Summarize`가 **합친 값 하나**로 만들고(더하기 · 「가장 센 것」은 에셋의 `_stack`), 유닛 효과에는 그 값이 `TeamEffects`의 `Value`로 넘어간다(기물이 켠 효과는 등급, 업그레이드가 켠 효과는 값). 턴 수입 · 무료 리롤은 `UpgradeDefinition.TotalOf`로 `RunState`가 읽는다. 상점 조작을 막는 것은 `RunState`가 아니라 화면(`UI/UpgradePicker`)이다.
 - 🔴 **전투 시간은 `BattleManager.Elapsed`**(전투 시작부터, 상점 시간 제외) — `Time.timeSinceLevelLoad`는 상점 시간까지 들어가므로 쓰지 말 것.
 - 🔴 **`Time.timeScale`을 쓰는 곳이 넷이다** — 결과 화면(0) · 상점(1, `BattleManager.Awake`) · 전투 배속(`SpeedButton.Current` ×1/2/4 — 전투 시작·버튼 누를 때) · 히트스톱(현재값×0.02). 측정용 배속(8)은 손으로 걸 때만. 히트스톱은 끝날 때 **자기가 건 값일 때만** 되돌린다.
   새로 timeScale을 만지는 코드를 넣으면 이 셋과 부딪히지 않는지 본다.

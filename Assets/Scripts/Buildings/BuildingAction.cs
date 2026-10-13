@@ -6,6 +6,8 @@ namespace GnorpWar
     public abstract class BuildingAction : ScriptableObject
     {
         public abstract void Execute(BoardRunner board, int slot, int level);
+        // 이번 발동에서 이 기물의 유닛 소환을 대신하나(대족장의 분노 — 이미 있으면 소환 대신 강화) — 발동마다 소환 직전에 한 번 묻는다
+        public virtual bool ReplacesSummon(BoardRunner board, int slot) => false;
         // 툴팁에서 "N초마다" 뒤에 붙는 구절 — 지금 레벨 값으로, 기호 없이, 마침표로 끝낸다 (CLAUDE.md §5-2)
         public abstract string Describe(int level);
         // 칸 아래에 보이는 대표 숫자(지금 등급 값, "1초"·"10%") — 없으면 null

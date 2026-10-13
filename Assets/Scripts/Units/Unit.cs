@@ -238,12 +238,24 @@ namespace GnorpWar
         {
             Vector2 at = _rb.position;
             BattleManager.NoteProgress();
-            Die();
+            // 죽지 않는 전사 — 죽을 때마다 확률로 그 자리에서 다시 일어난다. 사망 시 효과 · 처치 효과는 그대로 먼저 돌고(그동안은 죽은 유닛이다),
+            // 몸은 사라지지 않아 받은 강화가 그대로 남는다. 소환이 아니다
+            float reviveChance = 0f;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    reviveChance += e.Effect.ReviveChance;
+            bool revives = reviveChance > 0f && Random.value < reviveChance;
+            _hp = Mathf.Min(_hp, 0f);
+            if (!revives)
+                Die();
             if (attacker is Unit killer && killer.IsAlive)
             {
                 foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
                     if (e.Effect.AppliesFor(killer._team, killer._definition))
                         e.Effect.OnKill(killer, this, e.Stacks);
+                // 그 진영의 유닛이 처치했다(아군을 죽인 것도 처치다) — 기물이 처치 수를 센다(약탈족장 라이칸스로프)
+                if (BoardRunner.For(killer._team) is BoardRunner board)
+                    board.NotifyUnitKill(killer, this);
             }
             else if (attacker is Base tower)
                 tower.NotifyKill(this);
@@ -253,6 +265,14 @@ namespace GnorpWar
             Team foe = _team == Team.Ally ? Team.Enemy : Team.Ally;
             foreach (TeamEffects.Entry e in TeamEffects.For(foe))
                 e.Effect.OnEnemyDied(foe, this, at, e.Stacks);
+            if (!revives)
+                return;
+            _hp = MaxHp;
+            _doomTimer = 0f;
+            _doomKiller = null;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    e.Effect.OnRevived(this);
         }
 
         // 소모 — 죽음이 아니다(사망 효과 없음). 연기만 남기고 사라진다(조립 라인)
@@ -384,17 +404,33 @@ namespace GnorpWar
         {
             if (_statsVersion != StatBook.Version || _ownModifiersChanged)
                 RefreshStats();
+            // 고도로 스탯이 바뀌는 유닛(미노타우로스)은 고도가 한 눈금 넘게 달라지면 다시 센다 — 지금 고도의 값이다
+            else if (_usesAltitude && Mathf.Abs(Altitude - _statAltitude) >= AltitudeStep)
+                RefreshStats(false);
             return _stats[(int)stat];
         }
 
-        // 최대 체력이 바뀌면 지금 체력도 같은 비율로 — 가득 찬 유닛은 계속 가득
-        private void RefreshStats()
+        private static readonly UnitStat[] AltitudeStats = { UnitStat.Attack, UnitStat.MaxHp, UnitStat.MoveSpeed, UnitStat.AttackSpeed };
+        // 고도로 바뀌는 스탯을 다시 세는 눈금(칸) — 0.1이면 고도 1당 +10%가 1%씩 움직인다
+        private const float AltitudeStep = 0.1f;
+        // 스탯에 들어가 있는 고도(눈금에 맞춘 값) · 고도를 읽는 효과가 이 유닛에 걸려 있나(걸려 있을 때만 고도를 본다)
+        private float _statAltitude;
+        private bool _usesAltitude;
+
+        // 최대 체력이 바뀌면 지금 체력도 같은 비율로 — 가득 찬 유닛은 계속 가득. flash = 공격력이 오르면 오라를 반짝이나(고도로 조금씩 오르는 것은 반짝이지 않는다)
+        private void RefreshStats(bool flash = true)
         {
+            _usesAltitude = false;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    foreach (UnitStat stat in AltitudeStats)
+                        _usesAltitude |= e.Effect.AltitudeBonus(stat) != 0f;
+            _statAltitude = _usesAltitude ? Mathf.Round(Altitude / AltitudeStep) * AltitudeStep : 0f;
             float oldMaxHp = _stats[(int)UnitStat.MaxHp];
             float oldAttack = _stats[(int)UnitStat.Attack];
             _stats[(int)UnitStat.Attack] = Compute(UnitStat.Attack);
             // 공격력 버프를 받은 순간 — 빨간 오라(사용자 10/7: 받는 순간 반짝). 생애 첫 계산(oldAttack 0)은 버프가 아니다
-            if (oldAttack > 0f && _stats[(int)UnitStat.Attack] > oldAttack + 0.0001f && IsAlive)
+            if (flash && oldAttack > 0f && _stats[(int)UnitStat.Attack] > oldAttack + 0.0001f && IsAlive)
                 FlashAttackAura();
             _stats[(int)UnitStat.MaxHp] = Compute(UnitStat.MaxHp);
             _stats[(int)UnitStat.MoveSpeed] = Compute(UnitStat.MoveSpeed);
@@ -434,6 +470,11 @@ namespace GnorpWar
             foreach (StatModifier m in _ownModifiers)
                 if (m.Stat == stat)
                     sum.Add(m.Op, m.Value);
+            // 미노타우로스 — 고도 1당 +%(합연산), 지금 고도로
+            if (_usesAltitude)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        sum.Add(StatOp.Percent, e.Effect.AltitudeBonus(stat) * _statAltitude);
             // 공주 루니카 — 무적 상태인 내 아군의 공격력 +%(합연산)
             if (stat == UnitStat.Attack && IsInvulnerable)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -600,6 +641,31 @@ namespace GnorpWar
         }
         private float Feet => _rb.position.y - _halfHeight;
         private float Top => _rb.position.y + _halfHeight;
+
+        // 고도(트라이브 명세 §2-3 · 사용자 결정 10/13) — 발 높이 − 그 맵에서 가장 낮은 땅의 높이, 1 = 1칸. 지금 값이다:
+        // 맵의 언덕 · 뼛가루 언덕 · 아군을 밟고 선 높이 · 점프가 전부 들어간다. 「대상보다 높은가」(기름투하대 · 고지 점령 — IsAbove)와는 다른 값이다
+        // 탑(본진 · 그 위의 층)은 고도로 치지 않는다(사용자 결정 10/14 「고도는 땅, 유닛, 뼛가루 위에서만」) — 어느 진영이든 본진의 폭 안에 있는 동안은 그 자리의 땅 높이로 센다
+        public float Altitude
+        {
+            get
+            {
+                if (Ground.Instance == null)
+                    return 0f;
+                float feet = Feet;
+                for (int team = 0; team < 2; team++)
+                {
+                    Base home = Base.For((Team)team);
+                    if (home != null && _rb.position.x >= home.Bounds.min.x && _rb.position.x <= home.Bounds.max.x)
+                        feet = Mathf.Min(feet, Ground.Instance.HeightAt(_rb.position.x));
+                }
+                return Mathf.Max(0f, feet - Ground.Instance.LowestY);
+            }
+        }
+        // 뼛가루 언덕 위에 있나(맵의 원래 언덕과 구분된다) — 발밑 자리에 뼛가루가 쌓여 있으면. 그 위에서 아군을 밟고 선 유닛도 친다
+        public bool OnBoneDust => Ground.Instance != null && Ground.Instance.OnBoneDust(_rb.position.x);
+
+        // 발밑의 땅이 자랐다(뼛가루 언덕 — Ground) — 그만큼 그대로 올라간다
+        public void Lift(float rise) => _rb.position += Vector2.up * rise;
         // 점프 높이(발이 올라가는 높이) = 내 키 + N칸(BattleConfig, 기본 2) — 모든 유닛 공통. 2면 한 번에 두 층을 올라타 산이 가파르게 선다(사용자 10/6 "뾰족한 산")
         private float JumpHeight => _halfHeight * 2f + BattleManager.ClimbJumpExtra;
 
@@ -1145,6 +1211,11 @@ namespace GnorpWar
                         reflect += e.Effect.DamageReflectRatio(_team);
                 if (reflect > 0f)
                     DamageReflect.Back(attacker, amount * reflect, hitDirection, this);
+                // 때린 유닛의 진영에 「피해를 줬다」를 알린다(원시 의식 제단 — 준 피해만큼 회복). 아군을 때린 것도 준 피해다
+                if (attacker is Unit dealer && dealer.IsAlive)
+                    foreach (TeamEffects.Entry e in TeamEffects.For(dealer._team))
+                        if (e.Effect.AppliesFor(dealer._team, dealer._definition))
+                            e.Effect.OnDealtDamage(dealer, this, amount);
             }
             DamageNumbers.Damage(this, _team, new Vector2(_rb.position.x, Top), amount);
             // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다

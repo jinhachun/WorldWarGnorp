@@ -40,13 +40,14 @@ namespace GnorpWar
             }
         }
 
-        // region에 새 영주를 세운다(런 시작 · 반란 뒤) — 빌드 방향은 그 땅의 것, 성향은 새로 뽑는다
+        // region에 새 영주를 세운다(런 시작 · 반란 뒤) — 빌드 방향은 그 땅의 방향들 중 하나(둘 이상이면 고르게 뽑는다), 성향은 새로 뽑는다
         public Lord AddLord(int region, Random random)
         {
+            int[] builds = Graph.Builds[region];
             var lord = new Lord
             {
                 Id = Lords.Count,
-                Build = Graph.Build[region],
+                Build = builds.Length == 1 ? builds[0] : builds[random.Next(builds.Length)],
                 Temper = Rules.RollTemper(random),
                 Happiness = Rules.HappinessStart,
             };

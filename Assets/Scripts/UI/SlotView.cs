@@ -44,6 +44,8 @@ namespace GnorpWar
         private GameObject _overdriveMark;
         // 맵이 작동을 끈 칸의 정지 표시(Fx/StoppedMark) — 같은 식으로 처음 뜰 때 만든다
         private GameObject _stoppedMark;
+        // 제물의 의식 등으로 잠깐 멈춘 칸(BoardRunner.Slot.Frozen) — 같은 정지 그림을 흰색으로, 남은 시간과 함께. 꺼진 칸(늪지)과 달리 기물은 회색이 되지 않는다
+        private GameObject _frozenMark;
 
         public Button Button => _button;
         public BoardView.Source Source => _source;
@@ -107,9 +109,11 @@ namespace GnorpWar
                 // 전장 탑 표시(TowerBadge.ShowSeconds)와 같은 숫자 — 0.1초 단위 반올림, 0이 되면 숨고, 10초부터는 내림 정수.
                 // 쿨다운 없는 칸은 값이 0 · 1로 온다(안 보인다)
                 int tenths = running != null ? Mathf.RoundToInt(running.HasteLeft * 10f) : 0;
-                _hasteMark.SetActive(tenths > 0);
+                // 멈춘 동안에는 가속 시간도 흐르지 않는다 — 그 자리에 멈춤 표시가 선다
+                float frozen = running != null ? running.Frozen : 0f;
+                _hasteMark.SetActive(tenths > 0 && frozen <= 0f);
                 if (tenths > 0)
-                    _hasteText.text = tenths < 100 ? $"{tenths / 10}.{tenths % 10}초" : $"{tenths / 10}초";
+                    _hasteText.text = Seconds(tenths);
                 float scale = running != null ? running.CooldownScale : 1f;
                 bool scaled = Mathf.Abs(scale - 1f) > 0.005f;
                 _cooldownMark.SetActive(scaled);
@@ -119,6 +123,10 @@ namespace GnorpWar
 
             ShowMark(ref _overdriveMark, "OverdriveMark", _overdriveIcon, OverdriveMark.Color, _hasteMark != null && OverdriveMark.On(building, _source == BoardView.Source.EnemyField ? Team.Enemy : Team.Ally));
             ShowMark(ref _stoppedMark, "StoppedMark", _stoppedIcon, StoppedMark.Color, _hasteMark != null && stopped);
+            int frozenTenths = running != null ? Mathf.CeilToInt(running.Frozen * 10f) : 0;
+            ShowMark(ref _frozenMark, "FrozenMark", _stoppedIcon, Color.white, _hasteMark != null && frozenTenths > 0, true);
+            if (frozenTenths > 0 && _frozenMark != null)
+                _frozenMark.GetComponentInChildren<Text>(true).text = Seconds(frozenTenths);
 
             if (!_hovered)
                 return;
@@ -129,7 +137,10 @@ namespace GnorpWar
         }
 
         // 가속 표시 자리의 아이콘 하나(오버드라이브 번개 · 정지 표시) — 처음 뜰 때 가속 표시를 본떠 만든다
-        private void ShowMark(ref GameObject mark, string name, Sprite sprite, Color color, bool on)
+        private static string Seconds(int tenths) => tenths < 100 ? $"{tenths / 10}.{tenths % 10}초" : $"{tenths / 10}초";
+
+        // text = 숫자 글을 남긴다(멈춤의 남은 시간)
+        private void ShowMark(ref GameObject mark, string name, Sprite sprite, Color color, bool on, bool text = false)
         {
             if (mark == null)
             {
@@ -141,7 +152,7 @@ namespace GnorpWar
                 Image icon = mark.GetComponentInChildren<Image>(true);
                 icon.sprite = sprite;
                 icon.color = color;
-                mark.GetComponentInChildren<Text>(true).gameObject.SetActive(false);
+                mark.GetComponentInChildren<Text>(true).gameObject.SetActive(text);
             }
             if (mark.activeSelf != on)
                 mark.SetActive(on);

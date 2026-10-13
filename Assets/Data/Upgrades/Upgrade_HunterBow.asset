@@ -17,11 +17,11 @@ MonoBehaviour:
   _description: "\uB0B4 \uAD81\uBCD1\uC758 \uD654\uC0B4\uC5D0 \uB9DE\uC740 \uC801\uC740
     2\uCD08\uAC04 \uC774\uB3D9\uC18D\uB3C4 \xD7{0}"
   _values:
+  - 0.95
+  - 0.93
   - 0.9
   - 0.85
   - 0.8
-  - 0.7
-  - 0.6
   _stack: 1
   _max: 0
   _inPool: 1
@@ -32,3 +32,5 @@ MonoBehaviour:
   _effect: {fileID: 11400000, guid: 7f5079dbd73300b4bb616ed45b184978, type: 2}
   _unit: {fileID: 0}
   _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

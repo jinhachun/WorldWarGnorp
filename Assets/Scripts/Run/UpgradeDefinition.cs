@@ -75,7 +75,7 @@ namespace GnorpWar
         [Tooltip("효과 글 — {0}에 지금 값이 들어간다(표기 그대로: +N%의 N · ×N의 N · N기 · N초)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _description = "";
-        [Tooltip("등급별 값 — 칸 순서: 일반 · 고급 · 희귀 · 영웅 · 전설. 글에 보이는 숫자 그대로(8 = +8% · 0.9 = ×0.9)")]
+        [Tooltip("등급별 값 — 칸 순서: 일반 · 고급 · 희귀 · 영웅 · 전설. 글에 보이는 숫자 그대로(8 = +8% · 0.9 = ×0.9). 0 = 그 등급에는 없다(그 등급 재료를 합쳐도 후보에 안 나온다)")]
         [SerializeField] private float[] _values = new float[5];
         [SerializeField] private UpgradeStack _stack;
         [Tooltip("더한 값의 상한(연사 100) — 0 = 상한 없음")]
@@ -116,6 +116,9 @@ namespace GnorpWar
 
         // 그 등급의 값 — 신화 등급 업그레이드는 없다(전설 둘을 합쳐도 전설 값)
         public float ValueAt(BuildingRarity rarity) => _values[Mathf.Min((int)rarity, _values.Length - 1)];
+
+        // 그 등급에 이 업그레이드가 있나 — 값 칸이 0이면 없다(등급이 올라도 값이 같아지는 아래 등급을 비운다 — 사용자 결정 10/13). 합치기 후보를 뽑을 때 거른다
+        public bool AvailableAt(BuildingRarity rarity) => ValueAt(rarity) != 0f;
 
         // 설명 글 — 숫자는 지금 값 하나(CLAUDE.md §5-2 6번)
         public string Describe(float value) => string.Format(_description, value.ToString("0.##"));

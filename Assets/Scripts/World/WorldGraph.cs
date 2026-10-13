@@ -7,15 +7,16 @@ namespace GnorpWar
         // [지역] = 이어진 지역들
         public readonly int[][] Links;
         public readonly int[] Terrain;
-        public readonly int[] Build;
+        // [지역] = 그 땅에서 시작하는 영주가 가질 수 있는 빌드 방향 번호들 — 영주마다 그중 하나를 고르게 뽑는다(WorldState.AddLord). 지형 번호와 같은 수가 아니다
+        public readonly int[][] Builds;
 
         public int RegionCount => Links.Length;
 
-        public WorldGraph(int[][] links, int[] terrain, int[] build)
+        public WorldGraph(int[][] links, int[] terrain, int[][] builds)
         {
             Links = links;
             Terrain = terrain;
-            Build = build;
+            Builds = builds;
         }
     }
 }

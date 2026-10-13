@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_TribeUndying
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC8FD\uC9C0 \uC54A\uB294 \uC804\uC0AC"
+  _icon: {fileID: 21300000, guid: 0fafdfad16a7a1d44b6228ed99d90061, type: 3}
+  _description: 
+  _rarity: 4
+  _nation: 3
+  _faction: 0
+  _cooldown: 0
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions: []
+  _effects:
+  - {fileID: 11400000, guid: 6ded83fc6f699194c9f3f80c47beaaa1, type: 2}
+  _passives: []
+  _mythicActions: []
+  _mythicEffects:
+  - {fileID: 11400000, guid: c43d142416327b54195f215e9802664f, type: 2}
+  _mythicPassives: []
+  _mentionedUnits: []

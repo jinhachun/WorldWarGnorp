@@ -30,6 +30,8 @@ namespace GnorpWar
             public MapDefinition Terrain;
             [Tooltip("이 지형의 땅에서 시작하는 영주(런 시작 · 반란 뒤 새 영주)의 빌드 방향")]
             public EnemyBuildProfile Build;
+            [Tooltip("이 지형의 영주가 대신 가질 수 있는 다른 방향들 — 영주마다 위의 것과 이것들 중 하나를 고르게 뽑는다(얼음 · 초원의 트라이브)")]
+            public EnemyBuildProfile[] MoreBuilds = new EnemyBuildProfile[0];
         }
 
         [Tooltip("땅 번호 지도 — 칸마다 그 칸이 속한 땅(읽기 켬 · 압축 없음 · Point). 화면의 지도는 이것을 정수배로 키워 영주 색으로 칠한다")]
@@ -43,8 +45,32 @@ namespace GnorpWar
         public MapDefinition TerrainOf(int region) => _regions[region].Terrain;
         public Vector2Int AnchorOf(int region) => _regions[region].Anchor;
 
-        // build = WorldGraph.Build · Lord.Build의 번호
-        public EnemyBuildProfile BuildOf(int build) => _terrainBuilds[build].Build;
+        // 빌드 방향 번호(Lord.Build · WorldGraph.Builds) — 앞쪽은 지형 표의 줄 순서대로 그 줄의 첫 방향, 그 뒤로 줄 순서대로 「다른 방향들」.
+        // 그래서 방향이 하나뿐인 지형은 번호가 지형 번호와 같지만, 번호로 지형을 읽지 말 것
+        public int BuildCount
+        {
+            get
+            {
+                int count = _terrainBuilds.Length;
+                foreach (TerrainBuild row in _terrainBuilds)
+                    count += row.MoreBuilds.Length;
+                return count;
+            }
+        }
+
+        public EnemyBuildProfile BuildOf(int build)
+        {
+            if (build < _terrainBuilds.Length)
+                return _terrainBuilds[build].Build;
+            build -= _terrainBuilds.Length;
+            foreach (TerrainBuild row in _terrainBuilds)
+            {
+                if (build < row.MoreBuilds.Length)
+                    return row.MoreBuilds[build];
+                build -= row.MoreBuilds.Length;
+            }
+            return null;
+        }
 
         // 땅 번호 지도를 읽는다 — [y × width + x] = 땅 번호(바다는 Sea), 위 왼쪽이 0번 칸
         public int[] ReadCells(out int width, out int height)
@@ -60,19 +86,31 @@ namespace GnorpWar
             return cells;
         }
 
-        // 지형 번호 · 빌드 방향 번호 = 지형 표(_terrainBuilds)의 칸
+        // 지형 번호 = 지형 표(_terrainBuilds)의 줄, 빌드 방향 번호들 = 그 줄의 방향들(BuildOf의 번호)
         public WorldGraph ToGraph()
         {
+            // [줄] = 그 지형의 방향 번호들 — 첫 방향(줄 번호) + 다른 방향들(줄 수 뒤로 이어 센다)
+            var rowBuilds = new int[_terrainBuilds.Length][];
+            int next = _terrainBuilds.Length;
+            for (int row = 0; row < rowBuilds.Length; row++)
+            {
+                rowBuilds[row] = new int[1 + _terrainBuilds[row].MoreBuilds.Length];
+                rowBuilds[row][0] = row;
+                for (int k = 1; k < rowBuilds[row].Length; k++)
+                    rowBuilds[row][k] = next++;
+            }
             int count = _regions.Length;
             var links = new int[count][];
-            int[] terrain = new int[count], build = new int[count];
+            var terrain = new int[count];
+            var builds = new int[count][];
             for (int i = 0; i < count; i++)
             {
                 Region region = _regions[i];
                 links[i] = (int[])region.Links.Clone();
-                terrain[i] = build[i] = System.Array.FindIndex(_terrainBuilds, row => row.Terrain == region.Terrain);
+                terrain[i] = System.Array.FindIndex(_terrainBuilds, row => row.Terrain == region.Terrain);
+                builds[i] = rowBuilds[terrain[i]];
             }
-            return new WorldGraph(links, terrain, build);
+            return new WorldGraph(links, terrain, builds);
         }
     }
 }

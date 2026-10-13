@@ -51,10 +51,15 @@ namespace GnorpWar
         [SerializeField] private int[] _rarityPrices = { 3, 4, 5, 10, 12, 24 };
         // 가중치는 5칸 — 신화는 진열되지 않으므로 칸이 없다. RarityWeight가 (int)rarity로 읽으니
         // 신화 기물이 상점 풀(_shopPool)에 들어가면 그때 IndexOutOfRange가 난다(지금은 풀에 없어 RunState.HomeOffer가 건너뛴다)
-        [Tooltip("1라운드 진열의 등급 가중치")]
-        [SerializeField] private float[] _rarityWeightsFirst = { 60, 30, 10, 0, 0 };
-        [Tooltip("등급 단계 상한(WorldConfig)에 닿은 턴의 진열 등급 가중치 — 그 사이는 턴에 따라 섞고, 넘으면 이 값")]
-        [SerializeField] private float[] _rarityWeightsLast = { 15, 25, 30, 20, 10 };
+        [Tooltip("상점 등급 단계마다 한 줄(0단계부터 — 단계는 턴 수로 오른다, WorldConfig의 등급 단계) — 그 단계 진열의 등급 가중치. 단계가 줄 수를 넘으면 마지막 줄")]
+        [SerializeField] private RarityWeights[] _rarityWeightsByTier = { new RarityWeights() };
+
+        // 한 단계의 진열 등급 가중치 — 칸 순서: 일반 · 고급 · 희귀 · 영웅 · 전설(합이 100일 필요는 없다 — 비율로 읽는다)
+        [System.Serializable]
+        public class RarityWeights
+        {
+            public float[] Weights = { 100, 0, 0, 0, 0 };
+        }
 
         [Header("등급업 — 생산 기물은 등급이 올라도 한 번에 나오는 수가 그대로고, 쿨다운이 준다(사용자 10/10)")]
         [Tooltip("생산 기물(유닛을 내는 기물)의 등급이 하나 오를 때마다 쿨다운에 곱한다 — 0.8이면 8 → 6.4 → 5.12초")]
@@ -199,9 +204,9 @@ namespace GnorpWar
         // level = OwnedBuilding.Level(1 = 시작 등급 → 1)
         public float RankCooldownScale(int level) => Mathf.Pow(_rankCooldownFactor, level - 1);
 
-        // round는 0부터(RunState.Round = 턴 − 1) — 0이면 First, 등급 단계 상한(WorldConfig) 이상이면 Last
-        public float RarityWeight(BuildingRarity rarity, int round)
-            => Mathf.Lerp(_rarityWeightsFirst[(int)rarity], _rarityWeightsLast[(int)rarity], round / (float)Mathf.Max(1, _world.ShopTierMax));
+        // tier = 상점 등급 단계(0부터 — RunState.ShopTier) — 그 단계의 줄을 그대로 읽는다(줄 사이를 섞지 않는다). 줄 수를 넘으면 마지막 줄
+        public float RarityWeight(BuildingRarity rarity, int tier)
+            => _rarityWeightsByTier[Mathf.Clamp(tier, 0, _rarityWeightsByTier.Length - 1)].Weights[(int)rarity];
 
         public MapDefinition[] Maps => _maps;
 

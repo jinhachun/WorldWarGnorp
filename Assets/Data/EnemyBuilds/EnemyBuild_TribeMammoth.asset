@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f4552d00595e64486ff2cabbdc49f0, type: 3}
+  m_Name: EnemyBuild_TribeMammoth
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
+  _displayName: "\uD2B8\uB77C\uC774\uBE0C \uB9D8\uBAA8\uC2A4 \uBAB0\uBE75"
+  _nation: 3
+  _faction: 0
+  _picks:
+  - Building: {fileID: 11400000, guid: 522fa4bdfec4a434283a8c455d8c497d, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: a7fbfdfa60666544092a1a0e31e8ae9d, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 84942defd45a26040a748c90efb5c9be, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: ce4b9a6fef7ffb64caec3392835cbe2c, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: d2de88763adbdbd43a4ef6d60a409a4e, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: a61dedec8197ece46859f74e1aecc010, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 32dde15020c942c4c87270e520424cde, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 305a1f9b4723d84449dda6aa853fbbe8, type: 2}
+    Weight: 2
+  _producerValue: 1
+  _producerShare: 0.5
+  _commonValue: 0.5
+  _ownedScale: 1.5
+  _rerollReserve: 6
+  _raisesFloorAhead: 1

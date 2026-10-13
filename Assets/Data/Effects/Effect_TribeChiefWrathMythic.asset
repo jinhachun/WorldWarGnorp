@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e4d08a527582834a824986d638bd002, type: 3}
+  m_Name: Effect_TribeChiefWrathMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BoneDustOnKillEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: a8e6e39f004afe0498fbe788c4abca20, type: 2}
+  _description: "\uB0B4 \uBBF8\uB178\uD0C0\uC6B0\uB85C\uC2A4\uAC00 \uC801\uC744 \uCC98\uCE58\uD560
+    \uB54C\uB9C8\uB2E4, \uADF8 \uC790\uB9AC\uC5D0 \uC6D0\uC2DC \uC878\uBCD1 1\uAE30\uBD84\uC758
+    \uBF1B\uAC00\uB8E8\uB97C \uB0A8\uAE41\uB2C8\uB2E4."
+  _dust: {fileID: 11400000, guid: 6f184265ff0cff8408c5d1ec99534db4, type: 2}

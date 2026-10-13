@@ -71,6 +71,8 @@ namespace GnorpWar
             public TowerBadge Overdrive;
             // 맵이 작동을 끈 층의 빨간 정지 표시(Fx/StoppedMark) — 가속 표시와 같은 자리, 숫자 없이
             public TowerBadge Stopped;
+            // 잠깐 멈춘 층(제물의 의식 — BoardRunner.Slot.Frozen)의 흰 정지 표시 + 남은 초 — 같은 자리. 꺼진 층과 달리 회색이 되지 않는다(UI 탑 칸과 같은 방식)
+            public TowerBadge Frozen;
             public float Bounce = BounceDuration;
         }
 
@@ -231,7 +233,10 @@ namespace GnorpWar
             view.Icon.transform.localScale = Vector3.one * (IconSize(view.Icon.sprite) * Mathf.Lerp(BounceScale, 1f, t));
             view.Flash.color = new Color(1f, 1f, 1f, FlashAlpha * (1f - t));
 
-            view.Haste.ShowSeconds(running != null ? running.HasteLeft : 0f);
+            // 멈춘 동안에는 가속 시간도 흐르지 않는다 — 그 자리에 멈춤 표시가 선다
+            float frozen = running != null ? running.Frozen : 0f;
+            view.Frozen.ShowSeconds(frozen);
+            view.Haste.ShowSeconds(running != null && frozen <= 0f ? running.HasteLeft : 0f);
             view.Cooldown.ShowScale(running != null ? running.CooldownScale : 1f);
             view.Overdrive.ShowIcon(OverdriveMark.On(building, _base.Team));
             view.Stopped.ShowIcon(stopped);
@@ -304,6 +309,7 @@ namespace GnorpWar
 
             view.Overdrive = new TowerBadge(go.transform, "Overdrive", Forward * _badgeOffset, _overdriveIcon, _badgeFont, OverdriveMark.Color, wall);
             view.Stopped = new TowerBadge(go.transform, "Stopped", Forward * _badgeOffset, _stoppedIcon, _badgeFont, StoppedMark.Color, wall);
+            view.Frozen = new TowerBadge(go.transform, "Frozen", Forward * _badgeOffset, _stoppedIcon, _badgeFont, Color.white, wall);
 
             _floors.Add(view);
         }

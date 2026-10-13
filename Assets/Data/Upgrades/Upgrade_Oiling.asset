@@ -18,10 +18,10 @@ MonoBehaviour:
     \uAE30\uBB3C 1\uAC1C\uC758 \uCFE8\uB2E4\uC6B4 \xD7{0}"
   _values:
   - 0.97
+  - 0.96
   - 0.95
   - 0.93
   - 0.9
-  - 0.85
   _stack: 2
   _max: 0
   _inPool: 1
@@ -32,3 +32,5 @@ MonoBehaviour:
   _effect: {fileID: 0}
   _unit: {fileID: 0}
   _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

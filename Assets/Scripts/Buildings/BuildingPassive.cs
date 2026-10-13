@@ -21,6 +21,8 @@ namespace GnorpWar
         public virtual void OnSummonedFrom(BoardRunner board, int slot, int sourceSlot, Unit unit) { }
         // 내 타워(본진)의 화살이 적 유닛을 처치한 직후
         public virtual void OnTowerKill(BoardRunner board, int slot, Unit victim) { }
+        // 내 유닛이 유닛을 처치한 직후(아군을 죽인 것도 처치다 — 사용자 결정 10/14). 타워의 처치는 OnTowerKill
+        public virtual void OnUnitKill(BoardRunner board, int slot, Unit killer, Unit victim) { }
         // 내 작은 타워가 파괴된 직후(사라지기 전) — 어느 타워를 볼지(이 기물이 세운 것 · 전부)는 능력이 정한다(Base.BuiltBy)
         public virtual void OnSmallTowerDestroyed(BoardRunner board, int slot, Base tower) { }
 

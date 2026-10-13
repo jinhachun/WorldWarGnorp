@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_TribeCurse
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC800\uC8FC\uC758 \uBF08\uC5B8\uB355"
+  _icon: {fileID: 21300000, guid: 0fafdfad16a7a1d44b6228ed99d90061, type: 3}
+  _description: 
+  _rarity: 1
+  _nation: 3
+  _faction: 0
+  _cooldown: 5
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions:
+  - {fileID: 11400000, guid: 8c22f54c94ed90e44949896796fe0d99, type: 2}
+  _effects: []
+  _passives: []
+  _mythicActions:
+  - {fileID: 11400000, guid: a4762f49f8c93194fac02ce047a2a4c4, type: 2}
+  _mythicEffects: []
+  _mythicPassives: []
+  _mentionedUnits: []

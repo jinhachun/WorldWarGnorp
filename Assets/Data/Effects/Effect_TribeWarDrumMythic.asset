@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be133818dc7630f408f7e60f8879681b, type: 3}
+  m_Name: Effect_TribeWarDrumMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NoPushOnDustEffect
+  _categories: []
+  _units: []
+  _description: "\uBF1B\uAC00\uB8E8 \uC5B8\uB355 \uC704\uC5D0 \uC788\uB294 \uB0B4
+    \uC720\uB2DB\uC740 \uBC00\uB824\uB098\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."

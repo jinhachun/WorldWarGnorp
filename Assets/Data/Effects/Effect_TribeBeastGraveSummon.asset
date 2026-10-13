@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ede11269063e58c48ae7f435288d9997, type: 3}
+  m_Name: Effect_TribeBeastGraveSummon
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.SummonOnSummonChanceEffect
+  _categories:
+  - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _units: []
+  _description: "\uB0B4\uAC00 \uACBD\uBCF4\uBCD1\uC744 \uC18C\uD658\uD560 \uB54C\uB9C8\uB2E4,
+    {0}% \uD655\uB960\uB85C \uD230\uB4DC\uB77C \uC804\uC7C1\uC18C {1}\uAE30\uB97C
+    \uCD94\uAC00\uB85C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _summon: {fileID: 11400000, guid: 106ab9f832c4c674cb501dc68f48226c, type: 2}
+  _count: 1
+  _chance: 25

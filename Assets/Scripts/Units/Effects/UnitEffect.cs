@@ -15,6 +15,10 @@ namespace GnorpWar
         [TextArea]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private string _description = "";
+        [Tooltip("유닛 카드의 특성 줄 — 이 효과가 한 유닛의 타고난 능력일 때(UnitDefinition의 「타고난 효과」) 그 유닛 카드에 쓰는 글. 주어 없이, {0}에 이 효과의 숫자")]
+        [TextArea]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _trait = "";
 
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다(하위 효과의 표시용 글 칸도 읽는다)
         protected bool HideNonBalance => BalanceView.HideNonBalance;
@@ -22,6 +26,9 @@ namespace GnorpWar
         public string Description => _description;
         // 툴팁 글 — 등급으로 크는 효과는 설명의 {0}에 지금 등급 값을 넣는다
         public virtual string Describe(int level) => _description;
+        // 유닛 카드의 특성 줄(없으면 빈 글) — 숫자는 효과가 제 값에서 넣는다
+        public string Trait => string.Format(_trait, TraitNumbers());
+        protected virtual object[] TraitNumbers() => new object[0];
         // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null
         public virtual string Headline(int level) => null;
         // 이 효과를 켠 기물의 등급(같은 효과를 여러 기물이 켜면 가장 높은 것) — 훅 안에서 수치를 읽을 때
@@ -93,6 +100,16 @@ namespace GnorpWar
         public virtual float FirstAttackDamageBonus(Team team) => 0f;
         // 적용 대상 유닛이 쏜 화살이 적 유닛에 피해를 준 직후(사냥꾼의 활) — team = 쏜 쪽. 타워의 화살은 안 불린다
         public virtual void OnArrowHit(Team team, Unit victim) { }
+        // 고도 1(1칸)마다 그 스탯에 얹는 +비율(합연산, 미노타우로스 — 0.1 = 고도 1당 +10%) — 지금 고도로 센다(Unit.Altitude)
+        public virtual float AltitudeBonus(UnitStat stat) => 0f;
+        // 이 유닛이 유닛에게 피해를 준 직후(근접 · 화살 · 범위 · 반사 모두, 아군에게 준 것도) — amount = 그 피해(원시 의식 제단)
+        public virtual void OnDealtDamage(Unit dealer, Unit victim, float amount) { }
+        // 죽을 때마다 그 자리에서 다시 일어날 확률(0~1, 죽지 않는 전사) — 여러 효과면 더한다. 사망 시 효과 · 처치 효과는 먼저 돈다
+        public virtual float ReviveChance => 0f;
+        // 이 유닛이 죽었다가 그 자리에서 다시 일어난 직후(죽지 않는 전사 신화)
+        public virtual void OnRevived(Unit unit) { }
+        // 이 진영의 유닛이 죽으며 남기는 뼛가루의 양에 곱하는 값(뼈무덤 신화 2 — 적용 분류와 상관없이 읽는다)
+        public virtual float BoneDustFactor => 1f;
         // 처음 죽을 때 죽는 대신 최대 체력의 이 비율을 회복한다(신정 — 1 = 100%). 0이면 없음. 충정의 맹세(FirstDeathDelay)보다 먼저 쓰인다
         public virtual float FirstDeathHealRatio(Team team) => 0f;
         // 회복 투사체 하나를 던진 직후

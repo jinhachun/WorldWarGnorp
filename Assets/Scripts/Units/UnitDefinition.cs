@@ -123,9 +123,18 @@ namespace GnorpWar
         [BoxGroup("짓기 전용 — 건축가")]
         [SuffixLabel("칸", true)]
         [SerializeField] private float _buildGateClearance = 3f;
+        [Tooltip("타고난 효과 — 유닛 카드의 특성 줄에 글(효과의 「특성 줄」)을 싣는다. 표시용이다: 효과를 켜는 것은 이 유닛을 내는 기물이다")]
+        [BoxGroup("참조")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private UnitEffect[] _traitEffects = new UnitEffect[0];
 
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
+
+        // 유닛 카드의 특성 줄들(타고난 효과의 글, 숫자는 그 효과의 값) — 돌격 · 범위 같은 줄(UI/BuildingTooltip.UnitInfo) 뒤에 붙인다
+        public string[] TraitLines => System.Array.ConvertAll(_traitEffects, effect => effect.Trait);
+        // effect가 이 유닛의 타고난 효과인가 — 카드의 「기물이 켜 준 효과」 줄에서 같은 내용을 다시 쓰지 않게 거른다
+        public bool HasTrait(UnitEffect effect) => System.Array.IndexOf(_traitEffects, effect) >= 0;
 
         public string DisplayName => _displayName;
         public UnitCategory Category => _category;

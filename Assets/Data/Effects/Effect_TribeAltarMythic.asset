@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 475a6d4fd1886484087666b357e6b65a, type: 3}
+  m_Name: Effect_TribeAltarMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.LifestealStrongestEffect
+  _categories: []
+  _units: []
+  _description: "\uACF5\uACA9\uB825\uC774 \uB450 \uBC88\uC9F8\uB85C \uB192\uC740
+    \uB0B4 \uC720\uB2DB\uB3C4 \uAC19\uC740 \uD6A8\uACFC\uB97C \uBC1B\uC2B5\uB2C8\uB2E4."
+  _rank: 1
+  _ratio: 0.5

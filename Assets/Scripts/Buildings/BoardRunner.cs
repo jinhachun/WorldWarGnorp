@@ -16,6 +16,8 @@ namespace GnorpWar
             public float Timer;
             // 가속이 남은 시간 — 그동안 게이지가 2배로 찬다
             public float Haste;
+            // 쿨다운이 멈춘 남은 시간(제물의 의식) — 그동안 게이지가 안 차고 가속 시간도 흐르지 않는다
+            public float Frozen;
             // 층·칸 표시용(전장 탑 · UI 탑) — 남은 가속(초, 기물이 멈췄거나 쿨다운 없는 기물이면 0) · 지금 쿨다운 ÷ 원래 쿨다운(풍차 ×0.8 → 0.8, 받은 게 없으면 1).
             // 원래 쿨다운 = 그 등급의 쿨다운(CooldownAt) — 등급으로 준 몫은 받은 효과가 아니다
             public float HasteLeft => Cooldown > 0f && !BattleManager.BoardsStopped ? Mathf.Max(0f, Haste) : 0f;
@@ -181,14 +183,42 @@ namespace GnorpWar
             }
         }
 
-        // 군국주의 — 쿨다운이 가장 긴 기물을 즉시 1회 발동(같으면 아래층 먼저). 쿨다운 있는 기물이 없으면 아무 일도 없다
-        public void FireLongest()
+        // 쿨다운이 가장 긴 기물을 즉시 times번 발동(군국주의 · 약탈족장 라이칸스로프) — 같으면 그중 무작위(트라이브 명세 §2-1). 쿨다운 있는 기물이 없으면 아무 일도 없다
+        public void FireLongest(int times = 1)
         {
-            int longest = -1;
+            int longest = -1, ties = 0;
             for (int i = 0; i < _slots.Length; i++)
-                if (HasBuilding(i) && _slots[i].Cooldown > 0f && (longest < 0 || _slots[i].Cooldown > _slots[longest].Cooldown))
+            {
+                if (!HasBuilding(i) || _slots[i].Cooldown <= 0f)
+                    continue;
+                if (longest < 0 || _slots[i].Cooldown > _slots[longest].Cooldown)
+                {
                     longest = i;
-            FireNow(longest);
+                    ties = 1;
+                }
+                else if (_slots[i].Cooldown == _slots[longest].Cooldown && Random.Range(0, ++ties) == 0)
+                    longest = i;
+            }
+            for (int t = 0; t < times; t++)
+                FireNow(longest);
+        }
+
+        // 제물의 의식 — 칸의 쿨다운을 seconds 동안 멈춘다(그동안 게이지가 안 차고 가속도 안 걸린다). 이미 멈춰 있으면 더 긴 쪽. 즉시 발동(FireNow)은 멈춘 동안에도 된다
+        public void Freeze(int index, float seconds)
+        {
+            if (HasBuilding(index))
+                _slots[index].Frozen = Mathf.Max(_slots[index].Frozen, seconds);
+        }
+
+        // 제물의 의식 신화 — 멈췄던 기물이 다시 움직이는 순간 즉시 1회 발동한다(전투 동안, 패시브가 전투 시작 때 켠다)
+        public bool FireOnThaw;
+
+        public void NotifyUnitKill(Unit killer, Unit victim)
+        {
+            for (int i = 0; i < _slots.Length; i++)
+                if (IsActive(i))
+                    foreach (BuildingPassive passive in _slots[i].Building.Passives)
+                        passive.OnUnitKill(this, i, killer, victim);
         }
 
         // 단두대 혁명 — 살아 있는 적 유닛 중 무작위 하나에게 그 체력만큼의 피해(내 본진의 처치). 무적인 유닛은 피해를 받지 않는다(기존 무적 규칙)
@@ -230,6 +260,13 @@ namespace GnorpWar
                 Slot slot = _slots[i];
                 if (slot.Building == null)
                     continue;
+                if (slot.Frozen > 0f)
+                {
+                    slot.Frozen -= Time.deltaTime;
+                    if (slot.Frozen <= 0f && FireOnThaw && FireNow(i))
+                        BuffLinks.ToSlot(_team, -1, i, BuffKind.Trigger);
+                    continue;
+                }
                 slot.Timer += Time.deltaTime * (slot.Haste > 0f ? HasteRate : 1f) * rate;
                 slot.Haste -= Time.deltaTime;
                 TryFire(i);
@@ -287,7 +324,10 @@ namespace GnorpWar
                 repeats *= 2;
             for (int r = 0; r < repeats; r++)
             {
-                if (definition.Unit != null)
+                bool summons = definition.Unit != null;
+                foreach (BuildingAction action in building.Actions)
+                    summons &= !action.ReplacesSummon(this, index);
+                if (summons)
                     Summon(definition.Unit, definition.SummonCount + ExtraSummons, index);
                 foreach (BuildingAction action in building.Actions)
                     action.Execute(this, index, level);
@@ -429,7 +469,7 @@ namespace GnorpWar
         }
 
         // 쿨다운이 있는 기물의 칸 중 무작위 하나(없으면 -1)
-        private int RandomCooling()
+        public int RandomCooling()
         {
             int count = 0;
             for (int i = 0; i < _slots.Length; i++)

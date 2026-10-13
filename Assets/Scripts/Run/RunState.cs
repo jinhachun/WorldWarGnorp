@@ -805,7 +805,7 @@ namespace GnorpWar
         {
             var pool = new System.Collections.Generic.List<UpgradeDefinition>();
             foreach (UpgradeDefinition upgrade in _config.Upgrades)
-                if (upgrade.InPool)
+                if (upgrade.InPool && upgrade.AvailableAt(material))
                     pool.Add(upgrade);
             var choices = new UpgradeDefinition[Mathf.Min(UpgradeChoices, pool.Count)];
             for (int i = 0; i < choices.Length; i++)

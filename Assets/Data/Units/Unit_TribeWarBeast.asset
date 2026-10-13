@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1a1e7d011965d48ae5581c793fe6aa, type: 3}
+  m_Name: Unit_TribeWarBeast
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitDefinition
+  _displayName: "\uD230\uB4DC\uB77C \uC804\uC7C1\uC18C"
+  _category: {fileID: 11400000, guid: e9fd260e0fdfa214f96601ed00f1f26d, type: 2}
+  _allyPrefab: {fileID: 638779955689807151, guid: 791effe3e335a724d831710aa1969925, type: 3}
+  _enemyPrefab: {fileID: 6082175181310963690, guid: 965b4d314bb921841a82c56fb57b5d68, type: 3}
+  _moveSpeed: 4
+  _maxHp: 120
+  _attackDamage: 8
+  _attackInterval: 0.8
+  _attackRange: 0.8
+  _hitKnockback: 1.5
+  _bigKnockbackAt: 0.5
+  _bigKnockbackSpeed: 5
+  _stackRank: 1
+  _attackType: 0
+  _pushPower: 1.5
+  _chargeReadySeconds: 1
+  _chargeDamageMultiplier: 3
+  _chargePushMultiplier: 3
+  _projectile: {fileID: 0}
+  _projectileArcHeight: 2.5
+  _projectileSplashRadius: 0
+  _flameThickness: 2
+  _healAmount: 0
+  _slamInterval: 0
+  _slamJumpHeight: 3
+  _slamRadius: 5
+  _slamDamage: 20
+  _slamLiftHeight: 3
+  _slamStun: 0.8
+  _buildPrefab: {fileID: 0}
+  _buildSeconds: 2
+  _buildFlatness: 0.25
+  _buildSpacing: 2.5
+  _buildGateClearance: 3
+  _traitEffects:
+  - {fileID: 11400000, guid: 7569922b610daef40a56b38de99da685, type: 2}

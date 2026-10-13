@@ -196,13 +196,16 @@ namespace GnorpWar
                 traits.Add("가까운 땅에 작은 타워를 설치합니다.");
             if (unit.SlamInterval > 0f)
                 traits.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄웁니다."));
+            // 타고난 특성(UnitDefinition.TraitLines) — 그 유닛이면 늘 가진 효과. 숫자는 에셋 값으로 채워져 온다
+            foreach (string line in unit.TraitLines)
+                traits.Add(ColorNumbers(line));
             AddGroup(lines, traits, UnitTraitSize);
 
             var effects = new List<string>();
             foreach (OwnedBuilding owned in board)
                 if (!OwnedBuilding.IsEmpty(owned))
                     foreach (UnitEffect effect in owned.Effects)
-                        if (effect.AppliesTo(unit) && !string.IsNullOrEmpty(effect.Description))
+                        if (effect.AppliesTo(unit) && !unit.HasTrait(effect) && !string.IsNullOrEmpty(effect.Description))   // 타고난 특성으로 이미 쓴 것은 건너뛴다
                             effects.Add(Highlight(effect.Describe(owned.Level)));
             AddGroup(lines, effects, UnitEffectSize);
             return string.Join("\n", lines);

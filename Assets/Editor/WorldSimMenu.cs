@@ -38,12 +38,9 @@ namespace GnorpWar.Editor
                 Random.InitState(seed);
                 RunState.StartNew(battle);
                 var builds = new List<EnemyBuildProfile>();
-                for (int region = 0; region < world.Map.RegionCount; region++)
-                {
-                    EnemyBuildProfile build = world.Map.BuildOf(world.Map.ToGraph().Build[region]);
-                    if (!builds.Contains(build))
-                        builds.Add(build);
-                }
+                for (int b = 0; b < world.Map.BuildCount; b++)
+                    if (!builds.Contains(world.Map.BuildOf(b)))
+                        builds.Add(world.Map.BuildOf(b));
                 foreach (EnemyBuildProfile build in builds)
                 {
                     var production = new float[turns];
@@ -83,9 +80,7 @@ namespace GnorpWar.Editor
             var battle = AssetDatabase.LoadAssetAtPath<BattleConfig>(BattleConfigPath);
             runs = Mathf.Clamp(runs, 1, MaxRuns);
             int regions = world.Map.RegionCount;
-            int builds = 0;
-            foreach (int build in world.Map.ToGraph().Build)
-                builds = Mathf.Max(builds, build + 1);
+            int builds = world.Map.BuildCount;
             const int Tempers = 4, Shown = 10;
 
             var clearTurns = new List<int>();

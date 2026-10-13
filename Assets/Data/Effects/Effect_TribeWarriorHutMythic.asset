@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cede587612c3618429a993597dc0f57e, type: 3}
+  m_Name: Effect_TribeWarriorHutMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathBoonStrongestEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: eaa17cd8967f3e84ea90617459a79210, type: 2}
+  _description: "\uC6D0\uC2DC\uC758 \uC804\uC0AC\uAC00 \uC8FD\uC744 \uB54C, \uC804\uD22C
+    \uB3D9\uC548 \uACF5\uACA9\uB825\uC774 \uAC00\uC7A5 \uB192\uC740 \uB0B4 \uC720\uB2DB\uC758
+    \uACF5\uACA9\uC18D\uB3C4 +2%"
+  _healRatio: 0
+  _attackShare: 0
+  _maxHpShare: 0
+  _modifier:
+    Stat: 3
+    Op: 1
+    Value: 0.02

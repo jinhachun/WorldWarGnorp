@@ -18,11 +18,11 @@ MonoBehaviour:
     \uC804\uD22C \uB3D9\uC548 \uD68C\uBCF5\uBC1B\uC740 \uC544\uAD70\uC758 \uACF5\uACA9\uB825
     +{0}%"
   _values:
+  - 0.5
+  - 0.75
   - 1
   - 1.5
   - 2
-  - 3
-  - 4
   _stack: 0
   _max: 0
   _inPool: 1
@@ -33,3 +33,5 @@ MonoBehaviour:
   _effect: {fileID: 11400000, guid: 3920a8d7cd04c124aab22448fcdbe4af, type: 2}
   _unit: {fileID: 0}
   _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

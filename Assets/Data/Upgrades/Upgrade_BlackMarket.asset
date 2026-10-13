@@ -16,11 +16,11 @@ MonoBehaviour:
   _icon: {fileID: 21300000, guid: cb76e0d137302fe42867638a15dc43f9, type: 3}
   _description: "\uD134\uB9C8\uB2E4 \uBB34\uB8CC \uB9AC\uB864 +{0}\uD68C"
   _values:
+  - 0
+  - 0
   - 1
   - 2
   - 3
-  - 4
-  - 5
   _stack: 0
   _max: 0
   _inPool: 1
@@ -31,3 +31,5 @@ MonoBehaviour:
   _effect: {fileID: 0}
   _unit: {fileID: 0}
   _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

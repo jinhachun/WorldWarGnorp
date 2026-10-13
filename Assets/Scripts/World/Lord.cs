@@ -4,7 +4,7 @@ namespace GnorpWar
     public class Lord
     {
         public int Id;
-        // 빌드 방향 번호(WorldGraph.Build의 값) — 시작 지역의 지형에서 오고, 땅을 먹어도 바뀌지 않는다
+        // 빌드 방향 번호(WorldGraph.Builds의 값 중 하나 — 에셋은 WorldMapDefinition.BuildOf) — 시작 지역의 지형이 가진 방향들 중에서 뽑히고, 땅을 먹어도 바뀌지 않는다
         public int Build;
         public LordTemper Temper;
         public int Happiness;

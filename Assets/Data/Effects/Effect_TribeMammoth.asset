@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 225ebf93ee6e7fb489759fbf0c0fbc8e, type: 3}
+  m_Name: Effect_TribeMammoth
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.AttackSplashAllEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: d3dca02f281c81945abf726bc68df697, type: 2}
+  _description: "\uD230\uB4DC\uB77C \uB9D8\uBAA8\uC2A4\uB294 \uACF5\uACA9 \uC2DC,
+    \uC544\uAD70\uC744 \uD3EC\uD568\uD55C \uC8FC\uBCC0 \uBAA8\uB4E0 \uC720\uB2DB\uC5D0\uAC8C
+    \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+  _trait: "\uACF5\uACA9\uD560 \uB54C\uB9C8\uB2E4 \uC544\uAD70\uC744 \uD3EC\uD568\uD55C
+    \uC8FC\uBCC0 \uBAA8\uB4E0 \uC720\uB2DB\uC5D0\uAC8C \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+  _radius: 3

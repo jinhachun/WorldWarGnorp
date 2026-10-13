@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddd258b9d126c80459b407f49b886b6a, type: 3}
+  m_Name: Effect_TribeWeaponMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HealOnAllyKillEffect
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: d3dca02f281c81945abf726bc68df697, type: 2}
+  _description: "\uD230\uB4DC\uB77C \uB9D8\uBAA8\uC2A4\uAC00 \uC544\uAD70\uC744 \uCC98\uCE58\uD560
+    \uB54C\uB9C8\uB2E4, \uC790\uC2E0\uC758 \uCD5C\uB300 \uCCB4\uB825\uC758 {0}%\uB97C
+    \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _ratio: 0.1

@@ -17,10 +17,10 @@ MonoBehaviour:
   _description: "\uB0B4 \uBCF8\uC9C4\uC758 \uCCB4\uB825 +{0}%"
   _values:
   - 5
+  - 6
   - 8
-  - 12
-  - 18
-  - 25
+  - 10
+  - 15
   _stack: 0
   _max: 0
   _inPool: 1
@@ -31,3 +31,5 @@ MonoBehaviour:
   _effect: {fileID: 0}
   _unit: {fileID: 0}
   _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

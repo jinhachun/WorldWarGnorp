@@ -15,6 +15,8 @@ namespace GnorpWar.Editor
         {
             "EnemyBuild_Economy", "EnemyBuild_Tower", "EnemyBuild_HeavyInfantry", "EnemyBuild_Cavalry", "EnemyBuild_Priest", "EnemyBuild_Cog",
         };
+        // 그 지형의 영주가 대신 가질 수 있는 다른 방향(없으면 null) — 얼음 · 초원에 트라이브 둘(사용자 결정 10/14: 영주마다 그 지형의 방향 중 하나를 고르게 뽑는다)
+        private static readonly string[] MoreBuildAssets = { "EnemyBuild_TribeHill", null, null, "EnemyBuild_TribeMammoth", null, null };
 
         [MenuItem("GnorpWar/월드 에셋 만들기")]
         private static void Create()
@@ -51,6 +53,10 @@ namespace GnorpWar.Editor
                     SerializedProperty row = rows.GetArrayElementAtIndex(i);
                     row.FindPropertyRelative(nameof(WorldMapDefinition.TerrainBuild.Terrain)).objectReferenceValue = terrains[i];
                     row.FindPropertyRelative(nameof(WorldMapDefinition.TerrainBuild.Build)).objectReferenceValue = builds[i];
+                    SerializedProperty more = row.FindPropertyRelative(nameof(WorldMapDefinition.TerrainBuild.MoreBuilds));
+                    more.arraySize = MoreBuildAssets[i] != null ? 1 : 0;
+                    if (MoreBuildAssets[i] != null)
+                        more.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyBuildProfile>($"Assets/Data/EnemyBuilds/{MoreBuildAssets[i]}.asset");
                 }
             });
             // 새로 만든 맵에는 땅 모양 · 이웃 · 표시 자리를 굽는다

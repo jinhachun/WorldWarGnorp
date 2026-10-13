@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f4552d00595e64486ff2cabbdc49f0, type: 3}
+  m_Name: EnemyBuild_TribeHill
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyBuildProfile
+  _displayName: "\uD2B8\uB77C\uC774\uBE0C \uC5B8\uB355 \uBBF8\uB178\uD0C0\uC6B0\uB85C\uC2A4"
+  _nation: 3
+  _faction: 0
+  _picks:
+  - Building: {fileID: 11400000, guid: 06c5e788fafe52548b59cd1608a16373, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: c5968c7178dbc81449d4838817861ac2, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: ed86824964cfdac42aeaa935c41ccd8b, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 70cbfcbecd141464085b955939006b8e, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: a3c396eb09ee4674d8cd1a094e6e0dce, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 472540018c44db84d97edc351ab8d3cd, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 9c669b5a32acc804692f0335f391b79c, type: 2}
+    Weight: 2
+  _producerValue: 1
+  _producerShare: 0.5
+  _commonValue: 0.5
+  _ownedScale: 1.5
+  _rerollReserve: 6
+  _raisesFloorAhead: 1

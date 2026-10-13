@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_TribeLycan
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC57D\uD0C8\uC871\uC7A5 \uB77C\uC774\uCE78\uC2A4\uB85C\uD504"
+  _icon: {fileID: 0}
+  _description: 
+  _rarity: 4
+  _nation: 3
+  _faction: 0
+  _cooldown: 0
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions: []
+  _effects: []
+  _passives:
+  - {fileID: 11400000, guid: b6666fdc50ac95641833487f54960299, type: 2}
+  _mythicActions: []
+  _mythicEffects: []
+  _mythicPassives:
+  - {fileID: 11400000, guid: ed121e9e067de604dbd6b8a7f107007b, type: 2}
+  _mentionedUnits: []

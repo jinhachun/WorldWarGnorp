@@ -219,7 +219,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 - **탄이 유닛을 싣고 가는 길**: `Projectile.Carry(unit, source)` — 닿은(또는 떨어진) 자리에 `BoardRunner.Summon`으로 세운다(콜로서스 신화). 화살 프리팹을 빌려 그림만 바꾸므로 풀에서 다시 꺼낼 때 그림을 되돌린다.
 - **신화로 받는 길**: `RunState.Acquire(definition, upgrades)` — 오른 횟수를 얹어 넘긴다(판도라의 상자 신화). 신화 **정의**는 여전히 없다.
 - `UnitEffect`의 `ExtraProjectiles` · `PierceHitDamageFactor`는 타워(`Base.Shoot`)도 읽는다 — 타워는 적용 분류로 거르지 않는다.
-- 🔴 **신화에서는 수치가 오르지 않는다**(기획서 §1) — 상한은 **`OwnedBuilding.Level`(= `LevelOf`) 한 곳**에 있다. `Level`을 쓰는 곳은 모두 수치를 키우는 용도라(쿨다운 · 효과 세기 · 소환 수 · `TeamEffects` 등급 · `TowerPower`) 여기서 막으면 전부 따라온다. 상한은 고정값이 아니라 **「`Rarity`가 전설인 선의 Level」**이다 — 시작 등급마다 다르다(일반 5 · 전설 1).
+- 🔴 **신화에서는 수치가 오르지 않는다**(기획서 §1) — 상한은 **`OwnedBuilding.Level`(= `LevelOf`) 한 곳**에 있다. `Level`을 쓰는 곳은 모두 수치를 키우는 용도라(효과 세기 · 소환 수 · `TeamEffects` 등급 · `TowerPower`) 여기서 막으면 전부 따라온다. **예외는 생산 기물의 쿨다운 하나**(사용자 10/13) — 등급업 쿨다운 배율만 신화에서 한 번 더 걸리고, 그 단계는 `OwnedBuilding.CooldownLevel`(= `Level`, 신화면 +1)이 센다. 쿨다운을 읽을 땐 `Level`이 아니라 `OwnedBuilding.Cooldown` · `CooldownLevelOf`를 쓴다. 상한은 고정값이 아니라 **「`Rarity`가 전설인 선의 Level」**이다 — 시작 등급마다 다르다(일반 5 · 전설 1).
   `Copies`(합친 개수)는 `_upgrades`를 직접 읽어 신화에서도 2배로 늘어난다 — 읽는 곳은 `TowerPower.SupportGold`와 `EnemyShopper.OwnedValue`다(판매가는 `SpentGold`에서 나온다).
   🔴 **상한 규칙의 사본을 만들지 말 것** — 툴팁의 RANK UP 미리보기도 같은 `LevelOf`를 부른다. `level + 1`로 다음 등급을 계산하면 상한을 넘어가 「신화가 되면 더 좋아진다」고 거짓말을 한다.
 

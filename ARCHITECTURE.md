@@ -74,6 +74,8 @@
 한 턴 = 지도에서 시작해 지도로 돌아온다. 자세한 단계는 아래 「씬 둘과 턴 흐름」·「월드맵 런」.
 
 ```
+World 씬 ─► 국가 고르기 → 시작 업그레이드 고르기(지역 특수 셋 중 하나 — 고를 때까지 첫 턴을 안 연다)
+   ▼
 World 씬 ─► BeginTurn (AI 영주 전원 상점 + 내 수입 = 18 + 땅 × 2)
    │  땅 고르기(Preview) · 「상점」은 지도 위 팝업 — 몇 번이든
    ▼
@@ -122,8 +124,11 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 - 🔴 **칸·사거리 검사는 트리거를 무시한다**(`Unit.SolidOnly`). 화살이 트리거라서, 무시하지 않으면 날아가는 화살 때문에 "머리 위가 막혔다"로 오판한다.
   새 물리 검사를 추가할 때도 같은 필터를 쓸 것.
 - 🔴 **죽은 유닛은 즉시 충돌에서 빠져야 한다.** 튕겨나가는 동안 다른 유닛을 밀거나 받치면 안 된다(그래야 위의 산이 무너진다).
-- 🔴 **합치기 보상 업그레이드는 기물이 아니라 탑(영주)에 붙는다** — `TowerState.Upgrades`(얻은 것의 목록, 런 동안 유지 · `Reset`이 비운다). 얻는 자리는 `RunState.MergeInto`의 합치기 한 단계마다 한 번이고(`Acquire`는 안 지난다), 내 탑이면 대기열(`RunState.PendingUpgrades` → `ChooseUpgrade`), AI 탑이면 셋 중 무작위로 즉시다. 침략할 때 남은 대기는 무작위로 골라진다.
-  효과는 전투 시작에 `RunState.ApplyUpgrades`가 건다 — 같은 업그레이드는 `UpgradeDefinition.Summarize`가 **합친 값 하나**로 만들고(더하기 · 「가장 센 것」은 에셋의 `_stack`), 유닛 효과에는 그 값이 `TeamEffects`의 `Value`로 넘어간다(기물이 켠 효과는 등급, 업그레이드가 켠 효과는 값). 턴 수입 · 무료 리롤은 `UpgradeDefinition.TotalOf`로 `RunState`가 읽는다. 상점 조작을 막는 것은 `RunState`가 아니라 화면(`UI/UpgradePicker`)이다.
+- 🔴 **합치기 보상 업그레이드는 기물이 아니라 탑(영주)에 붙는다** — `TowerState.Upgrades`(얻은 것의 목록, 런 동안 유지 · `Reset`이 비운다). 얻는 자리는 `RunState.MergeInto`의 끝 한 곳이다 — 연쇄로 이어져도 한 번, 마지막으로 합친 재료의 등급으로(`Acquire`는 안 지난다), 내 탑이면 대기열(`RunState.PendingUpgrades` → `ChooseUpgrade`), AI 탑이면 셋 중 무작위로 즉시다. 침략할 때 남은 대기는 무작위로 골라진다.
+  효과는 전투 시작에 `RunState.ApplyUpgrades`가 건다 — 같은 업그레이드는 `UpgradeDefinition.Summarize`가 **합친 값 하나**로 만들고(더하기 · 「가장 센 것」 · 「얻은 것마다 따로」는 에셋의 `_stack` — 「따로」인 기름칠만 등급별로 한 줄씩 나온다), 유닛 효과에는 그 값이 `TeamEffects`의 `Value`로 넘어간다(기물이 켠 효과는 등급, 업그레이드가 켠 효과는 값). 턴 수입 · 무료 리롤은 `UpgradeDefinition.TotalOf`로 `RunState`가 읽는다. 상점 조작을 막는 것은 `RunState`가 아니라 화면(`UI/UpgradePicker`)이다.
+- 🔴 **지역 특수 업그레이드(신화 19종)는 같은 `UpgradeDefinition`에 종류 `Special` + `SpecialKind`로 실려 있다**(에셋 `Assets/Data/Upgrades/Special/`, `BattleConfig._specialUpgrades` — 합치기 후보 풀 `_upgrades`와 별개). 런마다 10종이 지역 10곳에 놓이고(`WorldRun.RegionSpecial`, 지도 에셋에 굽지 않는다) 나머지 9종에서 시작 고르기가 나온다.
+  **내 것과 AI 것이 다르게 붙는다** — 나는 고른 것이 런 끝까지 탑에 남고(시작 고르기 · 영주를 멸망시켰을 때 그 영주가 가진 것 중 최대 셋에서 하나), AI 영주는 **가진 땅의 것을 가진 동안만** 쓴다(`TowerState.LandSpecials` — 상점 · 전투 · 표시 앞에 `WorldRun.SyncSpecials`). 고르기는 합치기 보상과 **같은 대기열**(`PendingUpgrades`, 등급 신화)이고, 가진 목록도 `RunState.UpgradesOf` 하나에 신화 줄로 같이 나온다.
+  **병종을 `==`로 직접 견주지 말 것** — 군제 개혁이 진영별로 「~로도 취급」을 걸므로 `UnitAliases.Is` · `ICategoryFilter`로 묻는다. **자리 효과(바로 위 · 아래 · 위/아래에 있는)는 `BoardRunner.Linked`로 묻는다** — 연방제가 그 범위를 내 다른 모든 기물로 넓힌다.
 - 🔴 **전투 시간은 `BattleManager.Elapsed`**(전투 시작부터, 상점 시간 제외) — `Time.timeSinceLevelLoad`는 상점 시간까지 들어가므로 쓰지 말 것.
 - 🔴 **`Time.timeScale`을 쓰는 곳이 넷이다** — 결과 화면(0) · 상점(1, `BattleManager.Awake`) · 전투 배속(`SpeedButton.Current` ×1/2/4 — 전투 시작·버튼 누를 때) · 히트스톱(현재값×0.02). 측정용 배속(8)은 손으로 걸 때만. 히트스톱은 끝날 때 **자기가 건 값일 때만** 되돌린다.
   새로 timeScale을 만지는 코드를 넣으면 이 셋과 부딪히지 않는지 본다.

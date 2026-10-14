@@ -28,7 +28,7 @@ namespace GnorpWar
                 if (!lord.IsPlayer)
                     _towers[lord.Id] = NewTower();
 
-            // 지역 특수 업그레이드 — 전체에서 무작위로 뽑아 지역마다 하나씩(겹침 없음), 내 시작 땅은 뺀다. 남은 것은 시작 때 고를 후보가 된다
+            // 지역 특수 업그레이드 — 전체에서 무작위로 뽑아 지역마다 하나씩(겹침 없음), 내 시작 땅은 뺀다. 남은 것은 이번 런에 나오지 않는다(시작 때 고르기는 없앴다 — 사용자 10/15)
             RegionSpecial = new UpgradeDefinition[State.Owner.Length];
             UnplacedSpecials.AddRange(battle.SpecialUpgrades);
             var lands = new List<int>();
@@ -47,7 +47,7 @@ namespace GnorpWar
         // 지역 특수 업그레이드(아웃게임기획 §4) — [지역] = 그 땅에 놓인 것(없으면 null). 런마다 새로 놓는다(지도 에셋에 굽지 않는다).
         // AI 영주는 그 땅을 가진 동안 쓴다(SyncSpecials). 내가 그 땅에서 싸워 이기면 내 것이 되고 땅에서는 사라진다(RunState.FinishBattle)
         public readonly UpgradeDefinition[] RegionSpecial;
-        // 지도에 놓이지 않은 것 — 시작 때 고르는 후보가 여기서 나온다(RunState.ChooseNation)
+        // 지도에 놓이지 않은 것 — 이번 런에는 나오지 않는다(놓을 때 뽑고 남은 것)
         public readonly List<UpgradeDefinition> UnplacedSpecials = new List<UpgradeDefinition>();
 
         // lord의 탑에 「지금 가진 땅의 지역 특수 업그레이드」를 다시 적는다 — 상점 · 전투 · 표시 앞에 부른다(땅은 턴마다 넘어간다). 탑이 없으면(나 · 사라진 영주) 아무것도 안 한다

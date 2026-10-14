@@ -273,7 +273,7 @@ namespace GnorpWar
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             if (!enemy && !BattleManager.Fighting && building.Stacks > 0)
                 body += Note($"스택 {building.Stacks}");
-            // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당) — 전투 중에만, 그 진영이 센 값으로 남은 수(사용자 10/14). 전투마다 0부터라 상점에서는 쓰지 않는다
+            // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구) — 전투 중에만, 그 진영이 센 값으로 남은 수(사용자 10/14). 전투마다 0부터라 상점에서는 쓰지 않는다
             if (BattleManager.Fighting)
             {
                 Team side = enemy ? Team.Enemy : Team.Ally;
@@ -283,6 +283,8 @@ namespace GnorpWar
                 foreach (UnitEffect effect in building.Effects)
                     if (effect is AscensionEffect ascension)
                         body += Note($"다음 발동까지 {ascension.RemainingOf(side)}기");
+                    else if (effect is DeathCountSummonEffect deathCount)
+                        body += Note(deathCount.RemainingOf(side) > 0 ? $"발동까지 {deathCount.RemainingOf(side)}기" : "이번 전투 발동 끝");
             }
             // 적 탑 — 전투 씬에서는 돌고 있는 보드, 지도 씬에서는 미리 보는 영주의 탑
             BoardRunner runner = BoardRunner.For(Team.Enemy);

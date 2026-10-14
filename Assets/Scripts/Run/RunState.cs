@@ -193,7 +193,7 @@ namespace GnorpWar
 
         // 턴이 시작할 때 — AI 영주 전원이 상점을 한 번 돌고, 나는 수입을 받고 새 진열을 받는다(턴당 한 번 — 씬을 다시 불러와도 두 번 주지 않는다).
         // 지도에서 보는 영주의 탑이 이번 턴에 싸울 탑이 되도록, 상점에 들어갈 때가 아니라 턴이 열릴 때 한다
-        // 이번 턴이 이미 열렸나(수입 · 진열을 받았나) — 지도가 시작 업그레이드를 고르기 전에 첫 턴을 열지 않으려고 묻는다
+        // 이번 턴이 이미 열렸나(수입 · 진열을 받았나) — 지도가 첫 턴 전 대기(업그레이드 고르기)가 남았을 때 첫 턴을 열지 않으려고 묻는다
         public static bool TurnOpened => _shopEnteredRound == Round;
 
         public static void BeginTurn()
@@ -565,28 +565,9 @@ namespace GnorpWar
 
         public static void ChooseNation(BuildingNation nation)
         {
+            // 시작 때 지역 특수 업그레이드를 고르지 않는다(사용자 10/15) — 지역 특수는 영주를 멸망시켰을 때만 얻는다
             SetNation(nation);
-            if (!NationChosen)
-                OfferStartSpecial();
             NationChosen = true;
-        }
-
-        // 게임을 시작할 때 지역 특수 업그레이드 하나를 고른다(사용자 결정 10/13) — 지도에 놓이지 않은 것 중 셋이 후보다.
-        // 합치기 보상과 같은 대기열의 맨 앞에 신화 등급으로 싣는다(화면이 같은 고르기 창을 쓴다 — PendingUpgrades · ChooseUpgrade)
-        private static void OfferStartSpecial()
-        {
-            var pool = new System.Collections.Generic.List<UpgradeDefinition>(World.UnplacedSpecials);
-            var choices = new UpgradeDefinition[Mathf.Min(UpgradeChoices, pool.Count)];
-            for (int i = 0; i < choices.Length; i++)
-            {
-                int pick = Random.Range(0, pool.Count);
-                choices[i] = pool[pick];
-                pool.RemoveAt(pick);
-            }
-            if (choices.Length == 0)
-                return;
-            Pending.Insert(0, new UpgradeOffer { Rarity = BuildingRarity.Mythic, Choices = choices });
-            UpgradesChanged?.Invoke();
         }
 
         // region에 놓인 지역 특수 업그레이드(없으면 null) — 지도 표시 · 툴팁. 이름 · 아이콘 · 설명은 그 정의에서(Describe(ValueAt(신화)))

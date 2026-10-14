@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace GnorpWar
 {
     // 탑 층 그림 한 벌 — 벽 · 창틀 · 창 불빛. 전장 탑(Tower)과 같은 모양(사용자 10/9).
-    // 벽 재질·창 모양은 기물 국가: 킹덤 = 돌벽돌 + 아치 창 · 티크톡 = 리벳 철판 + 톱니 둘린 둥근 창 · 공용·빈 층 = 민 벽 + 아치 창.
+    // 벽 재질·창 모양은 기물 국가: 킹덤 = 돌벽돌 + 아치 창 · 티크톡 = 리벳 철판 + 톱니 둘린 둥근 창 · 트라이브 = 통나무 말뚝 + 뼈 매듭 끈 + 아치 창 · 공용·빈 층 = 민 벽 + 아치 창.
     // 창틀 색(등급)은 부르는 쪽이 칠한다. UI 탑 층(SlotView) · 상점 진열 카드(OfferCard) · 끌기 고스트(ShopPanel)가 같이 쓴다
     public class FloorLook : MonoBehaviour
     {
@@ -17,10 +17,11 @@ namespace GnorpWar
         [SerializeField] private Image _window;
         [Tooltip("창 불빛 — 창 안쪽 그림, Filled(Vertical · 아래 기준)")]
         [SerializeField] private Image _light;
-        [Tooltip("벽 — 공용·빈 층 · 킹덤 · 티크톡")]
+        [Tooltip("벽 — 공용·빈 층 · 킹덤 · 티크톡 · 트라이브")]
         [SerializeField] private Sprite _plainWall;
         [SerializeField] private Sprite _brickWall;
         [SerializeField] private Sprite _ironWall;
+        [SerializeField] private Sprite _tribeWall;
         [Tooltip("창틀 — 아치 창 · 톱니 둘린 둥근 창(티크톡)")]
         [SerializeField] private Sprite _archWindow;
         [SerializeField] private Sprite _gearWindow;
@@ -37,7 +38,8 @@ namespace GnorpWar
         {
             BuildingNation nation = building != null ? building.Nation : BuildingNation.Common;
             bool iron = nation == BuildingNation.TickTock;
-            _wall.sprite = iron ? _ironWall : nation == BuildingNation.Kingdom ? _brickWall : _plainWall;
+            _wall.sprite = iron ? _ironWall : nation == BuildingNation.Kingdom ? _brickWall
+                : nation == BuildingNation.Tribe && _tribeWall != null ? _tribeWall : _plainWall;
             _window.sprite = iron ? _gearWindow : _archWindow;
             _light.sprite = iron ? _roundLight : _archLight;
             _light.enabled = building != null && !stopped;

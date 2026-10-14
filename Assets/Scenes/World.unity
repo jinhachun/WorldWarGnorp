@@ -183,6 +183,7 @@ MonoBehaviour:
   _plainWall: {fileID: 21300000, guid: 039119b63fca4ab59db895364239999f, type: 3}
   _brickWall: {fileID: 21300000, guid: 9a911bc057584935a5a0f097d756284a, type: 3}
   _ironWall: {fileID: 21300000, guid: 466690a21c5c4c1eb7b587b3676cf9b4, type: 3}
+  _tribeWall: {fileID: 21300000, guid: 8afa71dfd4f0486083df534eafd1b305, type: 3}
   _archWindow: {fileID: 21300000, guid: 4626ab09fccd43ce90ac1f53f8fd3d8f, type: 3}
   _gearWindow: {fileID: 21300000, guid: 2bd9004fa0914e43bbfe0279d8a9ac3f, type: 3}
   _archLight: {fileID: 21300000, guid: dca2b2d29cb048f58d65c436a063ff08, type: 3}

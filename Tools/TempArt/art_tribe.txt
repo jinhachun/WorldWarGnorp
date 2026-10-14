@@ -1,0 +1,63 @@
+; 트라이브 임시 그림 — 층 벽(UI 탑 · 상점 카드, 본뜬 meta = UI/UI_FloorBrick.png 40x40을 3배) · 미궁의 입구 아이콘(80x80, 본뜬 meta = Icons/Icon_Sword.png)
+
+; 층 벽 — 통나무 말뚝(세로 이음)과 뼈 매듭이 달린 가죽 끈 두 줄
+@ UI/UI_FloorTribe.png 3 40x40 UI/UI_FloorBrick.png
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKK#.
+.#ggg#ggggg#ggggg#ggggg#ggggg#ggggg#gg#.
+.#gKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKK#.
+.#ggg#ggggg#ggggg#ggggg#ggggg#ggggg#gg#.
+.#gKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKKgKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+.#gKKKKKgKKKKKgKKKKKgKKKKKgKKKKKgKKKKK#.
+########################################
+.######################################.
+
+; 미궁의 입구 — 겹겹이 들어가는 돌 아치
+@ Icons/Icon_TribeLabyrinth.png 5 16x16 Icons/Icon_Sword.png
+................
+.....######.....
+...##......##...
+..#..######..#..
+.#..#......#..#.
+.#.#..####..#.#.
+#..#.#....#.#..#
+#.#..#.##.#..#.#
+#.#.#..##..#.#.#
+#.#.#.#..#.#.#.#
+#.#.#.#..#.#.#.#
+#.#.#.#..#.#.#.#
+#.#.#.#..#.#.#.#
+#.#.#.#..#.#.#.#
+################
+................

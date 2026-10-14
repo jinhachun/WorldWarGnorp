@@ -55,7 +55,7 @@ namespace GnorpWar
         [Tooltip("층 가운데에서 효과 표시 가운데까지(칸) — 창과 벽 사이 빈 벽(15.5px)")]
         [SerializeField] private float _badgeOffset = 1.9375f;
 
-        private enum Look { Plain, Brick, Iron }
+        private enum Look { Plain, Brick, Iron, Tribe }
 
         private class FloorView
         {
@@ -130,7 +130,7 @@ namespace GnorpWar
         {
             _base = GetComponent<Base>();
             _castle = GetComponent<SpriteRenderer>();
-            _walls = new[] { WallSprite(Look.Plain), WallSprite(Look.Brick), WallSprite(Look.Iron) };
+            _walls = new[] { WallSprite(Look.Plain), WallSprite(Look.Brick), WallSprite(Look.Iron), WallSprite(Look.Tribe) };
             _archLight = LightSprites(InArch);
             _roundLight = LightSprites(InRound);
             _badgeFont = TowerBadge.BuildFont();
@@ -251,6 +251,7 @@ namespace GnorpWar
             {
                 case BuildingNation.Kingdom: return Look.Brick;
                 case BuildingNation.TickTock: return Look.Iron;
+                case BuildingNation.Tribe: return Look.Tribe;
                 default: return Look.Plain;
             }
         }
@@ -472,6 +473,17 @@ namespace GnorpWar
                     if (rivetRow && (x == 3 || x == w - 4 || x == 9 || x == w - 10))
                         return Color.white;
                     return x == 11 || x == w - 12 ? PatternColor : Color.black;
+                }
+                case Look.Tribe:
+                {
+                    // 통나무 말뚝(6px마다 세로 이음) + 뼈 매듭이 달린 가죽 끈 두 줄 — UI 탑 그림(Sprites/UI/UI_FloorTribe)과 같은 무늬
+                    int lx = x - 2, band = (y - 2) % 19;
+                    bool knot = lx % 6 == 3;
+                    if (band == 9)
+                        return knot ? Color.white : PatternColor;
+                    if ((band == 8 || band == 10) && knot)
+                        return PatternColor;
+                    return lx % 6 == 0 ? PatternColor : Color.black;
                 }
                 default:
                     return Color.black;

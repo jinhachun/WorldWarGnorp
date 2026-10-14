@@ -42,7 +42,7 @@ namespace GnorpWar
         [SerializeField] private BuildingDefinition[] _shopPool = new BuildingDefinition[0];
         [Tooltip("합치기 보상 업그레이드 전부 — 기물을 합칠 때마다 이 중 「후보에 나옴」이 켜진 것에서 셋이 나온다")]
         [SerializeField] private UpgradeDefinition[] _upgrades = new UpgradeDefinition[0];
-        [Tooltip("지역 특수 업그레이드 전부(신화 등급) — 런마다 이 중 「특수 지역 수」만큼을 지역에 하나씩 놓고, 남은 것에서 시작 때 고를 셋이 나온다")]
+        [Tooltip("지역 특수 업그레이드 전부(신화 등급) — 런마다 이 중 「특수 지역 수」만큼을 지역에 하나씩 놓고(남은 것은 그 런에 나오지 않는다)")]
         [SerializeField] private UpgradeDefinition[] _specialUpgrades = new UpgradeDefinition[0];
         [Tooltip("지역 특수 업그레이드가 놓이는 지역 수")]
         [SerializeField] private int _specialRegions = 10;

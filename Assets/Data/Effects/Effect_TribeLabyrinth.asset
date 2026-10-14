@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2dcbfb735df4577ab6a3dae7876fd31, type: 3}
+  m_Name: Effect_TribeLabyrinth
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathCountSummonEffect
+  _categories:
+  - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _units: []
+  _description: "전투당 한 번, 내 경보병이 {0}기 죽으면 미노타우로스 {1}기를 소환합니다."
+  _trait:
+  _deaths: 20
+  _summon: {fileID: 11400000, guid: a8e6e39f004afe0498fbe788c4abca20, type: 2}
+  _count: 1
+  _countPerTier: 1
+  _mythicMark: {fileID: 11400000, guid: 0153e8a968a54470a86091e15276af89, type: 2}
+  _mythicExtra: {fileID: 11400000, guid: e8b64c0623e6336479441667f16688a2, type: 2}
+  _mythicExtraCount: 5

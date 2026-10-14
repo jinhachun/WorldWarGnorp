@@ -22,6 +22,8 @@ namespace GnorpWar
         private readonly int[] _codes = new int[MaxGlyphs];
         private int _count;
         private int _shownKey = -1;
+        // 숫자 아랫줄 — 아이콘이 있으면 아이콘 아래, 없으면 아이콘 자리(수를 세는 기물의 남은 수)
+        private readonly int _labelBottom;
 
         // parent = 층 · x = 층 가운데에서 표시 가운데까지(칸) · sortLike = 정렬을 따라갈 그림(층 판)
         public TowerBadge(Transform parent, string name, float x, Sprite icon, Sprite[] font, Color color, SpriteRenderer sortLike)
@@ -41,6 +43,7 @@ namespace GnorpWar
             }
             for (int i = 0; i < MaxGlyphs; i++)
                 _glyphs[i] = Add("Glyph", color, sortLike);
+            _labelBottom = icon != null ? LabelBottom : IconBottom + 2;
             _root.SetActive(false);
         }
 
@@ -81,6 +84,20 @@ namespace GnorpWar
                 Set(4, Times, Dot, hundredths / 10, hundredths % 10);
         }
 
+        // 남은 수 — 「17」(최대 999). 0이면 숨는다. 아이콘 없는 표시(수를 세는 기물)라 숫자를 아이콘 줄에 올린다
+        public void ShowCount(int count)
+        {
+            count = Mathf.Min(count, 999);
+            if (count <= 0)
+                Set(0);
+            else if (count < 10)
+                Set(1, count);
+            else if (count < 100)
+                Set(2, count / 10, count % 10);
+            else
+                Set(3, count / 100, count / 10 % 10, count % 10);
+        }
+
         // 숫자 없이 아이콘만 — 남은 시간이 없는 효과(오버드라이브 번개)
         public void ShowIcon(bool on)
         {
@@ -119,7 +136,7 @@ namespace GnorpWar
                 if (i >= count)
                     continue;
                 _glyphs[i].sprite = _font[_codes[i]];
-                _glyphs[i].transform.localPosition = new Vector3(x * Pixel, LabelBottom * Pixel, 0f);
+                _glyphs[i].transform.localPosition = new Vector3(x * Pixel, _labelBottom * Pixel, 0f);
                 x += Width(_codes[i]) + 1;
             }
         }

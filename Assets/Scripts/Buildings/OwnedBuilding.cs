@@ -83,6 +83,23 @@ namespace GnorpWar
 
         public void AddSpent(int gold) => _spentGold += gold;
 
+        // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구)의 남은 수 — 전투 중 탑 칸 표시(Bases/Tower · UI/SlotView).
+        // 전투 밖이거나 그런 효과가 없으면 0(안 보인다). 미궁은 발동이 끝나면 0
+        public int CountdownOf(Team team)
+        {
+            if (!BattleManager.Fighting)
+                return 0;
+            foreach (BuildingPassive passive in Passives)
+                if (passive is KillCountFirePassive killCount)
+                    return killCount.RemainingOf(team);
+            foreach (UnitEffect effect in Effects)
+                if (effect is AscensionEffect ascension)
+                    return ascension.RemainingOf(team);
+                else if (effect is DeathCountSummonEffect deathCount)
+                    return deathCount.RemainingOf(team);
+            return 0;
+        }
+
         // 등급이 오를 때마다 perTier씩 — level 1(시작 등급)이면 value 그대로
         public static float Scaled(float value, float perTier, int level) => value + perTier * (level - 1);
         public static int Scaled(int value, int perTier, int level) => value + perTier * (level - 1);

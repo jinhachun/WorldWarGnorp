@@ -127,6 +127,7 @@ namespace GnorpWar
             ShowMark(ref _frozenMark, "FrozenMark", _stoppedIcon, Color.white, _hasteMark != null && frozenTenths > 0, true);
             if (frozenTenths > 0 && _frozenMark != null)
                 _frozenMark.GetComponentInChildren<Text>(true).text = Seconds(frozenTenths);
+            ShowCountdown(_hasteMark != null && !empty ? building.CountdownOf(_source == BoardView.Source.EnemyField ? Team.Enemy : Team.Ally) : 0);
 
             if (!_hovered)
                 return;
@@ -156,6 +157,28 @@ namespace GnorpWar
             }
             if (mark.activeSelf != on)
                 mark.SetActive(on);
+        }
+
+        // 수를 세어 발동하는 기물(라이칸스로프 · 승천의 전당 · 미궁의 입구)의 남은 수 — 쿨다운 배율 표시를 본떠 같은 자리에, 아이콘 없이 숫자만(사용자 10/15). 0이면 숨는다
+        private GameObject _countMark;
+
+        private void ShowCountdown(int count)
+        {
+            bool on = count > 0;
+            if (_countMark == null)
+            {
+                if (!on)
+                    return;
+                _countMark = Instantiate(_cooldownMark, transform);
+                _countMark.name = "CountMark";
+                foreach (Image image in _countMark.GetComponentsInChildren<Image>(true))
+                    image.enabled = false;
+                _countMark.GetComponentInChildren<Text>(true).color = Color.white;   // 전장 탑 표시(TowerBadge)와 같은 흰색
+            }
+            if (_countMark.activeSelf != on)
+                _countMark.SetActive(on);
+            if (on)
+                _countMark.GetComponentInChildren<Text>(true).text = count.ToString();
         }
 
         public void OnPointerEnter(PointerEventData eventData) => _hovered = true;

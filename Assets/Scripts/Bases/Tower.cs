@@ -73,6 +73,8 @@ namespace GnorpWar
             public TowerBadge Stopped;
             // 잠깐 멈춘 층(제물의 의식 — BoardRunner.Slot.Frozen)의 흰 정지 표시 + 남은 초 — 같은 자리. 꺼진 층과 달리 회색이 되지 않는다(UI 탑 칸과 같은 방식)
             public TowerBadge Frozen;
+            // 수를 세어 발동하는 기물(라이칸스로프 · 승천의 전당 · 미궁의 입구)의 남은 수 — 뒤쪽 벽, 아이콘 없이 숫자만(사용자 10/15)
+            public TowerBadge Count;
             public float Bounce = BounceDuration;
         }
 
@@ -240,6 +242,7 @@ namespace GnorpWar
             view.Cooldown.ShowScale(running != null ? running.CooldownScale : 1f);
             view.Overdrive.ShowIcon(OverdriveMark.On(building, _base.Team));
             view.Stopped.ShowIcon(stopped);
+            view.Count.ShowCount(building != null ? building.CountdownOf(_base.Team) : 0);
             view.Wall.color = view.Icon.color = stopped ? StoppedMark.Gray : Color.white;
         }
 
@@ -311,6 +314,7 @@ namespace GnorpWar
             view.Overdrive = new TowerBadge(go.transform, "Overdrive", Forward * _badgeOffset, _overdriveIcon, _badgeFont, OverdriveMark.Color, wall);
             view.Stopped = new TowerBadge(go.transform, "Stopped", Forward * _badgeOffset, _stoppedIcon, _badgeFont, StoppedMark.Color, wall);
             view.Frozen = new TowerBadge(go.transform, "Frozen", Forward * _badgeOffset, _stoppedIcon, _badgeFont, Color.white, wall);
+            view.Count = new TowerBadge(go.transform, "Count", -Forward * _badgeOffset, null, _badgeFont, Color.white, wall);
 
             _floors.Add(view);
         }

@@ -13,7 +13,7 @@ namespace GnorpWar
         public override void OnHealLanded(Team team, Unit patient, float amount, float overflow, int stacks)
         {
             patient.AddModifier(_stat);
-            BuffLinks.EffectToPoint(team, this, patient.Position, BuffKind.Attack);
+            BuffLinks.EffectToPoint(team, this, patient.Position, BuffKind.Stat);
         }
 
         public override string Describe(int level) => string.Format(Description, _stat.Describe());

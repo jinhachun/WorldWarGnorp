@@ -392,6 +392,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BaseUpgradeRow
   _team: 0
   _labelTemplate: {fileID: 984405474}
+  _nationFont: {fileID: 12800000, guid: e0db11984e4867b42b4728b070b1891d, type: 3}
+  _tower: {fileID: 1602575316}
 --- !u!1 &35791515
 GameObject:
   m_ObjectHideFlags: 0
@@ -2627,6 +2629,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BaseUpgradeRow
   _team: 1
   _labelTemplate: {fileID: 984405474}
+  _nationFont: {fileID: 12800000, guid: e0db11984e4867b42b4728b070b1891d, type: 3}
+  _tower: {fileID: 986941220}
 --- !u!1 &808371323
 GameObject:
   m_ObjectHideFlags: 0
@@ -5858,6 +5862,11 @@ MonoBehaviour:
   _team: 0
   _spawnPoint: {fileID: 2085300308}
   _largeSpawnPoint: {fileID: 2085300308}
+  ExtraSummons: 0
+  TopFiresTwice: 0
+  AllAdjacent: 0
+  GuillotineInterval: 0
+  FireOnThawSlot: -1
 --- !u!4 &1534219408
 Transform:
   m_ObjectHideFlags: 0
@@ -6585,6 +6594,11 @@ MonoBehaviour:
   _team: 1
   _spawnPoint: {fileID: 145716101}
   _largeSpawnPoint: {fileID: 1255643186}
+  ExtraSummons: 0
+  TopFiresTwice: 0
+  AllAdjacent: 0
+  GuillotineInterval: 0
+  FireOnThawSlot: -1
 --- !u!4 &1724861876
 Transform:
   m_ObjectHideFlags: 0
@@ -7034,6 +7048,8 @@ MonoBehaviour:
   _maxX: 61
   _flatFrom: 46
   _blendWidth: 10
+  _dustMinDepth: 0.1
+  _dustClearance: 6
 --- !u!120 &1936945604
 LineRenderer:
   serializedVersion: 3

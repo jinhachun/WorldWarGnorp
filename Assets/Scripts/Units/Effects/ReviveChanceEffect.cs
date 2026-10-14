@@ -18,6 +18,8 @@ namespace GnorpWar
         {
             if (_onRevive.Value != 0f)
                 unit.AddModifier(_onRevive);
+            // 부활은 소환 색(사용자 10/14 기준) — 그 자리에서 일어나므로 켠 기물의 층에서
+            BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Summon);
         }
 
         public override string Describe(int level) => string.Format(Description, $"{_chance * 100f:0.#}", _onRevive.ValueText);

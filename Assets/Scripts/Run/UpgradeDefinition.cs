@@ -128,6 +128,61 @@ namespace GnorpWar
             => _kind == UpgradeKind.Special || _categories.Length == 0 || System.Array.IndexOf(_categories, unit.Category) >= 0;
         public bool AppliesTo(UnitCategory category) => _kind != UpgradeKind.Special && System.Array.IndexOf(_categories, category) >= 0;
 
+        // ── 표시용 — 이 업그레이드가 무엇에 걸리는가(유닛 카드 · 기물 툴팁의 「걸린 업그레이드」 — RunState.UpgradesOn). 계산은 Apply · Spawn이 한다.
+        // 새 종류(UpgradeKind · SpecialKind)를 넣으면 아래 두 판정에도 한 줄 넣는다 — 안 넣으면 어디에도 안 뜬다
+
+        // 군제 개혁이면 unit이 함께 취급되는 병종, 아니면 null
+        public UnitCategory AliasFor(UnitDefinition unit)
+            => Special == SpecialKind.CategoryAlias && System.Array.IndexOf(_categories, unit.Category) >= 0 ? _alsoAs : null;
+
+        // 그 유닛에 걸리나 — alsoAs = 그 탑에서 이 유닛이 함께 취급되는 병종들(군제 개혁). 타워 · 본진 · 운영에 거는 것은 유닛에 안 걸린다
+        public bool Affects(UnitDefinition unit, List<UnitCategory> alsoAs)
+        {
+            switch (_kind)
+            {
+                case UpgradeKind.UnitStat:
+                    return _categories.Length == 0 || AppliesTo(unit.Category) || alsoAs.Exists(category => AppliesTo(category));
+                case UpgradeKind.UnitEffect:
+                    return EffectAffects(unit, alsoAs);
+                case UpgradeKind.Summon:
+                    return _unit == unit;   // 그 유닛을 전투 시작 시 소환한다(신병 모집)
+                case UpgradeKind.Special:
+                    return AliasFor(unit) != null || _special == SpecialKind.Nationalism || (_effect != null && EffectAffects(unit, alsoAs));
+                default:
+                    return false;
+            }
+        }
+
+        private bool EffectAffects(UnitDefinition unit, List<UnitCategory> alsoAs)
+            => _effect.AppliesTo(unit) || alsoAs.Exists(category => _effect.AppliesTo(category));
+
+        // 그 기물에 걸리나 — owned · field = 탑에 놓인 기물과 그 탑의 필드. 진열 · 보관함의 기물은 field를 null로(자리 · 다른 기물과 견줘야 하는 군주제 · 군국주의는 놓인 기물만).
+        // 기물이 소환하는 유닛에 걸리는 것은 넣지 않는다(유닛 카드가 보여 준다). 진열에만 거는 것(공산주의 · 중립외교)은 가격 · 등급에 이미 보여서 뺀다
+        public bool Affects(BuildingDefinition building, OwnedBuilding owned, OwnedBuilding[] field)
+        {
+            bool cooling = building.Cooldown > 0f;
+            if (_kind == UpgradeKind.BuildingCooldown)
+                return cooling;   // 무작위 하나 — 걸릴 수 있는 기물
+            switch (Special)
+            {
+                case SpecialKind.Conscription:
+                    return cooling && building.Unit != null;
+                case SpecialKind.Enlightenment:   // 패배하면 무작위 하나 — 걸릴 수 있는 기물
+                case SpecialKind.Industrial:
+                    return cooling;
+                case SpecialKind.Federation:
+                    return System.Array.Exists(owned != null ? owned.Actions : building.Actions, action => action.UsesAdjacency)
+                           || System.Array.Exists(owned != null ? owned.Passives : building.Passives, passive => passive.UsesAdjacency);
+                case SpecialKind.Monarchy:
+                    return field != null && System.Array.FindLast(field, b => !OwnedBuilding.IsEmpty(b)) == owned;
+                case SpecialKind.Militarism:   // 쿨다운이 가장 긴 기물 — 같으면 그중 무작위라 후보 모두
+                    return cooling && field != null
+                           && !System.Array.Exists(field, b => !OwnedBuilding.IsEmpty(b) && b.Definition.Cooldown > 0f && b.Cooldown > owned.Cooldown);
+                default:
+                    return false;
+            }
+        }
+
         // 유닛 스탯에 거는 종류면 그 값 — 전투 시작(Apply)과 유닛 카드 미리 보기(RunStats.Preview)가 같이 읽는다
         public bool UnitModifier(float value, out StatModifier modifier)
         {

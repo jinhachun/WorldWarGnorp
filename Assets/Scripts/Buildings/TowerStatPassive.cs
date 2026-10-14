@@ -28,7 +28,7 @@ namespace GnorpWar
             {
                 Apply(board.Team, level);
                 OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
-                BuffLinks.ToTowers(board.Team, slot, BuffLinks.KindOf(_modifier.Stat));
+                BuffLinks.ToTowers(board.Team, slot, BuffKind.Stat);
             }
         }
 
@@ -39,7 +39,7 @@ namespace GnorpWar
             if (_trigger == Trigger.Buy)
             {
                 Apply(team, self.Level);
-                BuffLinks.ToTowers(team, BuffLinks.SlotOf(team, self), BuffLinks.KindOf(_modifier.Stat));
+                BuffLinks.ToTowers(team, BuffLinks.SlotOf(team, self), BuffKind.Stat);
             }
         }
 
@@ -48,7 +48,7 @@ namespace GnorpWar
             if (_trigger == Trigger.TowerKill && Apply(board.Team, board.Slots[slot].Building.Level, out TowerModifier applied))
             {
                 board.AddBattleGain(slot, applied.Op, applied.Value);
-                BuffLinks.ToTowers(board.Team, slot, BuffLinks.KindOf(applied.Stat));
+                BuffLinks.ToTowers(board.Team, slot, BuffKind.Stat);
             }
         }
 

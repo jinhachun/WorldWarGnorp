@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_BlackMarket
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC554\uC2DC\uC7A5"
-  _icon: {fileID: 21300000, guid: cb76e0d137302fe42867638a15dc43f9, type: 3}
+  _icon: {fileID: 21300000, guid: 670dfb81718148be9647900c5aff3834, type: 3}
   _description: "\uD134\uB9C8\uB2E4 \uBB34\uB8CC \uB9AC\uB864 +{0}\uD68C"
   _values:
   - 0

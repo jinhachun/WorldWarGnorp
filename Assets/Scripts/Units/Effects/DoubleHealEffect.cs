@@ -27,6 +27,7 @@ namespace GnorpWar
                     return;
                 _healed.Add(next);
                 healer.ThrowHeal(next);
+                BuffLinks.EffectFromUnit(healer.Team, this, healer.Position, next.Position, BuffKind.Stat);
             }
         }
 

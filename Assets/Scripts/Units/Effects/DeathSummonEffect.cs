@@ -17,7 +17,12 @@ namespace GnorpWar
         private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
 
         public override void OnDied(Unit unit, Vector2 at, int stacks)
-            => BoardRunner.For(unit.Team).Summon(_summon, Count(Level(unit.Team)), -1, new Vector2(at.x, Ground.Instance.HeightAt(at.x)), Source(unit.Team));
+        {
+            Vector2 ground = new Vector2(at.x, Ground.Instance.HeightAt(at.x));
+            BoardRunner.For(unit.Team).Summon(_summon, Count(Level(unit.Team)), -1, ground, Source(unit.Team));
+            // 죽은 자리에 나온다 — 유닛에서 그으면 길이가 없어 켠 기물의 층에서 그 자리로
+            BuffLinks.EffectToPoint(unit.Team, this, ground, BuffKind.Summon);
+        }
 
         public override string Describe(int level) => string.Format(Description, Count(level));
         public override string Headline(int level) => $"{Count(level)}기";

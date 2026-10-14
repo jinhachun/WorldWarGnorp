@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeWarDrum
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uC804\uC7C1 \uBD81\uC18C\uB9AC"
-  _icon: {fileID: 21300000, guid: abe3d570d16d8814fab61a1acad2a7e3, type: 3}
+  _icon: {fileID: 21300000, guid: 1c5458db66894369a341706ea1653f65, type: 3}
   _description: 
   _rarity: 1
   _nation: 3

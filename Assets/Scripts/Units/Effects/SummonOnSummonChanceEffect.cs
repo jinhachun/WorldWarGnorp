@@ -17,7 +17,12 @@ namespace GnorpWar
         public override void OnSummoned(Unit unit, int sourceSlot, int stacks)
         {
             if (Random.value * 100f < _chance)
-                BoardRunner.For(unit.Team).Summon(_summon, _count, -1, new Vector2(unit.Position.x, Ground.Instance.HeightAt(unit.Position.x)), Source(unit.Team));
+            {
+                Vector2 ground = new Vector2(unit.Position.x, Ground.Instance.HeightAt(unit.Position.x));
+                BoardRunner.For(unit.Team).Summon(_summon, _count, -1, ground, Source(unit.Team));
+                // 소환된 유닛 옆에 나온다 — 그 유닛에서(겹치면 켠 기물의 층에서)
+                BuffLinks.EffectFromUnit(unit.Team, this, unit.Position, ground, BuffKind.Summon);
+            }
         }
 
         public override string Describe(int level) => string.Format(Description, _chance.ToString("0.##"), _count);

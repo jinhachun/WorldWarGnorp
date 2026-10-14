@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_Whetstone
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC22B\uB3CC"
-  _icon: {fileID: 21300000, guid: db989e9d71a990d418efe16a72a4e7a6, type: 3}
+  _icon: {fileID: 21300000, guid: eceec70378c146898976aaa6f1f5d7ed, type: 3}
   _description: "\uB0B4 \uC720\uB2DB\uC758 \uACF5\uACA9\uB825 +{0}%"
   _values:
   - 2

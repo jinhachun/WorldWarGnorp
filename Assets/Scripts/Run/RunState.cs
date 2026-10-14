@@ -368,6 +368,62 @@ namespace GnorpWar
             return null;
         }
 
+        // ── 유닛 카드 · 기물 툴팁의 「걸린 업그레이드」 — 그 탑이 가진 업그레이드(합치기 보상 + 지역 특수) 중 그것에 걸리는 것(가진 순서). 보드 없이 읽는다(상점 · 지도에서도).
+        // 무엇에 걸리는지는 업그레이드 정의가 답한다(UpgradeDefinition.Affects)
+
+        // 내 유닛(enemy = 침략했거나 지도에서 보고 있는 영주의 유닛 — RunStats.Preview와 같은 뜻)
+        public static System.Collections.Generic.List<UpgradeHolding> UpgradesOn(UnitDefinition unit, bool enemy = false)
+        {
+            var on = new System.Collections.Generic.List<UpgradeHolding>();
+            TowerState tower = enemy ? OpponentOrPreviewTower() : Player;
+            if (!Started || tower == null)
+                return on;
+            System.Collections.Generic.List<UpgradeHolding> holdings = tower.Holdings();
+            var alsoAs = new System.Collections.Generic.List<UnitCategory>();
+            foreach (UpgradeHolding holding in holdings)
+                if (holding.Definition.AliasFor(unit) is UnitCategory category)
+                    alsoAs.Add(category);
+            foreach (UpgradeHolding holding in holdings)
+                if (holding.Definition.Affects(unit, alsoAs))
+                    on.Add(holding);
+            return on;
+        }
+
+        // 가진 기물 — 탑(내 탑 · 상대 영주의 탑)에 놓인 것이면 그 탑의 업그레이드로, 보관함의 기물이면 내 업그레이드 중 자리와 무관한 것만
+        public static System.Collections.Generic.List<UpgradeHolding> UpgradesOn(OwnedBuilding building)
+        {
+            if (OpponentOrPreviewTower() is TowerState other && System.Array.IndexOf(other.Field, building) >= 0)
+                return UpgradesOn(other, building.Definition, building, other.Field);
+            bool placed = System.Array.IndexOf(Player.Field, building) >= 0;
+            return UpgradesOn(Player, building.Definition, building, placed ? Player.Field : null);
+        }
+
+        // 진열의 기물 — 사서 놓으면 걸릴 내 업그레이드(자리와 무관한 것만)
+        public static System.Collections.Generic.List<UpgradeHolding> UpgradesOn(BuildingDefinition offer)
+            => UpgradesOn(Player, offer, null, null);
+
+        private static System.Collections.Generic.List<UpgradeHolding> UpgradesOn(TowerState tower, BuildingDefinition building, OwnedBuilding owned, OwnedBuilding[] field)
+        {
+            var on = new System.Collections.Generic.List<UpgradeHolding>();
+            if (!Started)
+                return on;
+            foreach (UpgradeHolding holding in tower.Holdings())
+                if (holding.Definition.Affects(building, owned, field))
+                    on.Add(holding);
+            return on;
+        }
+
+        // 상대(침략한 영주 · 지도에서 보는 영주)의 탑 — 그 영주가 지금 가진 땅의 지역 특수 업그레이드를 다시 적어서 돌려준다. 없으면 null
+        private static TowerState OpponentOrPreviewTower()
+        {
+            if (!Started)
+                return null;
+            Lord lord = Opponent ?? PreviewLord;
+            if (lord != null)
+                World.SyncSpecials(lord);
+            return _opponentTower ?? PreviewTower;
+        }
+
         // 국가주의가 읽는 행복도 — 나는 지금 행복도, AI 영주는 고정값으로 친다
         private const int AiHappinessForUpgrades = 3;
         public static int HappinessFor(Team team) => team == Team.Ally ? Happiness : AiHappinessForUpgrades;
@@ -743,6 +799,8 @@ namespace GnorpWar
         {
             public BuildingRarity Rarity;
             public UpgradeDefinition[] Choices;
+            // 공화정 — 후보를 이미 모두 얻었다. 화면은 보여 주기만 하고, 닫아도(ChooseUpgrade) 다시 얻지 않는다
+            public bool Granted;
         }
 
         private const int UpgradeChoices = 3;
@@ -760,7 +818,8 @@ namespace GnorpWar
                 return;
             UpgradeOffer offer = Pending[0];
             Pending.RemoveAt(0);
-            GainUpgrade(offer.Choices[choice], offer.Rarity);
+            if (!offer.Granted)
+                GainUpgrade(offer.Choices[choice], offer.Rarity);
             UpgradesChanged?.Invoke();
         }
 
@@ -816,10 +875,14 @@ namespace GnorpWar
             }
             if (choices.Length == 0)
                 return;
-            // 공화정 — 고르지 않고 후보를 모두 얻는다
+            // 공화정 — 고르지 않고 후보를 모두 얻는다. 내 탑이면 얻은 것을 보여 주는 항목을 대기열에 싣는다(사용자 10/14 — 조용히 넣지 않는다)
             if (_side.Special(SpecialKind.Republic) != null)
+            {
                 foreach (UpgradeDefinition choice in choices)
                     GainUpgrade(choice, material);
+                if (_side == Player)
+                    Pending.Add(new UpgradeOffer { Rarity = material, Choices = choices, Granted = true });
+            }
             else if (_side == Player)
                 Pending.Add(new UpgradeOffer { Rarity = material, Choices = choices });
             else

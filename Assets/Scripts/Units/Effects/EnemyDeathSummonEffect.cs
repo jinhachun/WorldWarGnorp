@@ -16,8 +16,11 @@ namespace GnorpWar
 
         public override void OnEnemyDied(Team team, Unit victim, Vector2 at, int stacks)
         {
-            if (_victims.Length == 0 || UnitAliases.IsAny(victim.Team, victim.Definition, _victims))
-                BoardRunner.For(team).Summon(_summon, _count, -1, new Vector2(at.x, Ground.Instance.HeightAt(at.x)), Source(team));
+            if (_victims.Length != 0 && !UnitAliases.IsAny(victim.Team, victim.Definition, _victims))
+                return;
+            Vector2 ground = new Vector2(at.x, Ground.Instance.HeightAt(at.x));
+            BoardRunner.For(team).Summon(_summon, _count, -1, ground, Source(team));
+            BuffLinks.EffectToPoint(team, this, ground, BuffKind.Summon);
         }
 
         public override string Describe(int level) => string.Format(Description, _count);

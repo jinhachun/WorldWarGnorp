@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_ArmorRepair
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uAC11\uC637 \uC218\uC120"
-  _icon: {fileID: 21300000, guid: df125b14532a7e242964c16e50fe9691, type: 3}
+  _icon: {fileID: 21300000, guid: 4a1ae0b156154185a6d2e238d07a5a3f, type: 3}
   _description: "\uB0B4 \uC720\uB2DB\uC758 \uCCB4\uB825 +{0}%"
   _values:
   - 2

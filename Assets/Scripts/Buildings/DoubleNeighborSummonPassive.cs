@@ -22,9 +22,10 @@ namespace GnorpWar
             _doubling = true;
             board.Summon(unit.Definition, _multiply - 1, sourceSlot);
             _doubling = false;
-            BuffLinks.ToSlot(board.Team, slot, sourceSlot, BuffKind.Trigger);
+            BuffLinks.ToSlot(board.Team, slot, sourceSlot, BuffKind.Summon);
         }
 
+        public override bool UsesAdjacency => true;
         public override string Describe(int level) => $"위에 있는 모든 기물이 유닛을 {_multiply}배로 소환합니다.";
     }
 }

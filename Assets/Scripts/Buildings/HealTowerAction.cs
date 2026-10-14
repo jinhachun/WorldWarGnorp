@@ -16,7 +16,7 @@ namespace GnorpWar
         public override void Execute(BoardRunner board, int slot, int level)
         {
             Base.HealTowers(board.Team, Ratio(level));
-            BuffLinks.ToTowers(board.Team, slot, BuffKind.Heal);
+            BuffLinks.ToTowers(board.Team, slot, BuffKind.Stat);
         }
 
         public override string Describe(int level) => $"내 타워들이 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";

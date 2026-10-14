@@ -18,3 +18,4 @@ MonoBehaviour:
     Op: 2
     Value: 0.95
   _perTier: 0
+  _floor: 0.2

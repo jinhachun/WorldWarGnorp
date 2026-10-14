@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeOutpost
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uC57D\uD0C8 \uC804\uCD08\uAE30\uC9C0"
-  _icon: {fileID: 21300000, guid: 8995451d894038b418c03ced05ac84d3, type: 3}
+  _icon: {fileID: 21300000, guid: 78c5b402a7a74a04af4d3a109516bdd6, type: 3}
   _description: 
   _rarity: 2
   _nation: 3

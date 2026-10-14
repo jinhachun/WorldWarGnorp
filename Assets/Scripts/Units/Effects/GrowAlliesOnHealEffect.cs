@@ -19,7 +19,7 @@ namespace GnorpWar
             foreach (Unit ally in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (ally.IsAlive && ally.Team == unit.Team && (ally.Position - unit.Position).sqrMagnitude <= _radius * _radius)
                     ally.Grow(_grow);
-            BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Vitality);
+            BuffLinks.EffectFromUnitToUnits(unit.Team, this, unit.Position, unit.Team, u => u != unit && (u.Position - unit.Position).sqrMagnitude <= _radius * _radius, BuffKind.Stat);
         }
 
         public override string Describe(int level) => string.Format(Description, $"{_minSize:0.##}");

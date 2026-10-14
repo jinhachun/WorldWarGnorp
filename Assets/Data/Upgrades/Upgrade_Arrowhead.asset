@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_Arrowhead
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uD654\uC0B4\uCD09"
-  _icon: {fileID: 21300000, guid: db989e9d71a990d418efe16a72a4e7a6, type: 3}
+  _icon: {fileID: 21300000, guid: 6eeb3ba0329a4904a7cc3ab56d69389f, type: 3}
   _description: "\uB0B4 \uD0C0\uC6CC\uB4E4\uC758 \uACF5\uACA9\uB825 +{0}%"
   _values:
   - 4

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Special_ReformHeavyInfantry
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uAD70\uC81C \uAC1C\uD601 \xB7 \uC911\uC7A5\uBCF4\uBCD1"
-  _icon: {fileID: 21300000, guid: 6dda89bc6c90e42489c142133294093f, type: 3}
+  _icon: {fileID: 21300000, guid: 1a4001e6599044249a458d1d73936382, type: 3}
   _description: "\uB0B4 \uACBD\uBCF4\uBCD1\uC740 \uC911\uAE30\uBCD1\uC73C\uB85C\uB3C4
     \uCDE8\uAE09\uD569\uB2C8\uB2E4."
   _values:

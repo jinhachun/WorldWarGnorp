@@ -30,6 +30,7 @@ namespace GnorpWar
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => other < slot && target.Cooldown > 0f;
 
+        public override bool UsesAdjacency => true;
         public override string Describe(int level) => $"아래에 있는 모든 기물의 쿨다운 ×{Factor(level):0.##}";
         public override string Headline(int level) => $"×{Factor(level):0.##}";
     }

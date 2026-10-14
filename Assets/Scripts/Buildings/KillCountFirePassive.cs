@@ -28,11 +28,15 @@ namespace GnorpWar
                 return;
             _count[(int)board.Team] = 0;
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
-            board.FireLongest(System.Array.IndexOf(board.Slots[slot].Building.Passives, _twiceMark) >= 0 ? 2 : 1);
+            int fired = board.FireLongest(System.Array.IndexOf(board.Slots[slot].Building.Passives, _twiceMark) >= 0 ? 2 : 1);
+            if (fired >= 0 && fired != slot)
+                BuffLinks.ToSlot(board.Team, slot, fired, BuffKind.Trigger);
         }
 
         // 지금까지 센 처치 수(칸 숫자 · 확인용)
         public int CountOf(Team team) => _count[(int)team];
+        // 다음 발동까지 남은 처치 수(설명 창의 회색 줄 — UI/BuildingTooltip)
+        public int RemainingOf(Team team) => BattleManager.Fighting ? _kills - _count[(int)team] : _kills;   // 전투 밖(상점)에서는 지난 전투의 값이 남아 있으므로 처음 값
 
         public override string Describe(int level) => $"유닛 {_kills}기를 처치할 때마다, 쿨다운이 가장 긴 내 기물을 즉시 1회 발동시킵니다.";
     }

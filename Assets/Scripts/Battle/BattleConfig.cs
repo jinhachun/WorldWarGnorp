@@ -96,6 +96,9 @@ namespace GnorpWar
         [Tooltip("교착 — 기물이 멈춘 뒤 이만큼(초) 동안 아무도 피해를 받지 않고 죽지 않으면 아군 승리. 가장 느린 유닛이 가장 느린 맵에서 성에서 성까지 걷는 시간보다 길어야 한다")]
         [SuffixLabel("초", true)]
         [SerializeField] private float _stalemateSeconds = 240f;
+        [Tooltip("대기 풀림 — 전투 중 이만큼(초) 동안 아무도 피해를 받지 않고 죽지 않으면, 피해가 다시 날 때까지 유닛이 멈춰 서는 규칙(계단 · 사거리 안에서 서기 · 받침 기다리기)을 풀고 맞붙을 때까지 전진한다. 0 = 끔")]
+        [SuffixLabel("초", true)]
+        [SerializeField] private float _stallAdvanceSeconds = 10f;
 
         [Header("유닛")]
         [Tooltip("유닛 크기 상한 — 1 = 기본 크기, 3 = 기본의 3배(+200%). 넘치는 성장은 버린다")]
@@ -156,6 +159,23 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private int _corpseMax = 128;
 
+        [Header("단두대 혁명 도끼 — 본진이 던지는 큰 도끼가 돌며 포물선으로 날아가 닿는 순간 즉사 판정(사용자 10/14)")]
+        [Tooltip("도끼 그림(Sprites/Fx/FX_Axe.png — 같은 이름으로 덮어쓰면 바로 반영)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _axeSprite;
+        [Tooltip("성에서 대상까지 날아가는 시간(게임 시간 초)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _axeFlightSeconds = 0.9f;
+        [Tooltip("포물선 꼭짓점 — 출발 · 대상 중 높은 쪽보다 이만큼(칸) 위")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _axeArcHeight = 8f;
+        [Tooltip("도는 속도(도/초)")]
+        [SuffixLabel("도/초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _axeSpin = 900f;
+
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
@@ -168,6 +188,10 @@ namespace GnorpWar
         public float CorpseSpinMax => _corpseSpinMax;
         public float CorpseLifetime => _corpseLifetime;
         public int CorpseMax => _corpseMax;
+        public Sprite AxeSprite => _axeSprite;
+        public float AxeFlightSeconds => _axeFlightSeconds;
+        public float AxeArcHeight => _axeArcHeight;
+        public float AxeSpin => _axeSpin;
 
         public WorldConfig World => _world;
         public int StartFloors => _startFloors;
@@ -186,6 +210,7 @@ namespace GnorpWar
         public float DeathmatchSeconds => _deathmatchSeconds;
         public float BoardStopSeconds => _deathmatchSeconds + _boardGraceSeconds;
         public float StalemateSeconds => _stalemateSeconds;
+        public float StallAdvanceSeconds => _stallAdvanceSeconds;
         public int StorageSlots => _storageSlots;
         // round는 0부터(RunState.Round) — 0이면 0
         public float BaseHpBonus(int round) => _baseHpPerRound * round;

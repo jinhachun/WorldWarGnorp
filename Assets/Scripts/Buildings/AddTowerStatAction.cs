@@ -15,7 +15,7 @@ namespace GnorpWar
             TowerModifier modifier = _modifier.Scaled(_perTier, level);
             TowerBook.AddForBattle(board.Team, modifier);
             board.AddBattleGain(slot, modifier.Op, modifier.Value);
-            BuffLinks.ToTowers(board.Team, slot, BuffLinks.KindOf(modifier.Stat));
+            BuffLinks.ToTowers(board.Team, slot, BuffKind.Stat);
         }
 
         public override bool BattleGain(out StatOp op)

@@ -203,6 +203,25 @@ namespace GnorpWar
         // index칸 그림의 화면 자리(지금 그려진 모습 기준)
         public Vector3 SlotPosition(int index) => _views[index].transform.position;
 
+        // 지금 보이는 칸들과 지붕을 감싸는 화면 사각형(Overlay 캔버스 — 화면 픽셀). 하나도 안 보이면 false (UI/BaseUpgradeRow가 겹침을 피한다)
+        public bool ScreenBounds(out Rect bounds)
+        {
+            bounds = default;
+            bool any = false;
+            var corners = new Vector3[4];
+            for (int i = 0; _views != null && i <= _views.Length; i++)
+            {
+                RectTransform rect = i < _views.Length ? (RectTransform)_views[i].transform : _roof;
+                if (rect == null || !rect.gameObject.activeInHierarchy)
+                    continue;
+                rect.GetWorldCorners(corners);
+                Rect r = Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+                bounds = any ? Rect.MinMaxRect(Mathf.Min(bounds.xMin, r.xMin), Mathf.Min(bounds.yMin, r.yMin), Mathf.Max(bounds.xMax, r.xMax), Mathf.Max(bounds.yMax, r.yMax)) : r;
+                any = true;
+            }
+            return any;
+        }
+
         private BoardRunner Runner => BoardRunner.For(_source == Source.EnemyField ? Team.Enemy : Team.Ally);
 
         // 전투 중 필드 줄(아군·적)은 그 진영 성 위 탑이 화면에 보이면 숨는다 — 탑이 같은 기물을 보여 주므로(사용자 10/8).

@@ -209,6 +209,7 @@ MonoBehaviour:
   _deathmatchSeconds: 180
   _boardGraceSeconds: 10
   _stalemateSeconds: 240
+  _stallAdvanceSeconds: 10
   _maxUnitSize: 3
   _stompDamagePerSecond: 0.5
   _climbRest: 1.5
@@ -227,3 +228,7 @@ MonoBehaviour:
   _corpseSpinMax: 540
   _corpseLifetime: 5
   _corpseMax: 128
+  _axeSprite: {fileID: 21300000, guid: 9eaf0d4c513d4809a01e79728949556c, type: 3}
+  _axeFlightSeconds: 0.9
+  _axeArcHeight: 8
+  _axeSpin: 900

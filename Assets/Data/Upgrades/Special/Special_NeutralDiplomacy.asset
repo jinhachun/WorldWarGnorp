@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Special_NeutralDiplomacy
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC911\uB9BD\uC678\uAD50"
-  _icon: {fileID: 21300000, guid: cb76e0d137302fe42867638a15dc43f9, type: 3}
+  _icon: {fileID: 21300000, guid: b4a904ae72d34b069e8c180b6730cdfe, type: 3}
   _description: "\uC0C1\uC810\uC5D0 \uD55C \uB4F1\uAE09 \uC624\uB978 \uAE30\uBB3C\uB3C4
     \uB4F1\uC7A5\uD569\uB2C8\uB2E4."
   _values:

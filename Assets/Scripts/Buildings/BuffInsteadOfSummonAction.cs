@@ -30,6 +30,7 @@ namespace GnorpWar
             foreach (Unit other in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (other.IsAlive && other.Team == board.Team && other.Definition == _unit)
                     other.AddModifier(_modifier);
+            BuffLinks.ToUnitsOf(board.Team, slot, board.Team, u => u.Definition == _unit, BuffKind.Stat);
         }
 
         public override string Describe(int level)

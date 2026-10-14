@@ -16,7 +16,14 @@ namespace GnorpWar
 
         private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
 
-        public override void OnKill(Unit killer, Unit victim, int stacks) => BoardRunner.For(killer.Team).Summon(_summon, Count(Level(killer.Team)), -1, source: Source(killer.Team));
+        public override void OnKill(Unit killer, Unit victim, int stacks)
+        {
+            BoardRunner board = BoardRunner.For(killer.Team);
+            board.Summon(_summon, Count(Level(killer.Team)), -1, source: Source(killer.Team));
+            // 처치한 유닛에서 성에서 나온 유닛으로
+            if (board.LastSpawned != null)
+                BuffLinks.EffectFromUnit(killer.Team, this, killer.Position, board.LastSpawned.Position, BuffKind.Summon);
+        }
 
         public override string Describe(int level) => string.Format(Description, Count(level));
         public override string Headline(int level) => $"{Count(level)}기";

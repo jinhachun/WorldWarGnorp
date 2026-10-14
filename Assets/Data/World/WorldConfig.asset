@@ -67,7 +67,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 21300000, guid: f4eaee187eed05143a496ebf60cfa554, type: 3}
   - {fileID: 21300000, guid: e9e8d8e66c61c6e4bba0f2b2cda2446d, type: 3}
-  - {fileID: 21300000, guid: a82440e3913a1e140b44e6152fa580c6, type: 3}
+  - {fileID: 21300000, guid: e80cfdb7c9d841c2ac54a1c6fc02627d, type: 3}
   _lordNames:
   - "\uC81C\uC784\uC2A4"
   - "\uBA54\uB9AC"

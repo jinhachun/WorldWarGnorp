@@ -23,8 +23,11 @@ namespace GnorpWar
 
         public override void OnDied(Unit unit, Vector2 at, int stacks)
         {
-            if (Random.value * 100f < Chance(Level(unit.Team)))
-                BoardRunner.For(unit.Team).Summon(_summon, _count, -1, new Vector2(at.x, Ground.Instance.HeightAt(at.x)), Source(unit.Team));
+            if (Random.value * 100f >= Chance(Level(unit.Team)))
+                return;
+            Vector2 ground = new Vector2(at.x, Ground.Instance.HeightAt(at.x));
+            BoardRunner.For(unit.Team).Summon(_summon, _count, -1, ground, Source(unit.Team));
+            BuffLinks.EffectToPoint(unit.Team, this, ground, BuffKind.Summon);
         }
 
         public override string Describe(int level) => string.Format(Description, Chance(level).ToString("0.##"), _count);

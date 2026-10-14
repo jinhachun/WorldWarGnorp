@@ -1092,7 +1092,8 @@ namespace GnorpWar
                     StartThrust(toPatient.sqrMagnitude > 0.0001f ? toPatient.normalized : new Vector2(Forward, 0f));
                     _attackCooldown = NextCooldown(_attackCooldown, AttackInterval);
                 }
-                if (enemyNear || patient != null)
+                // 한동안 피해가 없으면(대기 풀림) 뒤에 서 있지 않고 같이 전진한다 — 회복 전용끼리 사거리에서 마주 서면 영영 안 끝난다
+                if ((enemyNear || patient != null) && !BattleManager.Stalled)
                 {
                     velocity.x = 0f;
                     _rb.linearVelocity = velocity;
@@ -1113,7 +1114,9 @@ namespace GnorpWar
                 }
                 // 아군 위에서 싸우는 유닛도 계단 자리까지는 앞으로 다가앉는다 — 내려앉은 자리에 그대로 서면 기둥이 생긴다
                 bool settle = allyBelow != null && !blockedByEnemy && !holdForAbove && StairActive;
-                velocity.x = NoPress(_climbing ? ClimbVx(velocity.y) : StairAdvance(settle ? Forward * MoveSpeed : 0f, onGroundSurface, frontSupport), allyInFront);
+                // 대기 풀림 — 사거리 안에 적이 있어도 한동안 아무도 피해를 못 줬으면(언덕에 화살이 막히는 등) 서지 않고 적 몸에 닿을 때까지 다가가며 친다
+                bool press = BattleManager.Stalled && !blockedByEnemy;
+                velocity.x = NoPress(_climbing ? ClimbVx(velocity.y) : StairAdvance(settle || press ? Forward * MoveSpeed : 0f, onGroundSurface, frontSupport), allyInFront);
                 _rb.linearVelocity = velocity;
                 if (_attackCooldown <= 0f)
                 {
@@ -1166,7 +1169,8 @@ namespace GnorpWar
                 _aheadOnBaseUnit = IsAheadOnBaseUnit();
                 _walkScanTimer = TargetScanInterval;
             }
-            velocity.x = _aheadOnBaseUnit || holdForAbove ? 0f : Forward * MoveSpeed;
+            // 기다림이 풀린 동안(Released)에는 기지 위 유닛 뒤 · 머리 위 아군 때문에 서지 않는다 — 기다려 줄 상대가 더 오지 않는다
+            velocity.x = (_aheadOnBaseUnit || holdForAbove) && !Released ? 0f : Forward * MoveSpeed;
             // 앞면 유닛(앞에 맞닿은 아군이 없다)은 계단 상한에 묶이지 않고 걷는다 — 사거리에 적이 없는 맨 앞 유닛은 적과 맞붙을 때까지 전진한다(사용자 10/10).
             // 앞면이 나가면 그 뒤 유닛의 앞이 비어 차례로 따라간다. 사거리에 적이 들면 위의 싸움 분기가 다시 계단 자리에 세운다
             bool frontFace = !allyAhead;
@@ -1442,7 +1446,10 @@ namespace GnorpWar
         // ② 받침 — 발밑 가장 앞 아군보다 반 칸 뒤까지
         // 반 칸 자리에 앉히는 건 등반 점프가 한다(StartClimb — 뛰기 전에 착지 자리를 정하고 가로 속도를 맞춘다).
         // 내 산이 StairHoldLead 넘게 높을 때와 데스매치(기물 정지 뒤)에는 걸지 않는다 — 이긴 쪽이 넘어가 판을 끝낸다(안 풀면 위층이 영영 안 싸워 판이 멈춘다)
-        private bool StairActive => !BattleManager.BoardsStopped && PileNow[(int)_team] <= PileNow[1 - (int)_team] + StairHoldLead;
+        private bool StairActive => !Released && PileNow[(int)_team] <= PileNow[1 - (int)_team] + StairHoldLead;
+        // 기다리는 규칙(계단 상한 · 받침 기다리기 · 기지 위 유닛 뒤에서 서기)을 푸는 때 — 데스매치로 생산이 끝난 뒤(더 올 유닛이 없다), 그리고 한동안 피해가 없을 때.
+        // 양 진영 같은 판정이라 한쪽만 풀리지 않는다
+        private static bool Released => BattleManager.BoardsStopped || BattleManager.Stalled;
         // 내 산이 이만큼(칸) 넘게 높으면 계단을 풀고 넘쳐흐른다. 산 높이는 출렁여서 0.5처럼 작게 잡으면 비슷한 판에서도 수시로 열린다(10/9 측정)
         private const float StairHoldLead = 2f;
 

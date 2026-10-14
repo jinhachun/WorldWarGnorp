@@ -15,7 +15,7 @@ namespace GnorpWar
             if (_factor > 1f)
             {
                 unit.Grow(unit.Size * (_factor - 1f));
-                BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Vitality);
+                BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Stat);
             }
         }
 

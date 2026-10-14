@@ -7,6 +7,6 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Fire Owner On Kill")]
     public class FireOwnerOnKillEffect : UnitEffect
     {
-        public override void OnKill(Unit killer, Unit victim, int stacks) => BoardRunner.For(killer.Team).FireOwners(this);
+        public override void OnKill(Unit killer, Unit victim, int stacks) => BoardRunner.For(killer.Team).FireOwners(this, killer.Position);
     }
 }

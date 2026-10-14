@@ -116,7 +116,8 @@ namespace GnorpWar
             BuffLinks.ClearStanding(_team);
             _summonAtSmallTower = false;
             _summonAtEverySmallTower = false;
-            _doubleWhileHasted = false;
+            _doubleWhileHastedSlot = -1;
+            FireOnThawSlot = -1;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (BuildingPassive passive in _slots[i].Building.Passives)
@@ -127,12 +128,12 @@ namespace GnorpWar
         }
 
         // 다시 일어날 유닛들(노동의 기계화 신화) — 죽은 자리 · 일어날 시각(Time.time). 전투 시작마다 비운다
-        private readonly System.Collections.Generic.List<(float at, UnitDefinition unit, Vector2 point)> _revivals
-            = new System.Collections.Generic.List<(float, UnitDefinition, Vector2)>();
+        private readonly System.Collections.Generic.List<(float at, UnitDefinition unit, Vector2 point, UnitEffect by)> _revivals
+            = new System.Collections.Generic.List<(float, UnitDefinition, Vector2, UnitEffect)>();
 
         // seconds 뒤 point에서 unit이 다시 일어난다 — 소환이 아니다(추가 소환 · 변환 · 소환 이벤트를 지나지 않는다 — 지나면 죽을 때마다 수가 불어난다).
-        // 데스매치로 기물이 멈춘 뒤 · 전투가 끝난 뒤에는 일어나지 않는다(Update의 발동 루프와 같은 조건)
-        public void ReviveLater(UnitDefinition unit, Vector2 point, float seconds) => _revivals.Add((Time.time + seconds, unit, point));
+        // 데스매치로 기물이 멈춘 뒤 · 전투가 끝난 뒤에는 일어나지 않는다(Update의 발동 루프와 같은 조건). by = 일으킨 효과(버프 선의 출발 기물)
+        public void ReviveLater(UnitDefinition unit, Vector2 point, float seconds, UnitEffect by) => _revivals.Add((Time.time + seconds, unit, point, by));
 
         private void Revive()
         {
@@ -141,7 +142,9 @@ namespace GnorpWar
                 {
                     var revival = _revivals[i];
                     _revivals.RemoveAt(i);
-                    Unit.Spawn(revival.unit.PrefabFor(_team), new Vector2(revival.point.x, Ground.Instance.HeightAt(revival.point.x)));
+                    Vector2 ground = new Vector2(revival.point.x, Ground.Instance.HeightAt(revival.point.x));
+                    Unit.Spawn(revival.unit.PrefabFor(_team), ground);
+                    BuffLinks.EffectToPoint(_team, revival.by, ground, BuffKind.Summon);
                 }
         }
 
@@ -184,7 +187,7 @@ namespace GnorpWar
         }
 
         // 쿨다운이 가장 긴 기물을 즉시 times번 발동(군국주의 · 약탈족장 라이칸스로프) — 같으면 그중 무작위(트라이브 명세 §2-1). 쿨다운 있는 기물이 없으면 아무 일도 없다
-        public void FireLongest(int times = 1)
+        public int FireLongest(int times = 1)
         {
             int longest = -1, ties = 0;
             for (int i = 0; i < _slots.Length; i++)
@@ -201,6 +204,7 @@ namespace GnorpWar
             }
             for (int t = 0; t < times; t++)
                 FireNow(longest);
+            return longest;
         }
 
         // 제물의 의식 — 칸의 쿨다운을 seconds 동안 멈춘다(그동안 게이지가 안 차고 가속도 안 걸린다). 이미 멈춰 있으면 더 긴 쪽. 즉시 발동(FireNow)은 멈춘 동안에도 된다
@@ -210,8 +214,8 @@ namespace GnorpWar
                 _slots[index].Frozen = Mathf.Max(_slots[index].Frozen, seconds);
         }
 
-        // 제물의 의식 신화 — 멈췄던 기물이 다시 움직이는 순간 즉시 1회 발동한다(전투 동안, 패시브가 전투 시작 때 켠다)
-        public bool FireOnThaw;
+        // 제물의 의식 신화 — 멈췄던 기물이 다시 움직이는 순간 즉시 1회 발동한다(전투 동안, 패시브가 전투 시작 때 켠다). 값 = 켠 기물의 칸(버프 선의 출발), -1 = 꺼짐
+        public int FireOnThawSlot = -1;
 
         public void NotifyUnitKill(Unit killer, Unit victim)
         {
@@ -231,13 +235,18 @@ namespace GnorpWar
             if (targets.Count == 0)
                 return;
             Unit victim = targets[Random.Range(0, targets.Count)];
-            victim.TakeDamage(victim.MaxHp, new Vector2(_team == Team.Ally ? 1f : -1f, 0f), 0f, Base.For(_team));
+            Base home = Base.For(_team);
+            if (home == null || !home.IsAlive)
+                return;
+            // 도끼가 날아가 닿는 순간에 피해를 준다(Fx/AxeThrow — 사용자 10/14). 도끼가 보이므로 버프 선은 긋지 않는다
+            AxeThrow.Throw(home, victim);
         }
 
         // 물레방앗간 신화 — 이 진영의 가속 중인 기물이 발동할 때 효과를 2번 낸다(전투 동안, 패시브가 전투 시작 때 켠다). 곱하는 곳은 Fire
-        private bool _doubleWhileHasted;
+        // 켠 기물의 칸(버프 선의 출발), -1 = 꺼짐
+        private int _doubleWhileHastedSlot = -1;
 
-        public void DoubleFireWhileHasted() => _doubleWhileHasted = true;
+        public void DoubleFireWhileHasted(int slot) => _doubleWhileHastedSlot = slot;
 
         public void SummonAtSmallTower() => _summonAtSmallTower = true;
 
@@ -263,8 +272,8 @@ namespace GnorpWar
                 if (slot.Frozen > 0f)
                 {
                     slot.Frozen -= Time.deltaTime;
-                    if (slot.Frozen <= 0f && FireOnThaw && FireNow(i))
-                        BuffLinks.ToSlot(_team, -1, i, BuffKind.Trigger);
+                    if (slot.Frozen <= 0f && FireOnThawSlot >= 0 && FireNow(i) && FireOnThawSlot != i)
+                        BuffLinks.ToSlot(_team, FireOnThawSlot, i, BuffKind.Trigger);
                     continue;
                 }
                 slot.Timer += Time.deltaTime * (slot.Haste > 0f ? HasteRate : 1f) * rate;
@@ -318,8 +327,12 @@ namespace GnorpWar
             // 늪지 — 한 번 발동에 효과를 여러 번
             int repeats = Map != null ? Map.FireRepeats : 1;
             // 물레방앗간 신화 — 가속 중인 기물은 발동할 때 효과를 2번 낸다(맵의 반복과는 곱한다)
-            if (_doubleWhileHasted && _slots[index].Haste > 0f)
+            if (_doubleWhileHastedSlot >= 0 && _slots[index].Haste > 0f)
+            {
                 repeats *= 2;
+                if (_doubleWhileHastedSlot != index)
+                    BuffLinks.ToSlot(_team, _doubleWhileHastedSlot, index, BuffKind.Trigger);
+            }
             if (TopFiresTwice && index == TopIndex)
                 repeats *= 2;
             for (int r = 0; r < repeats; r++)
@@ -352,7 +365,7 @@ namespace GnorpWar
                     int extra = e.Effect.ExtraSummons(unit, count, sourceSlot, e.Stacks, e.Level);
                     count += extra;
                     if (extra > 0 && sourceSlot >= 0)
-                        BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Trigger);
+                        BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Summon);
                 }
             UnitEffect converter = null;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -362,7 +375,7 @@ namespace GnorpWar
                     if (converted != unit)
                         converter = e.Effect;
                     if (converted != unit && sourceSlot >= 0)
-                        BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Trigger);
+                        BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Summon);
                     unit = converted;
                 }
 
@@ -389,6 +402,7 @@ namespace GnorpWar
                 for (int i = 0; i < count; i++)
                 {
                     Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, from);
+                    LastSpawned = spawned;
                     if (converter != null)
                         converter.OnConverted(spawned);
                     spawned.NotifySummoned(sourceSlot, source);
@@ -401,6 +415,9 @@ namespace GnorpWar
                 }
             }
         }
+
+        // 마지막으로 소환한 유닛 — 유닛 효과가 소환한 뒤 버프 선을 그 유닛으로 긋는다(Summon을 부른 바로 뒤에만 읽는다)
+        public Unit LastSpawned { get; private set; }
 
         // 작은 타워의 발치 — 거기서 소환한다(파견 사무소)
         private static Vector2 Feet(Base tower) => new Vector2(tower.transform.position.x, tower.Bounds.min.y);
@@ -435,13 +452,14 @@ namespace GnorpWar
 
         // 이 유닛 효과를 켠 기물들을 즉시 1회 발동(마구간 신화 「이 기물을 즉시 1회 발동시킵니다」) — 유닛 효과는 자기 칸을 모르므로 켠 칸을 여기서 찾는다.
         // 전투가 끝났거나 데스매치로 기물이 멈춘 뒤에는 발동하지 않는다(Update의 발동 루프와 같은 조건)
-        public void FireOwners(UnitEffect effect)
+        // from = 일으킨 유닛의 자리 — 버프 선이 그 유닛에서 발동한 층으로 간다
+        public void FireOwners(UnitEffect effect, Vector2 from)
         {
             if (!_running || BattleManager.BoardsStopped)
                 return;
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i) && System.Array.IndexOf(_slots[i].Building.Effects, effect) >= 0 && FireNow(i))
-                    BuffLinks.EffectToSlot(_team, effect, i, BuffKind.Trigger);
+                    BuffLinks.EffectFromUnitToSlot(_team, effect, from, i, BuffKind.Trigger);
         }
 
         // 쿨다운에 곱한다(풍차 ×0.8)

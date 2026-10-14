@@ -15,6 +15,7 @@ namespace GnorpWar
             foreach (Unit unit in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (unit.IsAlive && unit.Team != board.Team)
                     unit.LoseMaxHpRatio(_ratio);
+            BuffLinks.ToUnitsOf(board.Team, slot, board.Team == Team.Ally ? Team.Enemy : Team.Ally, null, BuffKind.Debuff);
         }
 
         public override string Describe(int level) => $"모든 적이 최대 체력의 {_ratio * 100f:0.#}%를 잃습니다.";

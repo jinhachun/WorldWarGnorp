@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Special_Mercantilism
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC911\uC0C1\uC8FC\uC758"
-  _icon: {fileID: 21300000, guid: cb76e0d137302fe42867638a15dc43f9, type: 3}
+  _icon: {fileID: 21300000, guid: e3d6bef7ffe6423389bdeab063fa724e, type: 3}
   _description: "\uD134\uB9C8\uB2E4 \uC5BB\uB294 \uACE8\uB4DC \xD7{0}"
   _values:
   - 2

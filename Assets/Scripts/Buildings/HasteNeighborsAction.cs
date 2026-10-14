@@ -30,6 +30,7 @@ namespace GnorpWar
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => other < slot && target.Cooldown > 0f;
 
+        public override bool UsesAdjacency => true;
         public override string Describe(int level) => $"아래에 있는 모든 기물을 {Seconds(level):0.#}초간 가속합니다.";
         public override string Headline(int level) => $"{Seconds(level):0.#}초";
     }

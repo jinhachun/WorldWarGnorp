@@ -14,8 +14,10 @@ namespace GnorpWar
 
         public override void OnDealtDamage(Unit dealer, Unit victim, float amount)
         {
-            if (Strongest.Of(dealer.Team, _rank) == dealer)
-                dealer.Heal(amount * _ratio);
+            if (Strongest.Of(dealer.Team, _rank) != dealer)
+                return;
+            dealer.Heal(amount * _ratio);
+            BuffLinks.EffectToPoint(dealer.Team, this, dealer.Position, BuffKind.Stat);
         }
 
         public override string Describe(int level) => string.Format(Description, $"{_ratio * 100f:0.#}");

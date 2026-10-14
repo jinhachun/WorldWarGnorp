@@ -7,7 +7,7 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Double Fire While Hasted")]
     public class DoubleFireWhileHastedPassive : BuildingPassive
     {
-        public override void OnBattleStart(BoardRunner board, int slot, int level) => board.DoubleFireWhileHasted();
+        public override void OnBattleStart(BoardRunner board, int slot, int level) => board.DoubleFireWhileHasted(slot);
 
         public override string Describe(int level) => "가속 중인 내 기물은 발동할 때 효과를 2번 냅니다.";
     }

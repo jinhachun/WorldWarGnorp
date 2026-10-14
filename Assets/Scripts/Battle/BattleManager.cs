@@ -50,6 +50,10 @@ namespace GnorpWar
         public static bool TowersStopped => Fighting && Elapsed >= _instance._config.DeathmatchSeconds;
         // 데스매치 — 이 시각부터 모든 기물이 발동하지 않는다(생산 포함)
         public static bool BoardsStopped => Fighting && Elapsed >= _instance._config.BoardStopSeconds;
+        // 대기 풀림 — 한동안(BattleConfig) 피해도 사망도 없었다. 그동안 유닛은 멈춰 서는 규칙을 풀고 전진한다(Unit.FixedUpdate) — 피해가 다시 나면 바로 평소 규칙.
+        // 서로 닿지 않는 채로 마주 선 판(언덕 너머로 못 맞히는 원딜 · 회복 전용끼리 · 받침을 기다리는 유닛)을 푼다. 전투가 열린 뒤부터 센다
+        public static bool Stalled => Fighting && _instance._config.StallAdvanceSeconds > 0f
+                                      && Time.time - Mathf.Max(_instance._lastProgress, _instance._battleStart) >= _instance._config.StallAdvanceSeconds;
         // 유닛 크기 상한(1 = 기본) · 밟기 피해(초당 공격력 비율) — 전투 씬 밖이면 상한 없음 · 0
         public static float MaxUnitSize => _instance != null ? _instance._config.MaxUnitSize : float.MaxValue;
         public static float StompDamagePerSecond => _instance != null ? _instance._config.StompDamagePerSecond : 0f;
@@ -142,6 +146,7 @@ namespace GnorpWar
             RunState.ApplyUpgrades(Team.Ally, true);
             RunState.ApplyUpgrades(Team.Enemy, true);
             _battleStart = Time.time;
+            _lastProgress = Time.time;
             _fighting = true;
             _speedButton.SetActive(true);
             Time.timeScale = SpeedButton.Current;
@@ -189,6 +194,13 @@ namespace GnorpWar
             {
                 Debug.Log($"[Battle] 데스매치 — 아군 유닛 0 · 적은 공격 못 하는 유닛 {enemies}기만");
                 Finish(false);
+            }
+            // 양쪽 다 공격 못 하는 유닛만(사제끼리) — 아무도 더 깎을 수 없다. 본진 체력(남은 비율)이 많은 쪽 승, 같으면 아군 승(사용자 결정 10/14)
+            // 오버드라이브 타워가 아직 쏠 대상이 있으면 판을 둔다(위의 양쪽 0 판정과 같다)
+            else if (allies > 0 && enemies > 0 && allyAttackers == 0 && enemyAttackers == 0 && !Base.AnyTowerHasTarget())
+            {
+                Debug.Log($"[Battle] 데스매치 — 양쪽 다 공격 못 하는 유닛만(아군 {allies} · 적 {enemies}) → 본진 체력 아군 {_allyBase.Hp01:P0} · 적 {_enemyBase.Hp01:P0}");
+                Finish(_allyBase.Hp01 >= _enemyBase.Hp01);
             }
             // 교착 — 위 어디에도 안 걸리고 남은 판. 기물 정지 뒤로 이 시간 동안 피해도 사망도 없으면 아군 승리(사용자 결정 10/11)
             else if (Time.time - Mathf.Max(_lastProgress, _battleStart + _config.BoardStopSeconds) >= _config.StalemateSeconds)

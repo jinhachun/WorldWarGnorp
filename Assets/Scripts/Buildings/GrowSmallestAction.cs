@@ -23,7 +23,7 @@ namespace GnorpWar
             if (smallest != null)
             {
                 smallest.Grow(Amount(level));
-                BuffLinks.ToPoint(board.Team, slot, smallest.Position, BuffKind.Vitality);
+                BuffLinks.ToPoint(board.Team, slot, smallest.Position, BuffKind.Stat);
             }
         }
 

@@ -355,17 +355,18 @@ namespace GnorpWar
 
         // 영구히 걸린 것만(아군, 런 동안) — 전투의 유닛 계산과 RunStats.Preview가 같이 쓴다.
         // alias = 전투 시작 때 걸릴 별칭(상점에서는 아직 UnitAliases에 없다 — Preview가 필드에서 찾아 넘긴다)
-        public static void AccumulateRun(UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
-            => Accumulate(Run[(int)Team.Ally], Team.Ally, unit, stat, ref sum, alias);
+        // alsoAs = 전투 시작 때 걸릴 병종 취급(군제 개혁 — 마찬가지로 Preview가 그 탑의 업그레이드에서 찾아 넘긴다)
+        public static void AccumulateRun(UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null, List<UnitCategory> alsoAs = null)
+            => Accumulate(Run[(int)Team.Ally], Team.Ally, unit, stat, ref sum, alias, alsoAs);
 
         // 탑 한 채가 영구히 쌓은 것만 — 지금 그 진영에 걸려 있지 않은 탑(지도에서 고른 영주)의 값을 볼 때(RunStats.Preview)
-        public static void AccumulateBook(RunBook book, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
-            => Accumulate(book.Units, team, unit, stat, ref sum, alias);
+        public static void AccumulateBook(RunBook book, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null, List<UnitCategory> alsoAs = null)
+            => Accumulate(book.Units, team, unit, stat, ref sum, alias, alsoAs);
 
-        private static void Accumulate(List<Entry> entries, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null)
+        private static void Accumulate(List<Entry> entries, Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum, UnitDefinition alias = null, List<UnitCategory> alsoAs = null)
         {
             foreach (Entry e in entries)
-                if (e.Modifier.Stat == stat && (e.Source.AppliesFor(team, unit) || (alias != null && e.Source.AppliesTo(alias))))
+                if (e.Modifier.Stat == stat && (e.Source.AppliesFor(team, unit) || (alias != null && e.Source.AppliesTo(alias)) || RunStats.ByCategory(e.Source, alsoAs)))
                     sum.Add(e.Modifier.Op, e.Modifier.Value);
         }
     }
@@ -424,21 +425,32 @@ namespace GnorpWar
                 foreach (BuildingPassive passive in owned.Passives)
                     alias = passive.AliasOf(unit) ?? alias;
 
+            // 군제 개혁의 「~로도 취급」 — 전투가 시작돼야 UnitAliases에 걸리므로 그 탑의 업그레이드에서 미리 읽는다(병종으로 거르는 것이 그 병종도 받게)
+            List<UpgradeHolding> holdings = RunState.UpgradesOf(lord);
+            var alsoAs = new List<UnitCategory>();
+            foreach (UpgradeHolding holding in holdings)
+                if (holding.Definition.AliasFor(unit) is UnitCategory category)
+                    alsoAs.Add(category);
+
             StatSum sum = StatSum.Identity;
             if (enemy)
-                StatBook.AccumulateBook(RunState.PreviewBook, Team.Enemy, unit, stat, ref sum, alias);
+                StatBook.AccumulateBook(RunState.PreviewBook, Team.Enemy, unit, stat, ref sum, alias, alsoAs);
             else
-                StatBook.AccumulateRun(unit, stat, ref sum, alias);
+                StatBook.AccumulateRun(unit, stat, ref sum, alias, alsoAs);
             foreach (OwnedBuilding owned in active)
                 foreach (BuildingPassive passive in owned.Passives)
-                    if (passive is IUnitFilter filter && (filter.AppliesTo(unit) || (alias != null && filter.AppliesTo(alias)))
+                    if (passive is IUnitFilter filter && (filter.AppliesTo(unit) || (alias != null && filter.AppliesTo(alias)) || ByCategory(filter, alsoAs))
                         && passive.BattleStartStat(owned, stat, out StatModifier modifier))
                         sum.Add(modifier.Op, modifier.Value);
-            foreach (UpgradeHolding holding in RunState.UpgradesOf(lord))
-                if ((holding.Definition.AppliesTo(unit) || (alias != null && holding.Definition.AppliesTo(alias)))
+            foreach (UpgradeHolding holding in holdings)
+                if ((holding.Definition.AppliesTo(unit) || (alias != null && holding.Definition.AppliesTo(alias)) || ByCategory(holding.Definition, alsoAs))
                     && holding.Definition.UnitModifier(holding.Value, out StatModifier modifier) && modifier.Stat == stat)
                     sum.Add(modifier.Op, modifier.Value);
             return new Value { Base = baseValue, Now = sum.Apply(baseValue) };
         }
+
+        // 병종으로 거르는 것이 alsoAs(함께 취급되는 병종들) 중 하나를 받는가
+        internal static bool ByCategory(IUnitFilter filter, List<UnitCategory> alsoAs)
+            => alsoAs != null && filter is ICategoryFilter byCategory && alsoAs.Exists(category => byCategory.AppliesTo(category));
     }
 }

@@ -32,10 +32,17 @@ namespace GnorpWar
                 return;
             StatModifier stat = _stat.Scaled(_perTier, Level(team));
             if (_all)
+            {
                 foreach (Unit target in targets)
                     target.AddModifier(stat);
+                BuffLinks.EffectFromUnitToUnits(team, this, at, team, u => targets.Contains(u), BuffKind.Stat);
+            }
             else
-                targets[Random.Range(0, targets.Count)].AddModifier(stat);
+            {
+                Unit target = targets[Random.Range(0, targets.Count)];
+                target.AddModifier(stat);
+                BuffLinks.EffectFromUnit(team, this, at, target.Position, BuffKind.Stat);
+            }
         }
 
         public override string Describe(int level) => string.Format(Description, _stat.Scaled(_perTier, level).ValueText);

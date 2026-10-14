@@ -20,14 +20,14 @@ namespace GnorpWar
         // 화면 밖 판정 여유(칸)
         private const float ViewMargin = 2f;
 
-        // BuffKind 순서 — 가속 하늘 · 공격력 빨강(유닛 공격력 원판 색) · 체력/크기 초록 · 무적 노랑(무적 링 색) · 회복 연두(회복 숫자 색) · 발동 흰
+        // BuffKind 순서 — 소환 초록 · 스탯 빨강(유닛 공격력 원판 색) · 무적 노랑(무적 링 색) · 가속 하늘 · 디버프 밝은 보라(등급 테두리의 영웅 보라보다 밝고 분홍 쪽) · 발동 흰
         private static readonly Color[] Colors =
         {
-            new Color(0.4f, 0.85f, 1f),
-            new Color(1f, 0.15f, 0.1f),
             new Color(0.12f, 0.67f, 0.24f),
+            new Color(1f, 0.15f, 0.1f),
             new Color(1f, 0.85f, 0.1f),
-            new Color(90f / 255f, 1f, 110f / 255f),
+            new Color(0.4f, 0.85f, 1f),
+            new Color(0.95f, 0.45f, 1f),
             Color.white,
         };
 
@@ -78,14 +78,16 @@ namespace GnorpWar
                 return;
 
             // 대상이 유닛이면 대상 자리와 상관없이 (출발·종류)로 솎는다. 타워면 타워마다 하나씩 남긴다(타워 번호 — 16채부터는 번호가 겹쳐 솎인다)
-            int key = (((((int)link.Team * 64 + link.From + 1) * 64 + link.To + 1) * 16 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0)) * 16 + (link.Tower & 15);
+            // 유닛이 낸 선(FromAt)은 같은 기물의 층에서 나간 선과 따로 솎는다
+            int key = ((((((int)link.Team * 64 + link.From + 1) * 64 + link.To + 1) * 16 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0)) * 16 + (link.Tower & 15)) * 2 + (link.FromAt.HasValue ? 1 : 0);
             float now = Time.unscaledTime;
             if (_lastDrawn.TryGetValue(key, out float last) && now - last < MinGap)
                 return;
 
             // 맵 효과(준 기물 없음)는 그 진영의 출발점 그림에서(얼음 덩이 — Fx/MapMarker), 없으면 탑 꼭대기에서
             MapMarker marker = MapMarker.For(link.Team);
-            Vector2 from = link.From >= 0 ? tower.FloorFront(link.From) : marker != null ? marker.Position : tower.RoofTop;
+            // 유닛이 낸 것은 그 유닛의 자리에서(모양은 층 → 유닛과 같은 위로 불룩한 호)
+            Vector2 from = link.FromAt ?? (link.From >= 0 ? tower.FloorFront(link.From) : marker != null ? marker.Position : tower.RoofTop);
             Vector2 to = link.To >= 0 ? tower.FloorFront(link.To) : link.At.Value;
             if (!InView(from) && !InView(to))
                 return;

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeBoneGrave
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uBF08\uBB34\uB364"
-  _icon: {fileID: 21300000, guid: 12858822ca5490943b66e2a286a9d812, type: 3}
+  _icon: {fileID: 21300000, guid: 2a4fe2cceb314a6f8daa070c2f008c3a, type: 3}
   _description: 
   _rarity: 0
   _nation: 3

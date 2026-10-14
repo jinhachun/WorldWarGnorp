@@ -14,6 +14,8 @@ namespace GnorpWar
         public virtual string Headline(int level) => null;
         // 자리에 따라 달라지는 효과 — 이 기물이 slot층, target이 other층에 있을 때 효과가 target에 닿는가. 닿는 자리에 놓는 판단(Run/EnemyShopper)이 읽는다
         public virtual bool Reaches(int slot, int other, BuildingDefinition target) => false;
+        // 자리 효과(바로 위 · 아래 · 위에 있는 · 아래에 있는 — BoardRunner.Linked)를 쓰는가 — 연방제가 걸리는 기물인지 가린다(UpgradeDefinition.Affects)
+        public virtual bool UsesAdjacency => false;
         // 전투 동안 칸이 값을 쌓는가(허수아비 등) — 쌓으면 그 계산 방식. 쌓은 값은 Execute에서 board.AddBattleGain으로
         public virtual bool BattleGain(out StatOp op)
         {

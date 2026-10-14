@@ -26,7 +26,7 @@ namespace GnorpWar
                     count++;
                 }
             if (count > 0)
-                BuffLinks.ToPoint(board.Team, slot, sum / count, BuffKind.Heal);
+                BuffLinks.ToPoint(board.Team, slot, sum / count, BuffKind.Stat);
         }
 
         public override string Describe(int level) => $"모든 아군이 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";

@@ -13,7 +13,13 @@ namespace GnorpWar
 
         // §7과 같은 자리 — 구슬이 닿아 체력이 실제로 찼을 때(HasteOnHealEffect)
         public override void OnHealLanded(Team team, Unit patient, float amount, float overflow, int stacks)
-            => BoardRunner.For(team).HasteAll(_seconds);
+        {
+            BoardRunner board = BoardRunner.For(team);
+            board.HasteAll(_seconds);
+            for (int i = 0; i < board.Slots.Length; i++)
+                if (board.Slots[i].Building != null && board.Slots[i].Cooldown > 0f)
+                    BuffLinks.EffectToSlot(team, this, i, BuffKind.Haste);
+        }
 
         public override string Describe(int level) => string.Format(Description, $"{_seconds:0.#}");
     }

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeUndying
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uC8FD\uC9C0 \uC54A\uB294 \uC804\uC0AC"
-  _icon: {fileID: 21300000, guid: 0fafdfad16a7a1d44b6228ed99d90061, type: 3}
+  _icon: {fileID: 21300000, guid: 6aadccb3d4d442bba2fc7ff18ec3b9f1, type: 3}
   _description: 
   _rarity: 4
   _nation: 3

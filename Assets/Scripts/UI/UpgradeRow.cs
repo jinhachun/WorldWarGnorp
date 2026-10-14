@@ -13,7 +13,9 @@ namespace GnorpWar
         // 아이콘 한 변 · 외곽선 두께 · 아이콘과 「×N」 사이 · 줄 간격(px)
         private const float IconSize = 32f;
         private const float Frame = 2f;
-        private const float LabelGap = 4f;
+        private const float LabelGap = 2f;
+        // 「×N」 글자 크기 — 도트 폰트의 가장 작은 단계(12), 칸 아래쪽에 붙인다(사용자 10/14: 개수 표시는 작게)
+        public const int CountSize = 12;
         private const float CellHeight = 40f;
         // 외곽선까지 친 칸의 한 변(px) — 한 줄의 높이
         public const float BoxSize = IconSize + Frame * 2f;
@@ -58,7 +60,8 @@ namespace GnorpWar
             Text count = Object.Instantiate(_labelTemplate, Root);
             count.name = "Count";
             count.enabled = true;
-            count.alignment = TextAnchor.MiddleLeft;
+            count.fontSize = CountSize;
+            count.alignment = TextAnchor.LowerLeft;
             count.horizontalOverflow = HorizontalWrapMode.Overflow;
             count.raycastTarget = false;
             Place(count.rectTransform, Root, cell + new Vector2(BoxSize + LabelGap, 0f));

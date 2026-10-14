@@ -43,6 +43,8 @@ namespace GnorpWar
 
         // 자리에 따라 달라지는 효과 — 이 기물이 slot층, target이 other층에 있을 때 효과가 target에 닿는가. 닿는 자리에 놓는 판단(Run/EnemyShopper)이 읽는다
         public virtual bool Reaches(int slot, int other, BuildingDefinition target) => false;
+        // 자리 효과(바로 위 · 아래 · 위에 있는 · 아래에 있는 — BoardRunner.Linked)를 쓰는가 — 연방제가 걸리는 기물인지 가린다(UpgradeDefinition.Affects)
+        public virtual bool UsesAdjacency => false;
 
         // 툴팁의 완결 문장 — 지금 등급 값으로 (CLAUDE.md §5-2)
         public abstract string Describe(int level);

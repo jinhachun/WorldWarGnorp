@@ -33,6 +33,8 @@ namespace GnorpWar
                 strongest.AddModifier(new StatModifier(UnitStat.MaxHp, StatOp.Flat, unit.MaxHp * _maxHpShare));
             if (_modifier.Value != 0f)
                 strongest.AddModifier(_modifier);
+            // 회복도 스탯 색(사용자 10/14 기준) — 죽은 자리에서 받은 유닛으로
+            BuffLinks.EffectFromUnit(unit.Team, this, at, strongest.Position, BuffKind.Stat);
         }
     }
 }

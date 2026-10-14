@@ -11,7 +11,7 @@ namespace GnorpWar
         [SuffixLabel("초", true)]
         [SerializeField] private float _seconds = 5f;
 
-        public override void OnDied(Unit unit, Vector2 at, int stacks) => BoardRunner.For(unit.Team).ReviveLater(unit.Definition, at, _seconds);
+        public override void OnDied(Unit unit, Vector2 at, int stacks) => BoardRunner.For(unit.Team).ReviveLater(unit.Definition, at, _seconds, this);
 
         public override string Describe(int level) => string.Format(Description, $"{_seconds:0.#}");
     }

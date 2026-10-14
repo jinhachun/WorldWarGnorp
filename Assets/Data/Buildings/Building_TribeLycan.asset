@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeLycan
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uC57D\uD0C8\uC871\uC7A5 \uB77C\uC774\uCE78\uC2A4\uB85C\uD504"
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: b20bcc1f80674b1093d8814c3b5eae53, type: 3}
   _description: 
   _rarity: 4
   _nation: 3

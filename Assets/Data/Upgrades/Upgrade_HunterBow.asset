@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_HunterBow
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC0AC\uB0E5\uAFBC\uC758 \uD65C"
-  _icon: {fileID: 21300000, guid: 6dda89bc6c90e42489c142133294093f, type: 3}
+  _icon: {fileID: 21300000, guid: f4a3a33e29324048b4d2d4a4bd63e392, type: 3}
   _description: "\uB0B4 \uAD81\uBCD1\uC758 \uD654\uC0B4\uC5D0 \uB9DE\uC740 \uC801\uC740
     2\uCD08\uAC04 \uC774\uB3D9\uC18D\uB3C4 \xD7{0}"
   _values:

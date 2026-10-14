@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeAltar
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uC6D0\uC2DC \uC758\uC2DD \uC81C\uB2E8"
-  _icon: {fileID: 21300000, guid: 80bf566f3094e7943b18a7f3a4f0ae66, type: 3}
+  _icon: {fileID: 21300000, guid: b8ab75c2696748eb8579eff8fc5cc8dc, type: 3}
   _description: 
   _rarity: 2
   _nation: 3

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Building_TribeChiefWrath
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uB300\uC871\uC7A5\uC758 \uBD84\uB178"
-  _icon: {fileID: 21300000, guid: c6bc5d6cb9820fd478fbbd57cc32de52, type: 3}
+  _icon: {fileID: 21300000, guid: 2c8e16507ee4494998c4652273bf60cb, type: 3}
   _description: 
   _rarity: 4
   _nation: 3

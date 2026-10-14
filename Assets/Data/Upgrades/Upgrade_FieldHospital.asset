@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_FieldHospital
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC57C\uC804 \uBCD1\uC6D0"
-  _icon: {fileID: 21300000, guid: df125b14532a7e242964c16e50fe9691, type: 3}
+  _icon: {fileID: 21300000, guid: 04474d9977014f71a001f23b13bc4fbc, type: 3}
   _description: "\uB0B4 \uC9C0\uC6D0\uBCD1\uC774 \uCC98\uC74C \uACF5\uACA9\uBC1B\uC73C\uBA74
     {0}\uCD08\uAC04 \uBB34\uC801 \uC0C1\uD0DC\uAC00 \uB429\uB2C8\uB2E4."
   _values:

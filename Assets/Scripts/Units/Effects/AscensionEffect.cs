@@ -13,6 +13,17 @@ namespace GnorpWar
         [Tooltip("합연산 — 1 = +100%")]
         [SerializeField] private float _attack = 1f;
 
+        // 다음 발동까지 남은 사제 수(진영별, 툴팁 표시용) — 전투 밖에서는 처음 값. 기물에서 찾을 땐 그 기물의 Effects에서 이 타입을 고른다
+        public int RemainingOf(Team team)
+        {
+            if (!BattleManager.Fighting)
+                return _every;
+            foreach (TeamEffects.Entry e in TeamEffects.For(team))
+                if (e.Effect == this)
+                    return _every - e.Stacks % _every;
+            return _every;
+        }
+
         public override void OnDied(Unit unit, Vector2 at, int stacks)
         {
             TeamEffects.AddStack(unit.Team, this);
@@ -35,7 +46,7 @@ namespace GnorpWar
                     count++;
                 }
             if (count > 0)
-                BuffLinks.EffectToPoint(unit.Team, this, sum / count, BuffKind.Attack);
+                BuffLinks.EffectFromUnit(unit.Team, this, at, sum / count, BuffKind.Stat);
         }
     }
 }

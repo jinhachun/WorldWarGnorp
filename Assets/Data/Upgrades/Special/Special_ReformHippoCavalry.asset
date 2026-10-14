@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Special_ReformHippoCavalry
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uAD70\uC81C \uAC1C\uD601 \xB7 \uD558\uB9C8\uAE30\uBCD1"
-  _icon: {fileID: 21300000, guid: 6dda89bc6c90e42489c142133294093f, type: 3}
+  _icon: {fileID: 21300000, guid: 8a4501501c554b558c50ba01eb60c319, type: 3}
   _description: "\uB0B4 \uC911\uAE30\uBCD1\uC740 \uACBD\uBCF4\uBCD1\uC73C\uB85C\uB3C4
     \uCDE8\uAE09\uD569\uB2C8\uB2E4."
   _values:

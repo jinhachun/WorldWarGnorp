@@ -11,7 +11,7 @@ namespace GnorpWar
         public override void OnDied(Unit unit, Vector2 at, int stacks)
         {
             StatBook.AddForBattle(unit.Team, this, _stat);
-            BuffLinks.EffectToPoint(unit.Team, this, at, BuffKind.Attack);
+            BuffLinks.EffectFromUnitToUnits(unit.Team, this, at, unit.Team, u => this.AppliesFor(u.Team, u.Definition), BuffKind.Stat);
         }
 
         public override string Describe(int level) => string.Format(Description, _stat.Describe());

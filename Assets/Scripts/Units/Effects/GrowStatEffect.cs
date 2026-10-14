@@ -13,6 +13,7 @@ namespace GnorpWar
         {
             foreach (StatModifier stat in _stats)
                 unit.AddModifier(stat);
+            BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Stat);
         }
 
         // 설명의 {0}에 스탯들을 쉼표로 이어 넣는다(「이동속도 +5%, 공격속도 +5%」)

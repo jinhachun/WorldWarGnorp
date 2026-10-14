@@ -23,13 +23,16 @@ namespace GnorpWar
                     count++;
                 }
             if (count > 0)
-                BuffLinks.EffectToPoint(unit.Team, this, sum / count, BuffKind.Vitality);
+                BuffLinks.EffectFromUnit(unit.Team, this, unit.Position, sum / count, BuffKind.Stat);
         }
 
         public override void OnAttack(Unit attacker, IDamageable target, int stacks)
         {
-            if (attacker.Size >= _healerSize)
-                attacker.HealAlliesAround(_healRadius, attacker.AttackDamage);
+            if (attacker.Size < _healerSize)
+                return;
+            attacker.HealAlliesAround(_healRadius, attacker.AttackDamage);
+            BuffLinks.EffectFromUnitToUnits(attacker.Team, this, attacker.Position, attacker.Team,
+                u => u != attacker && (u.Position - attacker.Position).sqrMagnitude <= _healRadius * _healRadius, BuffKind.Stat);
         }
     }
 }

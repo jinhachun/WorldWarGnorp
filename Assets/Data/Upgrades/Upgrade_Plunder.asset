@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Upgrade_Plunder
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC57D\uD0C8"
-  _icon: {fileID: 21300000, guid: a82440e3913a1e140b44e6152fa580c6, type: 3}
+  _icon: {fileID: 21300000, guid: 136a01390ec746c9a60edf88fa08335e, type: 3}
   _description: "\uB0B4 \uACBD\uAE30\uBCD1\uC774 \uC801\uC744 \uCC98\uCE58\uD560
     \uB54C\uB9C8\uB2E4, \uCD5C\uB300 \uCCB4\uB825\uC758 {0}%\uB97C \uD68C\uBCF5\uD569\uB2C8\uB2E4."
   _values:

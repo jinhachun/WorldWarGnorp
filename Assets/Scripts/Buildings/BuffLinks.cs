@@ -3,15 +3,15 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 기물이 다른 대상에게 주는 것의 종류 — 선 색이 이걸로 갈린다(전장 Fx/BuffLinkFx · UI 탑)
+    // 기물이 다른 대상에게 주는 것의 종류 — 「대상에게 무엇이 바뀌나」로 가른다(사용자 10/14). 선 색이 이걸로 갈린다(전장 Fx/BuffLinkFx · UI 탑)
     public enum BuffKind
     {
-        Haste,          // 가속 · 쿨다운 감소 · 공격속도
-        Attack,         // 공격력(타워 사거리·화살 수 포함)
-        Vitality,       // 체력 · 크기
+        Summon,         // 유닛이 더 나오거나 다른 유닛으로 바뀐다 — 추가 · 조건 소환 · 소환 수 늘림 · 변환 · 부활
+        Stat,           // 내 유닛 · 타워의 능력치가 오른다 — 공격력 · 공격속도 · 체력 · 회복 · 크기 · 이동속도 · 사거리 · 화살 수
         Invulnerable,   // 무적
-        Heal,           // 회복
-        Trigger,        // 다른 기물을 발동시킴 · 다른 기물의 소환을 늘리거나 바꿈
+        Haste,          // 기물의 쿨다운이 빨리 돈다 — 가속 · 쿨다운 감소(유닛 공격속도는 Stat)
+        Debuff,         // 적을 약하게 한다 — 적 능력치 감소 · 감속 · 체력을 잃게 함 · 불태움
+        Trigger,        // 다른 기물을 즉시 발동시키거나 그 효과를 한 번 더 · 기물을 멈춤(제물의 의식)
     }
 
     public struct BuffLink
@@ -19,6 +19,8 @@ namespace GnorpWar
         public Team Team;
         // 효과를 준 기물의 칸(0 = 1층) — 기물이 아니면(맵의 전체 발동) -1
         public int From;
+        // 유닛이 준 것이면 그 유닛의 월드 자리(죽으며 준 것이면 죽은 자리) — 선은 층 대신 여기서 나간다. From은 그 효과를 켠 기물의 칸(솎기 열쇠)
+        public Vector2? FromAt;
         // 대상이 기물이면 그 칸, 아니면 -1
         public int To;
         // 대상이 유닛·타워면 그 월드 자리(유닛 무리면 가운데), 기물이면 null
@@ -94,6 +96,81 @@ namespace GnorpWar
                     ToSlot(team, slot, to, kind);
         }
 
+        // 유닛 효과를 유닛이 냈다(죽으며 · 처치하며 · 소환되며 등) — 선은 그 유닛의 자리(from)에서 대상(to)으로. 그 효과를 켠 기물이 없으면(합치기 보상 등) 긋지 않는다.
+        // 두 자리가 거의 같으면(그 자리에 소환 등) 선이 안 보이므로 켠 기물의 층에서 긋는다
+        public static void EffectFromUnit(Team team, UnitEffect effect, Vector2 from, Vector2 to, BuffKind kind)
+        {
+            if (Raised == null)
+                return;
+            int slot = NextSlotOf(team, effect, 0);
+            if (slot < 0)
+                return;
+            if ((to - from).sqrMagnitude < MinUnitLink * MinUnitLink)
+                EffectToPoint(team, effect, to, kind);
+            else
+                Raised.Invoke(new BuffLink { Team = team, From = slot, To = -1, FromAt = from, At = to, Kind = kind });
+        }
+
+        // 유닛에서 그 진영의 유닛 무리(조건에 맞는 것) 가운데로 — 무리가 없으면 긋지 않는다
+        public static void EffectFromUnitToUnits(Team team, UnitEffect effect, Vector2 from, Team recipients, System.Func<Unit, bool> filter, BuffKind kind)
+        {
+            if (Raised == null || NextSlotOf(team, effect, 0) < 0 || Throttled(team, effect))
+                return;
+            if (Centroid(recipients, filter, out Vector2 at))
+                EffectFromUnit(team, effect, from, at, kind);
+        }
+
+        // 무리 가운데를 찾는 건 유닛 전부를 훑는다 — 공격 · 회복마다 부르는 효과가 많으면 비싸므로, 같은 효과는 그리는 쪽의 솎기 시간(BuffLinkFx)만큼 건너뛴다
+        private const float CentroidGap = 0.15f;
+        private static readonly Dictionary<(Team, UnitEffect), float> LastCentroid = new Dictionary<(Team, UnitEffect), float>();
+
+        private static bool Throttled(Team team, UnitEffect effect)
+        {
+            float now = Time.unscaledTime;
+            if (LastCentroid.TryGetValue((team, effect), out float last) && now - last < CentroidGap && now >= last)
+                return true;
+            LastCentroid[(team, effect)] = now;
+            return false;
+        }
+
+        // 유닛에서 기물로(마구간 신화 — 처치한 유닛 → 발동한 그 기물의 층). From = To라 UI 탑은 긋지 않는다(층 → 층 선만 그린다)
+        public static void EffectFromUnitToSlot(Team team, UnitEffect effect, Vector2 from, int to, BuffKind kind)
+        {
+            if (Raised != null && NextSlotOf(team, effect, 0) >= 0)
+                Raised.Invoke(new BuffLink { Team = team, From = to, To = to, FromAt = from, Kind = kind });
+        }
+
+        // 유닛 효과를 켠 기물의 층에서 그 진영의 유닛 무리(조건에 맞는 것) 가운데로 — 유닛이 아니라 시각 · 진영이 낸 것(교대근무계획서 신화)
+        public static void EffectToUnits(Team team, UnitEffect effect, System.Func<Unit, bool> filter, BuffKind kind)
+        {
+            if (Raised != null && NextSlotOf(team, effect, 0) >= 0 && !Throttled(team, effect) && Centroid(team, filter, out Vector2 at))
+                EffectToPoint(team, effect, at, kind);
+        }
+
+        // 기물의 층에서 어느 진영이든 유닛 무리(조건에 맞는 것) 가운데로 — 적에게 거는 것(디버프)도
+        public static void ToUnitsOf(Team team, int from, Team recipients, System.Func<Unit, bool> filter, BuffKind kind)
+        {
+            if (Raised != null && Centroid(recipients, filter, out Vector2 at))
+                ToPoint(team, from, at, kind);
+        }
+
+        private static bool Centroid(Team team, System.Func<Unit, bool> filter, out Vector2 at)
+        {
+            Vector2 sum = Vector2.zero;
+            int count = 0;
+            foreach (Unit unit in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
+                if (unit.IsAlive && unit.Team == team && (filter == null || filter(unit)))
+                {
+                    sum += unit.Position;
+                    count++;
+                }
+            at = count > 0 ? sum / count : Vector2.zero;
+            return count > 0;
+        }
+
+        // 유닛 → 대상 선이 이보다(칸) 짧으면 층에서 긋는다
+        private const float MinUnitLink = 0.5f;
+
         private static int NextSlotOf(Team team, UnitEffect effect, int start)
         {
             BoardRunner board = BoardRunner.For(team);
@@ -128,26 +205,6 @@ namespace GnorpWar
             foreach (BuffLink link in StandingByTeam[(int)team])
                 if (link.To == slot)
                     Raised.Invoke(link);
-        }
-
-        public static BuffKind KindOf(UnitStat stat)
-        {
-            switch (stat)
-            {
-                case UnitStat.Attack: return BuffKind.Attack;
-                case UnitStat.MaxHp: return BuffKind.Vitality;
-                default: return BuffKind.Haste;
-            }
-        }
-
-        public static BuffKind KindOf(TowerStat stat)
-        {
-            switch (stat)
-            {
-                case TowerStat.MaxHp: return BuffKind.Vitality;
-                case TowerStat.AttackSpeed: return BuffKind.Haste;
-                default: return BuffKind.Attack;
-            }
         }
     }
 }

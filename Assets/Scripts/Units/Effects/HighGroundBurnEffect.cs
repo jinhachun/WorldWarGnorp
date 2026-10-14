@@ -13,7 +13,16 @@ namespace GnorpWar
         [Tooltip("매초 피해 = 불을 붙인 피해의 이 비율 — 0.2 = 20%")]
         [SerializeField] private float _ratio = 0.2f;
 
-        public override void OnHighGroundHit(Unit victim, float damage, IDamageable attacker) => victim.Ignite(_seconds, damage * _ratio, attacker);
+        public override void OnHighGroundHit(Unit victim, float damage, IDamageable attacker)
+        {
+            victim.Ignite(_seconds, damage * _ratio, attacker);
+            // 불태움은 디버프 — 쏜 유닛에서(타워가 쐈으면 켠 기물의 층에서) 맞은 적으로
+            Team team = victim.Team == Team.Ally ? Team.Enemy : Team.Ally;
+            if (attacker is Unit shooter)
+                BuffLinks.EffectFromUnit(team, this, shooter.Position, victim.Position, BuffKind.Debuff);
+            else
+                BuffLinks.EffectToPoint(team, this, victim.Position, BuffKind.Debuff);
+        }
 
         // 설명의 {0} = 초 · {1} = 매초 피해 비율(%)
         public override string Describe(int level) => string.Format(Description, $"{_seconds:0.#}", $"{_ratio * 100f:0.#}");

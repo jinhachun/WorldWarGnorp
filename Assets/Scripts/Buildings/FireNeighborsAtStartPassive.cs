@@ -23,6 +23,7 @@ namespace GnorpWar
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => Mathf.Abs(other - slot) == 1 && target.Cooldown > 0f;
 
+        public override bool UsesAdjacency => true;
         public override string Describe(int level) => $"전투 시작 시, 바로 위·아래 기물들을 즉시 {Times(level)}회 발동시킵니다.";
         public override string Headline(int level) => $"{Times(level)}회";
     }

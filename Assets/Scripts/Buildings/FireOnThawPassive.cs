@@ -6,7 +6,7 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Fire On Thaw")]
     public class FireOnThawPassive : BuildingPassive
     {
-        public override void OnBattleStart(BoardRunner board, int slot, int level) => board.FireOnThaw = true;
+        public override void OnBattleStart(BoardRunner board, int slot, int level) => board.FireOnThawSlot = slot;
 
         public override string Describe(int level) => "쿨다운이 멈췄던 기물은 다시 움직이는 순간 즉시 1회 발동합니다.";
     }

@@ -22,12 +22,13 @@ namespace GnorpWar
             if (board.Linked(slot, sourceSlot, sourceSlot == slot + 1) && unit.Definition == _when)
             {
                 board.Summon(_summon, Count(board.Slots[slot].Building.Level), slot);
-                BuffLinks.ToSlot(board.Team, sourceSlot, slot, BuffKind.Trigger);
+                BuffLinks.ToSlot(board.Team, sourceSlot, slot, BuffKind.Summon);
             }
         }
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => other == slot + 1 && target.Unit == _when;
 
+        public override bool UsesAdjacency => true;
         public override string Describe(int level) => $"바로 위 기물이 {_when.DisplayName}를 소환할 때마다 {_summon.DisplayName} {Count(level)}기를 소환합니다.";
     }
 }

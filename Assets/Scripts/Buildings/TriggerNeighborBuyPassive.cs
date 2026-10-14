@@ -29,6 +29,7 @@ namespace GnorpWar
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => Mathf.Abs(other - slot) == 1 && HasBuyEffects(target);
 
+        public override bool UsesAdjacency => true;
         // 1회면 기획서 문구 그대로("발동시킵니다")
         public override string Describe(int level)
             => $"전투 시작 시, 바로 위·아래 기물들의 「구매할 때마다,」 효과를 {(Times(level) > 1 ? $"{Times(level)}회 " : "")}발동시킵니다.";

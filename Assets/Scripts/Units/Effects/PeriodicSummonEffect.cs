@@ -22,7 +22,9 @@ namespace GnorpWar
                 return;
             unit.SetEffectCooldown(this, _interval);
             float x = unit.Position.x - unit.Forward * _behind;
-            BoardRunner.For(unit.Team).Summon(_summon, _count, -1, new Vector2(x, Ground.Instance.HeightAt(x)), Source(unit.Team));
+            Vector2 ground = new Vector2(x, Ground.Instance.HeightAt(x));
+            BoardRunner.For(unit.Team).Summon(_summon, _count, -1, ground, Source(unit.Team));
+            BuffLinks.EffectFromUnit(unit.Team, this, unit.Position, ground, BuffKind.Summon);
         }
 
         // 설명의 {0} = 간격(초) · {1} = 소환 수 — 글의 숫자가 에셋 값에서 나오게

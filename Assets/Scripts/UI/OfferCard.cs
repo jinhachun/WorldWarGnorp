@@ -83,10 +83,16 @@ namespace GnorpWar
             else
             {
                 OwnedBuilding pair = RunState.FindMergeTarget(building, Upgrades);
-                string body = BuildingTooltip.Describe(building, OwnedBuilding.LevelOf(building, Upgrades), building.CooldownAt(OwnedBuilding.CooldownLevelOf(building, Upgrades)));
+                // 사서 놓으면 걸릴 내 업그레이드 — 징병제가 있으면 소환 수에도 더해 보인다(아래의 업그레이드 줄과 숫자가 같은 말을 하게)
+                System.Collections.Generic.List<UpgradeHolding> upgrades = RunState.UpgradesOn(building);
+                int extra = 0;
+                foreach (UpgradeHolding upgrade in upgrades)
+                    if (upgrade.Definition.Special == SpecialKind.Conscription)
+                        extra += Mathf.RoundToInt(upgrade.Value);
+                string body = BuildingTooltip.Describe(building, OwnedBuilding.LevelOf(building, Upgrades), building.CooldownAt(OwnedBuilding.CooldownLevelOf(building, Upgrades)), false, extra);
                 if (pair != null)
-                    body += BuildingTooltip.RankUpPreview(building, pair.Level, pair.Rarity + 1);
-                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity + Upgrades), body, building.MentionedUnits, RunState.Field);
+                    body += BuildingTooltip.RankUpPreview(building, pair.Level, pair.Rarity + 1, extra);
+                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity + Upgrades), body, building.MentionedUnits, RunState.Field, false, upgrades);
             }
         }
 

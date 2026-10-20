@@ -1,7 +1,7 @@
 ---
 name: role
-description: 이 세션이 팀 역할(총괄·밸런스·개발·UI) 하나를 맡는다. 사용자가 "/role 밸런스"처럼 부를 때, 또는 맥락이 요약돼 내 역할을 다시 읽어야 할 때.
-argument-hint: <총괄|밸런스|개발|UI>
+description: 이 세션이 팀 역할(총괄·밸런스·개발·UIUX·아트·기획) 하나를 맡는다. 사용자가 "/role 밸런스"처럼 부를 때, 또는 맥락이 요약돼 내 역할을 다시 읽어야 할 때.
+argument-hint: <총괄|밸런스|개발|UIUX|아트|기획>
 ---
 
 # 역할 맡기 — `$ARGUMENTS`
@@ -10,7 +10,7 @@ argument-hint: <총괄|밸런스|개발|UI>
 
 ## 맡는 절차
 
-1. 인자가 `총괄 · 밸런스 · 개발 · UI · 기획` 중 하나가 아니면 사용자에게 묻는다.
+1. 인자가 `총괄 · 밸런스 · 개발 · UIUX · 아트 · 기획` 중 하나가 아니면 사용자에게 묻는다(예전 이름 `UI` = `UIUX`).
 2. 이 폴더의 `<역할>.md`를 읽는다(예: `.claude/skills/role/밸런스.md`).
 3. `ListAgents`로 **내 세션 이름**과 살아 있는 세션을 본다.
 4. `.claude/team/ROSTER.md`를 연다(없으면 아래 「명단 형식」으로 만든다).
@@ -29,7 +29,8 @@ argument-hint: <총괄|밸런스|개발|UI>
 | 총괄 | `HANDOFF.md` · `ROADMAP.md` · `CLAUDE.md` · `ARCHITECTURE.md` · `SCENE_MAP.md` · `SESSION_ZERO.md` · `README.md` · 명단 · git 커밋(사용자가 시킬 때만) |
 | 밸런스 | `Assets/Data/**`의 **이미 있는 에셋의 수치**(체력·공격·비용·쿨다운·적 보드 구성 등) |
 | 개발 | `Assets/Scripts/**`(UI 폴더 제외) · `Assets/Editor/**` · `Assets/Prefabs/**` · `Assets/Fx/**` · `ProjectSettings/**` · **새 SO 에셋 만들기** · 에셋의 설명 글 · 유닛·투사체 그림 배선 · 씬에서 Canvas 밖 오브젝트 |
-| UI | `Assets/Scripts/UI/**` · UI 그림 배선 · 씬에서 Canvas 아래 오브젝트 |
+| UIUX | `Assets/Scripts/UI/**` · UI 그림 배선 · 씬에서 Canvas 아래 오브젝트 |
+| 아트 | `Assets/Sprites/**`의 임시 그림 만들기·고치기 · 그림 임포트 설정(.meta) — **사용자가 그린 그림은 덮어쓰지 않는다** · 배선은 개발·UIUX에 요청 (사용자 10/15) |
 | 기획 | `Docs/`의 기획서(`WorldWarGnorp_기물기획.md` 등) — 사용자·총괄이 시킨 반영만(사용자 10/9) |
 | 잔일 | 지시에 고칠 곳이 정해진 한두 줄 수정 — 코드·에셋·UI 어디든(사용자 10/11). 확인은 컴파일까지만, 플레이·측정 없음. 총괄이 서브에이전트 하나를 이어서 쓴다 — 조건은 `잔일.md` |
 | (총괄) | `Docs/TodoList/` · `Docs/Record/` — 절차는 `.claude/skills/testResultReview/SKILL.md`. `Docs/testResult/`는 사용자만 쓴다 |
@@ -67,7 +68,8 @@ ROSTER의 `에디터:` 줄 하나가 잠금이다. **에디터를 바꾸는 MCP 
 총괄 = 
 밸런스 = 
 개발 = 
-UI = 
+UIUX = 
+아트 = 
 
 에디터: 비어 있음
 ```

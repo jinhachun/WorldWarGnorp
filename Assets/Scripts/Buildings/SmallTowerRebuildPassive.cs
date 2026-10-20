@@ -18,8 +18,12 @@ namespace GnorpWar
         public override void OnSmallTowerDestroyed(BoardRunner board, int slot, Base tower)
         {
             OwnedBuilding self = board.Slots[slot].Building;
-            if (tower.BuiltBy == self)
-                _build.Build(board, slot, self.Level);
+            if (tower.BuiltBy != self)
+                return;
+            Base rebuilt = _build.Build(board, slot, self.Level);
+            // 다시 세워지는 자리에 기둥
+            if (rebuilt != null)
+                PillarFx.Rise(new Vector2(rebuilt.transform.position.x, rebuilt.Bounds.min.y), rebuilt.Bounds.size.y);
         }
 
         public override string Describe(int level) => "이 작은 타워가 파괴되면, 다시 세워집니다.";

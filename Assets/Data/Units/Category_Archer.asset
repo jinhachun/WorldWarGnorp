@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: Category_Archer
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
   _displayName: "\uAD81\uBCD1"
+  _turnBack: 1

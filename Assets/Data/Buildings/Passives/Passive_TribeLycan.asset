@@ -11,6 +11,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 423d92a5f968df542bbadc5024f09d93, type: 3}
   m_Name: Passive_TribeLycan
-  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.KillCountFirePassive
-  _kills: 10
-  _twiceMark: {fileID: 11400000, guid: ed121e9e067de604dbd6b8a7f107007b, type: 2}
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathCountCooldownPassive
+  _deaths: 100
+  _factor: 0.96

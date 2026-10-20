@@ -55,7 +55,7 @@ namespace GnorpWar
             }
             // 받은 무리 가운데로 선 하나 — 적에게 거는 것(저주)은 디버프, 내 유닛에게(북소리)는 스탯
             if (count > 0)
-                BuffLinks.ToPoint(board.Team, slot, sum / count, _enemies ? BuffKind.Debuff : BuffKind.Stat);
+                BuffLinks.ToPoint(board.Team, slot, sum / count, _enemies ? BuffKind.Debuff : BuffKind.Stat, _enemies ? default : BuffLabel.Of(modifier));
         }
 
         public override string Describe(int level)

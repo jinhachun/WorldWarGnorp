@@ -20,19 +20,22 @@ namespace GnorpWar
         [Tooltip("진열이 잠겼을 때 카드 위에 뜨는 글")]
         [SerializeField] private Text _locked;
         [SerializeField] private Button _button;
-        [Tooltip("층 조각 뒤 빛(사용자 10/9) — 이미 가진 기물이면 은은한 흰 숨쉬기, 사면 바로 등급이 오르면 금색")]
+        [Tooltip("층 조각 뒤 빛(사용자 10/9) — 이미 가진 기물이면 은은한 흰 숨쉬기(RANK UP은 글자만 — 10/20)")]
         [SerializeField] private Image _glow;
         [Tooltip("사면 바로 등급이 오르는 카드 위에서 통통 튀는 「RANK UP!」")]
         [SerializeField] private Text _rankUp;
         [Tooltip("살 수 없는 카드(RunState.CanBuy가 거짓 — 골드 부족 등)는 카드 전체를 흐리게(사용자 10/10)")]
         [SerializeField] private CanvasGroup _group;
         private const float UnbuyableAlpha = 0.4f;
+        [Tooltip("팔린(빈) 진열 칸의 자리표시 — 회색 점선 칸(사용자 10/20 U9). 층 조각 자리에 원본 크기로")]
+        [SerializeField] private Image _sold;
+        private const string SoldMark = "—";
+        private static readonly Color SoldColor = new Color(0.43f, 0.43f, 0.46f);
+        private Color? _nameColor;
 
         // 빛 숨쉬기 · 글자 튐 — 작게·짧게(연출 과투자 금지)
         private static readonly Color OwnedGlow = Color.white;
-        private static readonly Color RankUpGlow = new Color(1f, 0.85f, 0.35f);
         private const float OwnedAlphaMin = 0.2f, OwnedAlphaMax = 0.55f, OwnedPeriod = 2.4f;
-        private const float RankUpAlphaMin = 0.55f, RankUpAlphaMax = 1f, RankUpPeriod = 1f;
         private const float RankUpHop = 8f, RankUpHopPeriod = 0.6f;
 
         private ShopPanel _shop;
@@ -71,7 +74,12 @@ namespace GnorpWar
             }
             _price.text = empty ? "" : $"{RunState.PriceOf(building)}";
             _coin.enabled = !empty;
-            _name.text = empty ? "" : building.DisplayName;
+            // 팔린 칸은 자리가 남는다 — 점선 칸 + 이름 자리에 「—」(이번 진열에서 몇 개 샀는지 보이게)
+            if (_sold != null)
+                _sold.enabled = empty;
+            _name.text = empty ? (_sold != null ? SoldMark : "") : building.DisplayName;
+            _nameColor ??= _name.color;
+            _name.color = empty ? SoldColor : _nameColor.Value;
             _button.interactable = canBuy;
             _group.alpha = empty || canBuy ? 1f : UnbuyableAlpha;   // 빛·「RANK UP!」도 같이 약해진다
             ShowOwnership(building);
@@ -92,7 +100,8 @@ namespace GnorpWar
                 string body = BuildingTooltip.Describe(building, OwnedBuilding.LevelOf(building, Upgrades), building.CooldownAt(OwnedBuilding.CooldownLevelOf(building, Upgrades)), false, extra);
                 if (pair != null)
                     body += BuildingTooltip.RankUpPreview(building, pair.Level, pair.Rarity + 1, extra);
-                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity + Upgrades), body, building.MentionedUnits, RunState.Field, false, upgrades);
+                BuildingTooltip.Show(this, BuildingTooltip.Title(building, false, building.Rarity + Upgrades), body, building.MentionedUnits, RunState.Field, false, upgrades,
+                    (building.Rarity + Upgrades, building.Nation));
             }
         }
 
@@ -101,14 +110,13 @@ namespace GnorpWar
         {
             bool rankUp = building != null && RunState.FindMergeTarget(building, Upgrades) != null;
             bool owned = !rankUp && building != null && Owns(building);
-            _glow.enabled = rankUp || owned;
+            _glow.enabled = owned;   // RANK UP은 글자 하나로만 알린다 — 금색 빛은 같은 말이라 뺐다(사용자 10/20 "불필요한 정보 줄이라")
             _rankUp.enabled = rankUp;
             if (float.IsNaN(_rankUpY))
                 _rankUpY = _rankUp.rectTransform.anchoredPosition.y;
             float t = Time.unscaledTime;
             if (rankUp)
             {
-                _glow.color = Pulse(RankUpGlow, RankUpAlphaMin, RankUpAlphaMax, RankUpPeriod, t);
                 Vector2 p = _rankUp.rectTransform.anchoredPosition;
                 _rankUp.rectTransform.anchoredPosition = new Vector2(p.x, _rankUpY + Mathf.Round(RankUpHop * Mathf.Abs(Mathf.Sin(t * Mathf.PI / RankUpHopPeriod))));
             }

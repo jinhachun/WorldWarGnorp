@@ -81,8 +81,8 @@ namespace GnorpWar
         // 관통 — 적용 대상 유닛의 화살 · 이 진영 타워의 화살이 적을 맞혀도 멈추지 않는다(관통탄 특허국)
         public virtual bool ProjectilesPierce => false;
         public virtual bool TowerArrowsPierce => false;
-        // 관통한 화살이 적을 맞힐 때마다 그 화살의 피해에 곱하는 값(관통탄 특허국 신화) — 유닛의 화살은 적용 분류로 거르고, 타워의 화살은 거르지 않고 읽는다
-        public virtual float PierceHitDamageFactor => 1f;
+        // 관통한 화살이 적을 맞힐 때마다 그 화살의 피해에 더하는 몫(관통탄 특허국 신화 1 = +100%, 합연산 — 효과끼리도 더한다) — 유닛의 화살은 적용 분류로 거르고, 타워의 화살은 거르지 않고 읽는다
+        public virtual float PierceHitDamageBonus => 0f;
         // 적용 대상 유닛이 공격 한 번에 더 쏘는 투사체 수(궁술수련관 신화) — 짧은 간격으로 잇달아 나가고 발마다 다른 적을 노린다(Unit.Burst). 아래는 그 발 사이 간격(초)
         public virtual int ExtraProjectiles => 0;
         public virtual float ExtraProjectileInterval => 0f;

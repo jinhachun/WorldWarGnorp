@@ -428,7 +428,7 @@ namespace GnorpWar
         private const int AiHappinessForUpgrades = 3;
         public static int HappinessFor(Team team) => team == Team.Ally ? Happiness : AiHappinessForUpgrades;
 
-        // 전투에서 이긴 탑의 필드 기물들에게 알린다(스팀바론 신화 「전투에서 승리할 때마다,」) — 그동안 상점 규칙(얻기)은 그 탑에 걸린다.
+        // 전투에서 이긴 탑의 필드 기물들에게 알린다(「전투에서 승리할 때마다,」 — 지금 쓰는 기물 없음) — 그동안 상점 규칙(얻기)은 그 탑에 걸린다.
         // 실제로 싸운 전투만이다 — AI 영주끼리의 승패(World/TowerPower)는 여기를 지나지 않는다
         private static void NotifyBattleWon(TowerState tower)
         {
@@ -584,6 +584,14 @@ namespace GnorpWar
             ForEachFieldPassive((passive, owned) => passive.OnGoldGained(owned));
         }
 
+        // 전투 중에 그 진영의 탑이 골드를 얻는다(주식시장) — 아군 = 내 탑 · 적 = 침략한 영주의 탑. 상점 밖이라 그 탑을 잠깐 지금 쪽으로 세운다
+        public static void GainBattleGold(Team team, int amount)
+        {
+            TowerState tower = team == Team.Ally ? Player : _opponentTower;
+            if (tower != null)
+                As(tower, () => GainGold(amount));
+        }
+
         // 상점 훅은 필드의 기물만 — 보관함은 효과가 없다
         private static void ForEachFieldPassive(System.Action<BuildingPassive, OwnedBuilding> call)
         {
@@ -593,10 +601,10 @@ namespace GnorpWar
                         call(passive, owned);
         }
 
-        // 「구매할 때마다,」 — 산 기물(합쳐졌으면 합쳐진 결과)에서, 필드의 스팀바론이 있으면 2번. 그다음 필드 기물의 "기물을 샀다" 훅(주식시장)
+        // 「구매할 때마다,」 — 산 기물(합쳐졌으면 합쳐진 결과)에서. 그다음 필드 기물의 "기물을 샀다" 훅(이동식 공장)
         private static void OnBought(OwnedBuilding owned)
         {
-            BuildingPassive.TriggerBuyEffects(owned, _side.Team, BuildingPassive.BuyRepeats(Field));
+            BuildingPassive.TriggerBuyEffects(owned, _side.Team, 1);
             ForEachFieldPassive((passive, self) => passive.OnAnyBought(self, owned));
         }
 
@@ -804,6 +812,19 @@ namespace GnorpWar
             UpgradesChanged?.Invoke();
         }
 
+        // 맨 앞 대기가 지역 특수(신화) 고르기면 고르지 않고 골드를 받을 수 있다 — 플레이어만(AI · Invade 직전 자동 고르기는 쓰지 않는다, 사용자 10/15)
+        public static bool CanSkipUpgrade => Pending.Count > 0 && Pending[0].Rarity == BuildingRarity.Mythic && !Pending[0].Granted;
+        public static int UpgradeSkipGold => _config.World.SpecialSkipGold;
+
+        public static void SkipUpgrade()
+        {
+            if (!CanSkipUpgrade)
+                return;
+            Pending.RemoveAt(0);
+            As(Player, () => GainGold(UpgradeSkipGold));
+            UpgradesChanged?.Invoke();
+        }
+
         // 지금 차례인 탑이 업그레이드 하나를 얻는다 — 운영 계열은 얻은 그 턴부터다(사용자 결정 10/13): 곡창은 그 등급의 골드를 바로 받고(골드를 얻은 것이라 골드 훅도 울린다),
         // 암시장은 그 등급의 횟수가 이번 턴 남은 무료 리롤에 더해진다. 다음 턴부터는 턴 수입 · 턴 시작 충전에 합쳐진 값으로 붙는다
         private static void GainUpgrade(UpgradeDefinition upgrade, BuildingRarity rarity)
@@ -823,6 +844,13 @@ namespace GnorpWar
         {
             World.SyncSpecials(lord);
             TowerState tower = lord.IsPlayer ? Player : World.TowerOf(lord);
+            return tower != null ? tower.Holdings() : new System.Collections.Generic.List<UpgradeHolding>();
+        }
+
+        // 이번 전투에서 team의 탑(내 탑 · 침략한 영주의 탑)이 가진 업그레이드 — 읽기만(전투 시작 알림 Fx/BattleStartLines)
+        public static System.Collections.Generic.List<UpgradeHolding> HoldingsFor(Team team)
+        {
+            TowerState tower = team == Team.Ally ? Player : _opponentTower;
             return tower != null ? tower.Holdings() : new System.Collections.Generic.List<UpgradeHolding>();
         }
 

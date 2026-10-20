@@ -14,6 +14,29 @@ namespace GnorpWar
         Trigger,        // 다른 기물을 즉시 발동시키거나 그 효과를 한 번 더 · 기물을 멈춤(제물의 의식)
     }
 
+    // 버프 글자(대상 위에 뜨는 「[아이콘] +5%」 — Fx/BuffTexts)의 아이콘. 아이콘이 없는 스탯은 글에 이름을 쓴다
+    public enum BuffIcon { None, Attack, Hp, Cooldown, AttackSpeed }
+
+    // 버프 글자 한 줄 — 스탯 · 쿨다운 배율만(사용자 10/15). Text가 null이면 글자 없음
+    public struct BuffLabel
+    {
+        public BuffIcon Icon;
+        public string Text;
+
+        public static BuffLabel Of(StatModifier m)
+            => m.Stat == UnitStat.Attack ? New(BuffIcon.Attack, m.ValueText) : m.Stat == UnitStat.MaxHp ? New(BuffIcon.Hp, m.ValueText)
+                : m.Stat == UnitStat.AttackSpeed ? New(BuffIcon.AttackSpeed, m.ValueText) : New(BuffIcon.None, m.Describe());
+
+        public static BuffLabel Of(TowerModifier m)
+            => m.Stat == TowerStat.Attack ? New(BuffIcon.Attack, m.ValueText) : m.Stat == TowerStat.MaxHp ? New(BuffIcon.Hp, m.ValueText)
+                : m.Stat == TowerStat.AttackSpeed ? New(BuffIcon.AttackSpeed, m.ValueText) : New(BuffIcon.None, $"{m.Name} {m.ValueText}");
+
+        // 쿨다운에 곱한 값 — 「×0.8」
+        public static BuffLabel Cooldown(float factor) => New(BuffIcon.Cooldown, new StatModifier(UnitStat.Attack, StatOp.Multiply, factor).ValueText);
+
+        private static BuffLabel New(BuffIcon icon, string text) => new BuffLabel { Icon = icon, Text = text };
+    }
+
     public struct BuffLink
     {
         public Team Team;
@@ -30,6 +53,8 @@ namespace GnorpWar
         public BuffKind Kind;
         // 늘 켜진 효과(풍차)를 대상이 발동할 때마다 다시 알리는 것 — 약하게 그린다
         public bool Weak;
+        // 대상 위에 띄울 버프 글자(없으면 Text = null)
+        public BuffLabel Label;
     }
 
     // "어떤 기물이 누구에게 무엇을 줬나" 알림 한 곳 — 효과를 거는 그 순간, 건 횟수만큼 부른다(그리는 쪽이 솎는다).
@@ -41,28 +66,28 @@ namespace GnorpWar
         // 늘 켜진 기물 → 기물 효과(진영별) — 전투 시작마다 비운다(BoardRunner.Begin)
         private static readonly List<BuffLink>[] StandingByTeam = { new List<BuffLink>(), new List<BuffLink>() };
 
-        public static void ToSlot(Team team, int from, int to, BuffKind kind)
-            => Raised?.Invoke(new BuffLink { Team = team, From = from, To = to, Kind = kind });
+        public static void ToSlot(Team team, int from, int to, BuffKind kind, BuffLabel label = default)
+            => Raised?.Invoke(new BuffLink { Team = team, From = from, To = to, Kind = kind, Label = label });
 
-        public static void ToPoint(Team team, int from, Vector2 at, BuffKind kind)
-            => Raised?.Invoke(new BuffLink { Team = team, From = from, To = -1, At = at, Kind = kind });
+        public static void ToPoint(Team team, int from, Vector2 at, BuffKind kind, BuffLabel label = default)
+            => Raised?.Invoke(new BuffLink { Team = team, From = from, To = -1, At = at, Kind = kind, Label = label });
 
         // 내 타워 전부(본진 + 작은 타워)에게 — 선은 각 타워의 화살이 나가는 자리로
-        public static void ToTowers(Team team, int from, BuffKind kind)
+        public static void ToTowers(Team team, int from, BuffKind kind, BuffLabel label = default)
         {
             if (Raised == null || from < 0)
                 return;
             Base main = Base.For(team);
             if (main != null && main.IsAlive)
-                Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = main.Muzzle, Tower = 1, Kind = kind });
+                Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = main.Muzzle, Tower = 1, Kind = kind, Label = label });
             int number = 1;
             foreach (Base small in Base.SmallTowers())
                 if (small.Team == team)
-                    Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = small.Muzzle, Tower = ++number, Kind = kind });
+                    Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = small.Muzzle, Tower = ++number, Kind = kind, Label = label });
         }
 
         // 내 유닛 무리에게(진영 단위 스탯) — 선 하나를 무리 가운데로. filter를 비우면 전부
-        public static void ToUnits(Team team, int from, BuffKind kind, IUnitFilter filter = null)
+        public static void ToUnits(Team team, int from, BuffKind kind, IUnitFilter filter = null, BuffLabel label = default)
         {
             if (Raised == null)
                 return;
@@ -75,16 +100,33 @@ namespace GnorpWar
                     count++;
                 }
             if (count > 0)
-                ToPoint(team, from, sum / count, kind);
+                ToPoint(team, from, sum / count, kind, label);
+        }
+
+        // 기물이 한 일이 전장의 한 자리에서 다른 자리로 이어진다(조립 라인 — 소모된 무리 가운데 → 거인). 솎기 열쇠는 그 기물의 칸
+        public static void FromPoint(Team team, int slot, Vector2 from, Vector2 to, BuffKind kind)
+            => Raised?.Invoke(new BuffLink { Team = team, From = slot, To = -1, FromAt = from, At = to, Kind = kind });
+
+        // 업그레이드 · 지역 특수(켠 기물이 없다)가 낸 것 — 그 진영 본진의 화살 발사점에서 나간다(사용자 10/20 Q1). 본진이 없으면 긋지 않는다
+        public static void FromBase(Team team, Vector2 at, BuffKind kind, BuffLabel label = default)
+        {
+            if (Raised != null && Base.For(team) is Base home && home.IsAlive)
+                Raised.Invoke(new BuffLink { Team = team, From = -1, To = -1, FromAt = home.Muzzle, At = at, Kind = kind, Label = label });
+        }
+
+        public static void FromBaseToSlot(Team team, int to, BuffKind kind, BuffLabel label = default)
+        {
+            if (Raised != null && Base.For(team) is Base home && home.IsAlive)
+                Raised.Invoke(new BuffLink { Team = team, From = -1, To = to, FromAt = home.Muzzle, Kind = kind, Label = label });
         }
 
         // 유닛 효과(진영 단위)가 낸 것 — 그 효과를 켠 기물의 칸에서 나간다
-        public static void EffectToPoint(Team team, UnitEffect effect, Vector2 at, BuffKind kind)
+        public static void EffectToPoint(Team team, UnitEffect effect, Vector2 at, BuffKind kind, BuffLabel label = default)
         {
             if (Raised == null)
                 return;
             for (int slot = NextSlotOf(team, effect, 0); slot >= 0; slot = NextSlotOf(team, effect, slot + 1))
-                ToPoint(team, slot, at, kind);
+                ToPoint(team, slot, at, kind, label);
         }
 
         public static void EffectToSlot(Team team, UnitEffect effect, int to, BuffKind kind)
@@ -96,28 +138,33 @@ namespace GnorpWar
                     ToSlot(team, slot, to, kind);
         }
 
-        // 유닛 효과를 유닛이 냈다(죽으며 · 처치하며 · 소환되며 등) — 선은 그 유닛의 자리(from)에서 대상(to)으로. 그 효과를 켠 기물이 없으면(합치기 보상 등) 긋지 않는다.
-        // 두 자리가 거의 같으면(그 자리에 소환 등) 선이 안 보이므로 켠 기물의 층에서 긋는다
-        public static void EffectFromUnit(Team team, UnitEffect effect, Vector2 from, Vector2 to, BuffKind kind)
+        // 유닛 효과를 유닛이 냈다(죽으며 · 처치하며 · 소환되며 등) — 선은 그 유닛의 자리(from)에서 대상(to)으로.
+        // 그 효과를 켠 기물이 없으면(유닛의 늘 켜진 효과 · 합치기 보상 등 — 사용자 10/20) 기물 칸 없이 유닛에서만 긋는다(두 자리가 거의 같으면 긋지 않는다).
+        // 기물이 있고 두 자리가 거의 같으면(그 자리에 소환 등) 선이 안 보이므로 켠 기물의 층에서 긋는다
+        public static void EffectFromUnit(Team team, UnitEffect effect, Vector2 from, Vector2 to, BuffKind kind, BuffLabel label = default)
         {
             if (Raised == null)
                 return;
             int slot = NextSlotOf(team, effect, 0);
             if (slot < 0)
+            {
+                if ((to - from).sqrMagnitude >= MinUnitLink * MinUnitLink)
+                    Raised.Invoke(new BuffLink { Team = team, From = -1, To = -1, FromAt = from, At = to, Kind = kind, Label = label });
                 return;
+            }
             if ((to - from).sqrMagnitude < MinUnitLink * MinUnitLink)
-                EffectToPoint(team, effect, to, kind);
+                EffectToPoint(team, effect, to, kind, label);
             else
-                Raised.Invoke(new BuffLink { Team = team, From = slot, To = -1, FromAt = from, At = to, Kind = kind });
+                Raised.Invoke(new BuffLink { Team = team, From = slot, To = -1, FromAt = from, At = to, Kind = kind, Label = label });
         }
 
         // 유닛에서 그 진영의 유닛 무리(조건에 맞는 것) 가운데로 — 무리가 없으면 긋지 않는다
-        public static void EffectFromUnitToUnits(Team team, UnitEffect effect, Vector2 from, Team recipients, System.Func<Unit, bool> filter, BuffKind kind)
+        public static void EffectFromUnitToUnits(Team team, UnitEffect effect, Vector2 from, Team recipients, System.Func<Unit, bool> filter, BuffKind kind, BuffLabel label = default)
         {
             if (Raised == null || NextSlotOf(team, effect, 0) < 0 || Throttled(team, effect))
                 return;
             if (Centroid(recipients, filter, out Vector2 at))
-                EffectFromUnit(team, effect, from, at, kind);
+                EffectFromUnit(team, effect, from, at, kind, label);
         }
 
         // 무리 가운데를 찾는 건 유닛 전부를 훑는다 — 공격 · 회복마다 부르는 효과가 많으면 비싸므로, 같은 효과는 그리는 쪽의 솎기 시간(BuffLinkFx)만큼 건너뛴다
@@ -141,17 +188,17 @@ namespace GnorpWar
         }
 
         // 유닛 효과를 켠 기물의 층에서 그 진영의 유닛 무리(조건에 맞는 것) 가운데로 — 유닛이 아니라 시각 · 진영이 낸 것(교대근무계획서 신화)
-        public static void EffectToUnits(Team team, UnitEffect effect, System.Func<Unit, bool> filter, BuffKind kind)
+        public static void EffectToUnits(Team team, UnitEffect effect, System.Func<Unit, bool> filter, BuffKind kind, BuffLabel label = default)
         {
             if (Raised != null && NextSlotOf(team, effect, 0) >= 0 && !Throttled(team, effect) && Centroid(team, filter, out Vector2 at))
-                EffectToPoint(team, effect, at, kind);
+                EffectToPoint(team, effect, at, kind, label);
         }
 
         // 기물의 층에서 어느 진영이든 유닛 무리(조건에 맞는 것) 가운데로 — 적에게 거는 것(디버프)도
-        public static void ToUnitsOf(Team team, int from, Team recipients, System.Func<Unit, bool> filter, BuffKind kind)
+        public static void ToUnitsOf(Team team, int from, Team recipients, System.Func<Unit, bool> filter, BuffKind kind, BuffLabel label = default)
         {
             if (Raised != null && Centroid(recipients, filter, out Vector2 at))
-                ToPoint(team, from, at, kind);
+                ToPoint(team, from, at, kind, label);
         }
 
         private static bool Centroid(Team team, System.Func<Unit, bool> filter, out Vector2 at)
@@ -190,10 +237,10 @@ namespace GnorpWar
         }
 
         // 늘 켜진 기물 → 기물 효과 — 지금 한 번 알리고, 대상이 발동할 때마다 약하게 다시 알린다
-        public static void Standing(Team team, int from, int to, BuffKind kind)
+        public static void Standing(Team team, int from, int to, BuffKind kind, BuffLabel label = default)
         {
             StandingByTeam[(int)team].Add(new BuffLink { Team = team, From = from, To = to, Kind = kind, Weak = true });
-            ToSlot(team, from, to, kind);
+            ToSlot(team, from, to, kind, label);
         }
 
         public static void ClearStanding(Team team) => StandingByTeam[(int)team].Clear();

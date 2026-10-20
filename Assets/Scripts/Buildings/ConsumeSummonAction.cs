@@ -33,9 +33,16 @@ namespace GnorpWar
                 return;
 
             _found.Sort((a, b) => (a.Position.x * a.Forward).CompareTo(b.Position.x * b.Forward));
+            Vector2 consumed = Vector2.zero;
             for (int i = 0; i < _consumeCount; i++)
+            {
+                consumed += _found[i].Position;
                 _found[i].Consume();
+            }
             board.Summon(_summon, SummonCount(level), slot);
+            // 사라진 무리 가운데 → 새로 나온 유닛(둘이 이어져 보이게)
+            if (board.LastSpawned != null && _consumeCount > 0)
+                BuffLinks.FromPoint(board.Team, slot, consumed / _consumeCount, board.LastSpawned.Position, BuffKind.Summon);
         }
 
         public override string Describe(int level)

@@ -10,7 +10,7 @@ namespace GnorpWar
     // 고른 땅이 없으면 같은 배치로 나(구분선 아래는 안내 글만), 내 땅을 고르면 나 + 그 땅의 지형.
     // 내가 가진 업그레이드는 여기가 아니라 위 줄의 「땅 n/30」 오른쪽에 늘어놓는다(ShowStatus — 넘치면 좌우로 끌어서 민다).
     // 지형 · 가진 업그레이드의 효과는 글로 쓰지 않는다 — 아이콘에 마우스를 올리면 뜬다(UI/UpgradeIcon). 고른 땅의 지역 특수 업그레이드만 효과를 글로도 쓴다. 행복도는 하트 아이콘이다.
-    // 오른쪽 기둥에는 그 영주의 탑이 선다 — 상점 탑과 같은 층 그림(SlotView)이고 층에 마우스를 올리면 기물 설명 창이 뜬다. 내 땅을 고르면 내 탑.
+    // 오른쪽 기둥에는 그 영주의 탑이 선다 — 상점 탑과 같은 층 그림(SlotView)이고 층에 마우스를 올리면 기물 설명 창이 뜬다. 내 땅을 고르거나 아무 땅도 안 고르면 내 탑.
     // 무엇을 고를지 · 명령 버튼은 WorldManager가 정한다
     public class WorldSidePanel : MonoBehaviour
     {
@@ -189,7 +189,8 @@ namespace GnorpWar
             {
                 _landBody.text = _noLandHint;
                 PlaceText(_landBody, center, y - BlockGap);
-                ShowTower(null, false, Color.white);
+                // 고른 땅이 없어도 탑 기둥에는 내 탑(사용자 10/20 U15 — 지도에서도 내 빌드가 보이게). 상점 중에는 상점의 내 탑에 내준다 · 알림 때는 비운다
+                ShowTower(land && !shop ? RunState.Field : null, false, RunState.ColorOf(state.Player));
                 return;
             }
 

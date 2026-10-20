@@ -55,6 +55,8 @@ namespace GnorpWar
         private float _targetScanTimer;
         private IDamageable _cachedTarget;
         private Collider2D _cachedTargetCollider;
+        // 찾은 적을 이 시각(Time.fixedTime)까지는 다시 고르지 않는다(BattleManager.TargetHold) — 앞뒤 적이 번갈아 가까워질 때 대상이 매 검색마다 바뀌지 않게
+        private float _targetHoldUntil;
         private Collider2D _foundCollider;
         // 프리스트의 회복 대상 캐시 — 같은 간격으로만 새로 찾는다
         private float _supportScanTimer;
@@ -62,6 +64,11 @@ namespace GnorpWar
         // 기지 위 유닛 검사 캐시(걷기) — 같은 간격으로만 새로 본다
         private float _walkScanTimer;
         private bool _aheadOnBaseUnit;
+        // 뒤돌아 싸움 검사 캐시(걷기, 같은 간격) — 등 뒤 가장 가까운 적 유닛의 x(없으면 NaN)
+        private float _turnBackScanTimer;
+        private float _turnBackX = float.NaN;
+        // 뒤돌기를 그만둔 뒤 이 시각까지는 다시 돌아서지 않는다(BattleManager.TargetHold)
+        private float _turnBackRetryAt;
         private readonly ContactPoint2D[] _contacts = new ContactPoint2D[16];
         private readonly List<Collider2D> _overlaps = new List<Collider2D>();
         private float _lastX;
@@ -253,9 +260,6 @@ namespace GnorpWar
                 foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
                     if (e.Effect.AppliesFor(killer._team, killer._definition))
                         e.Effect.OnKill(killer, this, e.Stacks);
-                // 그 진영의 유닛이 처치했다(아군을 죽인 것도 처치다) — 기물이 처치 수를 센다(약탈족장 라이칸스로프)
-                if (BoardRunner.For(killer._team) is BoardRunner board)
-                    board.NotifyUnitKill(killer, this);
             }
             else if (attacker is Base tower)
                 tower.NotifyKill(this);
@@ -265,9 +269,13 @@ namespace GnorpWar
             Team foe = _team == Team.Ally ? Team.Enemy : Team.Ally;
             foreach (TeamEffects.Entry e in TeamEffects.For(foe))
                 e.Effect.OnEnemyDied(foe, this, at, e.Stacks);
+            // 양 진영의 기물이 죽은 수를 센다(약탈족장 라이칸스로프 — 아군·적 구분 없이)
+            BoardRunner.For(Team.Ally)?.NotifyUnitDied(this);
+            BoardRunner.For(Team.Enemy)?.NotifyUnitDied(this);
             if (!revives)
                 return;
             _hp = MaxHp;
+            PillarFx.Rise(new Vector2(at.x, Feet), Top - Feet);   // 다시 일어나는 순간 발밑에서 기둥
             _doomTimer = 0f;
             _doomKiller = null;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -585,7 +593,12 @@ namespace GnorpWar
         {
             _slowFactor = Time.fixedTime < _slowUntil ? Mathf.Min(_slowFactor, factor) : factor;
             _slowUntil = Time.fixedTime + seconds;
+            StatusDots.Watch(this);
         }
+
+        // 지금 느려진 중 · 불타는 중 — 몸 상태 점(Fx/StatusDots)이 읽는다
+        public bool IsSlowed => Time.fixedTime < _slowUntil;
+        public bool IsBurning => _burnTicksLeft > 0;
 
         // 고지 점령 — 방금 공격한 적보다 높은 고도였으면 다음 공격까지의 간격에 공격속도 +%(합연산)를 얹는다
         private float IntervalAfter(IDamageable target)
@@ -596,7 +609,16 @@ namespace GnorpWar
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     bonus += e.Effect.HighGroundAttackSpeedBonus(_team);
+            if (bonus > 0f)
+                HighGroundSpark(target, new Vector2(Forward, 0f));
             return bonus > 0f ? _definition.AttackInterval / Compute(UnitStat.AttackSpeed, bonus) : AttackInterval;
+        }
+
+        // 고지 보너스가 붙은 타격 — 맞은 자리에 주황 섬광(기름투하대 · 고지 점령)
+        private static void HighGroundSpark(IDamageable target, Vector2 direction)
+        {
+            if (FxDirector.Instance != null && target is Unit hit)
+                FxDirector.Instance.HitSpark(hit.Position, direction, FxDirector.FireColor);
         }
 
         // 돌격 나팔 — 이 생애의 첫 공격에 곱하는 피해 배율(1 + 켜진 효과들의 +%). 한 번 읽으면 그 효과는 썼다
@@ -617,7 +639,7 @@ namespace GnorpWar
         public void ShootExtra()
         {
             if (_definition.AttackType == AttackType.Ranged && FindTarget(out IDamageable target, out Vector2 targetPoint))
-                Shoot(target, targetPoint);
+                Shoot(target, targetPoint, true);
         }
         // 다음 공격까지 — 이번 스텝에 넘친 시간(한 스텝까지)을 이월한다. 안 하면 간격이 물리 스텝 배수로 올림돼 공격이 느려진다
         // (0.033초 스텝에서 0.167초 간격이 0.2초가 되는 식). 오래 쉬다 쏜 첫 발은 한 스텝까지만 이월해 연사가 몰리지 않는다
@@ -639,8 +661,8 @@ namespace GnorpWar
                 if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.OnSummoned(this, sourceSlot, e.Stacks);
         }
-        private float Feet => _rb.position.y - _halfHeight;
-        private float Top => _rb.position.y + _halfHeight;
+        public float Feet => _rb.position.y - _halfHeight;
+        public float Top => _rb.position.y + _halfHeight;
 
         // 고도(트라이브 명세 §2-3 · 사용자 결정 10/13) — 발 높이 − 그 맵에서 가장 낮은 땅의 높이, 1 = 1칸. 지금 값이다:
         // 맵의 언덕 · 뼛가루 언덕 · 아군을 밟고 선 높이 · 점프가 전부 들어간다. 「대상보다 높은가」(기름투하대 · 고지 점령 — IsAbove)와는 다른 값이다
@@ -780,6 +802,9 @@ namespace GnorpWar
             _stats[(int)UnitStat.Attack] = 0f;  // 지난 생애의 공격력과 비교해 오라가 켜지지 않게
             _attackAuraTimer = 0f;
             _hp = 0f;
+            // 늘 켜진 효과(미노타우로스의 고도) — 이 유닛을 낸 기물과 상관없이 내 진영에 켠다(전투 시작에 TeamEffects가 비워진다)
+            foreach (UnitEffect effect in _definition.InnateEffects)
+                TeamEffects.Enable(_team, effect, 1);
             RefreshStats();
             _hp = MaxHp;
             _lastX = transform.position.x;
@@ -807,8 +832,12 @@ namespace GnorpWar
             _targetScanTimer = Random.Range(0f, TargetScanInterval);
             _cachedTarget = null;
             _cachedTargetCollider = null;
+            _targetHoldUntil = 0f;
+            _turnBackRetryAt = 0f;
             _supportScanTimer = Random.Range(0f, TargetScanInterval);
             _walkScanTimer = Random.Range(0f, TargetScanInterval);
+            _turnBackScanTimer = Random.Range(0f, TargetScanInterval);
+            _turnBackX = float.NaN;
             _cachedPatient = null;
             _aheadOnBaseUnit = false;
             _buildPhase = BuildPhase.Find;
@@ -894,6 +923,7 @@ namespace GnorpWar
             _targetScanTimer -= Time.fixedDeltaTime;
             _supportScanTimer -= Time.fixedDeltaTime;
             _walkScanTimer -= Time.fixedDeltaTime;
+            _turnBackScanTimer -= Time.fixedDeltaTime;
 
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
@@ -1126,6 +1156,9 @@ namespace GnorpWar
                     if (_definition.AttackType != AttackType.Flame && _definition.AttackType != AttackType.Sweep)
                         LookToward(toTarget.x);
                     _attackScale = FirstAttackScale();
+                    // 돌격 나팔 — 첫 공격이 세졌다: 노린 자리에 빨간 섬광(스탯 색)
+                    if (_attackScale > 1f && FxDirector.Instance != null)
+                        FxDirector.Instance.HitSpark(targetPoint, hitDirection, BuffLinkFx.ColorOf(BuffKind.Stat));
                     if (_definition.AttackType == AttackType.Flame)
                     {
                         BreatheFire();
@@ -1161,6 +1194,34 @@ namespace GnorpWar
             // 싸울 상대가 없다 — 다시 앞을 본다
             _lookBack = false;
             _runTime = IsStopped ? 0f : _runTime + Time.fixedDeltaTime;
+
+            // 뒤돌아 싸움(사용자 10/16 — 백도어 줄이기) — 「뒤돌아 싸움」 병종은 등 뒤 가까이 적 유닛이 남아 있으면 돌아서서 그쪽으로 걸어간다.
+            // 사거리에 들면 위의 싸움 분기가 치고, 대상이 사라지거나 멀어지면 다시 앞으로. 땅을 딛고 선 유닛만(산 위에서는 머리 넘기 규칙이 우선)
+            // 이미 돌아서 있으면 발밑이 한 스텝 땅이 아니어도(작은 턱 · 아군 어깨) 이어 간다 — 안 그러면 그 스텝만 앞을 보고 앞으로 걸어 떨린다
+            if (!_climbing && (onGroundSurface || !float.IsNaN(_turnBackX)))
+            {
+                if (_turnBackScanTimer <= 0f)
+                {
+                    // 들어가는 거리와 나오는 거리가 다르다(히스테리시스) — 돌아서 있으면 칸 + 여유 안까지 계속, 그만두면 TargetHold 동안은 다시 안 돌아선다
+                    bool turning = !float.IsNaN(_turnBackX);
+                    float range = BattleManager.TurnBackRange + (turning ? BattleManager.TurnBackExit : 0f);
+                    float x = turning || Time.fixedTime >= _turnBackRetryAt ? BehindEnemyX(range) : float.NaN;
+                    if (turning && float.IsNaN(x))
+                        _turnBackRetryAt = Time.fixedTime + BattleManager.TargetHold;
+                    _turnBackX = x;
+                    _turnBackScanTimer = TargetScanInterval;
+                }
+                if (!float.IsNaN(_turnBackX))
+                {
+                    // 뒤로 걷는 동안은 늘 뒤를 본다 — 적이 거의 같은 x면 LookToward의 무감 구간에 걸려 앞을 본 채 뒤로 걷던 것을 막는다
+                    LookToward(-Forward);
+                    // 스스로 뒤로 걷는 유일한 경우 — 뒤로 못 가는 래칫(HoldBack)을 이 스텝만 끈다
+                    _holdBack = false;
+                    velocity.x = -Forward * MoveSpeed;
+                    _rb.linearVelocity = velocity;
+                    return;
+                }
+            }
 
             // 기지 위는 한 층만 — 기지 위 유닛 머리로 걸어 올라가지도 않는다
             WalkMarker.Begin();
@@ -1232,6 +1293,7 @@ namespace GnorpWar
                     if (e.Effect.AppliesFor(_team, _definition) && e.Effect.FirstDeathHealRatio(_team) > 0f && UseOnce(e.Effect))
                     {
                         _hp = MaxHp * e.Effect.FirstDeathHealRatio(_team);
+                        PillarFx.Rise(new Vector2(_rb.position.x, Feet), Top - Feet);   // 죽을 뻔한 순간 다시 일어난다 — 기둥
                         return;
                     }
                 // 충정의 맹세 — 처음 죽을 때 대신 N초 무적, 그 뒤 쓰러진다(처치자는 그때 정해진 대로)
@@ -1410,6 +1472,42 @@ namespace GnorpWar
             return target != null;
         }
 
+        // 뒤돌아 싸움 — 등 뒤 높이 TurnBackHeight 칸 · 가로 range 칸(돌아서기 = BattleConfig 「뒤돌아 싸움」 칸, 그만두기 = 그 칸 + 여유) 안의 가장 가까운 살아 있는 적 유닛의 x. 없거나 내 병종이 안 돌아서면 NaN.
+        // 발밑 적(머리 넘기)은 세지 않는다
+        private const float TurnBackHeight = 2f;
+
+        private float BehindEnemyX(float range)
+        {
+            if (range <= 0f || _definition.Category == null || !_definition.Category.TurnBack)
+                return float.NaN;
+            Physics2D.OverlapBox(_rb.position - new Vector2(Forward * range * 0.5f, 0f), new Vector2(range, TurnBackHeight), 0f, _enemyFilter, _overlaps);
+            float best = float.MaxValue, x = float.NaN;
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out Unit enemy) || enemy._team == _team || !enemy.IsAlive || IsUnderfoot(enemy))
+                    continue;
+                float behind = (_rb.position.x - enemy._rb.position.x) * Forward;
+                if (behind > 0f && behind < best)
+                {
+                    best = behind;
+                    x = enemy._rb.position.x;
+                }
+            }
+            if (float.IsNaN(x))
+                return x;
+            // 그 적과 나 사이에 앞을 보고 선 내 아군이 있으면 돌아서지 않는다 — 앞쪽과 싸우는 아군 벽 너머의 적을 향해 걷다 막혀
+            // 경계에서 앞뒤로 떨던 것(사용자 10/20)을 막는다. 사이의 아군이 이미 그쪽으로 돌아서 있으면 따라 돌아선다(뒤에서 함께 막는다)
+            Physics2D.OverlapBox(new Vector2((_rb.position.x + x) * 0.5f, _rb.position.y), new Vector2(best, TurnBackHeight), 0f, _allyFilter, _overlaps);
+            foreach (Collider2D col in _overlaps)
+                if (col.TryGetComponent(out Unit ally) && ally != this && ally._team == _team && ally.IsAlive && !ally._lookBack
+                    && (_rb.position.x - ally._rb.position.x) * Forward > TurnBackAllyGap)
+                    return float.NaN;
+            return x;
+        }
+
+        // 사이에 선 아군으로 치는 거리 — 나와 맞닿아 겹친 아군은 빼고
+        private const float TurnBackAllyGap = 0.5f;
+
         private UnitCategory PreferredTarget()
         {
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -1524,7 +1622,7 @@ namespace GnorpWar
         private float _climbLandFeet;
 
         // 뒤로 못 가는 래칫(사용자 10/10 "뒤로 점프는 아예 하지마") — 넉백(경직)이 아닌 유닛은 물리 스텝이 뒤로 민 만큼 되돌린다.
-        // 유닛은 스스로 뒤로 걷지 않으므로 남는 뒤로 움직임은 전부 충돌(짓눌림 · 받침이 밀림 · 넉백된 유닛에 부딪힘)이다.
+        // 유닛은 스스로 뒤로 걷지 않으므로(뒤돌아 싸움 — 그 스텝은 끈다) 남는 뒤로 움직임은 전부 충돌(짓눌림 · 받침이 밀림 · 넉백된 유닛에 부딪힘)이다.
         // 물리 스텝 직후(WaitForFixedUpdate)에 고쳐야 밀린 자리가 한 번도 그려지지 않는다. 물리 검사는 없다
         private static readonly WaitForFixedUpdate AfterPhysics = new WaitForFixedUpdate();
         private bool _holdBack;
@@ -1583,9 +1681,11 @@ namespace GnorpWar
                 return FindTargetCachedCore(out target, out targetPoint);
         }
 
+        // 찾은 적은 TargetHold 동안 다시 고르지 않는다(검색 간격이 돌아와도) — 죽거나 · 발밑으로 들어가거나 · 사거리 밖이면 바로 다시 찾는다.
+        // 공격은 지금처럼 사거리 안이면 바로 한다(대상만 붙잡는다)
         private bool FindTargetCachedCore(out IDamageable target, out Vector2 targetPoint)
         {
-            if (_targetScanTimer > 0f)
+            if (_targetScanTimer > 0f || (_cachedTarget != null && Time.fixedTime < _targetHoldUntil))
             {
                 target = null;
                 targetPoint = default;
@@ -1607,6 +1707,8 @@ namespace GnorpWar
             bool found = FindTarget(out target, out targetPoint);
             _cachedTarget = found ? target : null;
             _cachedTargetCollider = found ? _foundCollider : null;
+            if (found)
+                _targetHoldUntil = Time.fixedTime + BattleManager.TargetHold;
             return found;
         }
 
@@ -1636,28 +1738,33 @@ namespace GnorpWar
 
         // 화살(돌) 한 발(타워 효과를 함께 받는 유닛이면 대상 하나에 그 수만큼) — 고도 보너스 · 높은 고도였나(기름투하대)는 쏘는 순간 그 적 기준,
         // 관통 · 관통 타격마다의 피해 배율(관통탄 특허국)은 켜진 효과에서 읽는다
-        private void Shoot(IDamageable target, Vector2 targetPoint)
+        // extra = 처치해서 더 쏜 발(연사 — 노란 꼬리). 여러 발이면 그림만 잠깐 벌어진다(Fx/ArrowFan)
+        private void Shoot(IDamageable target, Vector2 targetPoint, bool extra = false)
         {
             bool pierce = false;
-            float pierceFactor = 1f;
+            float pierceBonus = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                 {
                     pierce |= e.Effect.ProjectilesPierce;
-                    pierceFactor *= e.Effect.PierceHitDamageFactor;
+                    pierceBonus += e.Effect.PierceHitDamageBonus;
                 }
-            // 타워 효과를 함께 받는 유닛이면 타워의 화살 수 변경이 얹힌다(화살 강화기 신화 — 스팀바론 ×2)
+            // 타워 효과를 함께 받는 유닛이면 타워의 화살 수 변경이 얹힌다(화살 강화기 신화)
             int count = Mathf.Max(1, Mathf.RoundToInt(TowerBook.SharedCompute(_team, _definition, TowerStat.ArrowCount, 1f)));
-            float damage = AttackDamage * DamageScale * HighGroundScale(target);
+            float highGround = HighGroundScale(target);
+            float damage = AttackDamage * DamageScale * highGround;
             bool above = IsAbove(target);
             for (int i = 0; i < count; i++)
             {
                 Projectile shot = Pooled.Get(_definition.Projectile, WeaponPoint, Quaternion.identity);
                 shot.Launch(_team, damage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
                 if (pierce)
-                    shot.Pierce(pierceFactor);
+                    shot.Pierce(pierceBonus);
                 if (above)
-                    shot.HighGround();
+                    shot.HighGround(highGround > 1f);
+                if (extra)
+                    shot.MarkExtra();
+                ArrowFan.Fan(shot, i, count);
             }
         }
 
@@ -1730,8 +1837,11 @@ namespace GnorpWar
         private void Strike(IDamageable target, float damage, Vector2 direction, float push)
         {
             bool above = IsAbove(target);
-            damage *= HighGroundScale(target);
+            float highGround = HighGroundScale(target);
+            damage *= highGround;
             target.TakeDamage(damage, direction, push, this);
+            if (highGround > 1f)
+                HighGroundSpark(target, direction);
             if (above)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     if (e.Effect.AppliesFor(_team, _definition))
@@ -1750,6 +1860,7 @@ namespace GnorpWar
             _burnDamage = Mathf.Max(_burnDamage, damagePerSecond);
             _burnAttacker = attacker;
             _burnAttackerLife = attacker is Unit unit ? unit.Life : 0;
+            StatusDots.Watch(this);
         }
 
         private const float BurnInterval = 1f;
@@ -1927,6 +2038,7 @@ namespace GnorpWar
             if (nearest == null)
                 return false;
             Vector2 center = nearest._rb.position;
+            RingFx.Pulse(center, radius, Color.white, this);   // 맞는 범위(교황청 강타)
             Physics2D.OverlapCircle(center, radius, _enemyFilter, _overlaps);
             foreach (Collider2D col in _overlaps)
                 if (col.TryGetComponent(out IDamageable target) && target.Team != _team && target.IsAlive)

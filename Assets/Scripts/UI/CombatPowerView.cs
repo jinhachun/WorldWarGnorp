@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 체력 바 아래 — 진영별 유닛 수 + 초당 생산 수, 가운데 줄다리기 막대(유닛 수 비율, 아군 몫 = 파랑 채움).
+    // 체력 바 아래 — 진영별 유닛 수 + 초당 생산 수, 가운데 줄다리기 막대(유닛 수 비율, 아군 몫 = 내 영주 색 채움 · 나머지 = 상대 영주 색).
     // 전투 중에만 보인다
     public class CombatPowerView : MonoBehaviour
     {
@@ -17,11 +17,14 @@ namespace GnorpWar
         [SerializeField] private GameObject _content;
         [Tooltip("아군 몫 채움. Image.type = Filled 여야 fillAmount가 먹는다")]
         [SerializeField] private Image _allyFill;
+        [Tooltip("적 몫 채움(막대 바탕) — 비우면 색을 안 바꾼다")]
+        [SerializeField] private Image _enemyFill;
         [SerializeField] private Text _allyText;
         [SerializeField] private RectTransform _allyIcon;
         [SerializeField] private Text _enemyText;
 
         private float _shownShare = 0.5f;
+        private bool _colored;
 
         private void Update()
         {
@@ -30,10 +33,19 @@ namespace GnorpWar
                 _content.SetActive(fighting);
             if (!fighting)
             {
+                _colored = false;
                 _shownShare = 0.5f; // 다음 전투는 가운데에서 시작
                 return;
             }
 
+            // 진영 색 하나로(사용자 10/20 U10) — 체력 바와 같은 영주 색(RunState.LordColor). 상대는 전투가 시작돼야 정해진다
+            if (!_colored)
+            {
+                _colored = true;
+                _allyFill.color = RunState.LordColor(Team.Ally);
+                if (_enemyFill != null)
+                    _enemyFill.color = RunState.LordColor(Team.Enemy);
+            }
             int ally = CombatPower.Count(Team.Ally);
             int enemy = CombatPower.Count(Team.Enemy);
             float share = ally + enemy > 0 ? (float)ally / (ally + enemy) : 0.5f;

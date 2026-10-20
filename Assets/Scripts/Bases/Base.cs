@@ -260,6 +260,7 @@ namespace GnorpWar
         private void RefreshStats()
         {
             float oldMaxHp = _stats[(int)TowerStat.MaxHp];
+            float oldRange = _stats[(int)TowerStat.Range];
             // 작은 타워 = 본진 수치 × 배율(정의) — 그 위에 '내 타워' 효과(TowerBook)를 본진과 똑같이
             float attackScale = _small ? _definition.SmallAttackScale : 1f;
             float hpScale = _hpOfHome > 0f ? _hpOfHome : _small ? _definition.SmallHpScale : 1f;
@@ -269,6 +270,9 @@ namespace GnorpWar
             _stats[(int)TowerStat.ArrowCount] = TowerBook.Compute(_team, TowerStat.ArrowCount, 1f);
             _stats[(int)TowerStat.MaxHp] = TowerBook.Compute(_team, TowerStat.MaxHp, (_definition.MaxHp + RunState.BaseHpBonus) * hpScale, _hpBonus);
             _statsVersion = TowerBook.Version;
+            // 전투 중에 사거리가 늘었다(조준연산코그) — 이 타워 둘레에 새 사거리 고리(같은 타워는 1초에 한 번)
+            if (BattleManager.Fighting && oldRange > 0f && _stats[(int)TowerStat.Range] > oldRange + 0.001f)
+                RingFx.Pulse(transform.position, _stats[(int)TowerStat.Range], BuffLinkFx.ColorOf(BuffKind.Stat), this, 1f);
             if (oldMaxHp > 0f && IsAlive)
                 _hp *= _stats[(int)TowerStat.MaxHp] / oldMaxHp;
         }
@@ -287,19 +291,20 @@ namespace GnorpWar
             _attackCooldown = Unit.NextCooldown(_attackCooldown, _definition.AttackInterval / Stat(TowerStat.AttackSpeed));
         }
 
-        // 찾아 둔 대상(_targets)에게 화살 arrows발 — 가까운 적부터 한 발씩 나눠 쏜다. 쿨다운은 부르는 쪽이 돌린다
-        private void Shoot(int arrows)
+        // 찾아 둔 대상(_targets)에게 화살 arrows발 — 가까운 적부터 한 발씩 나눠 쏜다. 쿨다운은 부르는 쪽이 돌린다.
+        // extra = 처치해서 더 쏜 발(노란 꼬리 — Fx/ArrowTrails). 여러 발이면 그림만 잠깐 벌어진다(Fx/ArrowFan)
+        private void Shoot(int arrows, bool extra = false)
         {
             float damage = Stat(TowerStat.Attack);
             // 타워는 늘 높은 고도 — 적 유닛에게 기름투하대 보너스(적 본진엔 없음) · 관통탄
             float highGround = 1f;
             bool pierce = false;
-            float pierceFactor = 1f;
+            float pierceBonus = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
             {
                 highGround += e.Effect.HighGroundDamageBonus(e.Level);
                 pierce |= e.Effect.TowerArrowsPierce;
-                pierceFactor *= e.Effect.PierceHitDamageFactor;
+                pierceBonus += e.Effect.PierceHitDamageBonus;
             }
             for (int i = 0; i < arrows; i++)
             {
@@ -307,9 +312,12 @@ namespace GnorpWar
                 Projectile shot = Pooled.Get(_definition.Projectile, _muzzle.position, Quaternion.identity);
                 shot.Launch(_team, damage * (target.isUnit ? highGround : 1f), _definition.PushPower, target.point, _definition.ProjectileArcHeight, 0f, this);
                 if (pierce)
-                    shot.Pierce(pierceFactor);
+                    shot.Pierce(pierceBonus);
                 if (target.isUnit)
-                    shot.HighGround();   // 타워는 적 유닛에게 늘 높은 고도(기름투하대)
+                    shot.HighGround(highGround > 1f);   // 타워는 적 유닛에게 늘 높은 고도(기름투하대)
+                if (extra)
+                    shot.MarkExtra();
+                ArrowFan.Fan(shot, i, arrows);
             }
         }
 
@@ -364,7 +372,7 @@ namespace GnorpWar
             BoardRunner.For(_team).NotifyTowerKill(victim);
             int extra = TowerBook.ArrowsOnKillOf(_team);
             if (extra > 0 && IsAlive && CanAttack && FindTargets())
-                Shoot(extra);
+                Shoot(extra, true);
         }
 
         public void TakeDamage(float amount, Vector2 hitDirection, float push, IDamageable attacker)

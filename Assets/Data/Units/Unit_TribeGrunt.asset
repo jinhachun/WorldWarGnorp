@@ -46,5 +46,6 @@ MonoBehaviour:
   _buildFlatness: 0.25
   _buildSpacing: 2.5
   _buildGateClearance: 3
-  _traitEffects:
+  _traitEffects: []
+  _innateEffects:
   - {fileID: 11400000, guid: 6f184265ff0cff8408c5d1ec99534db4, type: 2}

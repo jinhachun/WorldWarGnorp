@@ -15,6 +15,7 @@ MonoBehaviour:
   _displayName: "\uC5BC\uC74C"
   _description: 
   _icon: {fileID: 21300000, guid: 0144101e700246e19edc36fe719034fe, type: 3}
+  _look: 3
   _unitRules: []
   _cooldownRate: 0.5
   _fireAllInterval: 10

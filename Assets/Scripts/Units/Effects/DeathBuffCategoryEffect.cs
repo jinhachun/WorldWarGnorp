@@ -35,13 +35,13 @@ namespace GnorpWar
             {
                 foreach (Unit target in targets)
                     target.AddModifier(stat);
-                BuffLinks.EffectFromUnitToUnits(team, this, at, team, u => targets.Contains(u), BuffKind.Stat);
+                BuffLinks.EffectFromUnitToUnits(team, this, at, team, u => targets.Contains(u), BuffKind.Stat, BuffLabel.Of(stat));
             }
             else
             {
                 Unit target = targets[Random.Range(0, targets.Count)];
                 target.AddModifier(stat);
-                BuffLinks.EffectFromUnit(team, this, at, target.Position, BuffKind.Stat);
+                BuffLinks.EffectFromUnit(team, this, at, target.Position, BuffKind.Stat, BuffLabel.Of(stat));
             }
         }
 

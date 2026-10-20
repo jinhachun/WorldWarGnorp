@@ -15,6 +15,7 @@ MonoBehaviour:
   _displayName: "\uC232"
   _description: 
   _icon: {fileID: 21300000, guid: 59ec2470dac44e1086b185d6885adcf9, type: 3}
+  _look: 1
   _unitRules:
   - _categories:
     - {fileID: 11400000, guid: 728ccb888483bab4cabe8181bd3e2725, type: 2}

@@ -51,10 +51,8 @@ namespace GnorpWar
         [SerializeField] private Text _noticeBody;
         [SerializeField] private Button _next;
         [SerializeField] private Text _nextLabel;
-        [Tooltip("런을 시작할 때 내 국가를 고르는 판 — 국가마다 버튼 하나와 그 버튼의 아이콘(칸 순서 = RunState.NationChoices)")]
-        [SerializeField] private GameObject _nationPanel;
-        [SerializeField] private Button[] _nationButtons;
-        [SerializeField] private Image[] _nationIcons;
+        [Tooltip("런을 시작할 때 내 국가를 고르는 판(UI/NationCard) — 순서 = RunState.NationChoices, 「시작」을 누르면 Chosen으로 알려 온다")]
+        [SerializeField] private NationCard _nationCard;
 
         private Stage _stage;
         private bool _shopOpen;
@@ -104,7 +102,7 @@ namespace GnorpWar
             _next.onClick.AddListener(Next);
             _skip.gameObject.SetActive(false);
             _notice.SetActive(false);
-            _nationPanel.SetActive(false);
+            _nationCard.gameObject.SetActive(false);
             _shopPopup.MapRequested += () => SetShop(false);
             _shopRect = (RectTransform)_shopPopup.transform;
             _shopHome = _shopRect.anchoredPosition;
@@ -147,31 +145,18 @@ namespace GnorpWar
         // 시작 때 지역 특수를 고르던 것(10/13)은 없앴다(사용자 10/15) — 지금은 첫 턴 전에 대기가 생길 길이 없어 늘 지나간다
         private static bool WaitingToStart => RunState.NationChosen && !RunState.TurnOpened && RunState.PendingUpgrades.Count > 0;
 
-        // 내 국가 고르기 — 국가마다 아이콘과 이름이 든 버튼 하나. 고르면 바로 첫 턴이 열린다
+        // 내 국가 고르기 — 카드(UI/NationCard)를 열고, 「시작」으로 고른 국가를 받으면 바로 첫 턴이 열린다
         private void ShowNations()
         {
             _stage = Stage.Choose;
             _turn = RunState.Round + 1;
-            BuildingNation[] nations = RunState.NationChoices;
-            for (int i = 0; i < _nationButtons.Length; i++)
+            _nationCard.Chosen += nation =>
             {
-                bool used = i < nations.Length;
-                _nationButtons[i].gameObject.SetActive(used);
-                if (!used)
-                    continue;
-                BuildingNation nation = nations[i];
-                _nationButtons[i].GetComponentInChildren<Text>(true).text = nation.DisplayName();
-                _nationIcons[i].sprite = _config.World.NationIcon(nation);
-                _nationIcons[i].SetNativeSize();
-                _nationButtons[i].onClick.AddListener(() =>
-                {
-                    RunState.ChooseNation(nation);
-                    _nationPanel.SetActive(false);
-                    if (!WaitingToStart)
-                        BeginTurn();
-                });
-            }
-            _nationPanel.SetActive(true);
+                RunState.ChooseNation(nation);
+                if (!WaitingToStart)
+                    BeginTurn();
+            };
+            _nationCard.Open(RunState.NationChoices, _config.World);
         }
 
         private void OnDestroy()

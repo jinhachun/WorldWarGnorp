@@ -31,7 +31,7 @@ namespace GnorpWar
             {
                 _applied[team]++;
                 StatBook.AddForBattle(unit.Team, this, _step);
-                BuffLinks.EffectToUnits(unit.Team, this, u => this.AppliesFor(u.Team, u.Definition), BuffKind.Stat);
+                BuffLinks.EffectToUnits(unit.Team, this, u => this.AppliesFor(u.Team, u.Definition), BuffKind.Stat, BuffLabel.Of(_step));
             }
         }
 

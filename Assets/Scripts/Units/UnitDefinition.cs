@@ -127,14 +127,21 @@ namespace GnorpWar
         [BoxGroup("참조")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private UnitEffect[] _traitEffects = new UnitEffect[0];
+        [Tooltip("늘 켜진 효과 — 이 유닛이 나오면(어느 기물로 나오든) 그 진영에 켠다(Unit.OnEnable). 특성 줄에도 싣는다. 같은 효과를 기물에 또 달지 말 것")]
+        [BoxGroup("참조")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private UnitEffect[] _innateEffects = new UnitEffect[0];
 
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
         // 유닛 카드의 특성 줄들(타고난 효과의 글, 숫자는 그 효과의 값) — 돌격 · 범위 같은 줄(UI/BuildingTooltip.UnitInfo) 뒤에 붙인다
-        public string[] TraitLines => System.Array.ConvertAll(_traitEffects, effect => effect.Trait);
+        public string[] TraitLines => System.Array.ConvertAll(Traits, effect => effect.Trait);
         // effect가 이 유닛의 타고난 효과인가 — 카드의 「기물이 켜 준 효과」 줄에서 같은 내용을 다시 쓰지 않게 거른다
-        public bool HasTrait(UnitEffect effect) => System.Array.IndexOf(_traitEffects, effect) >= 0;
+        public bool HasTrait(UnitEffect effect) => System.Array.IndexOf(Traits, effect) >= 0;
+        public UnitEffect[] InnateEffects => _innateEffects;
+        // 특성 줄에 싣는 효과 = 표시용 타고난 효과 + 늘 켜진 효과
+        private UnitEffect[] Traits => _innateEffects.Length == 0 ? _traitEffects : System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(_traitEffects, _innateEffects));
 
         public string DisplayName => _displayName;
         public UnitCategory Category => _category;

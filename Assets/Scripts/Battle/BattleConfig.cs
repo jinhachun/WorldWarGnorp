@@ -113,6 +113,15 @@ namespace GnorpWar
         [Tooltip("등반 점프 높이 = 내 키 + 이 칸 수. 2면 한 번에 두 층을 넘는다")]
         [SuffixLabel("칸", true)]
         [SerializeField] private float _climbJumpExtra = 2f;
+        [Tooltip("뒤돌아 싸움 — 「뒤돌아 싸움」이 켜진 병종(UnitCategory)은 사거리에 칠 것이 없고 등 뒤 이 칸 안에 적 유닛이 있으면 돌아서서 그쪽으로 걸어가 싸운다(사용자 10/16 — 백도어 줄이기)")]
+        [SuffixLabel("칸", true)]
+        [SerializeField] private float _turnBackRange = 4f;
+        [Tooltip("뒤돌아 싸움을 그만두는 거리 = 위 칸 + 이 여유 — 들어가는 거리와 나오는 거리를 달리해 경계에서 앞뒤로 떨지 않게(사용자 10/20)")]
+        [SuffixLabel("칸", true)]
+        [SerializeField] private float _turnBackExit = 1f;
+        [Tooltip("대상 · 방향을 정하면 적어도 이만큼 유지한다 — 노리는 적(대상이 죽거나 사거리 밖이면 바로 풀린다) · 뒤돌기를 그만둔 뒤 다시 돌아서기까지(사용자 10/20 — 앞뒤로 떨지 않게). 공격 판정 속도와는 무관")]
+        [SuffixLabel("초", true)]
+        [SerializeField] private float _targetHold = 0.5f;
 
         [Header("전투력 — 체력바 밑 표시. 유닛 전투력 = √(지금 체력 × 초당 피해) × 표시 배율, 진영 합계")]
         [Tooltip("범위 공격(화염·휩쓸기) 유닛의 초당 피해에 곱한다 — 한 번에 여럿을 친다")]
@@ -201,6 +210,9 @@ namespace GnorpWar
         public float ClimbRest => _climbRest;
         public float ClimbSlowerThan => _climbSlowerThan;
         public float ClimbJumpExtra => _climbJumpExtra;
+        public float TurnBackRange => _turnBackRange;
+        public float TurnBackExit => _turnBackExit;
+        public float TargetHold => _targetHold;
         public float PowerAreaScale => _powerAreaScale;
         public float PowerHealScale => _powerHealScale;
         public float PowerDisplayScale => _powerDisplayScale;

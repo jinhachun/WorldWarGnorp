@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7737e9921aa4d940b06312aa341cc8b, type: 3}
+  m_Name: Passive_SteamBaronTowerKillBuy
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.TowerKillBuyPassive
+  _kills: 50
+  _twiceMark: {fileID: 11400000, guid: e65bc801f14eccb44a28bd42a16ed7c2, type: 2}

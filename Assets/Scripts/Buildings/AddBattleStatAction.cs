@@ -34,7 +34,7 @@ namespace GnorpWar
                     break;
                 }
             board.AddBattleGain(slot, modifier.Op, modifier.Value);
-            BuffLinks.ToUnits(board.Team, slot, BuffKind.Stat, this);
+            BuffLinks.ToUnits(board.Team, slot, BuffKind.Stat, this, BuffLabel.Of(modifier));
         }
 
         // 발동 stacks번이 쌓은 값(지금 등급 기준) — +는 더하고 ×는 거듭 곱한다

@@ -8,15 +8,15 @@ namespace GnorpWar
     // 건물에 마우스를 올리면 뜨는 설명 창 (The Bazaar식) — 칸 오른쪽에, 오른쪽에 자리가 없으면 왼쪽에 뜬다.
     // 칸·카드는 마우스가 올라가 있는 동안 매 프레임 Show로 내용을 다시 넣는다(레벨·판매가가 바뀌어도 맞게).
     // 이 오브젝트는 켜 둔 채 판(_panel)만 켜고 끈다 — 꺼 두면 Awake가 안 돈다.
-    // 두 판의 높이는 글에 맞춰 늘고 준다(§5-1의 툴팁 예외 — 테두리 1px 단색 판이라 세로로 늘려도 안 깨진다)
+    // 두 판의 높이는 글에 맞춰 늘고 준다(§5-1의 툴팁 예외 — 검은 단색 판이라 세로로 늘려도 안 깨지고, 테두리는 UI/NationFrame이 그 크기로 새로 그린다)
     public class BuildingTooltip : MonoBehaviour
     {
         private const float Gap = 8f;
-        // 판 안쪽 위아래 여백 · 글 덩어리 사이 간격(px)
-        private const float Pad = 16f;
+        // 판 안쪽 위아래 여백 · 글 덩어리 사이 간격(px) — 종족 테두리(12px, UI/NationFrame)와 글 사이가 16px 되게(사용자 10/15)
+        private const float Pad = 24f;
         private const float InnerGap = 8f;
-        // 판 왼쪽 여백 — 글 칸들(sizeDelta.x -40)과 같다
-        private const float Side = 20f;
+        // 판 왼쪽 여백 — 글 칸들(sizeDelta.x -56)과 같다
+        private const float Side = 28f;
         // 유닛 그림 칸 — 이 크기 안에 들어가는 가장 큰 정수 배율로 픽셀 그대로 그린다
         private const float IconBox = 64f;
 
@@ -32,9 +32,27 @@ namespace GnorpWar
         [Tooltip("그림 오른쪽 — 이름 · 병종")]
         [SerializeField] private Text _unitName;
         [SerializeField] private Text _unitBody;
+        [Header("칸 문법 · 스탯 아이콘 (사용자 10/20)")]
+        [Tooltip("등급 보석(8×8) — 일반 · 고급 · 희귀 · 영웅 · 전설 · 신화 순. 제목 아래 등급 칩에 선다(칸에는 붙이지 않는다 — 등급은 창틀 색으로 보인다, 사용자 10/20)")]
+        [SerializeField] private Sprite[] _gems;
+        [Tooltip("유닛 판 능력치 줄 앞 아이콘 — 흰 그림, 색은 코드가 칠한다(StatColors). 체력 · 회복은 하트")]
+        [SerializeField] private Sprite _hpIcon;
+        [SerializeField] private Sprite _attackIcon;
+        [SerializeField] private Sprite _rangeIcon;
 
         private static BuildingTooltip _instance;
+
+        // 등급 보석 그림(없으면 null)
+        public static Sprite GemOf(BuildingRarity rarity)
+            => _instance != null && _instance._gems != null && (int)rarity < _instance._gems.Length ? _instance._gems[(int)rarity] : null;
+        // 상점이 열려 있으면 설명 창이 서는 자리(UI/ShopPanel이 넣고 뺀다) — 화면 안에 있을 때만 쓴다
+        public static RectTransform Dock { get; set; }
         private readonly Vector3[] _corners = new Vector3[4];
+        // 판 · 유닛 판의 원래 폭(씬 값) — 상점 자리에 설 때만 그 자리 폭으로 바꾼다
+        private float _panelWidth, _cardWidth;
+        // 유닛 판끼리 · 기물 판과 유닛 판 사이(px) · 능력치 아이콘 칸의 폭(글이 이 뒤에서 시작한다)
+        private const float CardGap = 6f;
+        private const float StatIconSize = 32f;
         private Component _owner;
 
         // 유닛 판 한 장 — 그림은 유닛·진영(영주 색)이 바뀔 때만 다시 짠다
@@ -53,12 +71,59 @@ namespace GnorpWar
             public int BodyVersion = -1;
             // 그 유닛에 걸린 업그레이드 줄들(본문 아래)
             public UpgradeLines Upgrades;
+            // 능력치 줄(아이콘 + 글) — 이름 아래, 본문 위. 처음 채울 때 만든다
+            public RectTransform Stats;
+            public readonly List<(Image Icon, Text Text)> Rows = new List<(Image, Text)>();
+            public List<StatLine> StatLines;
         }
+
+        // 능력치 한 줄 — 아이콘(없으면 null) · 아이콘 색 · 글
+        private struct StatLine
+        {
+            public Sprite Icon;
+            public Color Color;
+            public string Text;
+        }
+
+        // 능력치 아이콘 칸의 색(사용자 10/20 — UI 스탯 아이콘은 색 허용. 숫자 글자 색은 §5-2-9 그대로)
+        private static readonly Color HpIconColor = new Color(0.42f, 0.85f, 0.42f);
+        private static readonly Color HealIconColor = new Color(1f, 0.55f, 0.75f);
+        private static readonly Color AttackIconColor = new Color(0.95f, 0.35f, 0.3f);
+        private static readonly Color RangeIconColor = new Color(0.55f, 0.72f, 1f);
+        // 능력치 줄 — 아이콘과 글 사이 · 줄 사이(px)
+        private const float StatIconGap = 8f;
+        private const float StatRowGap = 2f;
 
         private readonly List<UnitCard> _cards = new List<UnitCard>();
         // 기물에 걸린 업그레이드 줄들(본문 아래) · 이번에 띄운 유닛 판마다 걸린 업그레이드
         private UpgradeLines _upgrades;
+        private InlineIcons _inline;
         private readonly List<List<UpgradeHolding>> _unitUpgrades = new List<List<UpgradeHolding>>();
+        // 제목 아래 칩 둘(사용자 10/20) — 등급 = 보석 + 이름(테두리 = 등급 테두리 색) · 국가 = 국가 기호(WorldConfig.NationIcon) + 이름(회색 테두리, 공용은 글자만).
+        // 칩 글자는 흰색 도트 — 등급 색은 테두리에만(글자 색 체계와 별개). 칩 줄 아래 얇은 구분선
+        private const int ChipTextSize = 24;
+        private const float ChipPad = 6f;
+        private const float ChipIconGap = 6f;
+        private const float ChipGap = 10f;
+        private const float ChipHeight = 32f;
+        private const float ChipBorder = 2f;
+        // 도트 폰트는 글자 위쪽 여백이 커서 가운데 맞춤일 때 올린다(캡처로 맞춘 값)
+        private const float ChipTextLift = 5f;
+        private const float RuleHeight = 2f;
+
+        private class Chip
+        {
+            public RectTransform Root;
+            public Image Box;
+            public Outline Border;
+            public Image Icon;
+            public Text Label;
+        }
+
+        private RectTransform _tags;
+        private Chip _rarityChip;
+        private Chip _nationChip;
+        private Image _rule;
 
         public const string NumberColor = "#FFD95A";
         public const string NoteColor = "#9A9AA8";
@@ -67,7 +132,6 @@ namespace GnorpWar
         private const string BonusColor = "#5AE66E";
         // 글자 크기 — 중요한 것일수록 크게. 능력치 줄은 _unitBody의 글자 크기.
         // 제목 · 유닛 이름 칸은 도트 폰트(12px)라 12의 정수배만 쓰고 굵게(<b>)를 쓰지 않는다 — 합성 굵기가 픽셀을 뭉갠다
-        private const int SubtitleSize = 24;
         private const int UnitNameSize = 36;
         private const int UnitCategorySize = 24;
         private const int UnitTraitSize = 18;
@@ -166,27 +230,34 @@ namespace GnorpWar
             string name = $"{building.DisplayName}{(enemy ? " (적)" : "")}";
             if (enemy)
                 name = $"<color={EnemyColor}>{name}</color>";
-            return $"{name}\n<size={SubtitleSize}>{rarity.DisplayName()} · {building.Nation.DisplayName()}</size>";
+            return name;   // 등급 · 국가는 제목 아래 칩(Show의 tags)
         }
 
         // 유닛 판 그림 오른쪽 글 — 이름(크게) · 병종(작게)
         private static string UnitName(UnitDefinition unit)
             => $"<size={UnitNameSize}>{unit.DisplayName}</size>\n<size={UnitCategorySize}>{unit.Category.DisplayName}</size>";
 
-        // 유닛 판 본문 — 능력치(체력 · 공격력 · 사거리) / 특성 / board의 건물이 이 유닛에 켜 준 효과 순으로, 뒤로 갈수록 작은 글씨
-        private static string UnitInfo(UnitDefinition unit, OwnedBuilding[] board, bool enemy)
+        // 유닛 판 능력치 줄(체력 · 공격력 · 사거리) — 줄마다 앞에 색 아이콘 칸(Fill이 그린다)
+        private List<StatLine> StatLines(UnitDefinition unit, bool enemy)
         {
-            var lines = new List<string> { Stat("체력", unit, UnitStat.MaxHp, enemy) };
+            var lines = new List<StatLine> { new StatLine { Icon = _hpIcon, Color = HpIconColor, Text = Stat("체력", unit, UnitStat.MaxHp, enemy) } };
             if (unit.AttackType == AttackType.Build)
-                lines.Add("공격 안 함");   // 싸우지 않는 유닛(건축가) — 사거리도 뜻이 없어 뺀다
+                lines.Add(new StatLine { Text = "공격 안 함" });   // 싸우지 않는 유닛(건축가) — 사거리도 뜻이 없어 뺀다
             else if (unit.AttackType == AttackType.Heal)
-                lines.Add(Stat("회복", unit, UnitStat.Attack, enemy));   // 회복량 = 공격력
+                lines.Add(new StatLine { Icon = _hpIcon, Color = HealIconColor, Text = Stat("회복", unit, UnitStat.Attack, enemy) });   // 회복량 = 공격력
             else if (unit.AttackType == AttackType.Flame)
-                lines.Add(Stat("공격력 초당", unit, UnitStat.Attack, enemy, 1f / unit.AttackInterval));
+                lines.Add(new StatLine { Icon = _attackIcon, Color = AttackIconColor, Text = Stat("공격력 초당", unit, UnitStat.Attack, enemy, 1f / unit.AttackInterval) });
             else
-                lines.Add(Stat("공격력", unit, UnitStat.Attack, enemy));
+                lines.Add(new StatLine { Icon = _attackIcon, Color = AttackIconColor, Text = Stat("공격력", unit, UnitStat.Attack, enemy) });
             if (unit.AttackType != AttackType.Build)
-                lines.Add("사거리 " + RangeWord(unit.AttackRange));
+                lines.Add(new StatLine { Icon = _rangeIcon, Color = RangeIconColor, Text = "사거리 " + RangeWord(unit.AttackRange) });
+            return lines;
+        }
+
+        // 유닛 판 본문(능력치 줄 아래) — 특성 / board의 건물이 이 유닛에 켜 준 효과 순으로, 뒤로 갈수록 작은 글씨
+        private static string UnitInfo(UnitDefinition unit, OwnedBuilding[] board)
+        {
+            var lines = new List<string>();
 
             var traits = new List<string>();
             if (unit.ChargeDamageMultiplier > 1f)
@@ -242,7 +313,7 @@ namespace GnorpWar
 
         private static readonly Regex Number = new Regex(@"\d+(\.\d+)?%?");
 
-        private static string ColorNumbers(string text) => Number.Replace(text, $"<color={NumberColor}>$0</color>");
+        public static string ColorNumbers(string text) => Number.Replace(text, $"<color={NumberColor}>$0</color>");
 
         // 효과 글 — 숫자는 노랑, 키워드(기획서 §5 낱말 · 병종 태그)는 굵게. 색은 늘리지 않는다(CLAUDE.md §5-2 9번).
         // 「관통탄 특허국」 같은 기물 이름 속 낱말은 건너뛴다
@@ -258,7 +329,21 @@ namespace GnorpWar
         {
             _instance = this;
             _panel.gameObject.SetActive(false);
+            _panelWidth = _panel.rect.width;
+            _cardWidth = _unitPanel.rect.width;
             _upgrades = NewLines(_panel);
+            _inline = _body.gameObject.AddComponent<InlineIcons>();
+            _tags = (RectTransform)new GameObject("Tags", typeof(RectTransform)).transform;
+            _tags.SetParent(_panel, false);
+            _tags.anchorMin = _tags.anchorMax = _tags.pivot = new Vector2(0f, 1f);
+            _rarityChip = NewChip(_tags, "Rarity");
+            _nationChip = NewChip(_tags, "Nation");
+            ColorUtility.TryParseHtmlString(NoteColor, out Color gray);
+            _rule = new GameObject("Rule", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            _rule.rectTransform.SetParent(_panel, false);
+            _rule.rectTransform.anchorMin = _rule.rectTransform.anchorMax = _rule.rectTransform.pivot = new Vector2(0f, 1f);
+            _rule.color = gray;
+            _rule.raycastTarget = false;
             _cards.Add(new UnitCard { Panel = _unitPanel, Icon = _unitIcon, Name = _unitName, Body = _unitBody, Upgrades = NewLines(_unitPanel) });
         }
 
@@ -278,8 +363,10 @@ namespace GnorpWar
             {
                 Team side = enemy ? Team.Enemy : Team.Ally;
                 foreach (BuildingPassive passive in building.Passives)
-                    if (passive is KillCountFirePassive killCount)
-                        body += Note($"다음 발동까지 {killCount.RemainingOf(side)}기");
+                    if (passive is DeathCountCooldownPassive deathCount)
+                        body += Note($"다음 쿨다운 감소까지 {deathCount.RemainingOf(side)}기");
+                    else if (passive is TowerKillBuyPassive towerKill)
+                        body += Note($"다음 발동까지 {towerKill.RemainingOf(side)}기");
                 foreach (UnitEffect effect in building.Effects)
                     if (effect is AscensionEffect ascension)
                         body += Note($"다음 발동까지 {ascension.RemainingOf(side)}기");
@@ -290,14 +377,71 @@ namespace GnorpWar
             BoardRunner runner = BoardRunner.For(Team.Enemy);
             OwnedBuilding[] board = !enemy ? RunState.Field : runner != null ? System.Array.ConvertAll(runner.Slots, s => s.Building) : RunState.EnemyField;
             // 그 기물에 걸린 업그레이드(군주제의 「2번」 등)는 본문 아래의 업그레이드 줄이 보여 준다
-            Show(owner, Title(building.Definition, enemy, building.Rarity), body, building.Definition.MentionedUnits, board, enemy, RunState.UpgradesOn(building));
+            Show(owner, Title(building.Definition, enemy, building.Rarity), body, building.Definition.MentionedUnits, board, enemy, RunState.UpgradesOn(building),
+                (building.Rarity, building.Definition.Nation));
         }
 
         // upgrades = 본문 아래에 아이콘과 함께 보일 「걸려 있는 업그레이드」(없으면 null). 유닛 판의 것은 유닛마다 스스로 찾는다(RunState.UpgradesOn)
-        public static void Show(Component owner, string title, string body, UnitDefinition[] units, OwnedBuilding[] board, bool enemy = false, List<UpgradeHolding> upgrades = null)
+        // tags = 제목 아래 등급 · 국가 칩(기물일 때만 — 맵 설명 등은 null)
+        public static void Show(Component owner, string title, string body, UnitDefinition[] units, OwnedBuilding[] board, bool enemy = false, List<UpgradeHolding> upgrades = null,
+            (BuildingRarity Rarity, BuildingNation Nation)? tags = null)
         {
             if (_instance != null)
-                _instance.Place(owner, title, body, units, board, enemy, upgrades);
+                _instance.Place(owner, title, body, units, board, enemy, upgrades, tags);
+        }
+
+        // 칩 하나 — 검은 판(테두리 = Outline) · 아이콘(원본 크기) · 흰 도트 글. 내용은 SetChip이 채운다
+        private Chip NewChip(RectTransform parent, string name)
+        {
+            var chip = new Chip { Root = (RectTransform)new GameObject(name, typeof(RectTransform)).transform };
+            chip.Root.SetParent(parent, false);
+            chip.Root.anchorMin = chip.Root.anchorMax = chip.Root.pivot = new Vector2(0f, 1f);
+            chip.Box = new GameObject("Box", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            chip.Box.rectTransform.SetParent(chip.Root, false);
+            chip.Box.rectTransform.anchorMin = Vector2.zero;
+            chip.Box.rectTransform.anchorMax = Vector2.one;
+            chip.Box.rectTransform.offsetMin = chip.Box.rectTransform.offsetMax = Vector2.zero;
+            chip.Box.color = Color.black;
+            chip.Box.raycastTarget = false;
+            chip.Border = chip.Box.gameObject.AddComponent<Outline>();
+            chip.Border.effectDistance = new Vector2(ChipBorder, -ChipBorder);
+            chip.Icon = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            chip.Icon.rectTransform.SetParent(chip.Root, false);
+            chip.Icon.rectTransform.anchorMin = chip.Icon.rectTransform.anchorMax = chip.Icon.rectTransform.pivot = new Vector2(0f, 0.5f);
+            chip.Icon.preserveAspect = true;
+            chip.Icon.raycastTarget = false;
+            chip.Label = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            chip.Label.rectTransform.SetParent(chip.Root, false);
+            chip.Label.rectTransform.anchorMin = chip.Label.rectTransform.anchorMax = chip.Label.rectTransform.pivot = new Vector2(0f, 0.5f);
+            chip.Label.font = _title.font;
+            chip.Label.fontSize = ChipTextSize;
+            chip.Label.color = Color.white;
+            chip.Label.raycastTarget = false;
+            chip.Label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            chip.Label.verticalOverflow = VerticalWrapMode.Overflow;
+            return chip;
+        }
+
+        // 칩을 채우고 폭을 돌려준다 — icon(원본 크기)이 없으면 글자만
+        private static float SetChip(Chip chip, Sprite icon, string label, Color border, float x)
+        {
+            float left = ChipPad;
+            chip.Icon.enabled = icon != null;
+            if (icon != null)
+            {
+                chip.Icon.sprite = icon;
+                chip.Icon.SetNativeSize();
+                chip.Icon.rectTransform.anchoredPosition = new Vector2(left, 0f);
+                left += chip.Icon.rectTransform.sizeDelta.x + ChipIconGap;
+            }
+            chip.Label.text = label;
+            chip.Label.rectTransform.sizeDelta = new Vector2(chip.Label.preferredWidth, ChipTextSize);
+            chip.Label.rectTransform.anchoredPosition = new Vector2(left, ChipTextLift);
+            float width = left + chip.Label.preferredWidth + ChipPad;
+            chip.Border.effectColor = border;
+            chip.Root.sizeDelta = new Vector2(width, ChipHeight);
+            chip.Root.anchoredPosition = new Vector2(x, -ChipBorder);   // 테두리가 칩 줄 밖으로 삐지지 않게
+            return width;
         }
 
         private UpgradeLines NewLines(RectTransform panel) => new UpgradeLines(panel, Side, panel.rect.width - Side * 2f, _title.font);
@@ -308,7 +452,9 @@ namespace GnorpWar
             while (_cards.Count <= i)
             {
                 RectTransform panel = Instantiate(_unitPanel, _unitPanel.parent);
-                // 첫 장의 업그레이드 줄들까지 복제됐다 — 버리고 이 장의 것을 새로 만든다
+                // 첫 장의 능력치 줄 · 업그레이드 줄들까지 복제됐다 — 버리고 이 장의 것을 새로 만든다(능력치 줄이 나중에 생겨 뒤에 있으니 먼저 지운다)
+                if (_cards[0].Stats != null)
+                    DestroyImmediate(panel.GetChild(_cards[0].Stats.GetSiblingIndex()).gameObject);
                 DestroyImmediate(panel.Find("Upgrades").gameObject);
                 _cards.Add(new UnitCard
                 {
@@ -334,30 +480,56 @@ namespace GnorpWar
             }
         }
 
-        private void Place(Component owner, string title, string body, UnitDefinition[] units, OwnedBuilding[] board, bool enemy, List<UpgradeHolding> upgrades)
+        // 놓는 자리(사용자 10/20 U5) — 둘 중 하나:
+        //   상점이 열려 있으면 상점의 빈 자리(Dock — 진열 · 확률 · 보관함을 덮지 않는 곳)에 그 폭으로, 유닛 판은 기물 판 아래로
+        //   그 밖에는 칸 오른쪽(자리 없으면 왼쪽)에, 유닛 판은 기물 판 옆으로 한 장씩 — 화면을 넘으면 앞 판 아래로
+        private void Place(Component owner, string title, string body, UnitDefinition[] units, OwnedBuilding[] board, bool enemy, List<UpgradeHolding> upgrades,
+            (BuildingRarity Rarity, BuildingNation Nation)? tags)
         {
             _owner = owner;
+            float scale = _panel.lossyScale.y;
+            float gap = Gap * scale;
+            // 폭은 상점 자리 폭 — 자리는 아래에서 고른다
+            bool docked = Docked(out Rect dock);
+            float width = docked ? dock.width / scale : _panelWidth;
+            float cardWidth = docked ? width : _cardWidth;
+            SetWidth(_panel, width);
+            _upgrades.Width = width - Side * 2f;
             _title.text = title;
-            _body.text = body;
+            _inline.SetText(body);   // 스탯 낱말 앞 줄 안 아이콘(UI/InlineIcons) — 자리 글자를 넣은 글로 높이를 잰다
             // 위에서부터 쌓는다 — Title · Body는 판 위쪽 기준(pivot 위)
             float titleHeight = Fit(_title, -Pad);
+            // 칩 줄 · 구분선 — 제목 아래에 쌓고, 본문 자리를 그만큼 내린다(titleHeight에 더한다)
+            _tags.gameObject.SetActive(tags != null);
+            _rule.gameObject.SetActive(tags != null);
+            if (tags != null)
+            {
+                ColorUtility.TryParseHtmlString(NoteColor, out Color gray);
+                BuildingRarity rarity = tags.Value.Rarity;
+                BuildingNation nation = tags.Value.Nation;
+                Sprite icon = RunState.Config != null && RunState.Config.World != null ? RunState.Config.World.NationIcon(nation) : null;
+                float x = SetChip(_rarityChip, GemOf(rarity), rarity.DisplayName(), rarity.FrameColor(), ChipBorder);
+                SetChip(_nationChip, icon, nation.DisplayName(), gray, ChipBorder + x + ChipGap);
+                _tags.anchoredPosition = new Vector2(Side, -(Pad + titleHeight + InnerGap));
+                titleHeight += InnerGap + ChipHeight + ChipBorder * 2f;
+                _rule.rectTransform.anchoredPosition = new Vector2(Side, -(Pad + titleHeight + InnerGap));
+                _rule.rectTransform.sizeDelta = new Vector2(width - Side * 2f, RuleHeight);
+                titleHeight += InnerGap + RuleHeight;
+            }
             float bodyHeight = Fit(_body, -(Pad + titleHeight + InnerGap));
+            _inline.Place();
             _unitUpgrades.Clear();
             foreach (UnitDefinition unit in units)
                 _unitUpgrades.Add(RunState.UpgradesOn(unit, enemy));
             _panel.gameObject.SetActive(true);
 
-            // 유닛 판 — 첫 장과 Panel 사이 간격(틀의 y)을 판끼리도 띄운다
-            float spacing = -_unitPanel.anchoredPosition.y;
-            float scale = _panel.lossyScale.y;
-            float gap = Gap * scale;
             // 기물 판의 업그레이드 — 본문 아래에 아이콘만(사용자 10/14)
             float height = Pad + titleHeight + InnerGap + bodyHeight;
             float lines = _upgrades.Show(upgrades, -(height + InnerGap));
             if (lines > 0f)
                 height += InnerGap + lines;
-            _panel.sizeDelta = new Vector2(_panel.sizeDelta.x, height + Pad);
-            float y = -spacing;
+            height += Pad;
+            _panel.sizeDelta = new Vector2(_panel.sizeDelta.x, height);
             for (int i = 0; i < Mathf.Max(units.Length, _cards.Count); i++)
             {
                 bool used = i < units.Length;
@@ -365,21 +537,80 @@ namespace GnorpWar
                 card.Panel.gameObject.SetActive(used);
                 if (!used)
                     continue;
-                float cardHeight = Fill(card, units[i], board, enemy, _unitUpgrades[i]);
-                card.Panel.anchoredPosition = new Vector2(card.Panel.anchoredPosition.x, y);
-                y -= cardHeight + spacing;
+                RectTransform rect = card.Panel;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+                rect.sizeDelta = new Vector2(cardWidth, rect.sizeDelta.y);
+                card.Upgrades.Width = cardWidth - Side * 2f;
+                Fill(card, units[i], board, enemy, _unitUpgrades[i]);
             }
 
-            // Overlay 캔버스라 월드 좌표 = 화면 픽셀. 유닛 판들은 Panel 밑에 매달려 있어 높이에 더한다
+            // Overlay 캔버스라 월드 좌표 = 화면 픽셀. 판 왼쪽 위(화면)와, 유닛 판이 놓이는 방향
             ((RectTransform)owner.transform).GetWorldCorners(_corners);   // 0 왼아래 · 1 왼위 · 2 오른위
-            Vector2 size = _panel.rect.size * scale;
-            float below = units.Length == 0 ? 0f : (-y - spacing) * scale;
-            bool right = _corners[2].x + gap + size.x <= Screen.width;
-            // 윗변을 칸 윗변에 맞추고, 화면 위아래를 넘으면 안으로 민다
-            float top = Mathf.Clamp(_corners[1].y, size.y + below + gap, Screen.height - gap);
-            _panel.pivot = new Vector2(right ? 0f : 1f, 1f);
-            _panel.position = new Vector3(right ? _corners[2].x + gap : _corners[0].x - gap, top, 0f);
+            bool column = docked;
+            int direction = 1;
+            float left, wantTop;
+            if (docked)
+            {
+                left = dock.xMin;
+                wantTop = dock.yMax;
+            }
+            else
+            {
+                bool right = _corners[2].x + gap + width * scale <= Screen.width;
+                direction = right ? 1 : -1;
+                left = right ? _corners[2].x + gap : _corners[0].x - gap - width * scale;
+                wantTop = _corners[1].y;
+            }
+
+            // 유닛 판 자리 — 기물 판 왼쪽 위 기준(로컬). 앞 판 = 기물 판에서 시작
+            float lowest = -height;
+            float prevX = 0f, prevY = 0f, prevWidth = width, prevHeight = height;
+            bool afterPanel = true;
+            for (int i = 0; i < units.Length; i++)
+            {
+                RectTransform rect = _cards[i].Panel;
+                float h = rect.sizeDelta.y;
+                float x = prevX, y = prevY - prevHeight - CardGap;
+                if (!column)
+                {
+                    float side = direction > 0 ? prevX + prevWidth + CardGap : prevX - CardGap - cardWidth;
+                    float screenLeft = left + side * scale;
+                    if (screenLeft >= gap && screenLeft + cardWidth * scale <= Screen.width - gap)
+                    {
+                        x = side;
+                        y = prevY;
+                    }
+                    else if (afterPanel && direction < 0)
+                        x = width - cardWidth;   // 왼쪽으로 펼치던 판은 아래로 내릴 때 오른쪽 끝을 맞춘다
+                }
+                rect.anchoredPosition = new Vector2(x, y);
+                lowest = Mathf.Min(lowest, y - h);
+                prevX = x;
+                prevY = y;
+                prevWidth = cardWidth;
+                prevHeight = h;
+                afterPanel = false;
+            }
+
+            // 윗변을 칸 윗변(또는 자리 윗변)에 맞추고, 화면 위아래를 넘으면 안으로 민다
+            float top = Mathf.Clamp(wantTop, -lowest * scale + gap, Screen.height - gap);
+            _panel.pivot = new Vector2(0f, 1f);
+            _panel.position = new Vector3(left, top, 0f);
         }
+
+        // 상점의 빈 자리 — 화면 안에 다 들어와 있을 때만(팝업이 미끄러지는 중 · 닫힘이면 칸 옆에 띄운다)
+        private bool Docked(out Rect dock)
+        {
+            dock = default;
+            if (Dock == null || !Dock.gameObject.activeInHierarchy)
+                return false;
+            var corners = new Vector3[4];
+            Dock.GetWorldCorners(corners);
+            dock = Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+            return dock.xMin >= -1f && dock.yMin >= -1f && dock.xMax <= Screen.width + 1f && dock.yMax <= Screen.height + 1f;
+        }
+
+        private static void SetWidth(RectTransform rect, float width) => rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
 
         // 글 높이에 맞춰 text를 판 위쪽에서 y만큼 내려 놓는다 — 높이를 돌려준다
         private static float Fit(Text text, float y)
@@ -391,8 +622,8 @@ namespace GnorpWar
             return height;
         }
 
-        // 유닛 판 한 장을 채우고 높이를 돌려준다
-        private static float Fill(UnitCard card, UnitDefinition unit, OwnedBuilding[] board, bool enemy, List<UpgradeHolding> upgrades)
+        // 유닛 판 한 장을 채우고 높이를 돌려준다 — 위에서부터 그림 · 이름 / 능력치 줄 / 본문(특성 · 켜 준 효과) / 업그레이드
+        private float Fill(UnitCard card, UnitDefinition unit, OwnedBuilding[] board, bool enemy, List<UpgradeHolding> upgrades)
         {
             // 적 진영의 영주가 바뀌면(지도에서 다른 땅을 고름) 그림의 영주 색도 다시 칠한다
             if (card.IconUnit != unit || card.IconEnemy != enemy || card.IconColor != RunState.LordColor(enemy ? Team.Enemy : Team.Ally))
@@ -401,7 +632,8 @@ namespace GnorpWar
             // 전투 중에는 보드가 안 바뀐다 — 스탯이 바뀌었을 때만 다시(가리키는 동안 매 프레임 불린다). 전투 밖에서는 상점에서 보드가 바뀌므로 늘 다시
             if (!BattleManager.Fighting || card.BodyUnit != unit || card.BodyEnemy != enemy || card.BodyVersion != StatBook.Version)
             {
-                card.Body.text = UnitInfo(unit, board, enemy);
+                card.StatLines = StatLines(unit, enemy);
+                card.Body.text = UnitInfo(unit, board);
                 card.BodyUnit = unit;
                 card.BodyEnemy = enemy;
                 card.BodyVersion = BattleManager.Fighting ? StatBook.Version : -1;
@@ -411,8 +643,11 @@ namespace GnorpWar
             float header = Mathf.Max(card.Icon.sizeDelta.y, nameHeight);
             card.Icon.anchoredPosition = new Vector2(card.Icon.anchoredPosition.x, -(Pad + (header - card.Icon.sizeDelta.y) / 2f));
             Fit(card.Name, -(Pad + (header - nameHeight) / 2f));
-            float bodyHeight = Fit(card.Body, -(Pad + header + InnerGap));
-            float height = Pad + header + InnerGap + bodyHeight;
+            float height = StatRows(card, Pad + header + InnerGap);
+            bool hasBody = !string.IsNullOrEmpty(card.Body.text);
+            card.Body.enabled = hasBody;
+            if (hasBody)
+                height += InnerGap + Fit(card.Body, -(height + InnerGap));
             // 그 유닛에 걸린 업그레이드 — 본문(능력치 · 특성 · 기물이 켜 준 효과) 아래에 늘 아이콘만(사용자 10/14 — 유닛 효과가 묻히지 않게)
             float lines = card.Upgrades.Show(upgrades, -(height + InnerGap));
             if (lines > 0f)
@@ -420,6 +655,76 @@ namespace GnorpWar
             height += Pad;
             card.Panel.sizeDelta = new Vector2(card.Panel.sizeDelta.x, height);
             return height;
+        }
+
+        // 능력치 줄 — 판 위에서 y만큼 내려와 한 줄씩(아이콘 칸 + 글). 마지막 줄 아래 끝의 y를 돌려준다
+        private float StatRows(UnitCard card, float y)
+        {
+            if (card.Stats == null)
+            {
+                card.Stats = (RectTransform)new GameObject("Stats", typeof(RectTransform)).transform;
+                card.Stats.SetParent(card.Panel, false);
+                card.Stats.anchorMin = card.Stats.anchorMax = card.Stats.pivot = new Vector2(0f, 1f);
+                card.Stats.anchoredPosition = Vector2.zero;
+                card.Stats.sizeDelta = Vector2.zero;
+            }
+            List<StatLine> lines = card.StatLines;
+            for (int i = 0; i < Mathf.Max(lines.Count, card.Rows.Count); i++)
+            {
+                if (i >= card.Rows.Count)
+                    card.Rows.Add(NewStatRow(card));
+                (Image icon, Text text) = card.Rows[i];
+                bool used = i < lines.Count;
+                icon.gameObject.SetActive(used && lines[i].Icon != null);
+                text.gameObject.SetActive(used);
+                if (!used)
+                    continue;
+                if (i > 0)
+                    y += StatRowGap;
+                StatLine line = lines[i];
+                float iconHeight = 0f;
+                if (line.Icon != null)
+                {
+                    if (icon.sprite != line.Icon)
+                    {
+                        icon.sprite = line.Icon;
+                        icon.SetNativeSize();
+                    }
+                    icon.color = line.Color;
+                    iconHeight = icon.rectTransform.sizeDelta.y;
+                }
+                text.text = line.Text;
+                float textHeight = text.preferredHeight;
+                float row = Mathf.Max(iconHeight, textHeight);
+                icon.rectTransform.anchoredPosition = new Vector2(Side, -(y + (row - iconHeight) / 2f));
+                text.rectTransform.anchoredPosition = new Vector2(Side + StatIconSize + StatIconGap, -(y + (row - textHeight) / 2f));
+                text.rectTransform.sizeDelta = new Vector2(text.preferredWidth, textHeight);
+                y += row;
+            }
+            return y;
+        }
+
+        // 능력치 줄 한 줄 — 아이콘(원본 크기) + 본문과 같은 글꼴의 글
+        private static (Image, Text) NewStatRow(UnitCard card)
+        {
+            var icon = new GameObject("StatIcon", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            icon.rectTransform.SetParent(card.Stats, false);
+            icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0f, 1f);
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            var text = new GameObject("StatText", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            text.rectTransform.SetParent(card.Stats, false);
+            text.rectTransform.anchorMin = text.rectTransform.anchorMax = text.rectTransform.pivot = new Vector2(0f, 1f);
+            text.font = card.Body.font;
+            text.fontSize = card.Body.fontSize;
+            text.color = card.Body.color;
+            text.lineSpacing = card.Body.lineSpacing;
+            text.supportRichText = true;
+            text.alignment = TextAnchor.UpperLeft;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
+            return (icon, text);
         }
 
         // 프리팹의 그림 부품(몸통 · 무기 · 말 …)을 같은 배치 · 색 · 그리는 순서로 Image에 옮긴다.

@@ -19,7 +19,7 @@ namespace GnorpWar
                 unit.AddModifier(m.Scaled(_perTier, level));
             // 스탯이 여럿이어도 알림은 하나 — 첫 스탯의 종류로
             if (_modifiers.Length > 0)
-                BuffLinks.ToPoint(board.Team, slot, unit.Position, BuffKind.Stat);
+                BuffLinks.ToPoint(board.Team, slot, unit.Position, BuffKind.Stat, BuffLabel.Of(_modifiers[0].Scaled(_perTier, level)));
         }
 
         public override bool Reaches(int slot, int other, BuildingDefinition target) => other > slot && target.Unit != null;

@@ -22,8 +22,7 @@ MonoBehaviour:
   _unit: {fileID: 11400000, guid: eaa17cd8967f3e84ea90617459a79210, type: 2}
   _unitCount: 1
   _actions: []
-  _effects:
-  - {fileID: 11400000, guid: 51cac354fe69adf419533b614ddd7ac1, type: 2}
+  _effects: []
   _passives: []
   _mythicActions: []
   _mythicEffects:

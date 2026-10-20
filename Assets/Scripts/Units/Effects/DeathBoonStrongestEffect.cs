@@ -27,14 +27,29 @@ namespace GnorpWar
                 return;
             if (_healRatio > 0f)
                 strongest.Heal(strongest.MaxHp * _healRatio);
+            // 버프 글자는 처음 건 스탯 하나(회복뿐이면 글자 없음)
+            BuffLabel label = default;
             if (_attackShare > 0f)
-                strongest.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Flat, unit.AttackDamage * _attackShare));
+            {
+                var attack = new StatModifier(UnitStat.Attack, StatOp.Flat, unit.AttackDamage * _attackShare);
+                strongest.AddModifier(attack);
+                label = BuffLabel.Of(attack);
+            }
             if (_maxHpShare > 0f)
-                strongest.AddModifier(new StatModifier(UnitStat.MaxHp, StatOp.Flat, unit.MaxHp * _maxHpShare));
+            {
+                var hp = new StatModifier(UnitStat.MaxHp, StatOp.Flat, unit.MaxHp * _maxHpShare);
+                strongest.AddModifier(hp);
+                if (label.Text == null)
+                    label = BuffLabel.Of(hp);
+            }
             if (_modifier.Value != 0f)
+            {
                 strongest.AddModifier(_modifier);
+                if (label.Text == null)
+                    label = BuffLabel.Of(_modifier);
+            }
             // 회복도 스탯 색(사용자 10/14 기준) — 죽은 자리에서 받은 유닛으로
-            BuffLinks.EffectFromUnit(unit.Team, this, at, strongest.Position, BuffKind.Stat);
+            BuffLinks.EffectFromUnit(unit.Team, this, at, strongest.Position, BuffKind.Stat, label);
         }
     }
 }

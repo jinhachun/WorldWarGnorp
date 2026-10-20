@@ -92,9 +92,12 @@ namespace GnorpWar
             if (!InView(from) && !InView(to))
                 return;
             _lastDrawn[key] = now;
-
             // 굽는 쪽 — 위·탑 앞쪽
             float forward = link.Team == Team.Ally ? 1f : -1f;
+            // 스탯 · 쿨다운 선이면 대상 위에 무슨 버프인지(약하게 다시 알리는 선은 빼고). 대상이 층 · 타워면 탑을 가리지 않게 앞쪽으로 붙인다
+            if (!link.Weak)
+                BuffTexts.Show(to, link.Label, link.To >= 0 || link.Tower > 0 ? forward : 0f);
+
             Line line = _free.Count > 0 ? _free.Pop() : new Line();
             BuffLinkShape.Fill(line.Points, from, to, BuffLinkShape.NewSeed(), new Vector2(forward * 0.5f, 1f), MinBulge, MaxBulge, Pixel * 0.5f);
             line.Color = Colors[(int)link.Kind];

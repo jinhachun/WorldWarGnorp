@@ -4,7 +4,7 @@ using UnityEngine;
 namespace GnorpWar
 {
     // 발동할 때마다, 쿨다운이 있는 무작위 내 기물 1개(이 기물도 될 수 있다)의 쿨다운을 N초간 멈추고, 이 기물의 바로 위 · 아래 기물들을 즉시 1회 발동시킨다
-    // (제물의 의식 — 트라이브 명세 §4 · §5 · 결정 기록: 「인접」 = 바로 위 · 아래). 순서는 멈추기 → 발동. 멈춘 기물이 바로 위 · 아래면 발동은 되고 그 뒤 멈춘다
+    // (제물의 의식 — 트라이브 명세 §4 · §5 · 결정 기록: 「인접」 = 바로 위 · 아래). 순서는 멈추기 → 발동. 멈춘 기물은 바로 위 · 아래여도 발동하지 않는다(사용자 10/15)
     [CreateAssetMenu(menuName = "GnorpWar/Actions/Sacrifice")]
     public class SacrificeAction : BuildingAction
     {

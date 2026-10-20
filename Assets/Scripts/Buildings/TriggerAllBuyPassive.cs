@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 전투 시작 시 내 모든 기물의 「구매할 때마다,」 효과를 발동시킨다 (영악한 투자가 신화 — 기획서 §7-1) — 이 보드의 스팀바론도 적용
+    // 전투 시작 시 내 모든 기물의 「구매할 때마다,」 효과를 발동시킨다 (영악한 투자가 신화 — 기획서 §7-1)
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Trigger All Buy")]
     public class TriggerAllBuyPassive : BuildingPassive
     {
@@ -13,11 +13,10 @@ namespace GnorpWar
         {
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);   // 발동된 기물은 TriggerBuyEffects가 알린다
             OwnedBuilding[] field = System.Array.ConvertAll(board.Slots, s => s.Building);
-            int repeats = BuyRepeats(field) * _times;
             for (int target = 0; target < field.Length; target++)
                 if (!OwnedBuilding.IsEmpty(field[target]))
                 {
-                    TriggerBuyEffects(field[target], board.Team, repeats);
+                    TriggerBuyEffects(field[target], board.Team, _times);
                     if (target != slot && HasBuyEffects(field[target].Definition))
                         BuffLinks.ToSlot(board.Team, slot, target, BuffKind.Trigger);
                 }

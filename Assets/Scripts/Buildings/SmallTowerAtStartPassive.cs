@@ -28,14 +28,15 @@ namespace GnorpWar
         public override void OnBattleStart(BoardRunner board, int slot, int level) => Build(board, slot, level);
 
         // 세운다 — 전투 시작 때, 그리고 신화면 이 타워가 파괴될 때마다 같은 규칙으로 다시(SmallTowerRebuildPassive)
-        public void Build(BoardRunner board, int slot, int level)
+        public Base Build(BoardRunner board, int slot, int level)
         {
             Base tower = Build(board.Team);
             if (tower == null)
-                return;
+                return null;
             tower.SetRangeBonus(Range(level).Value);
             tower.BuiltBy = board.Slots[slot].Building;
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
+            return tower;
         }
 
         // 자리 규칙대로 team의 작은 타워 1채 — 기물 없이도 세운다(합치기 보상 업그레이드 「전초 기지」). 본진이 없으면 null

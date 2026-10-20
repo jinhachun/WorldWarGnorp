@@ -15,6 +15,7 @@ MonoBehaviour:
   _displayName: "\uCD08\uC6D0"
   _description: 
   _icon: {fileID: 21300000, guid: 2c35c80c50d040ddbdf9aed2ca48f499, type: 3}
+  _look: 2
   _unitRules:
   - _categories:
     - {fileID: 11400000, guid: 85153d7df66545344b8f09cebb62a3f9, type: 2}

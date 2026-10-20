@@ -17,6 +17,8 @@ namespace GnorpWar
 
         // 수명 중 머리가 대상에 닿는 때 · 꼬리가 출발을 떠나는 때(비율)
         private const float HeadArrive = 0.45f;
+        // 머리가 대상에 닿는 시각(초) — 버프 글자(Fx/BuffTexts)가 이때 뜬다
+        public const float ArriveTime = Lifetime * HeadArrive;
         private const float TailLeave = 0.15f;
         private const float TailAlpha = 0.3f;
         // 불룩함 = 두 끝 거리의 이 비율(부르는 쪽 하한·상한으로 묶은 뒤 선마다 ±30%)

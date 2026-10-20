@@ -59,6 +59,9 @@ namespace GnorpWar
         public static float StompDamagePerSecond => _instance != null ? _instance._config.StompDamagePerSecond : 0f;
         // 등반 — 모든 등반 점프 뒤 쉬는 초 · 앞 아군이 이 비율보다 느려야 오른다 · 점프 높이 = 키 + 이 칸. 전투 씬 밖이면 기본값
         public static float ClimbRest => _instance != null ? _instance._config.ClimbRest : 0f;
+        public static float TurnBackRange => _instance != null ? _instance._config.TurnBackRange : 0f;
+        public static float TurnBackExit => _instance != null ? _instance._config.TurnBackExit : 0f;
+        public static float TargetHold => _instance != null ? _instance._config.TargetHold : 0f;
         public static float ClimbSlowerThan => _instance != null ? _instance._config.ClimbSlowerThan : 0.5f;
         public static float ClimbJumpExtra => _instance != null ? _instance._config.ClimbJumpExtra : 2f;
         // 데스매치 시각(전투 경과 초) — 화면 표시용. 전투 씬 밖이면 0

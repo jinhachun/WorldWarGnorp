@@ -20,7 +20,7 @@ namespace GnorpWar
             if (target is Unit enemy && UnitAliases.Is(enemy.Team, enemy.Definition, _prey))
             {
                 attacker.AddModifier(new StatModifier(UnitStat.Attack, StatOp.Multiply, Factor(Level(attacker.Team))));
-                BuffLinks.EffectToPoint(attacker.Team, this, attacker.Position, BuffKind.Stat);
+                BuffLinks.EffectToPoint(attacker.Team, this, attacker.Position, BuffKind.Stat, BuffLabel.Of(new StatModifier(UnitStat.Attack, StatOp.Multiply, Factor(Level(attacker.Team)))));
             }
         }
 

@@ -11,7 +11,7 @@ namespace GnorpWar
             if (overflow <= 0f)
                 return;
             patient.AddModifier(new StatModifier(UnitStat.MaxHp, StatOp.Flat, overflow));
-            BuffLinks.EffectToPoint(team, this, patient.Position, BuffKind.Stat);
+            BuffLinks.EffectToPoint(team, this, patient.Position, BuffKind.Stat, BuffLabel.Of(new StatModifier(UnitStat.MaxHp, StatOp.Flat, overflow)));
         }
     }
 }

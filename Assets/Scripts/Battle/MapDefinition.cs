@@ -8,6 +8,9 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Map")]
     public class MapDefinition : ScriptableObject
     {
+        // 전장 연출(Fx/TerrainFx)의 종류 — 땅 장식 · 떠다니는 입자(사용자 10/20: 전장 자체가 그 지형으로 보이게)
+        public enum TerrainLook { Plain, Forest, Grassland, Ice, Jungle, Swamp }
+
         // 병종 태그로 고른 유닛의 스탯 하나에 곱한다(기획서 §6 곱연산)
         [System.Serializable]
         public class UnitRule : IUnitFilter, ICategoryFilter
@@ -89,6 +92,9 @@ namespace GnorpWar
         [Tooltip("맵 이름 앞 아이콘(32×32) — 상점 맵 칸 · 전투 중 맵 이름 · 월드 지도의 땅 표시")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _icon;
+        [Tooltip("전장에 그리는 지형 연출(Fx/TerrainFx) — 땅 장식(풀 · 덩굴 · 물웅덩이 …) · 떠다니는 입자(눈발 · 낙엽 …)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private TerrainLook _look;
 
         [TitleGroup("유닛 — 전투 동안 양 진영에"), ShowIf(nameof(ShowUnitRules))]
         [SerializeField] private UnitRule[] _unitRules = new UnitRule[0];
@@ -122,6 +128,7 @@ namespace GnorpWar
 
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
+        public TerrainLook Look => _look;
         // 설명 글 — 아래 수치 필드에서 만든다(값을 고치면 글이 따라간다, CLAUDE.md §5-2 6번). 수치로 나오는 줄이 없는 맵(기본)만 _description
         public string Description
         {

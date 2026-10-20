@@ -24,7 +24,7 @@ namespace GnorpWar
                     OwnedBuilding.NotifyEffect(board.Slots[i].Building);
                 // 늘 켜진 효과 — 지금 한 번, 그 뒤로는 대상이 발동할 때마다 약하게(BuffLinks.Standing). 쿨다운 없는 기물은 받는 게 없다
                 if (board.Slots[i].Building != null && board.Slots[i].Cooldown > 0f)
-                    BuffLinks.Standing(board.Team, slot, i, BuffKind.Haste);
+                    BuffLinks.Standing(board.Team, slot, i, BuffKind.Haste, BuffLabel.Cooldown(Factor(level)));
             }
         }
 

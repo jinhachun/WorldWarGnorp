@@ -10,7 +10,7 @@ namespace GnorpWar
     // 다른 영주와의 국경 · 해안선은 흰 선, 같은 영주의 땅 사이는 옅은 선. 침략할 수 있는 땅에는 내 땅에서 그 땅으로 화살표 하나
     // (국경을 가장 길게 맞댄 내 땅에서, 여덟 방향 도트 도장) — _hatch를 켜면 그 땅에 그 영주 색 빗금도. 고른 땅은 노란 테두리, 가리킨 땅은 조금 밝게.
     // 판도 · 고른 땅 · 가리킨 땅이 바뀔 때마다 그림을 통째로 다시 칠한다(375×252칸).
-    // 땅마다 지형 아이콘과 땅 번호는 구운 표시 자리(AnchorOf)에 한 번 놓는다.
+    // 땅마다 지형 아이콘 · 지역 특수 표시 · 내 땅 왕관은 구운 표시 자리(AnchorOf)에 한 번 놓는다.
     // 누름 · 가리킴은 화면 좌표를 칸으로 바꿔 땅 번호를 읽는다 — 무엇을 할지는 WorldManager가 정한다
     [RequireComponent(typeof(RawImage))]
     public class WorldMapView : MonoBehaviour, IPointerClickHandler, IPointerMoveHandler, IPointerExitHandler, IScrollHandler, IDragHandler
@@ -18,13 +18,22 @@ namespace GnorpWar
         public const int None = -1;
 
         // 채움 밝기(영주 색 × 이 값) — 남의 땅 · 가리킨 남의 땅 · 내 땅 · 가리킨 내 땅 · 같은 영주의 땅 사이 선(채움 대비)
-        private const float Fill = 0.34f;
-        private const float HoverFill = 0.5f;
+        // 남의 땅은 어둡게 깔고 침략할 수 있는 땅만 밝게 띄운다(사용자 10/20 U4 — 30칸이 다 진해 내 땅 · 갈 수 있는 땅이 묻혔다)
+        private const float Fill = 0.16f;
+        private const float HoverFill = 0.3f;
+        private const float OpenFill = 0.42f;
+        private const float OpenHoverFill = 0.6f;
         private const float MineFill = 0.8f;
         private const float MineHoverFill = 1f;
         private const float InnerLine = 0.6f;
+        // 남의 땅 국경 · 해안선의 밝기(영주 색에 곱함) — 채움(Fill)보다 진하게, 흰색은 내 땅 국경만
+        private const float EnemyEdge = 0.75f;
         // 내 땅 덩어리의 바깥 테두리 두께(칸) · 빗금 간격(칸) · 고른 땅 테두리 두께(칸)
         private const int MineBorder = 2;
+        // 내 땅 국경 강조(사용자 10/15 「내 땅이 잘 안 보인다」 — 4X식 국경) — 흰 테두리 안쪽 띠(칸, 테두리 포함 두께) · 그 띠의 흰색 섞는 비율 · 바깥(남의 땅 쪽) 검은 그림자(칸)
+        private const int MineGlow = 4;
+        private const float GlowWhite = 0.45f;
+        private const int MineShadow = 1;
         private const int HatchStep = 5;
         private const int SelectedWidth = 2;
         // 침략 화살표 — 손으로 찍은 도장 둘(오른쪽 · 오른쪽 아래)을 90도씩 돌려 여덟 방향으로 쓴다(임의 각도로 그으면 4px 격자에서 계단이 깨진다).
@@ -63,15 +72,13 @@ namespace GnorpWar
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 SeaColor = new Color32(0, 0, 0, 255);
 
-        // 표시의 자리(표시 자리 기준, 화면 px): 지형 아이콘 뒤 검은 판의 한 변 · 아이콘 높이 · 땅 번호 높이
+        // 표시의 자리(표시 자리 기준, 화면 px): 지형 아이콘 뒤 검은 판의 한 변 · 아이콘 높이(땅 번호는 지웠다 — 사용자 10/15)
         private const float IconBack = 36f;
         private const float IconY = 12f;
-        private const float LabelY = -22f;
-        private const int LabelSize = 24;
         // 표시 자리의 px 값들을 잰 기준 — 지도 한 칸 = 화면 4px
         private const float CellPixels = 4f;
 
-        [Tooltip("땅 번호 · 업그레이드 글 — 도트 폰트")]
+        [Tooltip("영주 이름 — 도트 폰트(WorldLords)")]
         [SerializeField] private Font _dotFont;
         [Tooltip("침략할 수 있는 땅에 화살표와 함께 그 영주 색 빗금도 친다")]
         [SerializeField] private bool _hatch;
@@ -79,6 +86,8 @@ namespace GnorpWar
         [SerializeField] private Sprite _lordSprite;
         [Tooltip("영주 그림이 드는 깃발 — 흰 그림(영주 색을 입힌다)")]
         [SerializeField] private Sprite _lordFlag;
+        [Tooltip("내 땅 표시 — 내 땅마다 지형 아이콘 위에 늘 뜬다(사용자 10/15 「내 영토가 눈에 안 띈다」), 원본 크기")]
+        [SerializeField] private Sprite _crown;
 
         private RawImage _image;
         private Texture2D _texture;
@@ -87,10 +96,12 @@ namespace GnorpWar
         private int _width, _height;
         private Vector2Int[] _anchors;
         // 땅마다 — 지형 아이콘의 검은 판 · 지역 특수 업그레이드 표시(외곽선 칸 · 아이콘) · 지금 그려 둔 특수 업그레이드(없으면 null)
-        private Image[] _terrains, _specialFrames;
+        private Image[] _terrains, _specialFrames, _crowns;
         private UpgradeIcon[] _specialIcons;
         private UpgradeDefinition[] _specials;
         private const float SpecialOutline = 2f;
+        // 왕관과 지형 아이콘 판 사이(px)
+        private const float CrownGap = 2f;
         // [작은 땅 번호 × 땅 수 + 큰 땅 번호] = 두 땅이 맞댄 국경의 칸들 — 화살표가 여기서 나온다
         private readonly Dictionary<int, List<Vector2Int>> _borders = new Dictionary<int, List<Vector2Int>>();
 
@@ -109,7 +120,7 @@ namespace GnorpWar
         public int Arrows { get; private set; }
         // 땅을 눌렀다(바다 · 지도 밖이면 None)
         public event System.Action<int> Clicked;
-        // 지도 위를 돌아다니는 영주들 — 표시(번호 · 아이콘) 위에 그려진다
+        // 지도 위를 돌아다니는 영주들 — 표시(아이콘) 위에 그려진다
         public WorldLords Lords { get; private set; }
 
         public void Build(WorldMapDefinition map)
@@ -127,6 +138,7 @@ namespace GnorpWar
             _anchors = new Vector2Int[regions];
             _terrains = new Image[regions];
             _specialFrames = new Image[regions];
+            _crowns = new Image[regions];
             _specialIcons = new UpgradeIcon[regions];
             _specials = new UpgradeDefinition[regions];
             // 맞댄 국경 — 오른쪽 · 아래 칸과 땅이 다른 칸
@@ -184,20 +196,16 @@ namespace GnorpWar
                 _specialIcons[region] = tip;
                 frame.gameObject.SetActive(false);
 
-                var label = new GameObject("Label", typeof(RectTransform), typeof(Text), typeof(Outline)).GetComponent<Text>();
-                label.transform.SetParent(mark, false);
-                label.font = _dotFont;
-                label.fontSize = LabelSize;
-                label.alignment = TextAnchor.MiddleCenter;
-                label.horizontalOverflow = HorizontalWrapMode.Overflow;
-                label.verticalOverflow = VerticalWrapMode.Overflow;
-                label.raycastTarget = false;
-                label.text = $"{region + 1:00}";
-                label.rectTransform.sizeDelta = Vector2.zero;
-                label.rectTransform.anchoredPosition = new Vector2(0f, LabelY);
-                var outline = label.GetComponent<Outline>();
-                outline.effectColor = Color.black;
-                outline.effectDistance = new Vector2(2f, 2f);
+                // 내 땅 왕관 — 지형 아이콘(과 특수 표시) 줄 바로 위 가운데, 검은 테두리(Show가 켜고 끈다)
+                Image crown = _crowns[region] = NewImage(mark, "Crown");
+                crown.sprite = _crown;
+                crown.SetNativeSize();
+                crown.preserveAspect = true;
+                crown.rectTransform.anchoredPosition = new Vector2(0f, IconY + (IconBack + crown.rectTransform.sizeDelta.y) * 0.5f + CrownGap);
+                var crownOutline = crown.gameObject.AddComponent<Outline>();
+                crownOutline.effectColor = Color.black;
+                crownOutline.effectDistance = new Vector2(2f, 2f);
+                crown.gameObject.SetActive(false);
             }
             Lords = gameObject.AddComponent<WorldLords>();
             Lords.Init(_cells, _width, _height, scale, _anchors, _lordSprite, _lordFlag, _dotFont);
@@ -254,6 +262,9 @@ namespace GnorpWar
                 if (owner[region] != _owner[region] || open != _invadable[region] || !color.Equals(_colors[region]))
                     changed = true;
                 _owner[region] = owner[region];
+                bool crowned = owner[region] == mine;
+                if (_crowns[region].gameObject.activeSelf != crowned)
+                    _crowns[region].gameObject.SetActive(crowned);
                 _colors[region] = color;
                 _invadable[region] = open;
             }
@@ -263,7 +274,7 @@ namespace GnorpWar
             _hovered = Hovered;
             _mine = mine;
             _painted = true;
-            Paint(_pixels, _cells, _width, _height, _owner, _colors, _mine, _hatch ? _invadable : null, _selected, _hovered);
+            Paint(_pixels, _cells, _width, _height, _owner, _colors, _mine, _invadable, _hatch ? _invadable : null, _selected, _hovered);
             // 지형 장식 — 채움 색 위에 살짝 밝게(화살표는 그 위에 찍는다)
             foreach (int pixel in _decor)
                 _pixels[pixel] = Color32.Lerp(_pixels[pixel], White, DecorBrightness);
@@ -346,8 +357,8 @@ namespace GnorpWar
                 _pixels[(_height - 1 - cell.y) * _width + cell.x] = color;
         }
 
-        // cells = [y × width + x] 땅 번호(위 왼쪽이 0번 칸), pixels = 텍스처 순서(아래 줄부터). hatch = 빗금을 칠 땅(없으면 null)
-        public static void Paint(Color32[] pixels, int[] cells, int width, int height, int[] owner, Color32[] colors, int mine, bool[] hatch, int selected, int hovered)
+        // cells = [y × width + x] 땅 번호(위 왼쪽이 0번 칸), pixels = 텍스처 순서(아래 줄부터). open = 침략할 수 있는 땅(밝게만 — 점선 띠는 국경과 따로 놀아 뺐다, 사용자 10/21), hatch = 빗금을 칠 땅(없으면 null)
+        public static void Paint(Color32[] pixels, int[] cells, int width, int height, int[] owner, Color32[] colors, int mine, bool[] open, bool[] hatch, int selected, int hovered)
         {
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
@@ -358,11 +369,14 @@ namespace GnorpWar
                     {
                         Color32 color = colors[region];
                         bool own = owner[region] == mine;
-                        float fill = own ? (region == hovered ? MineHoverFill : MineFill) : region == hovered ? HoverFill : Fill;
+                        bool reachable = !own && open != null && open[region];
+                        float fill = own ? (region == hovered ? MineHoverFill : MineFill)
+                            : reachable ? (region == hovered ? OpenHoverFill : OpenFill)
+                            : region == hovered ? HoverFill : Fill;
                         pixel = Scaled(color, fill);
                         if (hatch != null && hatch[region] && (x + y) % HatchStep == 0)
                             pixel = color;
-                        // 선은 한 줄만 — 오른쪽 · 아래 칸과 주인이 다르면 흰 선, 주인은 같고 땅만 다르면 옅은 선. 바다 · 지도 끝과 닿은 칸은 해안선
+                        // 선은 한 줄만 — 오른쪽 · 아래 칸과 주인이 다르면 국경선, 주인은 같고 땅만 다르면 옅은 선. 바다 · 지도 끝과 닿은 칸은 해안선
                         bool coast = At(cells, width, height, x - 1, y) < 0 || At(cells, width, height, x, y - 1) < 0;
                         bool lordEdge = false, landEdge = false;
                         for (int k = 0; k < 2; k++)
@@ -378,12 +392,21 @@ namespace GnorpWar
                                     landEdge = true;
                             }
                         }
-                        // 내 땅 덩어리의 바깥 가장자리는 굵게
-                        if (coast || lordEdge || (own && NearOther(cells, width, height, x, y, owner, mine)))
+                        // 내 땅 덩어리의 바깥 가장자리는 굵게 · 그 안쪽은 내 색이 밝게 번진 띠 · 맞닿은 남의 땅 쪽에는 검은 그림자
+                        // 남의 땅 국경 · 해안선은 흰색 없이 그 영주 색으로 채움보다 진하게 — 흰 국경은 내 땅만(사용자 10/15)
+                        if (own && (coast || lordEdge || NearOther(cells, width, height, x, y, owner, mine, MineBorder)))
                             pixel = White;
+                        else if (own && NearOther(cells, width, height, x, y, owner, mine, MineGlow))
+                            pixel = Color32.Lerp(color, White, GlowWhite);
+                        else if (!own && NearMine(cells, width, height, x, y, owner, mine))
+                            pixel = SeaColor;
+                        else if (coast || lordEdge)
+                            pixel = Scaled(color, EnemyEdge);
                         else if (landEdge)
                             pixel = Scaled(color, fill * InnerLine);
-                        if (region == selected && NearEdge(cells, width, height, x, y, region))
+                        // 고른 땅 테두리는 이웃 땅 쪽에 그려진 국경선(흰 선 · 그림자 · 영주 색 선)까지 덮는다 — 안 덮으면 노란 선 밖으로 다른 선이 비친다(사용자 10/15)
+                        if (region == selected ? NearEdge(cells, width, height, x, y, region, SelectedWidth)
+                            : selected >= 0 && Near(cells, width, height, x, y, selected, own ? MineBorder : MineShadow))
                             pixel = SelectedColor;
                     }
                     pixels[(height - 1 - y) * width + x] = pixel;
@@ -394,11 +417,11 @@ namespace GnorpWar
         private static int At(int[] cells, int width, int height, int x, int y)
             => x < 0 || y < 0 || x >= width || y >= height ? WorldMapDefinition.Sea : cells[y * width + x];
 
-        // 내 땅의 칸 (x, y)에서 MineBorder칸 안에 내 땅이 아닌 칸(남의 땅 · 바다)이 있나
-        private static bool NearOther(int[] cells, int width, int height, int x, int y, int[] owner, int mine)
+        // 내 땅의 칸 (x, y)에서 range칸 안에 내 땅이 아닌 칸(남의 땅 · 바다)이 있나
+        private static bool NearOther(int[] cells, int width, int height, int x, int y, int[] owner, int mine, int range)
         {
-            for (int dx = -MineBorder; dx <= MineBorder; dx++)
-                for (int dy = -MineBorder; dy <= MineBorder; dy++)
+            for (int dx = -range; dx <= range; dx++)
+                for (int dy = -range; dy <= range; dy++)
                 {
                     int other = At(cells, width, height, x + dx, y + dy);
                     if (other < 0 || owner[other] != mine)
@@ -407,12 +430,35 @@ namespace GnorpWar
             return false;
         }
 
-        // 그 땅의 가장자리에서 SelectedWidth칸 안인가
-        private static bool NearEdge(int[] cells, int width, int height, int x, int y, int region)
+        // 남의 땅의 칸 (x, y)에서 MineShadow칸 안에 내 땅이 있나
+        private static bool NearMine(int[] cells, int width, int height, int x, int y, int[] owner, int mine)
         {
-            for (int dx = -SelectedWidth; dx <= SelectedWidth; dx++)
-                for (int dy = -SelectedWidth; dy <= SelectedWidth; dy++)
+            for (int dx = -MineShadow; dx <= MineShadow; dx++)
+                for (int dy = -MineShadow; dy <= MineShadow; dy++)
+                {
+                    int other = At(cells, width, height, x + dx, y + dy);
+                    if (other >= 0 && owner[other] == mine)
+                        return true;
+                }
+            return false;
+        }
+
+        // 그 땅의 가장자리에서 range칸 안인가
+        private static bool NearEdge(int[] cells, int width, int height, int x, int y, int region, int range)
+        {
+            for (int dx = -range; dx <= range; dx++)
+                for (int dy = -range; dy <= range; dy++)
                     if (At(cells, width, height, x + dx, y + dy) != region)
+                        return true;
+            return false;
+        }
+
+        // (x, y)에서 range칸 안에 그 땅이 있나
+        private static bool Near(int[] cells, int width, int height, int x, int y, int region, int range)
+        {
+            for (int dx = -range; dx <= range; dx++)
+                for (int dy = -range; dy <= range; dy++)
+                    if (At(cells, width, height, x + dx, y + dy) == region)
                         return true;
             return false;
         }

@@ -12,7 +12,13 @@ namespace GnorpWar
         public bool AppliesTo(UnitDefinition unit) => true;
 
         public override void OnBattleStart(BoardRunner board, int slot, int level)
-            => StatBook.AddForBattle(board.Team == Team.Ally ? Team.Enemy : Team.Ally, this, _modifier);
+        {
+            Team foe = board.Team == Team.Ally ? Team.Enemy : Team.Ally;
+            StatBook.AddForBattle(foe, this, _modifier);
+            // 이 층 → 적 유닛이 나오는 적 성문 앞(디버프) — 전투 시작엔 아직 적 유닛이 없다
+            if (BoardRunner.For(foe) is BoardRunner foeBoard)
+                BuffLinks.ToPoint(board.Team, slot, foeBoard.SpawnPoint, BuffKind.Debuff);
+        }
 
         public override string Describe(int level) => $"적 유닛의 {_modifier.Describe()}";
     }

@@ -34,6 +34,8 @@ namespace GnorpWar
         [SerializeField] private Image _dragGhostWindow;
         [Tooltip("끄는 동안 탑 층 경계에 뜨는 끼워 넣기 선(가운데 기준) — 레이캐스트를 막지 않아야 한다")]
         [SerializeField] private RectTransform _insertLine;
+        [Tooltip("상점에서 설명 창이 서는 자리(보이지 않는 칸) — 진열 · 확률 · 보관함을 덮지 않는 빈 곳(사용자 10/20 U5). 비우면 칸 옆에 뜬다")]
+        [SerializeField] private RectTransform _tooltipDock;
 
         // 「지도로」를 눌렀다 — 상점을 닫는 일은 이 판을 띄운 쪽이 한다
         public event System.Action MapRequested;
@@ -83,12 +85,13 @@ namespace GnorpWar
             _dragGhost.gameObject.SetActive(false);
             _sellHover = _sell.GetComponent<ButtonHover>();
             _merge = gameObject.AddComponent<MergeFx>();
-            _merge.Init(_dragGhost);
             foreach (BoardView view in GetComponentsInChildren<BoardView>(true))
                 if (view.Kind == BoardView.Source.Storage)
                     _storageView = view;
                 else
                     _fieldView = view;
+            // 합치기 후광은 내 탑(필드 칸들) 바로 뒤에 그린다
+            _merge.Init(_dragGhost, (RectTransform)_fieldView.transform);
             if (_towerLayer != null)
             {
                 var field = (RectTransform)_fieldView.transform;
@@ -111,7 +114,11 @@ namespace GnorpWar
             _towerX = x;
         }
 
-        private void OnEnable() => RunState.Merged += OnMerged;
+        private void OnEnable()
+        {
+            RunState.Merged += OnMerged;
+            BuildingTooltip.Dock = _tooltipDock;
+        }
 
         // 합치기가 일어났다(상태는 이미 끝났다) — 한 단계씩 재생한다. 단계의 자리는 합치기 전 모습 기준이고, 칸 그림은 아직 그 모습이다
         private void OnMerged(System.Collections.Generic.IReadOnlyList<RunState.MergeStep> steps)
@@ -136,6 +143,8 @@ namespace GnorpWar
         private void OnDisable()
         {
             RunState.Merged -= OnMerged;
+            if (BuildingTooltip.Dock == _tooltipDock)
+                BuildingTooltip.Dock = null;
             _hasSelection = false;
             _dragging = false;
             if (_dragGhost != null)
@@ -381,7 +390,8 @@ namespace GnorpWar
             Grey(_sell, _sellLabel);
         }
 
-        // 등급 이름 대신 등급 색(기물 테두리 색)으로 칠한 숫자 — 안 나오는 등급(0%)도 자리는 두고 흐리게(순서가 곧 등급이라)
+        // 회색 이름표 「등장 확률」 + 등급 이름과 숫자를 등급 색(기물 테두리 색)으로 — 색만으로 등급을 가르지 않게 이름을 붙인다(사용자 10/20 U12).
+        // 안 나오는 등급(0%)도 자리는 두고 흐리게
         private static string ChanceLine()
         {
             var parts = new string[5];
@@ -390,9 +400,9 @@ namespace GnorpWar
                 var rarity = (BuildingRarity)i;
                 int percent = Mathf.RoundToInt(RunState.OfferChance(rarity) * 100f);
                 string color = ColorUtility.ToHtmlStringRGB(rarity.FrameColor()) + (percent == 0 ? ZeroChanceAlpha : "FF");
-                parts[i] = $"<color=#{color}>{percent}%</color>";
+                parts[i] = $"<color=#{color}>{rarity.DisplayName()} {percent}%</color>";
             }
-            return string.Join("  ", parts);
+            return $"<color={BuildingTooltip.NoteColor}>등장 확률</color>  " + string.Join("  ", parts);
         }
 
         private const string ZeroChanceAlpha = "59";   // 35%

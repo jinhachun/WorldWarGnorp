@@ -25,12 +25,10 @@ MonoBehaviour:
   _effects:
   - {fileID: 11400000, guid: 2d57f67766e590b44bee96ced7ee16af, type: 2}
   - {fileID: 11400000, guid: 747f429df583c724b9c0d2430aefa6cf, type: 2}
-  - {fileID: 11400000, guid: 7569922b610daef40a56b38de99da685, type: 2}
   _passives: []
   _mythicActions: []
   _mythicEffects:
   - {fileID: 11400000, guid: d83237dce21cc754883fc6645692b3b2, type: 2}
-  - {fileID: 11400000, guid: 51cac354fe69adf419533b614ddd7ac1, type: 2}
   _mythicPassives: []
   _mentionedUnits:
   - {fileID: 11400000, guid: 106ab9f832c4c674cb501dc68f48226c, type: 2}

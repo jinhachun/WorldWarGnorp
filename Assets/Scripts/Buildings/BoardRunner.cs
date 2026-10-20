@@ -56,8 +56,15 @@ namespace GnorpWar
         public OwnedBuilding[] Field { get; private set; }
         // 칸이 발동한 순간 (UI 반짝임 등)
         public event System.Action<int> Triggered;
+        // 소환 한 번이 끝난 순간 — (원본 칸, 실제로 나온 수: 추가 소환·변환·파견 사무소 신화까지 반영). 칸 없는 소환(유닛 효과 등)은 -1
+        public event System.Action<int, int> Summoned;
+        // 맵의 「전부 발동」(얼음)이 터진 순간 — 진영. 지형 연출(Fx/TerrainFx)이 탑 창에 얼음 섬광을 띄운다
+        public static event System.Action<Team> MapFiredAll;
 
         public static BoardRunner For(Team team) => ByTeam[(int)team];
+
+        // 자리를 정하지 않은 소환이 나오는 성문 앞(전투 시작 알림 Fx/BattleStartLines가 유닛이 아직 없을 때 선을 긋는 자리)
+        public Vector2 SpawnPoint => _spawnPoint.position;
 
         private void Awake() => ByTeam[(int)_team] = this;
 
@@ -133,7 +140,11 @@ namespace GnorpWar
 
         // seconds 뒤 point에서 unit이 다시 일어난다 — 소환이 아니다(추가 소환 · 변환 · 소환 이벤트를 지나지 않는다 — 지나면 죽을 때마다 수가 불어난다).
         // 데스매치로 기물이 멈춘 뒤 · 전투가 끝난 뒤에는 일어나지 않는다(Update의 발동 루프와 같은 조건). by = 일으킨 효과(버프 선의 출발 기물)
-        public void ReviveLater(UnitDefinition unit, Vector2 point, float seconds, UnitEffect by) => _revivals.Add((Time.time + seconds, unit, point, by));
+        public void ReviveLater(UnitDefinition unit, Vector2 point, float seconds, UnitEffect by)
+        {
+            _revivals.Add((Time.time + seconds, unit, point, by));
+            StatusDots.At(new Vector2(point.x, Ground.Instance.HeightAt(point.x)), seconds);   // 기다리는 동안 그 자리에 초록 점
+        }
 
         private void Revive()
         {
@@ -143,7 +154,8 @@ namespace GnorpWar
                     var revival = _revivals[i];
                     _revivals.RemoveAt(i);
                     Vector2 ground = new Vector2(revival.point.x, Ground.Instance.HeightAt(revival.point.x));
-                    Unit.Spawn(revival.unit.PrefabFor(_team), ground);
+                    Unit risen = Unit.Spawn(revival.unit.PrefabFor(_team), ground);
+                    PillarFx.Rise(ground, risen.Top - ground.y);
                     BuffLinks.EffectToPoint(_team, revival.by, ground, BuffKind.Summon);
                 }
         }
@@ -175,7 +187,7 @@ namespace GnorpWar
         // 자리 효과가 slot층의 기물에서 other층의 기물에 닿는가 — byPosition = 그 능력의 원래 자리 규칙(바로 위 · 아래에 있는 …). 연방제면 내 다른 모든 기물
         public bool Linked(int slot, int other, bool byPosition) => other != slot && (AllAdjacent || byPosition);
 
-        private int TopIndex
+        public int TopIndex
         {
             get
             {
@@ -186,13 +198,13 @@ namespace GnorpWar
             }
         }
 
-        // 쿨다운이 가장 긴 기물을 즉시 times번 발동(군국주의 · 약탈족장 라이칸스로프) — 같으면 그중 무작위(트라이브 명세 §2-1). 쿨다운 있는 기물이 없으면 아무 일도 없다
+        // 쿨다운이 가장 긴 기물을 즉시 times번 발동(군국주의) — 같으면 그중 무작위(트라이브 명세 §2-1). 쿨다운 있는 기물이 없으면 아무 일도 없다. 멈춘 기물은 고르지 않는다(발동이 안 되므로)
         public int FireLongest(int times = 1)
         {
             int longest = -1, ties = 0;
             for (int i = 0; i < _slots.Length; i++)
             {
-                if (!HasBuilding(i) || _slots[i].Cooldown <= 0f)
+                if (!HasBuilding(i) || _slots[i].Cooldown <= 0f || _slots[i].Frozen > 0f)
                     continue;
                 if (longest < 0 || _slots[i].Cooldown > _slots[longest].Cooldown)
                 {
@@ -207,7 +219,7 @@ namespace GnorpWar
             return longest;
         }
 
-        // 제물의 의식 — 칸의 쿨다운을 seconds 동안 멈춘다(그동안 게이지가 안 차고 가속도 안 걸린다). 이미 멈춰 있으면 더 긴 쪽. 즉시 발동(FireNow)은 멈춘 동안에도 된다
+        // 제물의 의식 — 칸의 쿨다운을 seconds 동안 멈춘다(그동안 게이지가 안 차고 가속도 안 걸린다). 이미 멈춰 있으면 더 긴 쪽. 멈춘 동안은 즉시 발동(FireNow)도 안 된다(사용자 10/15)
         public void Freeze(int index, float seconds)
         {
             if (HasBuilding(index))
@@ -217,12 +229,12 @@ namespace GnorpWar
         // 제물의 의식 신화 — 멈췄던 기물이 다시 움직이는 순간 즉시 1회 발동한다(전투 동안, 패시브가 전투 시작 때 켠다). 값 = 켠 기물의 칸(버프 선의 출발), -1 = 꺼짐
         public int FireOnThawSlot = -1;
 
-        public void NotifyUnitKill(Unit killer, Unit victim)
+        public void NotifyUnitDied(Unit victim)
         {
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (BuildingPassive passive in _slots[i].Building.Passives)
-                        passive.OnUnitKill(this, i, killer, victim);
+                        passive.OnUnitDied(this, i, victim);
         }
 
         // 단두대 혁명 — 살아 있는 적 유닛 중 무작위 하나에게 그 체력만큼의 피해(내 본진의 처치). 무적인 유닛은 피해를 받지 않는다(기존 무적 규칙)
@@ -301,6 +313,7 @@ namespace GnorpWar
                     for (int i = 0; i < _slots.Length; i++)
                         if (FireNow(i))
                             BuffLinks.ToSlot(_team, -1, i, BuffKind.Trigger);
+                    MapFiredAll?.Invoke(_team);
                 }
             }
         }
@@ -348,6 +361,7 @@ namespace GnorpWar
                     TeamEffects.AddStack(_team, effect);
             }
 
+            FloorMultiplier.Show(_team, index, repeats);   // 효과를 여러 번 냈으면 층 옆에 「×2」
             Triggered?.Invoke(index);
             BuffLinks.SlotFired(_team, index);
         }
@@ -359,6 +373,7 @@ namespace GnorpWar
         {
             if (source == null && HasBuilding(sourceSlot))
                 source = _slots[sourceSlot].Building.Definition;
+            int baseCount = count;   // 추가 소환 전 — 더 나온 몫에 기둥(Fx/PillarFx)
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
                 {
@@ -381,6 +396,8 @@ namespace GnorpWar
 
             // 파견 사무소 — 자리를 정하지 않은 소환은 가장 앞에 있는 내 작은 타워의 발치에서(없으면 아래 그대로 성에서)
             Base outpost = at == null && _summonAtSmallTower ? Base.FrontSmallTower(_team) : null;
+            // 그 자리에서 나오는 소환(죽은 자리 · 날아가 떨어진 자리 등 — 파견 사무소는 빼고)은 거기서 나온 게 보이게 기둥
+            bool inPlace = at != null;
             if (outpost != null)
                 at = Feet(outpost);
 
@@ -390,12 +407,15 @@ namespace GnorpWar
             // 기물이 소환하면 그 기물의 층에서 나온다(탑 — 큰 유닛도 자기 층에서, 사용자 10/8). 기물이 아닌 소환·자리를 정한 소환은 그대로
             Tower tower = at == null && sourceSlot >= 0 ? Tower.For(_team) : null;
             bool fromFloor = tower != null && sourceSlot < tower.FloorCount;
+            int spawnedCount = 0;
             SpawnGroup(point);
             // 파견 사무소 신화 — 가장 앞 타워 말고 나머지 내 작은 타워에서도 같은 수가 동시에 나온다
             if (outpost != null && _summonAtEverySmallTower)
                 foreach (Base small in Base.SmallTowers())
                     if (small != outpost && small.Team == _team)
                         SpawnGroup(Feet(small));
+            if (spawnedCount > 0)
+                Summoned?.Invoke(sourceSlot, spawnedCount);
 
             void SpawnGroup(Vector2 from)
             {
@@ -403,8 +423,12 @@ namespace GnorpWar
                 {
                     Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, from);
                     LastSpawned = spawned;
+                    spawnedCount++;
                     if (converter != null)
                         converter.OnConverted(spawned);
+                    // 기둥 — 그 자리 소환의 첫 기 · 추가 소환으로 더 나온 기(대량보급) · 다른 유닛으로 바뀌어 나온 기(교황청 · 노동의 기계화)
+                    if ((inPlace && i == 0) || i >= baseCount || converter != null)
+                        PillarFx.Rise(new Vector2(spawned.Position.x, spawned.Feet), spawned.Top - spawned.Feet);
                     spawned.NotifySummoned(sourceSlot, source);
                     // 다른 층의 기물이 ~를 소환할 때마다 (군기 · 성당기사단) — 어느 층을 볼지는 능력이 정한다
                     if (sourceSlot >= 0)
@@ -444,7 +468,7 @@ namespace GnorpWar
         // 즉시 1회 발동 — 게이지는 그대로(징집 포고문). 쿨다운 없는 기물은 발동하지 않는다(false)
         public bool FireNow(int index)
         {
-            if (!HasBuilding(index) || _slots[index].Cooldown <= 0f)
+            if (!HasBuilding(index) || _slots[index].Cooldown <= 0f || _slots[index].Frozen > 0f)
                 return false;
             Fire(index);
             return true;

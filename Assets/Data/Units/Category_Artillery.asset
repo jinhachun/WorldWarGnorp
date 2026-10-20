@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: Category_Artillery
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
   _displayName: "\uD3EC\uBCD1"
+  _turnBack: 1

@@ -21,18 +21,16 @@ namespace GnorpWar
         public virtual void OnSummonedFrom(BoardRunner board, int slot, int sourceSlot, Unit unit) { }
         // 내 타워(본진)의 화살이 적 유닛을 처치한 직후
         public virtual void OnTowerKill(BoardRunner board, int slot, Unit victim) { }
-        // 내 유닛이 유닛을 처치한 직후(아군을 죽인 것도 처치다 — 사용자 결정 10/14). 타워의 처치는 OnTowerKill
-        public virtual void OnUnitKill(BoardRunner board, int slot, Unit killer, Unit victim) { }
+        // 유닛이 죽은 직후 — 어느 진영의 유닛이든(약탈족장 라이칸스로프)
+        public virtual void OnUnitDied(BoardRunner board, int slot, Unit victim) { }
         // 내 작은 타워가 파괴된 직후(사라지기 전) — 어느 타워를 볼지(이 기물이 세운 것 · 전부)는 능력이 정한다(Base.BuiltBy)
         public virtual void OnSmallTowerDestroyed(BoardRunner board, int slot, Base tower) { }
 
         // 「구매할 때마다,」 — 이 기물을 샀을 때(합쳐졌으면 합쳐진 결과에서) · 영악한 투자가가 다시 발동시킬 때. team = 효과를 받을 진영
         public virtual void OnBuy(OwnedBuilding self, Team team) { }
-        // 「구매할 때마다,」 효과가 있나 — 주식시장·영악한 투자가가 읽는다
+        // 「구매할 때마다,」 효과가 있나 — 이동식 공장·영악한 투자가가 읽는다
         public virtual bool HasBuyEffect => false;
-        // 「구매할 때마다,」 효과를 몇 번 발동시키나(스팀바론 2) — 보드에서 가장 큰 값
-        public virtual int BuyEffectRepeat => 1;
-        // 상점 — 내가 기물을 산 직후(주식시장) · 리롤 · 골드를 얻을 때. 필드의 기물만(RunState)
+        // 상점 — 내가 기물을 산 직후(이동식 공장) · 리롤 · 골드를 얻을 때. 필드의 기물만(RunState)
         public virtual void OnAnyBought(OwnedBuilding self, OwnedBuilding bought) { }
         public virtual void OnReroll(OwnedBuilding self) { }
         // 「판매 시,」 — 이 기물을 판 직후(칸은 이미 비었다)
@@ -63,16 +61,6 @@ namespace GnorpWar
                 if (passive.HasBuyEffect)
                     return true;
             return false;
-        }
-
-        public static int BuyRepeats(OwnedBuilding[] board)
-        {
-            int repeats = 1;
-            foreach (OwnedBuilding owned in board)
-                if (!OwnedBuilding.IsEmpty(owned))
-                    foreach (BuildingPassive passive in owned.Passives)
-                        repeats = Mathf.Max(repeats, passive.BuyEffectRepeat);
-            return repeats;
         }
 
         // 한 기물의 「구매할 때마다,」 효과를 repeats번

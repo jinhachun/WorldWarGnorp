@@ -33,6 +33,9 @@ namespace GnorpWar
         [SerializeField] private int _shopTierTurns = 14;
         [Tooltip("반란 뒤 들어선 새 영주가 생기자마자 보는 상점 횟수(그 턴의 수입으로) — 탑은 시작 층수(BattleConfig)")]
         [SerializeField] private int _newLordShops = 1;
+        [Tooltip("영주를 멸망시키고 지역 특수(신화) 업그레이드를 고를 때, 고르지 않고 건너뛰면 받는 골드(플레이어만 — 사용자 10/15)")]
+        [SuffixLabel("골드", true)]
+        [SerializeField] private int _specialSkipGold = 15;
 
         [Header("탑 전투력 — AI끼리의 승패 주사위가 읽는다(World/TowerPower)")]
         [Tooltip("유닛을 쿨다운마다 내지 않는 기물(강화 · 타워 · 패시브)은 쓴 골드(구매가 × 합쳐진 수) × 이 값을 전투력에 얹는다. 0 = 생산 기물만 센다")]
@@ -64,6 +67,20 @@ namespace GnorpWar
         [Tooltip("국가 아이콘 — 칸 순서 = BuildingNation(공용 · 킹덤 · 티크톡). 국가를 고르는 버튼에 쓴다")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _nationIcons = new Sprite[0];
+        [Tooltip("설명 글 줄 안 아이콘(UI/InlineIcons) — 칸 순서 = 공격력 · 체력 · 공격속도 · 쿨다운 · 골드 · 유닛 수(16×16 원본 크기, 사용자 10/21)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _inlineIcons = new Sprite[0];
+        [Tooltip("국가 고르기 카드 — 칸 순서 = BuildingNation. 대표 유닛(큰 그림, 정수배로 키워 내 색으로) · 설명 글(깔끔 폰트, 사용자 10/15)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private UnitDefinition[] _nationUnits = new UnitDefinition[0];
+        [HideIf(nameof(HideNonBalance))]
+        [TextArea(2, 4)]
+        [SerializeField] private string[] _nationDescriptions = new string[0];
+        [Tooltip("UI 테두리 조각(UI/NationFrame) — 칸 순서 = BuildingNation, 내 국가의 것을 쓴다(공용 칸이 비면 흰 선). 변 = 위쪽 변 한 토막(맨 윗줄이 바깥) · 모서리 = 왼쪽 위. 읽기 켜진 그림이어야 한다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _frameEdges = new Sprite[0];
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _frameCorners = new Sprite[0];
 
         [Header("영주 닉네임 — 지도의 영주 그림 위 · 왼쪽 패널 · 승리 글(임시 이름, 사용자 10/12)")]
         [Tooltip("이름 목록(값은 에셋에 — 흔한 외국 이름의 한글 표기, 사용자 10/12) — 한 런에서 영주마다 하나씩 겹치지 않게 돌려 쓰고, 다 쓰면 뒤에 숫자를 붙인다(제임스2)")]
@@ -106,12 +123,19 @@ namespace GnorpWar
         private const int ColorStride = 11;
         public Color LordColor(int lord) => _lordColors[lord * ColorStride % _lordColors.Length];
         public Sprite NationIcon(BuildingNation nation) => _nationIcons[(int)nation];
+        // 설명 글 줄 안 아이콘(UI/InlineIcons) — 칸 순서 = InlineIcons.Kind. 비면 그 낱말엔 아이콘 없음
+        public Sprite InlineIcon(InlineIcons.Kind kind) => (int)kind < _inlineIcons.Length ? _inlineIcons[(int)kind] : null;
+        public UnitDefinition NationUnit(BuildingNation nation) => (int)nation < _nationUnits.Length ? _nationUnits[(int)nation] : null;
+        public Sprite FrameEdge(BuildingNation nation) => (int)nation < _frameEdges.Length ? _frameEdges[(int)nation] : null;
+        public Sprite FrameCorner(BuildingNation nation) => (int)nation < _frameCorners.Length ? _frameCorners[(int)nation] : null;
+        public string NationDescription(BuildingNation nation) => (int)nation < _nationDescriptions.Length ? _nationDescriptions[(int)nation] : "";
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;
         // round는 0부터(턴 − 1) — 그 턴의 상점 등급 단계(기술 연구는 부르는 쪽이 얹는다)
         public int ShopTier(int round) => Mathf.Min(round * _shopTierMax / Mathf.Max(1, _shopTierTurns), _shopTierMax);
         public float CoalitionGoldScale => _coalitionGoldScale;
         public int NewLordShops => _newLordShops;
+        public int SpecialSkipGold => _specialSkipGold;
         public float PowerPerGold => _powerPerGold;
 
         public WorldRules ToRules() => new WorldRules

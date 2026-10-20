@@ -18,6 +18,8 @@ namespace GnorpWar
 
         public override void OnAttack(Unit attacker, IDamageable target, int stacks)
         {
+            // 맞는 범위 — 아군도 맞으므로 빨강
+            RingFx.Pulse(attacker.Position, _radius, BuffLinkFx.ColorOf(BuffKind.Stat), attacker);
             Physics2D.OverlapCircle(attacker.Position, _radius, SolidOnly, Overlaps);
             Hit.Clear();
             float damage = attacker.AttackDamage * attacker.DamageScale;

@@ -15,6 +15,12 @@ namespace GnorpWar
         [SerializeField] private ParticleSystem _deathPuff;
         [SerializeField] private CameraShake _cameraShake;
         [SerializeField] private FlameBit _flameBit;
+        [Header("버프 글자(Fx/BuffTexts)")]
+        [SerializeField] private Font _buffFont;
+        [SerializeField] private Sprite _attackIcon;
+        [SerializeField] private Sprite _hpIcon;
+        [SerializeField] private Sprite _cooldownIcon;
+        [SerializeField] private Sprite _attackSpeedIcon;
 
         private bool _hitStopping;
         private float _hitStopEndedAt = float.NegativeInfinity;
@@ -26,8 +32,19 @@ namespace GnorpWar
         {
             Instance = this;
             // 버프 선 — 파편과 같은 픽셀 재질(FX_Pixel)로 그린다
-            gameObject.AddComponent<BuffLinkFx>().Init(_hitSpark.GetComponent<ParticleSystemRenderer>().sharedMaterial);
+            Material pixel = _hitSpark.GetComponent<ParticleSystemRenderer>().sharedMaterial;
+            gameObject.AddComponent<BuffLinkFx>().Init(pixel);
+            // 전투 시각화 부품(Docs/전투시각화_계획.md) — 모두 같은 픽셀 재질 · 부품마다 메시 하나
+            gameObject.AddComponent<ArrowTrails>().Init(pixel);
+            gameObject.AddComponent<ArrowFan>();
+            gameObject.AddComponent<RingFx>().Init(pixel);
+            gameObject.AddComponent<StatusDots>().Init(pixel);
+            gameObject.AddComponent<PillarFx>().Init(pixel);
+            gameObject.AddComponent<FloorMultiplier>().Init(pixel);
+            gameObject.AddComponent<BattleStartLines>();
             _corpses = gameObject.AddComponent<CorpseFx>();
+            // BuffIcon 순서 — None · 공격력 · 체력 · 쿨다운 · 공격속도
+            gameObject.AddComponent<BuffTexts>().Init(_buffFont, new[] { null, _attackIcon, _hpIcon, _cooldownIcon, _attackSpeedIcon });
         }
 
         private void OnDestroy()
@@ -72,6 +89,8 @@ namespace GnorpWar
         private const float FlameSpreadY = 0.35f;
         private static readonly Color FlameHot = new Color(1f, 0.85f, 0.3f);
         private static readonly Color FlameCool = new Color(1f, 0.45f, 0.15f);
+        // 불꽃 색 — 고지 보너스가 붙은 타격의 섬광(기름투하대 · 고지 점령)
+        public static Color FireColor => FlameCool;
 
         public void Flame(Vector2 mouth, float forward, float length)
         {
@@ -80,6 +99,16 @@ namespace GnorpWar
                 FlameBit bit = Pooled.Get(_flameBit, mouth + new Vector2(0f, Random.Range(-FlameSpreadY, FlameSpreadY)), Quaternion.identity);
                 bit.Launch(new Vector2(forward * FlameSpeed, Random.Range(-0.5f, 0.5f)), length / FlameSpeed, Color.Lerp(FlameHot, FlameCool, Random.value));
             }
+        }
+
+        // 불타는 유닛 머리 위로 불꽃 한 조각이 짧게 오른다(몸 상태 점 Fx/StatusDots)
+        private const float EmberRise = 1.5f;
+        private const float EmberLife = 0.25f;
+
+        public void Ember(Vector2 head)
+        {
+            FlameBit bit = Pooled.Get(_flameBit, head, Quaternion.identity);
+            bit.Launch(new Vector2(Random.Range(-0.3f, 0.3f), EmberRise), EmberLife, Color.Lerp(FlameHot, FlameCool, Random.value));
         }
 
         public void Shake(float amount)

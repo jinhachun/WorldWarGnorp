@@ -13,7 +13,11 @@ namespace GnorpWar
         public bool AppliesTo(UnitDefinition unit) => System.Array.IndexOf(_categories, unit.Category) >= 0;
         public bool AppliesTo(UnitCategory category) => System.Array.IndexOf(_categories, category) >= 0;
 
-        public override void OnBattleStart(BoardRunner board, int slot, int level) => TowerBook.ShareWithUnits(board.Team, this);
+        public override void OnBattleStart(BoardRunner board, int slot, int level)
+        {
+            TowerBook.ShareWithUnits(board.Team, this);
+            BuffLinks.ToPoint(board.Team, slot, board.SpawnPoint, BuffKind.Stat);   // 이 층 → 궁병이 나오는 성문 앞(전투 시작엔 아직 유닛이 없다)
+        }
 
         public override string Describe(int level)
         {

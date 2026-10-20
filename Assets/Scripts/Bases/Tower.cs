@@ -61,6 +61,8 @@ namespace GnorpWar
         {
             public TowerFloor Floor;
             public SpriteRenderer Wall;
+            // 창틀(톱니 · 뼈 매듭 포함)만 따로 — 그 층 기물의 등급 테두리 색(UI 탑 창틀과 같은 색, 사용자 10/20). 빈 층은 흰색
+            public SpriteRenderer Frame;
             public SpriteRenderer Light;
             public SpriteRenderer Icon;
             public SpriteRenderer Flash;
@@ -84,9 +86,12 @@ namespace GnorpWar
         private SpriteRenderer _castle;
         // [Look] = 그 재질의 층 판(벽·처마선·창틀)
         private Sprite[] _walls;
+        // [Look] = 그 재질의 창틀만(흰색 — 등급 색으로 칠한다)
+        private Sprite[] _frames;
         // [k] = 창이 아래에서 k줄까지 켜진 불빛(아치 창 · 둥근 창). 마지막 칸 = 다 켜짐(번쩍임도 이것)
         private Sprite[] _archLight;
         private Sprite[] _roundLight;
+        private Sprite[] _boneLight;
         private Sprite[] _badgeFont;
         private SpriteRenderer _roof;
         private BoardRunner _subscribed;
@@ -133,8 +138,10 @@ namespace GnorpWar
             _base = GetComponent<Base>();
             _castle = GetComponent<SpriteRenderer>();
             _walls = new[] { WallSprite(Look.Plain), WallSprite(Look.Brick), WallSprite(Look.Iron), WallSprite(Look.Tribe) };
+            _frames = new[] { FrameSprite(Look.Plain), FrameSprite(Look.Brick), FrameSprite(Look.Iron), FrameSprite(Look.Tribe) };
             _archLight = LightSprites(InArch);
             _roundLight = LightSprites(InRound);
+            _boneLight = LightSprites(InSquare);
             _badgeFont = TowerBadge.BuildFont();
             _roof = MakeRoof();
         }
@@ -208,7 +215,9 @@ namespace GnorpWar
             Sprite wall = _walls[(int)look];
             if (view.Wall.sprite != wall)
                 view.Wall.sprite = wall;
-            Sprite[] lights = look == Look.Iron ? _roundLight : _archLight;
+            if (view.Frame.sprite != _frames[(int)look])
+                view.Frame.sprite = _frames[(int)look];
+            Sprite[] lights = look == Look.Iron ? _roundLight : look == Look.Tribe ? _boneLight : _archLight;
             ShowIcon(view.Icon, building != null ? building.Definition.Icon : null);
 
             // 창 불빛 — 빈 층은 꺼짐, 전투 중 쿨다운 기물은 찬 만큼 아래부터, 나머지는 은은히 다 켜짐
@@ -244,6 +253,7 @@ namespace GnorpWar
             view.Stopped.ShowIcon(stopped);
             view.Count.ShowCount(building != null ? building.CountdownOf(_base.Team) : 0);
             view.Wall.color = view.Icon.color = stopped ? StoppedMark.Gray : Color.white;
+            view.Frame.color = (building != null ? building.Rarity.FrameColor() : Color.white) * (stopped ? StoppedMark.Gray : Color.white);
         }
 
         private static Look LookOf(OwnedBuilding building)
@@ -293,6 +303,10 @@ namespace GnorpWar
             floor.Init(_base.Team, index);
 
             var view = new FloorView { Floor = floor, Wall = wall };
+
+            // 창틀 — 층 판과 같은 크기 그림, 판 바로 앞(불빛·번쩍임은 창 안쪽이라 겹치지 않는다)
+            view.Frame = Child(go.transform, "Frame", Vector2.zero, -0.005f).gameObject.AddComponent<SpriteRenderer>();
+            Sort(view.Frame);
 
             // 창 불빛 · 번쩍임 — 층 판과 같은 크기 그림이라 같은 자리에 겹친다
             view.Light = Child(go.transform, "Light", Vector2.zero, -0.01f).gameObject.AddComponent<SpriteRenderer>();
@@ -406,6 +420,22 @@ namespace GnorpWar
             return dx * dx + dy * dy <= RoundRadius * RoundRadius;
         }
 
+        // 뼈 모서리 네모 창(트라이브 — 킹덤 아치와 구분되고 네모 아이콘이 틀을 가리지 않게, 사용자 10/15) — 둥근 창과 같은 높이 · 같은 가운데의 정사각형
+        private bool InSquare(int x, int y)
+        {
+            float dx = x + 0.5f - SpriteWidth * 0.5f;
+            float dy = y + 0.5f - WindowCenterY;
+            return Mathf.Abs(dx) <= RoundRadius && Mathf.Abs(dy) <= RoundRadius;
+        }
+
+        // 네모 창 네 모서리 바깥의 뼈 매듭 — 틀 모서리에서 대각선으로 붙은 2×2
+        private bool BoneKnot(int x, int y)
+        {
+            float dx = Mathf.Abs(x + 0.5f - SpriteWidth * 0.5f), dy = Mathf.Abs(y + 0.5f - WindowCenterY);
+            float from = RoundRadius + 1f;
+            return dx > from && dx <= from + 2f && dy > from && dy <= from + 2f;
+        }
+
         // 둥근 창 둘레 톱니 — 창틀 바깥에 2×2 이빨 8개(45°마다)
         private bool GearTooth(int x, int y)
         {
@@ -433,7 +463,7 @@ namespace GnorpWar
         private Sprite WallSprite(Look look)
         {
             int w = SpriteWidth, h = SpriteHeight;
-            System.Func<int, int, bool> inside = look == Look.Iron ? (System.Func<int, int, bool>)InRound : InArch;
+            System.Func<int, int, bool> inside = WindowOf(look);
             var texture = NewTexture(w, h);
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
@@ -447,7 +477,7 @@ namespace GnorpWar
                         c = Color.clear;
                     else if (inside(x, y))
                         c = Color.black;
-                    else if (Near(inside, x, y, 1) || look == Look.Iron && GearTooth(x, y))
+                    else if (IsFrame(look, inside, x, y))
                         c = Color.white;
                     else if (Near(inside, x, y, look == Look.Iron ? 4 : 2))
                         c = Color.black;   // 창 둘레는 무늬를 비워 창이 또렷하게
@@ -455,6 +485,26 @@ namespace GnorpWar
                         c = Pattern(look, x, y, w);
                     texture.SetPixel(x, y, c);
                 }
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+        }
+
+        private System.Func<int, int, bool> WindowOf(Look look)
+            => look == Look.Iron ? InRound : look == Look.Tribe ? InSquare : (System.Func<int, int, bool>)InArch;
+
+        // 창틀 픽셀 — 창 안쪽 바로 바깥 1px 테 + 티크톡 톱니 · 트라이브 뼈 매듭
+        private bool IsFrame(Look look, System.Func<int, int, bool> inside, int x, int y)
+            => !inside(x, y) && (Near(inside, x, y, 1) || look == Look.Iron && GearTooth(x, y) || look == Look.Tribe && BoneKnot(x, y));
+
+        // 창틀만 그린 판 — 층 판과 같은 크기 · 같은 피벗이라 그대로 겹친다
+        private Sprite FrameSprite(Look look)
+        {
+            int w = SpriteWidth, h = SpriteHeight;
+            System.Func<int, int, bool> inside = WindowOf(look);
+            var texture = NewTexture(w, h);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    texture.SetPixel(x, y, IsFrame(look, inside, x, y) ? Color.white : Color.clear);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), PixelsPerUnit);
         }

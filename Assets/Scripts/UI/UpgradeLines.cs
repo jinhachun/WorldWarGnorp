@@ -27,7 +27,9 @@ namespace GnorpWar
         }
 
         private readonly RectTransform _root;
-        private readonly float _width;
+        private float _width;
+        // 판 폭이 바뀌면(설명 창이 상점 자리에 설 때 — BuildingTooltip) 줄의 폭도 바꾼다
+        public float Width { set => _width = value; }
         private readonly Font _dot;
         private readonly List<Line> _lines = new List<Line>();
 

@@ -28,12 +28,12 @@ namespace GnorpWar
                 if (!lord.IsPlayer)
                     _towers[lord.Id] = NewTower();
 
-            // 지역 특수 업그레이드 — 전체에서 무작위로 뽑아 지역마다 하나씩(겹침 없음), 내 시작 땅은 뺀다. 남은 것은 이번 런에 나오지 않는다(시작 때 고르기는 없앴다 — 사용자 10/15)
+            // 지역 특수 업그레이드 — 전체에서 무작위로 뽑아 지역마다 하나씩(겹침 없음), 내 시작 땅과 그 이웃 땅은 뺀다(사용자 10/15). 남은 것은 이번 런에 나오지 않는다(시작 때 고르기는 없앴다 — 사용자 10/15)
             RegionSpecial = new UpgradeDefinition[State.Owner.Length];
             UnplacedSpecials.AddRange(battle.SpecialUpgrades);
             var lands = new List<int>();
             for (int region = 0; region < RegionSpecial.Length; region++)
-                if (region != playerRegion)
+                if (region != playerRegion && System.Array.IndexOf(State.Graph.Links[playerRegion], region) < 0)
                     lands.Add(region);
             for (int i = 0; i < battle.SpecialRegions && UnplacedSpecials.Count > 0 && lands.Count > 0; i++)
             {

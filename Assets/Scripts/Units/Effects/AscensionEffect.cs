@@ -46,7 +46,7 @@ namespace GnorpWar
                     count++;
                 }
             if (count > 0)
-                BuffLinks.EffectFromUnit(unit.Team, this, at, sum / count, BuffKind.Stat);
+                BuffLinks.EffectFromUnit(unit.Team, this, at, sum / count, BuffKind.Stat, BuffLabel.Of(new StatModifier(UnitStat.Attack, StatOp.Percent, _attack)));
         }
     }
 }

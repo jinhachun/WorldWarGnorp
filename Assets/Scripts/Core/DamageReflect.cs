@@ -15,6 +15,12 @@ namespace GnorpWar
             try
             {
                 attacker.TakeDamage(amount, -hitDirection, 0f, from);
+                // 돌려받은 쪽에 보라 섬광(디버프 색) — 반사인 게 보이게(성채 신화 · 루니카 신화 · 가시 갑옷)
+                if (FxDirector.Instance != null && (attacker is Unit || attacker is Base))
+                {
+                    UnityEngine.Vector2 at = attacker is Unit unit ? unit.Position : ((Base)attacker).Muzzle;
+                    FxDirector.Instance.HitSpark(at, -hitDirection, BuffLinkFx.ColorOf(BuffKind.Debuff));
+                }
             }
             finally
             {

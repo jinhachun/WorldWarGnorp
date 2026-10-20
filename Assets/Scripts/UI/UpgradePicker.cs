@@ -6,7 +6,7 @@ namespace GnorpWar
 {
     // 업그레이드 고르기 창(아웃게임기획 §4, 사용자 10/13) — 고를 것(RunState.PendingUpgrades)이 있으면 지도 씬 어디서든 카드가 뜨고, 하나를 누르면 닫힌다(대기가 남았으면 다음 것).
     //   합치기 보상: 상점에서 합치기 연출이 끝난 직후, 카드 셋.
-    //   지역 특수 업그레이드(신화): 국가를 고른 직후(시작) · 영주를 멸망시키고 지도로 돌아와 AI 턴 재생이 끝난 뒤, 카드 1~3장 + 머리말.
+    //   지역 특수 업그레이드(신화): 국가를 고른 직후(시작) · 영주를 멸망시키고 지도로 돌아와 AI 턴 재생이 끝난 뒤, 카드 1~3장 + 머리말 + 카드 아래 「건너뛰기 +N골드」 버튼.
     //   공화정(이미 셋을 모두 얻었다 — UpgradeOffer.Granted, 사용자 10/14): 합치기 보상처럼 카드 셋 + 공화정 머리말. 고르는 게 아니라 카드 · 판 어디를 눌러도 닫히고, 카드 강조가 없다.
     // 떠 있는 동안에는 화면 전체를 덮는 판이 지도 · 상점 조작을 막는다.
     // 카드 = 등급 색 외곽선(기물 등급 테두리와 같은 색 · 같은 강조 — BuildingRarity.FrameColor, UI/ButtonHover) · 아이콘(원본 크기) · 이름 · 그 등급의 효과 한 줄.
@@ -36,6 +36,9 @@ namespace GnorpWar
         [SerializeField] private ShopPanel _shop;
         [Tooltip("AI 턴 재생 동안 켜져 있는 판(SkipReplay) — 그동안에는 뜨지 않는다(재생이 끝난 뒤에 고른다)")]
         [SerializeField] private GameObject _replay;
+        [Tooltip("지역 특수(신화) 고르기에만 보이는 「건너뛰기 +N골드」 버튼 — 고르지 않고 골드를 받는다(RunState.SkipUpgrade, 사용자 10/15)")]
+        [SerializeField] private Button _skip;
+        [SerializeField] private Text _skipLabel;
 
         // 카드 셋이 바뀐 직후 이만큼(초)은 누르기를 받지 않는다 — 더블클릭이 다음 것까지 고르지 않게
         private const float ClickGuard = 0.2f;
@@ -57,6 +60,15 @@ namespace GnorpWar
                 int choice = i;
                 _cards[i].Button.onClick.AddListener(() => Choose(choice));
             }
+            _skip.onClick.AddListener(Skip);
+        }
+
+        private void Skip()
+        {
+            if (Time.unscaledTime - _shownAt < ClickGuard)
+                return;
+            _shownAt = Time.unscaledTime;
+            RunState.SkipUpgrade();
         }
 
         // 판(어두운 판 — 이 오브젝트의 자식)을 누름 — 공화정 창이면 닫는다. 카드 누르기는 버튼이 먼저 받는다
@@ -108,6 +120,8 @@ namespace GnorpWar
             _shownAt = Time.unscaledTime;
             _header.enabled = offer.Rarity == BuildingRarity.Mythic || offer.Granted;
             _header.text = offer.Granted ? RepublicHeader : _specialHeader;
+            _skip.gameObject.SetActive(RunState.CanSkipUpgrade);
+            _skipLabel.text = $"건너뛰기 <color={BuildingTooltip.NumberColor}>+{RunState.UpgradeSkipGold}</color>골드";
             int count = offer.Choices.Length;
             for (int i = 0; i < _cards.Length; i++)
             {

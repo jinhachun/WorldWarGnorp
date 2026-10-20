@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: Category_HeavyInfantry
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UnitCategory
   _displayName: "\uC911\uBCF4\uBCD1"
+  _turnBack: 1

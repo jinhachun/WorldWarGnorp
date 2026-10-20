@@ -26,11 +26,12 @@ MonoBehaviour:
   _shopTierMax: 9
   _shopTierTurns: 14
   _newLordShops: 1
+  _specialSkipGold: 15
   _powerPerGold: 1
   _coalition: 1
   _coalitionLands: 15
   _coalitionWins: 3
-  _coalitionGoldScale: 0.3
+  _coalitionGoldScale: 0.5
   _underdog: 1
   _underdogGoldPerLand: 1
   _underdogGoldMax: 10
@@ -68,6 +69,40 @@ MonoBehaviour:
   - {fileID: 21300000, guid: f4eaee187eed05143a496ebf60cfa554, type: 3}
   - {fileID: 21300000, guid: e9e8d8e66c61c6e4bba0f2b2cda2446d, type: 3}
   - {fileID: 21300000, guid: e80cfdb7c9d841c2ac54a1c6fc02627d, type: 3}
+  _inlineIcons:
+  - {fileID: 21300000, guid: 54e9b0aa074d2a67669f8213ddf1b5eb, type: 3}
+  - {fileID: 21300000, guid: c79a0f96426324476a25953a79be9e9a, type: 3}
+  - {fileID: 21300000, guid: 885403486ef2008094dca0fe6c83df67, type: 3}
+  - {fileID: 21300000, guid: 3ed5adb4bf997414badccee93404b6c9, type: 3}
+  - {fileID: 21300000, guid: 3172f20f63b0f69bbc3da4d6ed379d46, type: 3}
+  - {fileID: 21300000, guid: 896e9ffb184c1f2f216c56cced6ab7c3, type: 3}
+  _nationUnits:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: df36a7226be228e439c2dd7daf651e98, type: 2}
+  - {fileID: 11400000, guid: b59d3b90e7994134792cb2b84c50105f, type: 2}
+  - {fileID: 11400000, guid: d3dca02f281c81945abf726bc68df697, type: 2}
+  _nationDescriptions:
+  - 
+  - "\uC2E0\uC559\uACFC \uAE30\uC0AC\uB3C4\uC758 \uC655\uAD6D. \uBC29\uD328\uBCD1\uACFC
+    \uC0AC\uC81C\uB85C \uB6AB\uB9AC\uC9C0 \uC54A\uB294 \uBCBD\uC744 \uC313\uAC70\uB098,
+    \uB04A\uC784\uC5C6\uB294 \uBB34\uC801 \uAE30\uC0AC\uB85C \uB3CC\uACA9\uD569\uB2C8\uB2E4."
+  - "\uD1B1\uB2C8\uC640 \uC99D\uAE30\uC758 \uAE30\uACC4 \uB3C4\uC2DC. \uACF5\uC7A5\uACFC
+    \uC2DC\uC7A5\uC73C\uB85C \uACE8\uB4DC\uB97C \uBD88\uB9AC\uACE0, \uD1B1\uB2C8\uBCD1\uC0AC
+    \uBB3C\uB7C9\uACFC \uAC15\uD654\uB41C \uD654\uC0B4 \uD0C0\uC6CC\uB85C \uBC00\uC5B4\uBD99\uC785\uB2C8\uB2E4."
+  - "\uBF08\uC640 \uD53C\uC758 \uBD80\uC871. \uC4F0\uB7EC\uC9C4 \uC804\uC0AC\uC758
+    \uBF08\uAC00\uB8E8\uB85C \uC5B8\uB355\uC744 \uC313\uC544 \uB192\uC740 \uACF3\uC744
+    \uCC28\uC9C0\uD558\uACE0, \uB3D9\uB8CC\uC758 \uC8FD\uC74C\uC744 \uD798 \uC0BC\uC544
+    \uB9D8\uBAA8\uC2A4\uC640 \uBBF8\uB178\uD0C0\uC6B0\uB85C\uC2A4\uB97C \uBD88\uB7EC\uB0C5\uB2C8\uB2E4."
+  _frameEdges:
+  - {fileID: 0}
+  - {fileID: 21300000, guid: 6a46803efe3e47b48830adde1f0e8922, type: 3}
+  - {fileID: 21300000, guid: d574935685054ab59cdbaa99cb2dd422, type: 3}
+  - {fileID: 21300000, guid: ad839d0b927a4e438a9cc3fe1fc47f54, type: 3}
+  _frameCorners:
+  - {fileID: 0}
+  - {fileID: 21300000, guid: 4803d1c509dd465685a29529a4026f04, type: 3}
+  - {fileID: 21300000, guid: 54745e67c5bb4ac380619bc992129875, type: 3}
+  - {fileID: 21300000, guid: ce31fcb82c624b1f81619522dd030405, type: 3}
   _lordNames:
   - "\uC81C\uC784\uC2A4"
   - "\uBA54\uB9AC"

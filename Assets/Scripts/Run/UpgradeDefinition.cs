@@ -113,6 +113,8 @@ namespace GnorpWar
         public UpgradeKind Kind => _kind;
         public bool InPool => _inPool;
         public SpecialKind Special => _kind == UpgradeKind.Special ? _special : SpecialKind.None;
+        // 타워 스탯에 거는 종류면 그 스탯(전투 시작 알림 Fx/BattleStartLines의 버프 글자)
+        public TowerStat TowerStat => _towerStat;
 
         // 그 등급의 값 — 신화 등급 업그레이드는 없다(전설 둘을 합쳐도 전설 값)
         public float ValueAt(BuildingRarity rarity) => _values[Mathf.Min((int)rarity, _values.Length - 1)];
@@ -232,9 +234,20 @@ namespace GnorpWar
         {
             if (_kind == UpgradeKind.BuildingCooldown)
                 for (int i = 0; i < count; i++)
-                    BoardRunner.For(team).ScaleRandomCooldown(value);
+                {
+                    // 본진 → 뽑힌 층(가속 색 + 「×0.97」) — 켠 기물이 없는 효과는 본진에서(사용자 10/20 Q1)
+                    int slot = BoardRunner.For(team).ScaleRandomCooldown(value);
+                    if (slot >= 0)
+                        BuffLinks.FromBaseToSlot(team, slot, BuffKind.Haste, BuffLabel.Cooldown(value));
+                }
             else if (_kind == UpgradeKind.Summon)
-                BoardRunner.For(team).Summon(_unit, Mathf.RoundToInt(value), -1);
+            {
+                BoardRunner board = BoardRunner.For(team);
+                board.Summon(_unit, Mathf.RoundToInt(value), -1);
+                // 성문 앞에 기둥 — 업그레이드로 나온 무리(선은 전투 시작 알림 Fx/BattleStartLines가 긋는다)
+                if (board.LastSpawned is Unit first)
+                    PillarFx.Rise(new Vector2(first.Position.x, first.Feet), first.Top - first.Feet);
+            }
             else if (_kind == UpgradeKind.SmallTower)
             {
                 Base tower = _smallTower.Build(team);
@@ -242,7 +255,11 @@ namespace GnorpWar
                     tower.SetHpOfHome(value / 100f);
             }
             else if (Special == SpecialKind.Militarism)
-                BoardRunner.For(team).FireLongest();
+            {
+                int slot = BoardRunner.For(team).FireLongest();
+                if (slot >= 0)
+                    BuffLinks.FromBaseToSlot(team, slot, BuffKind.Trigger);   // 본진 → 즉시 발동한 층
+            }
             else if (Special == SpecialKind.Industrial)
                 BoardRunner.For(team).HasteAll(value);
         }

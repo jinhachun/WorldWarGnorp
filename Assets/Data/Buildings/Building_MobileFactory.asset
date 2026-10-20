@@ -18,16 +18,16 @@ MonoBehaviour:
   _rarity: 2
   _nation: 2
   _faction: 4
-  _cooldown: 3.5
+  _cooldown: 10
   _unit: {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
   _unitCount: 1
   _actions: []
   _effects: []
   _passives:
-  - {fileID: 11400000, guid: aa9f640d801c3984e862f09b9ff0469e, type: 2}
-  _mythicActions: []
-  _mythicEffects:
-  - {fileID: 11400000, guid: 1264027c2c4783948b8e30069b2133e4, type: 2}
+  - {fileID: 11400000, guid: 72cdb521117229046bb263d759c8249f, type: 2}
+  _mythicActions:
+  - {fileID: 11400000, guid: 1d228332fedc38449ae540a5138c6577, type: 2}
+  _mythicEffects: []
   _mythicPassives: []
   _mentionedUnits:
   - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}

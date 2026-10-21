@@ -155,6 +155,10 @@ namespace GnorpWar
             _roof.color = FlagColor;
             if (_flag != null)
                 _flag.color = FlagColor;
+            // 성 그림 = 그 진영 국가의 성(WorldConfig 「전장 본진 그림」, 사용자 10/22) — 같은 크기 · 같은 성문 자리라 충돌 박스 · 성문 · 발사점은 그대로. 파란 자리는 영주 색
+            Sprite castle = RunState.Config != null && RunState.Config.World != null ? RunState.Config.World.Castle(RunState.NationOf(_base.Team)) : null;
+            if (castle != null)
+                _castle.sprite = LordPaint.Of(castle, _base.Team);
             _subscribed = BoardRunner.For(_base.Team);
             if (_subscribed != null)
                 _subscribed.Triggered += OnTriggered;

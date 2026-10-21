@@ -33,6 +33,9 @@ namespace GnorpWar
 
         private bool FromRight => _team == Team.Enemy;
 
+        // 이 줄(이름 줄 + 아이콘 줄)의 아래 끝(화면 y) — 전투 골드 칸(UI/BattleGoldView)이 그 아래에 붙는다
+        public float ScreenBottom => transform.position.y - _height * transform.lossyScale.y;
+
         private void Start()
         {
             Lord lord = _team == Team.Ally ? RunState.World.State.Player : RunState.Opponent;

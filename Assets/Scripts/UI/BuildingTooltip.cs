@@ -127,7 +127,7 @@ namespace GnorpWar
 
         public const string NumberColor = "#FFD95A";
         public const string NoteColor = "#9A9AA8";
-        private const string EnemyColor = "#FF7A6E";
+        public const string EnemyColor = "#FF7A6E";
         // 유닛 판 능력치의 영구 강화분(「공격력 11+1」의 +1) · RANK UP 미리보기의 바뀐 숫자 — 버프 선의 체력 초록(BuffLinkFx)보다 밝은 초록
         private const string BonusColor = "#5AE66E";
         // 글자 크기 — 중요한 것일수록 크게. 능력치 줄은 _unitBody의 글자 크기.

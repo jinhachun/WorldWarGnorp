@@ -22,7 +22,7 @@ namespace GnorpWar
         {
             float factor = 1f;
             foreach (TeamEffects.Entry e in TeamEffects.For(unit.Team))
-                factor *= e.Effect.BoneDustFactor;
+                factor *= e.Effect.BoneDustFactor(unit.Team);
             Pour(at.x, factor);
         }
 

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_K_ShieldLine
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "방패 대열"
+  _icon: {fileID: 21300000, guid: caff4f382c83492d90d9f93e6e827abe, type: 3}
+  _description: "내 중보병이 적과 맞붙어 있는 동안, 바로 뒤 아군이 받는 피해 ×{0}"
+  _values:
+  - 0
+  - 0.9
+  - 0.85
+  - 0.8
+  - 0.7
+  _stack: 1
+  _max: 0
+  _inPool: 1
+  _nation: 1
+  _gainMax: 0
+  _kind: 2
+  _categories:
+  - {fileID: 11400000, guid: 3a39e5b8cf800ec4a90e5827c089bfe9, type: 2}
+  _units: []
+  _unitStat: 0
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: 5170a64b8c5744a3ad2cc993aa3dbf5e, type: 2}
+  _lineKind: 1
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

@@ -78,6 +78,16 @@ namespace GnorpWar
             Lord lord = Opponent ?? (PreviewRegion >= 0 ? World.State.OwnerOf(PreviewRegion) : null);
             return lord != null ? ColorOf(lord) : Color.white;
         }
+        // 진영의 국가 — 나는 고른 국가, 적은 침략한 영주(고르기 전에는 미리 보는 땅의 영주)의 빌드 방향의 국가. 없으면 공용. 본진 그림(Bases/Tower)이 읽는다
+        public static BuildingNation NationOf(Team team)
+        {
+            if (team == Team.Ally)
+                return Nation;
+            Lord lord = Opponent ?? (PreviewRegion >= 0 ? World.State.OwnerOf(PreviewRegion) : null);
+            if (lord == null)
+                return BuildingNation.Common;
+            return lord.IsPlayer ? Nation : World.Map.BuildOf(lord.Build).Nation;
+        }
         // 상점 효과(골드 훅 등)를 받는 진영 — 지금 상점을 도는 쪽
         public static Team ActingTeam => _side.Team;
 
@@ -208,6 +218,7 @@ namespace GnorpWar
             RunBook.Use(Team.Enemy, NoOpponent.Book);
             World.ShopPhase();
             ChargeFreeRerolls(Player);
+            GainInterest();
             GainGold(Income);
             if (ShopLocked)
                 RollOffers(onlyEmpty: true);
@@ -534,6 +545,7 @@ namespace GnorpWar
                 Round = round;
                 _shopNation = build.Nation;
                 ChargeFreeRerolls(tower);
+                GainInterest();
                 GainGold(gold);
                 RollOffers(onlyEmpty: ShopLocked);
                 EnemyShopper.Shop(build);
@@ -584,6 +596,14 @@ namespace GnorpWar
             ForEachFieldPassive((passive, owned) => passive.OnGoldGained(owned));
         }
 
+        // 복리 — 턴 수입을 받기 전, 지금 차례인 탑이 가진 골드로(AI 영주도 같다)
+        private static void GainInterest()
+        {
+            int interest = UpgradeDefinition.InterestOf(_side.Upgrades, Gold);
+            if (interest > 0)
+                GainGold(interest);
+        }
+
         // 전투 중에 그 진영의 탑이 골드를 얻는다(주식시장) — 아군 = 내 탑 · 적 = 침략한 영주의 탑. 상점 밖이라 그 탑을 잠깐 지금 쪽으로 세운다
         public static void GainBattleGold(Team team, int amount)
         {
@@ -606,6 +626,9 @@ namespace GnorpWar
         {
             BuildingPassive.TriggerBuyEffects(owned, _side.Team, 1);
             ForEachFieldPassive((passive, self) => passive.OnAnyBought(self, owned));
+            // 견본품 — 「구매할 때마다,」 효과가 있는 기물을 샀으면 확률로 무료 리롤 +1회(합은 에셋의 상한 100까지)
+            if (BuildingPassive.HasBuyEffects(owned.Definition) && Random.value * 100f < UpgradeDefinition.TotalOf(_side.Upgrades, UpgradeKind.BuyReroll))
+                _side.FreeRerolls++;
         }
 
         // 이번 라운드 성 최대 체력에 더할 값(양 진영) — 런 밖이면 0
@@ -704,7 +727,10 @@ namespace GnorpWar
 
         // 공용이거나 지금 상점을 도는 탑의 국가(내 차례면 내 국가, 영주의 차례면 그 영주의 빌드 방향의 국가) 기물인가
         private static bool IsHome(BuildingDefinition building)
-            => building.Nation == BuildingNation.Common || building.Nation == (_side == Player ? Nation : _shopNation);
+            => building.Nation == BuildingNation.Common || building.Nation == SideNation;
+
+        // 지금 상점을 도는 탑의 국가 — 내 차례면 내 국가, 영주의 차례(ShopAs)면 그 영주의 빌드 방향의 국가. 진열 비율 · 국가 전용 업그레이드가 읽는다
+        private static BuildingNation SideNation => _side == Player ? Nation : _shopNation;
 
         // 진열 한 칸에서 b가 뽑힐 가중치(국가 비율을 걸기 전 — 등급 비율만) — 화면의 등급 확률(OfferChance)이 쓴다
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
@@ -864,16 +890,17 @@ namespace GnorpWar
                 if (spawns)
                     holding.Definition.Spawn(team, holding.Value, holding.Count);
                 else
-                    holding.Definition.Apply(team, holding.Value);
+                    holding.Definition.Apply(team, holding.Value, holding.Count);
         }
 
         // 합치기 한 번(연쇄 포함) — material = 마지막으로 합친 재료의 등급. 내 탑이면 대기열에 쌓고(화면이 고르게 한다), 다른 탑(AI 영주)은 셋 중 무작위로 바로 얻는다.
         // 공짜로 받은 기물(Acquire)은 합치기가 아니라 여기를 지나지 않는다
         private static void OfferUpgrade(BuildingRarity material)
         {
+            // 공용 + 그 탑의 국가 것(국가 전용 — 아웃게임기획 §4, 총괄 10/21). 한 풀에서 가중치 없이 고르게
             var pool = new System.Collections.Generic.List<UpgradeDefinition>();
             foreach (UpgradeDefinition upgrade in _config.Upgrades)
-                if (upgrade.InPool && upgrade.AvailableAt(material))
+                if (upgrade.InPool && upgrade.AvailableAt(material) && (upgrade.Nation == BuildingNation.Common || upgrade.Nation == SideNation))
                     pool.Add(upgrade);
             var choices = new UpgradeDefinition[Mathf.Min(UpgradeChoices, pool.Count)];
             for (int i = 0; i < choices.Length; i++)

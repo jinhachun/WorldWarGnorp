@@ -31,6 +31,9 @@ namespace GnorpWar
             => m.Stat == TowerStat.Attack ? New(BuffIcon.Attack, m.ValueText) : m.Stat == TowerStat.MaxHp ? New(BuffIcon.Hp, m.ValueText)
                 : m.Stat == TowerStat.AttackSpeed ? New(BuffIcon.AttackSpeed, m.ValueText) : New(BuffIcon.None, $"{m.Name} {m.ValueText}");
 
+        // 회복 유닛의 공격력(= 회복량)에 건 값 — 「회복량 +8%」. 회복량 아이콘은 없다(아웃게임기획 §4 — 글에 이름을 쓴다)
+        public static BuffLabel Heal(StatModifier m) => New(BuffIcon.None, $"회복량 {m.ValueText}");
+
         // 쿨다운에 곱한 값 — 「×0.8」
         public static BuffLabel Cooldown(float factor) => New(BuffIcon.Cooldown, new StatModifier(UnitStat.Attack, StatOp.Multiply, factor).ValueText);
 
@@ -119,6 +122,10 @@ namespace GnorpWar
             if (Raised != null && Base.For(team) is Base home && home.IsAlive)
                 Raised.Invoke(new BuffLink { Team = team, From = -1, To = to, FromAt = home.Muzzle, Kind = kind, Label = label });
         }
+
+        // 전장의 한 자리에서 기물의 층으로 — 켠 기물이 없는 업그레이드가 유닛을 써서 기물을 움직였다(피의 공물 — 바친 졸병 → 발동한 층). From = To라 UI 탑은 긋지 않는다
+        public static void FromPointToSlot(Team team, Vector2 from, int to, BuffKind kind)
+            => Raised?.Invoke(new BuffLink { Team = team, From = to, To = to, FromAt = from, Kind = kind });
 
         // 유닛 효과(진영 단위)가 낸 것 — 그 효과를 켠 기물의 칸에서 나간다
         public static void EffectToPoint(Team team, UnitEffect effect, Vector2 at, BuffKind kind, BuffLabel label = default)

@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_R_BonePile
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "뼈 쌓기"
+  _icon: {fileID: 21300000, guid: 29ac35699e3a4fd5b372f0ccc2c2fe76, type: 3}
+  _description: "내 뼛가루 언덕이 쌓이는 양 +{0}%"
+  _values:
+  - 10
+  - 15
+  - 20
+  - 30
+  - 40
+  _stack: 0
+  _max: 0
+  _inPool: 1
+  _nation: 3
+  _gainMax: 0
+  _kind: 2
+  _categories: []
+  _units: []
+  _unitStat: 0
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: ba516d885572468b923a298053a2f2e2, type: 2}
+  _lineKind: 1
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

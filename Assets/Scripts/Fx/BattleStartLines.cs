@@ -46,11 +46,20 @@ namespace GnorpWar
             {
                 case UpgradeKind.UnitStat:
                     upgrade.UnitModifier(holding.Value, out StatModifier modifier);
-                    BuffLinks.FromBase(team, UnitsOr(team, upgrade, board), BuffKind.Stat, BuffLabel.Of(modifier));
+                    BuffLinks.FromBase(team, UnitsOr(team, upgrade, board), BuffKind.Stat, upgrade.HealLabel ? BuffLabel.Heal(modifier) : BuffLabel.Of(modifier));
                     return true;
                 case UpgradeKind.UnitEffect:
-                    BuffLinks.FromBase(team, UnitsOr(team, upgrade, board), BuffKind.Stat);
-                    return true;
+                    return EffectLine(team, upgrade, board);
+                case UpgradeKind.SmallTowerAttack:
+                    bool built = false;
+                    BuffLabel small = BuffLabel.Of(new TowerModifier(TowerStat.Attack, StatOp.Percent, holding.Value / 100f));
+                    foreach (Base tower in Base.SmallTowers())
+                        if (tower.Team == team && tower.IsAlive)
+                        {
+                            BuffLinks.FromBase(team, tower.Muzzle, BuffKind.Stat, small);
+                            built = true;
+                        }
+                    return built;
                 case UpgradeKind.Summon:
                     BuffLinks.FromBase(team, board.SpawnPoint, BuffKind.Summon);
                     return true;
@@ -88,6 +97,31 @@ namespace GnorpWar
                     return any;
             }
             return false;
+        }
+
+        // 유닛 효과를 켠 업그레이드 — 에셋의 선 색 · 가는 곳(유닛 무리 · 본진 둘레 · 쿨다운이 있는 층 전부)
+        private static bool EffectLine(Team team, UpgradeDefinition upgrade, BoardRunner board)
+        {
+            switch (upgrade.LineTarget)
+            {
+                case UpgradeLine.Base:
+                    if (!(Base.For(team) is Base home) || !home.IsAlive)
+                        return false;
+                    RingFx.Pulse(home.Bounds.center, home.Bounds.extents.y, BuffLinkFx.ColorOf(upgrade.LineKind), home);
+                    return true;
+                case UpgradeLine.Floors:
+                    bool any = false;
+                    for (int i = 0; i < board.Slots.Length; i++)
+                        if (!OwnedBuilding.IsEmpty(board.Slots[i].Building) && board.Slots[i].Cooldown > 0f)
+                        {
+                            BuffLinks.FromBaseToSlot(team, i, upgrade.LineKind);
+                            any = true;
+                        }
+                    return any;
+                default:
+                    BuffLinks.FromBase(team, UnitsOr(team, upgrade, board), upgrade.LineKind);
+                    return true;
+            }
         }
 
         // 맞는 내 유닛 무리 가운데 — 아직 없으면 성문 앞(곧 나올 자리)

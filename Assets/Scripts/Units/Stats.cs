@@ -155,10 +155,22 @@ namespace GnorpWar
         public static FollowRule FollowOf(Team team) => Follows[(int)team];
         public static void SetFollow(Team team, FollowRule rule) => Follows[(int)team] = rule;
 
+        // 작은 타워만의 공격력 합연산 %(합치기 보상 「보조 포탑」 — 0.08 = +8%) — 전투 동안. 진영 %와 한 번에 더해진다(Base.RefreshStats)
+        private static readonly float[] SmallAttack = new float[2];
+
+        public static float SmallAttackOf(Team team) => SmallAttack[(int)team];
+
+        public static void AddSmallAttack(Team team, float percent)
+        {
+            SmallAttack[(int)team] += percent;
+            Version++;
+        }
+
         public static void ClearBattle()
         {
             foreach (List<TowerModifier> list in Battle)
                 list.Clear();
+            SmallAttack[0] = SmallAttack[1] = 0f;
             Deathmatch[0] = Deathmatch[1] = false;
             ArrowsOnKill[0] = ArrowsOnKill[1] = 0;
             Reflect[0] = Reflect[1] = false;

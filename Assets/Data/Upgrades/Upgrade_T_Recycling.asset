@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_T_Recycling
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "재활용"
+  _icon: {fileID: 21300000, guid: ee960e335cdd42d0a46ba8e7f8871b02, type: 3}
+  _description: "내 톱니병사가 {0}기 죽을 때마다, 골드 1을 얻습니다."
+  _values:
+  - 0
+  - 30
+  - 25
+  - 20
+  - 15
+  _stack: 2
+  _max: 0
+  _inPool: 1
+  _nation: 2
+  _gainMax: 0
+  _kind: 2
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
+  _unitStat: 0
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: eac8c9910e564b2cb9d25ef0a16add58, type: 2}
+  _lineKind: 1
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

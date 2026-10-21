@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_R_AncestorWrath
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "조상의 분노"
+  _icon: {fileID: 21300000, guid: eceec70378c146898976aaa6f1f5d7ed, type: 3}
+  _description: "내 유닛이 {0}기 죽을 때마다, 전투 동안 내 유닛의 공격력 {1}"
+  _values:
+  - 0
+  - 15
+  - 12
+  - 10
+  - 7
+  _stack: 2
+  _max: 0
+  _inPool: 1
+  _nation: 3
+  _gainMax: 0
+  _kind: 2
+  _categories: []
+  _units: []
+  _unitStat: 0
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: cecbca5f9d3f4373b844847745245b3b, type: 2}
+  _lineKind: 1
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

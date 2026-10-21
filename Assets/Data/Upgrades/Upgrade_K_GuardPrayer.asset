@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_K_GuardPrayer
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "수호 기도"
+  _icon: {fileID: 21300000, guid: ba57e9b96c6c4090b0c1434142c483ca, type: 3}
+  _description: "내 본진이 피해를 받을 때마다, {0}% 확률로 그 피해를 받지 않습니다."
+  _values:
+  - 0
+  - 5
+  - 7
+  - 9
+  - 12
+  _stack: 0
+  _max: 50
+  _inPool: 1
+  _nation: 1
+  _gainMax: 0
+  _kind: 2
+  _categories: []
+  _units: []
+  _unitStat: 0
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: 997ccfd8027443eca54c050522e400bd, type: 2}
+  _lineKind: 2
+  _lineTarget: 1
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

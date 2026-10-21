@@ -15,6 +15,8 @@ namespace GnorpWar
             public BuildingDefinition Source;
             // 합치기 보상 업그레이드가 켠 효과의 합쳐진 값(UpgradeDefinition.Apply) — 기물이 켠 효과는 0
             public float Value;
+            // 「얻은 것마다 따로」인 업그레이드가 켠 효과 — 얻은 것 하나하나의 값(UpgradeDefinition.Apply)
+            public readonly List<float> Values = new List<float>();
         }
 
         private static readonly List<Entry>[] ByTeam = { new List<Entry>(), new List<Entry>() };
@@ -57,6 +59,16 @@ namespace GnorpWar
                 if (entry.Effect == effect)
                     return entry.Value;
             return 0f;
+        }
+
+        private static readonly List<float> NoValues = new List<float>();
+
+        public static List<float> ValuesOf(Team team, UnitEffect effect)
+        {
+            foreach (Entry entry in For(team))
+                if (entry.Effect == effect)
+                    return entry.Values;
+            return NoValues;
         }
 
         public static int LevelOf(Team team, UnitEffect effect)

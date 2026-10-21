@@ -13,10 +13,12 @@ namespace GnorpWar
         [SerializeField] private int _count = 1;
         [SuffixLabel("%", true)]
         [SerializeField] private float _chance = 25f;
+        [Tooltip("켜면 확률을 켠 합치기 보상 업그레이드의 값에서 읽는다(짐승 몰이 — 위 확률 칸은 안 쓴다)")]
+        [SerializeField] private bool _chanceFromUpgrade;
 
         public override void OnSummoned(Unit unit, int sourceSlot, int stacks)
         {
-            if (Random.value * 100f < _chance)
+            if (Random.value * 100f < (_chanceFromUpgrade ? Value(unit.Team) : _chance))
             {
                 Vector2 ground = new Vector2(unit.Position.x, Ground.Instance.HeightAt(unit.Position.x));
                 BoardRunner.For(unit.Team).Summon(_summon, _count, -1, ground, Source(unit.Team));

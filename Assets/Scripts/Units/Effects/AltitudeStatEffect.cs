@@ -14,7 +14,7 @@ namespace GnorpWar
         protected override object[] TraitNumbers()
             => new object[] { string.Join(", ", System.Array.ConvertAll(_perAltitude, modifier => modifier.Describe())) };
 
-        public override float AltitudeBonus(UnitStat stat)
+        public override float AltitudeBonus(Team team, UnitStat stat)
         {
             float bonus = 0f;
             foreach (StatModifier modifier in _perAltitude)

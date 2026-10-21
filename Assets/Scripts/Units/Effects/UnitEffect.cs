@@ -29,6 +29,8 @@ namespace GnorpWar
         // 유닛 카드의 특성 줄(없으면 빈 글) — 숫자는 효과가 제 값에서 넣는다
         public string Trait => string.Format(_trait, TraitNumbers());
         protected virtual object[] TraitNumbers() => new object[0];
+        // 합치기 보상 업그레이드의 설명 글 {1}부터 — 등급으로 안 변하는 이 효과의 숫자(왕성 수비대의 50 · 조상의 분노의 +1%)
+        public virtual object[] UpgradeNumbers() => new object[0];
         // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null
         public virtual string Headline(int level) => null;
         // 이 효과를 켠 기물의 등급(같은 효과를 여러 기물이 켜면 가장 높은 것) — 훅 안에서 수치를 읽을 때
@@ -37,6 +39,8 @@ namespace GnorpWar
         protected BuildingDefinition Source(Team team) => TeamEffects.SourceOf(team, this);
         // 이 효과를 켠 합치기 보상 업그레이드의 합쳐진 값(글에 보이는 숫자 그대로 — 10 = 10%) — 업그레이드용 효과가 읽는다
         protected float Value(Team team) => TeamEffects.ValueOf(team, this);
+        // 「얻은 것마다 따로」(UpgradeStack.Each)인 업그레이드가 켠 효과 — 얻은 것 하나하나의 값(둘 가지면 두 칸). 그 밖이면 빈 목록
+        protected System.Collections.Generic.List<float> Values(Team team) => TeamEffects.ValuesOf(team, this);
 
         public bool AppliesTo(UnitDefinition unit)
             => (_categories.Length == 0 && _units.Length == 0)
@@ -46,7 +50,7 @@ namespace GnorpWar
         public bool AppliesTo(UnitCategory category) => System.Array.IndexOf(_categories, category) >= 0;
 
         // 소환 처리 ① — 이 유닛을 count기 소환할 때 더 소환할 수(BoardRunner.Summon). sourceSlot = 소환한 기물 칸(아니면 -1)
-        public virtual int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level) => 0;
+        public virtual int ExtraSummons(Team team, UnitDefinition unit, int count, int sourceSlot, int stacks, int level) => 0;
         // 소환 처리 ② — 대신 소환할 유닛(그대로면 unit)
         public virtual UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks) => unit;
         // 이 효과가 바꿔서 소환한 유닛이 나온 직후(한 마리마다, 소환 이벤트 앞)
@@ -101,7 +105,7 @@ namespace GnorpWar
         // 적용 대상 유닛이 쏜 화살이 적 유닛에 피해를 준 직후(사냥꾼의 활) — team = 쏜 쪽. 타워의 화살은 안 불린다
         public virtual void OnArrowHit(Team team, Unit victim) { }
         // 고도 1(1칸)마다 그 스탯에 얹는 +비율(합연산, 미노타우로스 — 0.1 = 고도 1당 +10%) — 지금 고도로 센다(Unit.Altitude)
-        public virtual float AltitudeBonus(UnitStat stat) => 0f;
+        public virtual float AltitudeBonus(Team team, UnitStat stat) => 0f;
         // 이 유닛이 유닛에게 피해를 준 직후(근접 · 화살 · 범위 · 반사 모두, 아군에게 준 것도) — amount = 그 피해(원시 의식 제단)
         public virtual void OnDealtDamage(Unit dealer, Unit victim, float amount) { }
         // 죽을 때마다 그 자리에서 다시 일어날 확률(0~1, 죽지 않는 전사) — 여러 효과면 더한다. 사망 시 효과 · 처치 효과는 먼저 돈다
@@ -109,7 +113,7 @@ namespace GnorpWar
         // 이 유닛이 죽었다가 그 자리에서 다시 일어난 직후(죽지 않는 전사 신화)
         public virtual void OnRevived(Unit unit) { }
         // 이 진영의 유닛이 죽으며 남기는 뼛가루의 양에 곱하는 값(뼈무덤 신화 2 — 적용 분류와 상관없이 읽는다)
-        public virtual float BoneDustFactor => 1f;
+        public virtual float BoneDustFactor(Team team) => 1f;
         // 처음 죽을 때 죽는 대신 최대 체력의 이 비율을 회복한다(신정 — 1 = 100%). 0이면 없음. 충정의 맹세(FirstDeathDelay)보다 먼저 쓰인다
         public virtual float FirstDeathHealRatio(Team team) => 0f;
         // 회복 투사체 하나를 던진 직후
@@ -119,5 +123,20 @@ namespace GnorpWar
         public virtual void OnHealLanded(Team team, Unit patient, float amount, float overflow, int stacks) { }
         // 소환 처리 ③ — 이 유닛이 소환된 직후(추가·변환이 끝난 뒤, 한 마리마다)
         public virtual void OnSummoned(Unit unit, int sourceSlot, int stacks) { }
+        // 합치기 보상 업그레이드가 이 효과를 켠 직후(전투 시작 — 보드가 돌기 전, UpgradeDefinition.Apply). 훅 안에서 유닛을 낼 효과가 그 유닛의 늘 켜진 효과를 미리 켠다 —
+        // 훅은 TeamEffects 목록을 도는 중에 불리므로, 그 안에서 새 효과가 목록에 더해지면 안 된다
+        public virtual void OnEnabled(Team team) { }
+        // 이 유닛의 무적이 저절로 끝난 직후(신앙의 갑주) — 이어서 또 걸려 길어졌으면 끝날 때 한 번
+        public virtual void OnInvulnerableEnded(Unit unit) { }
+
+        // ── 아래는 적용 분류와 상관없이 그 진영에 켜진 효과 전부에 불린다(대상을 효과가 가린다)
+        // 이 진영의 유닛 victim이 받는 피해에 곱하는 값(방패 대열 · 뼈 갑옷) — 1 = 그대로. 효과끼리 곱한다
+        public virtual float DamageTakenFactor(Unit victim) => 1f;
+        // 이 진영의 타워(본진 · 작은 타워)의 화살이 적 유닛을 처치한 직후(증기 압력)
+        public virtual void OnTowerKill(Team team, Base tower, Unit victim) { }
+        // 이 진영의 본진(작은 타워 아님)이 피해를 받을 때 그 피해를 받지 않을 확률(0~1, 수호 기도) — 효과끼리 더한다
+        public virtual float BaseBlockChance(Team team) => 0f;
+        // 이 진영의 본진이 피해를 받은 직후(살아 있을 때 — 왕성 수비대)
+        public virtual void OnBaseDamaged(Base home) { }
     }
 }

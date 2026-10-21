@@ -8,6 +8,6 @@ namespace GnorpWar
     {
         [SerializeField] private float _factor = 2f;
 
-        public override float BoneDustFactor => _factor;
+        public override float BoneDustFactor(Team team) => _factor;
     }
 }

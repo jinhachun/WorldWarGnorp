@@ -24,6 +24,8 @@ namespace GnorpWar
             public Text Name;
             [Tooltip("효과 한 줄 — 깔끔 폰트")]
             public Text Body;
+            // 국가 전용 업그레이드의 국가 기호(카드 오른쪽 위 구석 — 총괄 10/21). 카드마다 실행 중 하나 만든다(Awake)
+            [System.NonSerialized] public Image Nation;
         }
 
         [Tooltip("화면 전체를 덮는 어두운 판 — 뒤의 지도 · 상점을 못 누르게 막는다. 카드와 머리말은 이 판의 자식이다")]
@@ -59,8 +61,26 @@ namespace GnorpWar
             {
                 int choice = i;
                 _cards[i].Button.onClick.AddListener(() => Choose(choice));
+                _cards[i].Nation = NationMark((RectTransform)_cards[i].Button.transform);
             }
             _skip.onClick.AddListener(Skip);
+        }
+
+        // 카드 오른쪽 위 구석, 종족 테두리(NationFrame)의 모서리 「+」 장식 안쪽 — 원본 크기(Simple + Set Native Size, CLAUDE.md §5-1). 누르기를 가리지 않는다
+        private const float NationInset = 40f;
+
+        private static Image NationMark(RectTransform card)
+        {
+            var mark = new GameObject("NationMark", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            var rect = mark.rectTransform;
+            rect.SetParent(card, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one;
+            rect.anchoredPosition = new Vector2(-NationInset, -NationInset);
+            mark.type = Image.Type.Simple;
+            mark.preserveAspect = true;
+            mark.raycastTarget = false;
+            mark.enabled = false;
+            return mark;
         }
 
         private void Skip()
@@ -141,6 +161,15 @@ namespace GnorpWar
                     card.Button.image.color = card.Hover.Base;
                 card.Icon.sprite = choice.Icon;
                 card.Icon.SetNativeSize();
+                Sprite nation = choice.Nation != BuildingNation.Common && RunState.Config != null && RunState.Config.World != null
+                    ? RunState.Config.World.NationIcon(choice.Nation) : null;
+                card.Nation.enabled = nation != null;
+                if (nation != null)
+                {
+                    card.Nation.sprite = nation;
+                    card.Nation.SetNativeSize();
+                    card.Nation.transform.SetAsLastSibling();   // 카드 안쪽 판 위에
+                }
                 card.Name.text = choice.DisplayName;
                 card.Body.text = BuildingTooltip.Highlight(choice.Describe(choice.ValueAt(offer.Rarity)));
             }

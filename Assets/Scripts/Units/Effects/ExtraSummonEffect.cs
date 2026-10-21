@@ -13,7 +13,7 @@ namespace GnorpWar
         [SuffixLabel("기", true)]
         [SerializeField] private int _extraPerTier = 1;
 
-        public override int ExtraSummons(UnitDefinition unit, int count, int sourceSlot, int stacks, int level)
+        public override int ExtraSummons(Team team, UnitDefinition unit, int count, int sourceSlot, int stacks, int level)
             => OwnedBuilding.Scaled(_extra, _extraPerTier, level);
 
         public override string Describe(int level) => string.Format(Description, OwnedBuilding.Scaled(_extra, _extraPerTier, level));

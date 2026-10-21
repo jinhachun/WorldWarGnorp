@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_K_Knighthood
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "기사 서임"
+  _icon: {fileID: 21300000, guid: 0c87956e09c04f3dbf4b09c2f5eddd1d, type: 3}
+  _description: "내 경보병이 적 {0}기를 처치하면, 기사로 바뀝니다."
+  _values:
+  - 0
+  - 0
+  - 4
+  - 3
+  - 2
+  _stack: 1
+  _max: 0
+  _inPool: 1
+  _nation: 1
+  _gainMax: 0
+  _kind: 2
+  _categories:
+  - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _units: []
+  _unitStat: 0
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: 2b22d90240b94ac7b39821bf308a778e, type: 2}
+  _lineKind: 0
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

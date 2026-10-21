@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_T_GiantBlueprint
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "거인 설계도"
+  _icon: {fileID: 21300000, guid: 92706966154c432294a97b50f87af2ac, type: 3}
+  _description: "내 톱니거인의 체력 +{0}%\n내 톱니거인의 크기 +{0}%"
+  _values:
+  - 0
+  - 6
+  - 8
+  - 12
+  - 20
+  _stack: 0
+  _max: 0
+  _inPool: 1
+  _nation: 2
+  _gainMax: 0
+  _kind: 0
+  _categories: []
+  _units:
+  - {fileID: 11400000, guid: b59d3b90e7994134792cb2b84c50105f, type: 2}
+  _unitStat: 1
+  _unitOp: 1
+  _towerStat: 0
+  _effect: {fileID: 11400000, guid: d7d8b875324e4c88a1fbf3fd9a61976d, type: 2}
+  _lineKind: 1
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

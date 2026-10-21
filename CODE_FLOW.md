@@ -135,7 +135,7 @@ sequenceDiagram
 - 즉시 발동은 `BoardRunner.FireNow`(게이지 그대로) — 액션 · 패시브 · 유닛 효과(`FireOwners`)가 부른다.
 - **`BoardRunner.Summon`** = 이 진영 모든 소환의 입구: 켜진 효과의 `ExtraSummons` → `ConvertSummon` → 자리 결정(작은 타워 · 탑 층 · 성문) → 한 마리마다 `Unit.Spawn`/`Unit.SpawnStanding`(→ `Pooled.Get`) → `OnConverted` → `Unit.NotifySummoned`(효과 `OnSummoned`) → 다른 칸 패시브 `OnSummonedFrom`.
 - **`Unit`** — `OnEnable`이 한 생애의 상태를 전부 되돌린다(풀 재사용). 매 물리 스텝 `Unit.FixedUpdate`: 경직·넉백 → 효과 `Tick` → 회복 유닛 분기 → `FindTargetCached`로 적이 있으면 공격 분기(`AttackType`별 — `Strike` · `FireProjectile` · `BreatheFire` · `Sweep`), 없으면 뒤돌아 싸움(병종의 `UnitCategory._turnBack`이 켜져 있고 땅을 딛고 서 있을 때, 등 뒤 `BattleConfig._turnBackRange`칸 안의 적 유닛 쪽으로 걷는다 — 이 스텝은 뒤로 못 가는 래칫 `HoldBack`을 끈다) → 그것도 없으면 전진·등반. 떨림 방지: 찾은 적은 `BattleConfig._targetHold` 동안 붙잡는다(죽음·발밑·사거리 밖이면 바로 다시 찾음), 뒤돌기는 `_turnBackRange` 안에서 들어가고 `+ _turnBackExit` 밖에서 그만두며(그만둔 뒤 `_targetHold` 동안 다시 안 돎), 앞을 보고 싸우는 아군이 그 적과 나 사이에 있으면 돌아서지 않는다(10/21). 그림 연출은 `Unit.Update`.
-- **피해** `Unit.TakeDamage` → (무적이면 반사만) → 체력 감소 · `NoteProgress` · 반사 · 때린 쪽 `OnDealtDamage` → 0 이하면 첫 죽음 보호 효과 → `Unit.Perish`. 살아 있으면 효과 `OnHit` → 밀림.
+- **피해** `Unit.TakeDamage` · `Base.TakeDamage` → 실제로 깎인 몫을 `Battle/DamageMeter.Credit`(공격자의 출처 칸 `Unit.SourceSlot` · 타워 · 기타 — 결과 창 딜 미터기, `BattleManager.StartBattle`에서 비움) → (무적이면 반사만) → 체력 감소 · `NoteProgress` · 반사 · 때린 쪽 `OnDealtDamage` → 0 이하면 첫 죽음 보호 효과 → `Unit.Perish`. 살아 있으면 효과 `OnHit` → 밀림.
 - **죽음** `Unit.Perish`: 부활 확률 → `Die`(충돌 끄기 · 시체 연출, 시간이 지나면 `SetActive(false)`로 풀에 반납) → 두 진영 보드 `BoardRunner.NotifyUnitDied`(패시브 `OnUnitDied` — 누가 죽였든) → 처치자 진영 효과 `OnKill` 또는 타워 처치면 `Base.NotifyKill` → `BoardRunner.NotifyTowerKill`(칸 패시브 — 예: 주식시장 `TowerKillGoldPassive` → `RunState.GainBattleGold` + `GoldDrops.Raise` → 뷰 `Fx/GoldCoinFx` · `UI/BattleGoldView`, 스팀바론 `TowerKillBuyPassive` → 「구매할 때마다,」 발동 경로) → 내 진영 `OnDied` → 상대 진영 `OnEnemyDied`.
 - **본진** `Base.FixedUpdate`: 쏠 수 있으면(`CanAttack`) `FindTargets` → `Base.Shoot` → `Projectile`. `Base.TakeDamage`: 작은 타워면 `NotifySmallTowerDestroyed` 후 `Destroy`, 본진이면 `SetActive(false)` + `Destroyed`.
 - 스탯은 매번 계산하지 않는다 — `Unit`·`Base`가 `StatBook.Version`·`TowerBook.Version`이 바뀌었을 때만 다시 읽는다(`Unit.RefreshStats` · `Base.RefreshStats`).
@@ -224,7 +224,6 @@ flowchart LR
 | `RunState.Merged` (static) | `ShopPanel.OnEnable` | 합치기 단계별 재생(상태는 이미 끝난 뒤) |
 | `RunState.UpgradesChanged` (static) | 지금 구독자 없음 — `UpgradePicker`는 폴링 | — |
 | `NationCard.Chosen` (국가) | `WorldManager.ShowNations` | 「시작」을 누르면 `RunState.ChooseNation` → `BeginTurn` — 카드(뷰)는 상태를 바꾸지 않는다 |
-| `BoardRunner.Summoned` (칸, 마리 수) | `UI/BattleSummary` | `BoardRunner.Summon` 끝에서 실제로 나온 마리 수(추가 소환 · 변환 · 징병제 반영, 0기면 안 냄). 칸 없는 소환(유닛 효과 · 업그레이드 · 투사체)은 칸 = -1 — 결과 창 「이번 전투」 층별 소환 수 |
 | `ShopPanel.MapRequested` | `WorldManager.Awake` | 상점 닫기 |
 | `WorldMapView.Clicked(int region)` | `WorldManager.Awake` | 땅 고르기 |
 | uGUI `onClick` | `WorldManager.Awake`(침략 · 쉬기 · 상점 · 건너뛰기 · 다음) · `BattleManager.Awake`(결과 버튼) · `ShopPanel.Start` · `SpeedButton.Awake` | 버튼 |

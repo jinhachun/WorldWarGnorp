@@ -28,7 +28,7 @@ Fx               ← FxDirector   (파편·먼지 프리팹 + CameraShake 참조
 Global Light 2D  ← Light2D(Global)
 Ground           ← PolygonCollider2D · LineRenderer · Ground   (굽은 땅 x -61~61, 원점·스케일 1 고정. 모양은 판 시작 때 이번 맵(`RunState.Map`)의 지형 스타일로 언덕·고원·골짜기를 무작위로 놓는다 — 실행 순서 100(BattleManager 뒤). 같은 때 맵 뒷배경 겹(`MapDefinition.Backdrop` — `Assets/Sprites/Backdrop/`, 회색 실루엣, 겹마다 `BackdropParallax`)과 땅 속 검은 메시(Fill)를 만든다. 정렬: 뒷배경 -30~ < 땅 속 -10 < 탑 -1 < 유닛 0. 땅 위 소품은 없음. `_flatAnchors` 비어 있음)
 TerrainFx        ← Fx/TerrainFx (재질 FX_Pixel — 지형 연출: 땅 장식 · 하늘 입자 · 탑 창 표시, 맵 종류 = `MapDefinition.Look` — 10/20)
-Base_Ally        ← SpriteRenderer(`castle.png`, order -1 — 유닛이 성 앞에 그려짐) · BoxCollider2D · Base(Team=Ally) · Tower(망루 사이에서 솟는 하나로 이어진 탑, 층 6×2.5칸 — 층마다 처마선 + 창 안 기물 아이콘 + 창틀(`Frame`, 그 층 기물 등급 테두리 색 · 빈 층 흰색 · 꺼진 층 ×회색 — 10/20), 벽 재질 = 그 층 기물 국가(킹덤 돌벽돌·아치 창 · 티크톡 리벳 철판·톱니 창 · 트라이브 통나무 말뚝·뼈 모서리 네모 창 · 공용 민 벽 · 빈 층 꺼진 창), 창 불빛 = 쿨다운(전투 중 아래부터 차오름, 쿨 없는 기물·상점은 은은히), 숫자 라벨·게이지 없음. 그림은 전부 코드 생성 · 층·Roof·층별 Flash·Icon·창은 실행 중 생성, `_flag` = 자식 Flag를 지붕 꼭대기로 옮김)   (성 x -53.75, 박스 x -60.75~-46.5 · 높이 7.125 = 그림의 몸통, 성문 x -52.31. 같은 진영 유닛은 몸이 통과. 체력·화살 = `Base_Test.asset`)
+Base_Ally        ← SpriteRenderer(성 그림 = 그 진영 국가의 성 — `WorldConfig._castles`: 킹덤·공용 `castle.png`(사용자 그림) · 티크톡 `castle_ticktock` · 트라이브 `castle_tribe`, `Tower.Start`가 `RunState.NationOf(Team)`로 바꿈(10/22), order -1 — 유닛이 성 앞에 그려짐) · BoxCollider2D · Base(Team=Ally) · Tower(망루 사이에서 솟는 하나로 이어진 탑, 층 6×2.5칸 — 층마다 처마선 + 창 안 기물 아이콘 + 창틀(`Frame`, 그 층 기물 등급 테두리 색 · 빈 층 흰색 · 꺼진 층 ×회색 — 10/20), 벽 재질 = 그 층 기물 국가(킹덤 돌벽돌·아치 창 · 티크톡 리벳 철판·톱니 창 · 트라이브 통나무 말뚝·뼈 모서리 네모 창 · 공용 민 벽 · 빈 층 꺼진 창), 창 불빛 = 쿨다운(전투 중 아래부터 차오름, 쿨 없는 기물·상점은 은은히), 숫자 라벨·게이지 없음. 그림은 전부 코드 생성 · 층·Roof·층별 Flash·Icon·창은 실행 중 생성, `_flag` = 자식 Flag를 지붕 꼭대기로 옮김)   (성 x -53.75, 박스 x -60.75~-46.5 · 높이 7.125 = 그림의 몸통, 성문 x -52.31. 같은 진영 유닛은 몸이 통과. 체력·화살 = `Base_Test.asset`)
  ├─ Muzzle       (꼭대기 가운데, 화살 나가는 자리)
  ├─ BackStop     ← BoxCollider2D   (보이지 않음) 성 뒤 x -61.5~-61, 땅 ~ y 36
  └─ Flag         ← SpriteRenderer(`flag.png`, 진영색)   탑 지붕 꼭대기(Tower가 층 수 따라 옮김)
@@ -44,7 +44,8 @@ AllySpawnPoint   ← (Transform만) 아군 성문(x -52.31). `Unit.Spawn`이 여
 EnemySpawnPoint  ← (Transform만) 적 성문(x 52.31)
 BossSpawnPoint   ← (Transform만) 적의 넓은 유닛(공룡·코끼리)이 나오는 자리(지금은 적 성문과 같은 x)
 EventSystem      ← EventSystem · InputSystemUIInputModule   (새 Input System 전용 — StandaloneInputModule 쓰지 말 것)
-Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRaycaster
+Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080, Expand) · GraphicRaycaster
+ │   (10/22부터 화면 UI는 전부 `Canvas/Screen` 아래 — 가운데 기준 1920×1080, RectMask2D 없음(전장은 카메라가 화면 전체에 그리고, 동전·전장 탑 툴팁은 판 밖에도 뜬다). ResultPanel 덮개만 sizeDelta (3840,1080)으로 판보다 크게 — 어떤 화면비에서도 화면 전체를 덮는다. 아래 트리는 Screen 아래 기준, 「화면 왼쪽/오른쪽 끝」은 판(1920)의 끝)
  ├─ BaseBar_Ally · BaseBar_Enemy   ← Image · BaseHealthBar   (맨 윗줄 좌·우, 각 폭 900) → Fill(Filled, 아군은 왼쪽·적은 오른쪽 기준) · HpText(현재 체력 숫자, 바 가운데 24px · Outline)
  ├─ AllyBoardView  ← BoardView(아군 필드, **전투 중에만**) → SlotTemplate [꺼짐] ← Image(탑 층 벽 `UI_Floor*` 120×120) · Button · SlotView → Light(66×66 Filled 세로·아래 기준 — 창 불빛 = 쿨다운) · Icon(×0.6) · RarityFrame(창틀 `UI_Window*`, 등급 색) · Level(창 아래 15pt)   (늪지에서 꺼진 기물의 층은 밝기 ×0.4로 회색이 되고 가속 표시 자리에 빨간 금지 표시 `UI_IconStopped` — 판정은 `BoardRunner.StoppedByMap`, 그림 칸은 `SlotView`·`FloorLook`·`Tower`의 `_stoppedIcon`)
  ├─ EnemyBoardView ← BoardView(적 필드)   → SlotTemplate [꺼짐]   (오른쪽 기준 x -630부터 130px → 오른쪽. 칸 0이 왼쪽)
@@ -57,7 +58,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
  ├─ RampLabel      ← Text · RampLabel   (위 가운데 (65, -110) — 두 보드 사이 빈 곳 가운데라 배속 버튼보다 오른쪽, 전투 중에만: 시간 + 데스매치 단계, 글자 30 · 폭 540)
  ├─ SpeedButton    ← Image · Button · SpeedButton → Label   (위 가운데 y -190, 전투 중에만 — BattleManager가 켜고 끈다. ×1 → ×2 → ×4)
  ├─ TerrainBanner  ← CanvasGroup · UI/TerrainBanner → Title(도트 48) · Body(도트 24)   (전투 시작 때 가운데 지형 이름 + 효과 글 1.6초 → 0.4초 사라짐, 클릭 안 막음 — 10/20)
- ├─ BattleGold     ← UI/BattleGoldView   (왼쪽 위 내 체력바 아래 — 전투 중 골드: 동전 아이콘 + 노란 숫자, 주식시장 골드가 닿을 때 오른다. 형제 순서는 BuildingTooltip 바로 앞 — 툴팁이 위에 그려진다)
+ ├─ BattleGold     ← UI/BattleGoldView   (왼쪽 위 내 체력바 아래 — 전투 중 골드: 동전 아이콘 + 노란 숫자, 주식시장 골드가 닿을 때 오른다. 형제 순서는 BuildingTooltip 바로 앞 — 툴팁이 위에 그려진다. 자리는 매 프레임 내 업그레이드 줄 바로 아래, 타워 UI와 겹치면 그 오른쪽으로(10/22))
  ├─ GoldCoinLayer  ← Fx/GoldCoinFx가 그리는 판(맨 위 — 죽은 적 자리에서 튄 동전이 BattleGold로 날아감)
  ├─ 〈ShopPanel〉   🔴 **이 아래 트리는 Battle 씬이 아니라 프리팹 `Assets/Prefabs/UI/ShopPopup`의 것이다**(10/11 상점이 World 씬 팝업으로 옮겨감 — `Battle.unity`에 `ShopPanel`은 없다). 아래 「World 씬」 절과 같이 볼 것
  │   ├─ Status   ← Text
@@ -72,7 +73,7 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
  │   ├─ LockButton(`RunState.ToggleShopLock`) · RerollButton · RaiseButton(층 올리기 NG / 최고층) · SellButton(+ SellDropZone: 칸을 끌어 놓으면 판매) · StartButton   ← Image · Button → Label   (y -1010)
  │   └─ DragGhost      ← Image(층 조각, 벽 금색 틴트) · FloorLook · CanvasGroup(레이캐스트 안 막음) → Light · Icon · Window(등급 색) · Cap   (끄는 동안 포인터를 따라다님 — 반드시 ShopPanel의 마지막 자식)
  ├─ ResultPanel    [실행 시 꺼짐] ← Image → ResultText(한 줄) · ResultStats(`ResultStats` — 목숨·승리 아이콘 줄, y -10) · ResultTime(회색 「전투 시간 분:초」, y -50 — `RampLabel.LastElapsed`) · RetryButton(y -134) → Label("다음 라운드"/"새 런")
- │   (10/20 UIUX: Board(`UI_ResultPanel` 판) · 멸망 문장을 제목 바로 아래로 · SummaryHeader「이번 전투」 · SummaryCells(층별 소환 수, 많은 순 최대 8) · SummaryDamage(적 본진에 준 피해 · 내 본진이 받은 피해). 숫자는 `UI/BattleSummary`(Canvas 바로 아래, 켜 둔 채 — `BoardRunner.Summoned`로 층별 소환 수를 센다 — 「N기」)가 채운다)
+ │   (10/21 딜 미터기: Board(검은 속 + 회색 2px 선 + 네 모서리 매듭 `UI_FrameKnot`, 크기는 줄 수에 맞춰 코드가 정함) 아래 ResultText(도트 72) · ResultSummary(하트) · ResultStats · ResultTime · SummaryHeader「준 피해」 · SummaryCells(기물 줄 — 아이콘 64 · 이름 · `UI_MeterBar` 막대 · 숫자, 많은 순 최대 8 + 타워 · 기타) · RetryButton(UI_CmdButton). 채우기·움직임은 `UI/BattleSummary`, 숫자는 `Battle/DamageMeter`, 「준 피해」 선 오른쪽에 「나 / 적」 탭(`UI/TabButton`, `UI_Tab*` 88×40 — 10/22))
  └─ BuildingTooltip ← BuildingTooltip (켜 둔 채) → Panel(UI_TooltipWide · CanvasGroup 레이캐스트 안 막음, 판만 켜고 끔) → Title · Body · UnitPanel(UI_TooltipWide, Panel 아래에 매달림 · 설명에 나오는 유닛마다 한 장 — 이 판이 틀, 둘째 장부터 실행 중 복제해 아래로 6px 간격으로 쌓음) → UnitBody   (상점이 열려 있으면 상점 안 고정 자리 `TooltipDock`에 그 폭으로, 상점 밖에선 칸 옆 + 유닛 판을 옆으로 펼침 · 유닛 판 능력치 줄 앞 색 아이콘 — Canvas 마지막 자식)
 ```
 
@@ -100,12 +101,12 @@ Canvas           ← Canvas(Overlay) · CanvasScaler(1920×1080) · GraphicRayca
 ## World 씬 (10/11 — 월드맵, 빌드 0번)
 `Assets/Scenes/World.unity`. 오브젝트는 전부 Canvas(uGUI) — 지도도 UI다. 트리·참조의 원본은 씬 파일이고, 여기엔 덩어리만 적는다.
 - `WorldManager`(`World/WorldManager`) — 턴 시작 · 씬 전환 · AI 턴 재생.
-- Canvas: `TopBar`(턴 · 골드 · 행복도 · 땅 n/30 · 그 오른쪽에 **내 업그레이드 줄** — 가로 `ScrollRect`, 스크롤바 없음) · `SidePanel` · `Map`(영토 지도 — `UI/WorldMapView`가 땅 번호 텍스처를 칠하고, 땅마다 지형 아이콘 · 지역 특수 표시 · 내 땅이면 그 위에 왕관(`UI_IconCrown`)을 띄운다. 땅 번호 글자는 없다(사용자 10/15). 내 땅 덩어리 국경은 흰 테두리 + 안쪽 밝은 띠 + 바깥 검은 그림자로 굵게(4X식, 사용자 10/15). 남의 땅 채움은 어둡게 · 침략 가능 땅은 밝게(10/20 — 점선 띠는 10/21에 뺌). 땅을 안 골라도 탑 기둥에 내 탑) · `SkipReplay` · `BuildingTooltip`.
+- Canvas(10/22부터 화면 UI는 전부 `Canvas/Screen` 아래 — 가운데 기준 1920×1080 + RectMask2D, CanvasScaler = Expand라 16:9가 아니면 검은 띠. 아래 경로는 Screen 아래 기준): `TopBar`(아이콘 + 숫자 — 달력 턴 · 동전 골드 · 하트 행복도 · 왕관 땅 n/30(10/21) · 그 오른쪽에 **내 업그레이드 줄** — 가로 `ScrollRect`, 스크롤바 없음) · `SidePanel` · `Map`(영토 지도 — `UI/WorldMapView`가 땅 번호 텍스처를 칠하고, 땅마다 지형 아이콘 · 지역 특수 표시 · 내 땅이면 그 위에 왕관(`UI_IconCrown`)을 띄운다. 땅 번호 글자는 없다(사용자 10/15). 내 땅 덩어리 국경은 흰 테두리 + 안쪽 밝은 띠 + 바깥 검은 그림자로 굵게(4X식, 사용자 10/15). 남의 땅 채움은 어둡게 · 침략 가능 땅은 밝게(10/20 — 점선 띠는 10/21에 뺌). 땅을 안 골라도 탑 기둥에 내 탑) · `SkipReplay` · `BuildingTooltip`. 10/21 꾸미기: `Frame`(`UI_WorldFrame` 1920×1080 화면 테두리 — 2중 선 · 이음매 매듭, ShopButton 다음 형제, 레이캐스트 끔) · 명령 버튼 셋(침략 · 쉬기 · 상점) = `UI_CmdButton*` 220×80 Sprite Swap 네 상태 · ButtonHover `_pressDepth` 4 · SidePanel 가로 구분선 = `UI_SideDivider`.
 - **`SidePanel`(10/12 — 워크래프트2식 초상화 배치, `UI/WorldSidePanel`)**: 기둥 둘이 세로 선(2px, 명령을 받는 동안만)으로 갈린다.
   - **정보 기둥** — 고른 영주 그림(깃발 포함, 몸 64px · 몸 중심을 이름 글 중심에) · 이름 · 국가 · 그 영주의 업그레이드 줄(합치기 보상 — 등급 색 테두리 칸 + 「×N」) · 구분선 · 「지형 :」 · 「패배시」 + 하트. 고른 땅이 없으면 나 + 안내 글, 상점이 보이는 동안은 나 + 「내 영지」 + 국가만(지형 줄은 빈다). 고른 땅에 지역 특수 업그레이드가 있으면 「지형 :」 아래에 아이콘 + 이름 + 효과 글.
   - **`Canvas/UpgradePicker`**(Dim · Cards · Header · SkipButton, `BuildingTooltip` 바로 앞 — 상점 팝업 밖) — 업그레이드 고르기 창. 스스로 `RunState.PendingUpgrades`를 보고 지도든 상점이든 화면 전체를 막고 뜬다(합치기 보상 · 멸망 보상). AI 턴 재생 중에는 안 뜬다. `SkipButton`(「건너뛰기 +N골드」)은 멸망 보상(지역 특수) 고르기에만 보인다 — N은 `WorldConfig` 「건너뛰면 받는 골드」.
   - 지도의 땅 표시 = 지형 아이콘 + (특수 지역이면) 오른쪽에 빨강 테두리 칸.
-  - `NationPanel`(국가 고르기) — 국가 카드 하나: `NationName`(도트) · `NationArt`(대표 유닛을 정수배로) · `NationBody`(깔끔 폰트) · `NationPrev`/`NationNext`(화살표, 키보드 ←/→도) · `NationStart`(「시작」). 채우기 · 넘기기 · 그림은 `UI/NationCard`(NationPanel에 붙음, `Chosen` 이벤트로 고른 국가를 알린다 — 상태 변경은 `WorldManager`). 순서 = `RunState.NationChoices`, 대표 유닛 · 설명 글은 `WorldConfig` 「국가 고르기 카드」.
+  - `NationPanel`(국가 고르기, 화면 전체 · B안 10/21) — 왼쪽 `Title`·`Divider`·`RowTemplate`(UI/NationRow, 국가 수만큼 복제)·`Hint` / 탑 `Floor0~2`(FloorLook)·`Roof` / 무대 `StageTitle`(Emblem·Name·Line)·`Backdrop`(RectMask2D)·`Landmark`·`Ground`·`Units`·`Path0~2`(Icon·Name·Line) / `NationStart`(명령 버튼)·`KeyHint` / 맨 위 `Frame`(UI_WorldFrame). 채우기·움직임은 `UI/NationCard`(`Chosen` 이벤트 — 상태 변경은 `WorldManager`), 순서 = `RunState.NationChoices`, 내용은 `WorldConfig` 「국가 고르기 화면의 무대」(`NationShowcase`).
   - **탑 기둥**(x 348) — 그 영주의 탑. 상점 팝업이 켜지는 동안은 숨고, 그 자리에 아래 `ShopTower`가 선다.
   - 「침략」「쉬기」「상점」 버튼 · 요약/통일/게임 오버 글.
 - **씬에 없고 실행 중에 생기는 것 둘** — 씬 파일에서 찾지 말 것.

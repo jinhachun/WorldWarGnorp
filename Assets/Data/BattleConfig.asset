@@ -23,7 +23,7 @@ MonoBehaviour:
   _rerollCost: 2
   _sellRatio: 0.5
   _offerCount: 5
-  _homeNationShare: 0.66
+  _homeNationShare: 0.8
   _shopPool:
   - {fileID: 11400000, guid: 0df3393d6acf586489bba3e6f0085363, type: 2}
   - {fileID: 11400000, guid: da7e3ce140469e543af9f3a2abf0af8b, type: 2}

@@ -49,6 +49,12 @@ namespace GnorpWar
         [SerializeField] private Sprite _lordFlag;
         [Tooltip("행복도 아이콘(하트) — 위 줄과 「패배시」 줄")]
         [SerializeField] private Sprite _heartIcon;
+        [Tooltip("위 줄 아이콘 — 턴(해) · 골드(동전, 숫자와 같은 노랑으로 칠한다) · 땅(왕관 — 지도의 내 땅 표시와 같은 그림). 글 대신 아이콘 + 숫자")]
+        [SerializeField] private Sprite _turnIcon;
+        [SerializeField] private Sprite _goldIcon;
+        [SerializeField] private Sprite _landIcon;
+        [Tooltip("가로 구분선 그림 — 2중 선 + 양 끝 매듭(글 기둥 폭 그대로, 원본 크기)")]
+        [SerializeField] private Sprite _dividerSprite;
         [Header("영주의 탑")]
         [Tooltip("틀 층(꺼져 있음) — 이 자리가 1층, 위로 쌓는다. 비우면 탑을 그리지 않는다")]
         [SerializeField] private SlotView _slotTemplate;
@@ -77,19 +83,24 @@ namespace GnorpWar
         private Text _specialBody;
         private Text _loseTitle;
         private HeartRow _hearts;
-        private Text _statusLands;
+        private Text _statusTurn, _statusGold, _statusLands;
+        private Image _turnImage, _goldImage, _landImage;
         private UpgradeRow _mine;
         private RectTransform _mineView;
 
-        // 위 줄 — 「턴 N    골드 G」 + 행복도 하트(UI/HeartRow) + 「땅 n/30」 + 내가 가진 업그레이드 아이콘 줄(UI/UpgradeRow). bar = 그 줄의 글(왼쪽 가운데 정렬).
-        // 업그레이드 줄은 bar의 오른쪽 끝까지가 창이고, 넘치면 좌우로 끌어서 민다(스크롤바 없음)
+        // 위 줄 — [해] N · [동전] G · 행복도 하트(UI/HeartRow) · [왕관] n/30 · 내가 가진 업그레이드 아이콘 줄(UI/UpgradeRow). 낱말 없이 아이콘 + 숫자(10/21 He is Coming풍).
+        // bar = 그 줄의 글(왼쪽 가운데 정렬) — 글은 비우고 숫자 글의 틀로만 쓴다. 업그레이드 줄은 bar의 오른쪽 끝까지가 창이고, 넘치면 좌우로 끌어서 민다(스크롤바 없음)
         public void ShowStatus(Text bar, int turn)
         {
             if (_hearts == null)
             {
-                _statusLands = Instantiate(bar, bar.transform);
-                Anchor(_statusLands.rectTransform, new Vector2(0f, 0.5f));
-                _statusLands.rectTransform.sizeDelta = new Vector2(0f, bar.rectTransform.sizeDelta.y);
+                // 숫자 글은 bar를 복제한다 — 자식이 생기기 전에 셋 다 만든다(뒤에 복제하면 자식까지 따라온다)
+                _statusTurn = StatusText(bar);
+                _statusGold = StatusText(bar);
+                _statusLands = StatusText(bar);
+                _turnImage = StatusIcon(bar, _turnIcon, Color.white);
+                _goldImage = StatusIcon(bar, _goldIcon, ColorUtility.TryParseHtmlString(BuildingTooltip.NumberColor, out Color gold) ? gold : Color.white);
+                _landImage = StatusIcon(bar, _landIcon, Color.white);
                 _hearts = new HeartRow(bar.rectTransform, _heartIcon);
 
                 var view = new GameObject("Upgrades", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
@@ -106,11 +117,12 @@ namespace GnorpWar
                 scroll.vertical = false;
                 scroll.movementType = ScrollRect.MovementType.Clamped;
             }
-            bar.text = $"턴 {turn}    골드 <color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>";
-            float x = _hearts.Show(bar.preferredWidth + StatusGap);
-            _statusLands.rectTransform.anchoredPosition = new Vector2(x + StatusGap, 0f);
-            _statusLands.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
-            x += StatusGap + _statusLands.preferredWidth + StatusGap;
+            bar.text = "";
+            float x = StatusCell(_turnImage, _statusTurn, 0f, turn.ToString());
+            x = StatusCell(_goldImage, _statusGold, x + StatusGap, $"<color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>");
+            x = _hearts.Show(x + StatusGap);
+            x = StatusCell(_landImage, _statusLands, x + StatusGap, $"{RunState.Lands}/{RunState.RegionCount}");
+            x += StatusGap;
             _mineView.anchoredPosition = new Vector2(x, 0f);
             _mineView.sizeDelta = new Vector2(Mathf.Max(0f, bar.rectTransform.rect.width - x), UpgradeRow.BoxSize);
             _mine.Show(RunState.UpgradesOf(RunState.World.State.Player));
@@ -129,9 +141,9 @@ namespace GnorpWar
             WorldState state = world.State;
             if (_owned == null)
                 Build();
-            // 글 기둥의 한가운데 · 왼쪽 끝 · 폭
+            // 글 기둥의 한가운데 · 왼쪽 끝
             float left = _title.rectTransform.anchoredPosition.x - _title.rectTransform.sizeDelta.x * 0.5f;
-            float center = _title.rectTransform.anchoredPosition.x, width = _title.rectTransform.sizeDelta.x;
+            float center = _title.rectTransform.anchoredPosition.x;
 
             // 상점이 열린 동안에는 고른 땅과 상관없이 나를 보여 준다(사용자 10/12 — 탑 기둥도 내 탑이다). 그 아래는 비운다
             bool any = land && !shop && selected >= 0;
@@ -195,9 +207,9 @@ namespace GnorpWar
             }
 
             y -= BlockGap * 0.5f;
+            // 구분선 그림은 글 기둥 폭 그대로의 원본 크기(§5-1) — 그 높이만큼 내려간다
             _divider.rectTransform.anchoredPosition = new Vector2(left, y);
-            _divider.rectTransform.sizeDelta = new Vector2(width, DividerHeight);
-            y -= DividerHeight + BlockGap * 0.5f;
+            y -= _divider.rectTransform.sizeDelta.y + BlockGap * 0.5f;
 
             MapDefinition terrain = world.Map.TerrainOf(selected);
             _terrainLine.Tip.Set(terrain.Icon, terrain.DisplayName, BuildingTooltip.Highlight(terrain.Description));
@@ -240,6 +252,8 @@ namespace GnorpWar
             _owned = new UpgradeRow((RectTransform)transform, _title, CellWidth, RowColumns, false);
             _divider = NewImage((RectTransform)transform, "Divider");
             Anchor(_divider.rectTransform, new Vector2(0f, 1f));
+            _divider.sprite = _dividerSprite;
+            _divider.SetNativeSize();
             // 정보 기둥과 탑 기둥 사이의 세로 구분선(사용자 10/12) — 패널 위에서 바닥까지. 가로 구분선과 같은 굵기 · 색
             if (_slotTemplate != null)
             {
@@ -332,6 +346,35 @@ namespace GnorpWar
         }
 
         private static void Anchor(RectTransform rect, Vector2 anchor) => rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+
+        // 위 줄의 숫자 글 하나 — bar와 같은 폰트 · 크기, 왼쪽 가운데 기준
+        private static Text StatusText(Text bar)
+        {
+            Text text = Instantiate(bar, bar.transform);
+            Anchor(text.rectTransform, new Vector2(0f, 0.5f));
+            text.rectTransform.sizeDelta = new Vector2(0f, bar.rectTransform.sizeDelta.y);
+            return text;
+        }
+
+        private static Image StatusIcon(Text bar, Sprite sprite, Color color)
+        {
+            Image icon = NewImage(bar.rectTransform, "Icon");
+            Anchor(icon.rectTransform, new Vector2(0f, 0.5f));
+            icon.sprite = sprite;
+            icon.color = color;
+            icon.SetNativeSize();
+            return icon;
+        }
+
+        // 아이콘 + 숫자를 x부터 놓는다 — 숫자 오른쪽 끝의 x
+        private static float StatusCell(Image icon, Text text, float x, string value)
+        {
+            icon.rectTransform.anchoredPosition = new Vector2(x, 0f);
+            x += icon.rectTransform.sizeDelta.x + LabelGap * 2f;
+            text.rectTransform.anchoredPosition = new Vector2(x, 0f);
+            text.text = value;
+            return x + text.preferredWidth;
+        }
 
         // 가운데 정렬 글(위 가운데 기준)을 (center, y)에 놓고 그 아래 끝의 y를 돌려준다
         private static float Place(RectTransform rect, float center, float y)

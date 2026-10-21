@@ -70,6 +70,8 @@ namespace GnorpWar
         // 뒤돌기를 그만둔 뒤 이 시각까지는 다시 돌아서지 않는다(BattleManager.TargetHold)
         private float _turnBackRetryAt;
         private readonly ContactPoint2D[] _contacts = new ContactPoint2D[16];
+        // 콜라이더 → 유닛 — 접촉 루프가 접촉마다 TryGetComponent(네이티브 호출)를 부르지 않게. 풀 재사용이라 Awake에 한 번 넣고 파괴될 때 뺀다
+        private static readonly Dictionary<Collider2D, Unit> ByCollider = new Dictionary<Collider2D, Unit>();
         private readonly List<Collider2D> _overlaps = new List<Collider2D>();
         private float _lastX;
         private float _advanceSpeed;
@@ -139,6 +141,8 @@ namespace GnorpWar
         public int Life { get; private set; }
         // 이 유닛을 낳은 기물(BoardRunner.Summon이 적는다) — 「이 기물이 소환한 ~」을 가리는 효과가 읽는다. 기물이 낳지 않았으면 null
         public BuildingDefinition SummonedBy { get; private set; }
+        // 이 유닛을 낸 칸(BoardRunner.Summon의 sourceSlot) — 칸 없는 소환이면 -1. 준 피해를 그 칸 몫으로 센다(Battle/DamageMeter)
+        public int SourceSlot { get; private set; } = -1;
 
         // 효과별 이 유닛의 다음 사용 시각(톱니거인의 주기 소환 등) — 생애마다 비운다
         private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
@@ -240,6 +244,29 @@ namespace GnorpWar
         // 이 생애에 이 효과를 처음 쓰나 — 쓰면 표시한다(루니카 첫 피격 · 충정의 맹세 첫 죽음)
         public bool UseOnce(UnitEffect effect) => _usedOnce.Add(effect);
 
+        // 이 생애에 이 효과가 센 수에 1을 더하고 그 수를 돌려준다(기사 서임 — 이 유닛의 처치 수). 생애마다 0부터
+        private readonly Dictionary<UnitEffect, int> _effectCounts = new Dictionary<UnitEffect, int>();
+
+        public int AddCount(UnitEffect effect)
+        {
+            _effectCounts.TryGetValue(effect, out int count);
+            _effectCounts[effect] = ++count;
+            return count;
+        }
+
+        // 지금 체력을 최대 체력의 비율로(기사 서임 — 바뀌기 전 유닛의 남은 비율을 이어 간다). 피해 · 회복이 아니다
+        public void SetHpRatio(float ratio)
+        {
+            if (IsAlive)
+                _hp = Mathf.Max(DoomedHp, MaxHp * Mathf.Clamp01(ratio));
+        }
+
+        // 적과 맞붙어 있나(앞이 적 몸에 막혔다 — 지난 물리 스텝) · 앞에 맞닿은 아군(그중 가장 느린 쪽, 없으면 null) — 방패 대열이 「바로 뒤 아군」을 가린다
+        public bool Engaged { get; private set; }
+        public Unit AllyInFront { get; private set; }
+        // 지금 죽는 중인 이 유닛이 그 자리에서 다시 일어나는가(죽지 않는 전사) — 사망 시 효과 안에서만 뜻이 있다(영혼의 메아리는 다시 일어나는 죽음을 세지 않는다)
+        public bool Reviving { get; private set; }
+
         // 죽는다 — 처치 효과(처치자 진영) → 사망 효과(내 진영, 하마 교련장 등)
         private void Perish(IDamageable attacker)
         {
@@ -252,6 +279,7 @@ namespace GnorpWar
                 if (e.Effect.AppliesFor(_team, _definition))
                     reviveChance += e.Effect.ReviveChance;
             bool revives = reviveChance > 0f && Random.value < reviveChance;
+            Reviving = revives;
             _hp = Mathf.Min(_hp, 0f);
             if (!revives)
                 Die();
@@ -272,6 +300,7 @@ namespace GnorpWar
             // 양 진영의 기물이 죽은 수를 센다(약탈족장 라이칸스로프 — 아군·적 구분 없이)
             BoardRunner.For(Team.Ally)?.NotifyUnitDied(this);
             BoardRunner.For(Team.Enemy)?.NotifyUnitDied(this);
+            Reviving = false;
             if (!revives)
                 return;
             _hp = MaxHp;
@@ -432,7 +461,7 @@ namespace GnorpWar
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     foreach (UnitStat stat in AltitudeStats)
-                        _usesAltitude |= e.Effect.AltitudeBonus(stat) != 0f;
+                        _usesAltitude |= e.Effect.AltitudeBonus(_team, stat) != 0f;
             _statAltitude = _usesAltitude ? Mathf.Round(Altitude / AltitudeStep) * AltitudeStep : 0f;
             float oldMaxHp = _stats[(int)UnitStat.MaxHp];
             float oldAttack = _stats[(int)UnitStat.Attack];
@@ -482,7 +511,7 @@ namespace GnorpWar
             if (_usesAltitude)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     if (e.Effect.AppliesFor(_team, _definition))
-                        sum.Add(StatOp.Percent, e.Effect.AltitudeBonus(stat) * _statAltitude);
+                        sum.Add(StatOp.Percent, e.Effect.AltitudeBonus(_team, stat) * _statAltitude);
             // 공주 루니카 — 무적 상태인 내 아군의 공격력 +%(합연산)
             if (stat == UnitStat.Attack && IsInvulnerable)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -657,6 +686,7 @@ namespace GnorpWar
         public void NotifySummoned(int sourceSlot, BuildingDefinition source)
         {
             SummonedBy = source;
+            SourceSlot = sourceSlot;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.OnSummoned(this, sourceSlot, e.Stacks);
@@ -781,6 +811,14 @@ namespace GnorpWar
             // 그림은 오른쪽(아군 전방)을 보고 그려져 있다 — 전방이 -x면 자식(무기)까지 통째로 뒤집는다
             if (Forward < 0f)
                 transform.localScale = Vector3.Scale(transform.localScale, new Vector3(-1f, 1f, 1f));
+            foreach (Collider2D col in GetComponents<Collider2D>())
+                ByCollider[col] = this;
+        }
+
+        private void OnDestroy()
+        {
+            foreach (Collider2D col in GetComponents<Collider2D>())
+                ByCollider.Remove(col);
         }
 
         // 한 생애의 시작 — 처음 만들 때도, 풀에서 다시 꺼낼 때도(Pooled) 여기서 지난 생애의 흔적을 모두 지운다
@@ -788,6 +826,7 @@ namespace GnorpWar
         {
             Life++;
             SummonedBy = null;
+            SourceSlot = -1;
             CombatPower.NoteSpawn(_team);
             if (Size != 1f)
                 SetSize(1f);
@@ -797,6 +836,10 @@ namespace GnorpWar
             _doomTimer = 0f;
             _doomKiller = null;
             _usedOnce.Clear();
+            _effectCounts.Clear();
+            Engaged = false;
+            AllyInFront = null;
+            Reviving = false;
             _slowUntil = 0f;
             _stats[(int)UnitStat.MaxHp] = 0f;  // 지난 생애의 최대 체력으로 비율을 맞추지 않게
             _stats[(int)UnitStat.Attack] = 0f;  // 지난 생애의 공격력과 비교해 오라가 켜지지 않게
@@ -880,7 +923,12 @@ namespace GnorpWar
             {
                 _invulnerableTimer -= Time.fixedDeltaTime;
                 if (_invulnerableTimer <= 0f)
+                {
                     _ownModifiersChanged = true;   // 무적 중 공격력 보너스가 끝난다
+                    foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                        if (e.Effect.AppliesFor(_team, _definition))
+                            e.Effect.OnInvulnerableEnded(this);
+                }
             }
             // 충정의 맹세 — 유예가 끝나면 쓰러진다
             if (_doomTimer > 0f)
@@ -945,7 +993,8 @@ namespace GnorpWar
             {
                 ContactPoint2D contact = _contacts[i];
                 // 컴포넌트 조회는 접촉 하나에 한 번만 — 산 속 유닛은 접촉이 많아 여기가 제일 자주 돈다
-                contact.collider.TryGetComponent(out Unit touched);
+                Collider2D other = contact.collider;   // 게터가 매번 네이티브에서 찾는다 — 한 번만
+                ByCollider.TryGetValue(other, out Unit touched);
                 if (contact.normal.y < -0.5f && touched != null && touched._team == _team)
                     allyAbove = touched;
                 if (contact.normal.y > 0.5f)
@@ -962,9 +1011,9 @@ namespace GnorpWar
                         else
                             enemyBelow = touched;
                     }
-                    else if (contact.collider.usedByEffector)
+                    else if (other.usedByEffector)
                         onDeck = true;   // 이펙터를 쓰는 콜라이더는 탑의 층 바닥뿐(Tower)
-                    else if (contact.collider.TryGetComponent(out Base _))
+                    else if (other.TryGetComponent(out Base _))
                         _onBase = true;
                     else
                         onGroundSurface = true;   // 유닛·층 바닥·기지가 아닌 발판 = 땅
@@ -987,6 +1036,8 @@ namespace GnorpWar
             ContactsMarker.End();
             _allyBehind = allyBehind;
             _allyAhead = allyAhead;
+            Engaged = blockedByEnemy;
+            AllyInFront = allyInFront;
             ReportPile(grounded, onGroundSurface);
             if (grounded)
             {
@@ -1265,6 +1316,10 @@ namespace GnorpWar
                 return;
             }
 
+            // 받는 피해 배율(방패 대열 · 뼈 갑옷) — 대상은 효과가 가린다
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                amount *= e.Effect.DamageTakenFactor(this);
+            DamageMeter.Credit(attacker, _team, UnityEngine.Mathf.Min(amount, UnityEngine.Mathf.Max(0f, _hp)));   // 실제로 깎인 몫만(초과 피해 제외)
             _hp -= amount;
             if (amount > 0f)
             {

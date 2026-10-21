@@ -25,7 +25,9 @@ namespace GnorpWar
         [Tooltip("전투 배속 버튼 — 전투 중에만 보인다")]
         [SerializeField] private GameObject _speedButton;
 
-        private const float ResultHeartGap = 6f;
+        private const float ResultHeartGap = 8f;
+        // 결과 한 줄의 원래 x(판 왼쪽 기준선) — 지면 하트 몫만큼 민다
+        private float _summaryX;
 
         private bool _fighting;
         private bool _over;
@@ -99,6 +101,7 @@ namespace GnorpWar
             _allyBoard.Load(RunState.Field);
             _enemyBoard.Load(RunState.CheatEnemyField ?? RunState.EnemyField);
             _resultPanel.SetActive(false);
+            _summaryX = _resultSummary.rectTransform.anchoredPosition.x;
             _speedButton.SetActive(false);
             _allyBase.Destroyed += OnBaseDestroyed;
             _enemyBase.Destroyed += OnBaseDestroyed;
@@ -130,6 +133,7 @@ namespace GnorpWar
             StatBook.ClearBattle();
             TowerBook.ClearBattle();
             UnitAliases.Clear();
+            DamageMeter.Clear();
             // 맵의 「전부 발동」(얼음) — 양쪽 성 근처에 출발점 그림을 띄운다
             if (RunState.Map != null && RunState.Map.FireAllInterval > 0f)
                 foreach (Team team in new[] { Team.Ally, Team.Enemy })
@@ -233,11 +237,12 @@ namespace GnorpWar
             // AI 영주들의 턴 · 통일 · 게임 오버는 지도에서 보여 준다
             _resultText.text = won ? "승리!" : "패배...";
             _resultSummary.text = won ? WinLine(opponent) : BuildingTooltip.Highlight($"-{happiness - RunState.Happiness}");
-            // 잃은 행복도는 하트 + 숫자로 — 하트(글의 자식)는 글의 바로 왼쪽. 하트와 글이 한 덩어리로 가운데에 오게 글을 하트 몫의 절반만큼 오른쪽으로
+            // 잃은 행복도는 하트 + 숫자로 — 하트(글의 자식, 글 왼쪽 끝 기준)는 글의 바로 왼쪽. 글은 판 왼쪽 기준선에서 하트 몫만큼 오른쪽으로(결과 창은 왼쪽 정렬 — UI/BattleSummary)
             _resultHeart.enabled = !won;
             RectTransform heart = _resultHeart.rectTransform, summary = _resultSummary.rectTransform;
-            summary.anchoredPosition = new Vector2(won ? 0f : (heart.sizeDelta.x + ResultHeartGap) * 0.5f, summary.anchoredPosition.y);
-            heart.anchoredPosition = new Vector2(-(_resultSummary.preferredWidth + heart.sizeDelta.x) * 0.5f - ResultHeartGap, heart.anchoredPosition.y);
+            float shift = won ? 0f : heart.sizeDelta.x + ResultHeartGap;
+            summary.anchoredPosition = new Vector2(_summaryX + shift, summary.anchoredPosition.y);
+            heart.anchoredPosition = new Vector2(heart.sizeDelta.x * 0.5f - shift, heart.anchoredPosition.y);
             _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
             Time.timeScale = 0f;

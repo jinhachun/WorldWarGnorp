@@ -264,7 +264,7 @@ namespace GnorpWar
             // 작은 타워 = 본진 수치 × 배율(정의) — 그 위에 '내 타워' 효과(TowerBook)를 본진과 똑같이
             float attackScale = _small ? _definition.SmallAttackScale : 1f;
             float hpScale = _hpOfHome > 0f ? _hpOfHome : _small ? _definition.SmallHpScale : 1f;
-            _stats[(int)TowerStat.Attack] = TowerBook.Compute(_team, TowerStat.Attack, _definition.AttackDamage * attackScale);
+            _stats[(int)TowerStat.Attack] = TowerBook.Compute(_team, TowerStat.Attack, _definition.AttackDamage * attackScale, _small ? TowerBook.SmallAttackOf(_team) : 0f);
             _stats[(int)TowerStat.AttackSpeed] = TowerBook.Compute(_team, TowerStat.AttackSpeed, 1f);
             _stats[(int)TowerStat.Range] = TowerBook.Compute(_team, TowerStat.Range, _definition.AttackRange, _rangeBonus);
             _stats[(int)TowerStat.ArrowCount] = TowerBook.Compute(_team, TowerStat.ArrowCount, 1f);
@@ -370,6 +370,8 @@ namespace GnorpWar
         public void NotifyKill(Unit victim)
         {
             BoardRunner.For(_team).NotifyTowerKill(victim);
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                e.Effect.OnTowerKill(_team, this, victim);
             int extra = TowerBook.ArrowsOnKillOf(_team);
             if (extra > 0 && IsAlive && CanAttack && FindTargets())
                 Shoot(extra, true);
@@ -380,6 +382,20 @@ namespace GnorpWar
             if (!IsAlive)
                 return;
 
+            // 수호 기도 — 본진만, 확률로 이 피해를 받지 않는다(막은 자리에 무적 색 고리)
+            if (!_small && amount > 0f)
+            {
+                float block = 0f;
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    block += e.Effect.BaseBlockChance(_team);
+                if (block > 0f && Random.value < block)
+                {
+                    RingFx.Pulse(_collider.bounds.center, _collider.bounds.extents.y, BuffLinkFx.ColorOf(BuffKind.Invulnerable), this, BlockRingGap);
+                    return;
+                }
+            }
+
+            DamageMeter.Credit(attacker, _team, Mathf.Min(amount, Mathf.Max(0f, _hp)));   // 실제로 깎인 몫만(초과 피해 제외)
             _hp -= amount;
             if (amount > 0f)
                 BattleManager.NoteProgress();
@@ -400,6 +416,12 @@ namespace GnorpWar
                 gameObject.SetActive(false);
                 Destroyed?.Invoke(this);
             }
+            else if (!_small)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    e.Effect.OnBaseDamaged(this);
         }
+
+        // 막은 고리를 다시 띄우기까지(초) — 화살이 몰려도 고리가 겹쳐 쌓이지 않게
+        private const float BlockRingGap = 0.3f;
     }
 }

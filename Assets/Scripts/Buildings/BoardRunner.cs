@@ -56,8 +56,6 @@ namespace GnorpWar
         public OwnedBuilding[] Field { get; private set; }
         // 칸이 발동한 순간 (UI 반짝임 등)
         public event System.Action<int> Triggered;
-        // 소환 한 번이 끝난 순간 — (원본 칸, 실제로 나온 수: 추가 소환·변환·파견 사무소 신화까지 반영). 칸 없는 소환(유닛 효과 등)은 -1
-        public event System.Action<int, int> Summoned;
         // 맵의 「전부 발동」(얼음)이 터진 순간 — 진영. 지형 연출(Fx/TerrainFx)이 탑 창에 얼음 섬광을 띄운다
         public static event System.Action<Team> MapFiredAll;
 
@@ -130,6 +128,7 @@ namespace GnorpWar
                     foreach (BuildingPassive passive in _slots[i].Building.Passives)
                         passive.OnBattleStart(this, i, _slots[i].Building.Level);
             _fireAllTimer = 0f;
+            _deathmatchFired = false;
             _revivals.Clear();
             _running = true;
         }
@@ -183,6 +182,9 @@ namespace GnorpWar
         // 단두대 혁명 — 이 간격(초)마다 내 본진이 무작위 적 유닛 1기를 즉사시킨다(0 = 없음)
         public float GuillotineInterval;
         private float _guillotineTimer;
+        // 합치기 보상 「야근 수당」 — 데스매치가 시작될 때 쿨다운이 있는 내 모든 기물을 즉시 이만큼 발동(0 = 없음). 한 전투에 한 번
+        public int DeathmatchFires;
+        private bool _deathmatchFired;
 
         // 자리 효과가 slot층의 기물에서 other층의 기물에 닿는가 — byPosition = 그 능력의 원래 자리 규칙(바로 위 · 아래에 있는 …). 연방제면 내 다른 모든 기물
         public bool Linked(int slot, int other, bool byPosition) => other != slot && (AllAdjacent || byPosition);
@@ -293,6 +295,20 @@ namespace GnorpWar
                 TryFire(i);
             }
 
+            // 야근 수당 — 데스매치가 시작된 프레임에 한 번. 본진 → 발동한 층마다 흰 선
+            if (DeathmatchFires > 0 && !_deathmatchFired && BattleManager.TowersStopped)
+            {
+                _deathmatchFired = true;
+                for (int i = 0; i < _slots.Length; i++)
+                {
+                    bool fired = false;
+                    for (int t = 0; t < DeathmatchFires; t++)
+                        fired |= FireNow(i);
+                    if (fired)
+                        BuffLinks.FromBaseToSlot(_team, i, BuffKind.Trigger);
+                }
+            }
+
             if (GuillotineInterval > 0f)
             {
                 _guillotineTimer += Time.deltaTime;
@@ -377,7 +393,7 @@ namespace GnorpWar
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
                 {
-                    int extra = e.Effect.ExtraSummons(unit, count, sourceSlot, e.Stacks, e.Level);
+                    int extra = e.Effect.ExtraSummons(_team, unit, count, sourceSlot, e.Stacks, e.Level);
                     count += extra;
                     if (extra > 0 && sourceSlot >= 0)
                         BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Summon);
@@ -407,15 +423,12 @@ namespace GnorpWar
             // 기물이 소환하면 그 기물의 층에서 나온다(탑 — 큰 유닛도 자기 층에서, 사용자 10/8). 기물이 아닌 소환·자리를 정한 소환은 그대로
             Tower tower = at == null && sourceSlot >= 0 ? Tower.For(_team) : null;
             bool fromFloor = tower != null && sourceSlot < tower.FloorCount;
-            int spawnedCount = 0;
             SpawnGroup(point);
             // 파견 사무소 신화 — 가장 앞 타워 말고 나머지 내 작은 타워에서도 같은 수가 동시에 나온다
             if (outpost != null && _summonAtEverySmallTower)
                 foreach (Base small in Base.SmallTowers())
                     if (small != outpost && small.Team == _team)
                         SpawnGroup(Feet(small));
-            if (spawnedCount > 0)
-                Summoned?.Invoke(sourceSlot, spawnedCount);
 
             void SpawnGroup(Vector2 from)
             {
@@ -423,7 +436,6 @@ namespace GnorpWar
                 {
                     Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, from);
                     LastSpawned = spawned;
-                    spawnedCount++;
                     if (converter != null)
                         converter.OnConverted(spawned);
                     // 기둥 — 그 자리 소환의 첫 기 · 추가 소환으로 더 나온 기(대량보급) · 다른 유닛으로 바뀌어 나온 기(교황청 · 노동의 기계화)

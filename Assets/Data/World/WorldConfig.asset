@@ -124,7 +124,7 @@ MonoBehaviour:
     - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
     - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
     - {fileID: 11400000, guid: b59d3b90e7994134792cb2b84c50105f, type: 2}
-    Landmark: {fileID: 21300000, guid: 378a7db3cbcda83c7ae83b8000982a3f, type: 3}
+    Landmark: {fileID: 21300000, guid: 0d7e2e4d86a743ac8fc1df8bf2ce4fbb, type: 3}
     Backdrop: {fileID: 21300000, guid: 097b9bf98a408f49caec146da6ddff7b, type: 3}
     Paths:
     - Building: {fileID: 11400000, guid: 8599043724103aa4f9f9dcd4b5b2841a, type: 2}
@@ -144,7 +144,7 @@ MonoBehaviour:
     - {fileID: 11400000, guid: e8b64c0623e6336479441667f16688a2, type: 2}
     - {fileID: 11400000, guid: a8e6e39f004afe0498fbe788c4abca20, type: 2}
     - {fileID: 11400000, guid: d3dca02f281c81945abf726bc68df697, type: 2}
-    Landmark: {fileID: 21300000, guid: 81e9859817939d19e0f4159668833afe, type: 3}
+    Landmark: {fileID: 21300000, guid: f1fcd5080e684f229d704fe370435e91, type: 3}
     Backdrop: {fileID: 21300000, guid: 2ad87726c0139526cb5adf45fc7df643, type: 3}
     Paths:
     - Building: {fileID: 11400000, guid: 70cbfcbecd141464085b955939006b8e, type: 2}

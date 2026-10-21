@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
   _displayName: "\uBC29\uD328 \uACF5\uBC29"
   _icon: {fileID: 21300000, guid: aabc6e1ed152c564692360d49db51e86, type: 3}
+  _iconLarge: {fileID: 21300000, guid: e6017b09215f3a875610e863e50760b5, type: 3}
   _description: 
   _rarity: 0
   _nation: 1

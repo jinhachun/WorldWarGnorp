@@ -70,17 +70,21 @@ namespace GnorpWar
         [Tooltip("설명 글 줄 안 아이콘(UI/InlineIcons) — 칸 순서 = 공격력 · 체력 · 공격속도 · 쿨다운 · 골드 · 유닛 수(16×16 원본 크기, 사용자 10/21)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _inlineIcons = new Sprite[0];
-        [Tooltip("국가 고르기 카드 — 칸 순서 = BuildingNation. 대표 유닛(큰 그림, 정수배로 키워 내 색으로) · 설명 글(깔끔 폰트, 사용자 10/15)")]
-        [HideIf(nameof(HideNonBalance))]
-        [SerializeField] private UnitDefinition[] _nationUnits = new UnitDefinition[0];
+        [Tooltip("국가 고르기 화면(UI/NationCard) — 칸 순서 = BuildingNation. 설명 글은 첫 문장(마침표 앞)이 국가의 한 줄로 쓰인다(깔끔 폰트, 사용자 10/15)")]
         [HideIf(nameof(HideNonBalance))]
         [TextArea(2, 4)]
         [SerializeField] private string[] _nationDescriptions = new string[0];
+        [Tooltip("국가 고르기 화면의 무대(UI/NationCard, 사용자 10/21 B안) — 칸 순서 = BuildingNation. 빌드 갈래 이름은 기물기획 §8 흐름 이름 그대로")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private NationShowcase[] _nationShowcases = new NationShowcase[0];
         [Tooltip("UI 테두리 조각(UI/NationFrame) — 칸 순서 = BuildingNation, 내 국가의 것을 쓴다(공용 칸이 비면 흰 선). 변 = 위쪽 변 한 토막(맨 윗줄이 바깥) · 모서리 = 왼쪽 위. 읽기 켜진 그림이어야 한다")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _frameEdges = new Sprite[0];
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _frameCorners = new Sprite[0];
+        [Tooltip("전장 본진(성) 그림(Bases/Tower) — 칸 순서 = BuildingNation, 그 진영 국가의 것을 쓴다(사용자 10/22). 128×64 · 같은 몸통 · 같은 성문 자리 · 가운데 성벽 윗면은 아래에서 35px(탑 1층 바닥). 파란 자리(#81ABFF)는 영주 색. 비면 씬에 놓인 그림 그대로")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _castles = new Sprite[0];
 
         [Header("영주 닉네임 — 지도의 영주 그림 위 · 왼쪽 패널 · 승리 글(임시 이름, 사용자 10/12)")]
         [Tooltip("이름 목록(값은 에셋에 — 흔한 외국 이름의 한글 표기, 사용자 10/12) — 한 런에서 영주마다 하나씩 겹치지 않게 돌려 쓰고, 다 쓰면 뒤에 숫자를 붙인다(제임스2)")]
@@ -125,9 +129,10 @@ namespace GnorpWar
         public Sprite NationIcon(BuildingNation nation) => _nationIcons[(int)nation];
         // 설명 글 줄 안 아이콘(UI/InlineIcons) — 칸 순서 = InlineIcons.Kind. 비면 그 낱말엔 아이콘 없음
         public Sprite InlineIcon(InlineIcons.Kind kind) => (int)kind < _inlineIcons.Length ? _inlineIcons[(int)kind] : null;
-        public UnitDefinition NationUnit(BuildingNation nation) => (int)nation < _nationUnits.Length ? _nationUnits[(int)nation] : null;
+        public NationShowcase Showcase(BuildingNation nation) => (int)nation < _nationShowcases.Length ? _nationShowcases[(int)nation] : null;
         public Sprite FrameEdge(BuildingNation nation) => (int)nation < _frameEdges.Length ? _frameEdges[(int)nation] : null;
         public Sprite FrameCorner(BuildingNation nation) => (int)nation < _frameCorners.Length ? _frameCorners[(int)nation] : null;
+        public Sprite Castle(BuildingNation nation) => (int)nation < _castles.Length ? _castles[(int)nation] : null;
         public string NationDescription(BuildingNation nation) => (int)nation < _nationDescriptions.Length ? _nationDescriptions[(int)nation] : "";
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;
@@ -152,5 +157,33 @@ namespace GnorpWar
             UnderdogGoldPerLand = _underdogGoldPerLand,
             UnderdogGoldMax = _underdogGoldMax,
         };
+    }
+
+    // 국가 고르기 화면의 무대 한 벌 — 표시용(규칙은 읽지 않는다)
+    [System.Serializable]
+    public class NationShowcase
+    {
+        [Tooltip("국가 기호 — 목록 줄(32px) · 무대 이름 옆(64px). 16px 기호(국가 아이콘)의 ×2 · ×4 원본")]
+        public Sprite EmblemSmall;
+        public Sprite Emblem;
+        [Tooltip("바닥선 위에 왼쪽부터 서는 유닛(내 색으로)")]
+        public UnitDefinition[] Units = new UnitDefinition[0];
+        [Tooltip("바닥선 오른쪽의 랜드마크(128×64 · PPU 8 — 무대에서 정수배로)")]
+        public Sprite Landmark;
+        [Tooltip("무대 뒤 먼 산 실루엣(전장 배경 그림 — 어둡게 깔린다)")]
+        public Sprite Backdrop;
+        [Tooltip("바닥선 아래 빌드 갈래(2~3개)")]
+        public NationPath[] Paths = new NationPath[0];
+    }
+
+    [System.Serializable]
+    public class NationPath
+    {
+        [Tooltip("대표 기물 — 아이콘을 쓴다")]
+        public BuildingDefinition Building;
+        [Tooltip("기물기획 §8 흐름 이름(「킹덤 – 」 뒤)")]
+        public string Name;
+        [Tooltip("한 줄 요약(~합니다.체)")]
+        public string Line;
     }
 }

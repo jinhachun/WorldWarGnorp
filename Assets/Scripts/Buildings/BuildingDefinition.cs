@@ -13,6 +13,9 @@ namespace GnorpWar
         [Tooltip("칸·진열 카드에 그리는 그림 — 흰색으로 그리고 칸에서 색을 입힌다")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _icon;
+        [Tooltip("원본 크기로 그리는 곳(전투 결과 창 · 국가 고르기 빌드 갈래)의 64px 그림 — 16 격자 ×4(사용자 10/21). 층 칸 안은 위 그림을 층 격자(×3)로 줄여 쓴다. 비면 위 그림")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _iconLarge;
         [Tooltip("생산·액션으로 못 쓰는 발동 효과 — 툴팁에서 \"N초마다\" 뒤에 붙는 구절 (CLAUDE.md §5-2)")]
         [TextArea]
         [HideIf(nameof(HideNonBalance))]
@@ -57,6 +60,7 @@ namespace GnorpWar
 
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
+        public Sprite IconLarge => _iconLarge != null ? _iconLarge : _icon;
         public string Description => _description;
         public BuildingRarity Rarity => _rarity;
         public BuildingNation Nation => _nation;

@@ -65,7 +65,7 @@ flowchart TD
 ### World 씬 — `WorldManager`
 `WorldManager.Update`가 `Stage`(`Choose` · `Command` · `March` · `Replay` · `Summary`)로 도는 상태 기계다. 규칙은 전부 `RunState`가 하고 `WorldManager`는 화면·순서만 맡는다.
 
-1. **턴 열기** `WorldManager.BeginTurn` → `RunState.BeginTurn` — 턴당 한 번(`_shopEnteredRound`로 막는다). 지난 상대를 내려놓고 → `WorldRun.ShopPhase`(AI 영주마다 `WorldRun.Shop` → `RunState.ShopAs` → `EnemyShopper.Shop`) → 내 무료 리롤 충전 → `RunState.GainGold(Income)` → `RollOffers`. 이어서 `RunState.TakeShopCue`가 참이면 상점 팝업이 저절로 내려온다(`WorldManager.SetShop`).
+1. **턴 열기** `WorldManager.BeginTurn` → `RunState.BeginTurn` — 턴당 한 번(`_shopEnteredRound`로 막는다). 지난 상대를 내려놓고 → `WorldRun.ShopPhase`(AI 영주마다 `WorldRun.Shop` → `RunState.ShopAs` → `EnemyShopper.Shop` — 유령 영주는 상점 대신 `Possess`로 그 턴 스냅샷의 탑을 세운다. 유령은 새 런 때 `RunState.StartNew`가 `RunRecord.ReadAll` → `World.AddGhosts`로 붙인다, 플레이 중에만) → 내 무료 리롤 충전 → `RunState.GainGold(Income)` → `RollOffers`. 이어서 `RunState.TakeShopCue`가 참이면 상점 팝업이 저절로 내려온다(`WorldManager.SetShop`).
 2. **명령** — 땅 클릭(`WorldMapView.Clicked` → `WorldManager.Select`), 고른 땅은 매 프레임 `RunState.Preview`로 런 상태에 둔다(상점·패널이 같은 땅을 본다). 버튼: 「침략」 `Invade` · 「쉬기」 `Rest` · 「상점」 `Shop`.
 3. **상점 팝업** `ShopPanel`(프리팹 `ShopPopup`) — 버튼·끌기가 `RunState.Buy`/`BuyInto`/`BuyInsert`/`MoveInsert`/`Swap`/`Sell`/`Reroll`/`RaiseFloor`/`ToggleShopLock`만 부른다. 「지도로」는 `ShopPanel.MapRequested` → `WorldManager.SetShop(false)`.
    - 진열 짐꾼 연출은 `OfferCard`가 상태 변화를 보고 스스로 한다 — 새 기물이면 왼쪽에서 걸어 들어옴(팝업이 `Settled`된 뒤), 비면(구매) 빈손 껍데기가 왼쪽으로 나감. 리롤은 `ShopPanel`이 `RunState.Reroll` 전에 `OfferCard.LeaveForReroll`(짐 든 껍데기가 오른쪽으로)을 부르고 `ExitLeft`(0.3초)를 건다 — 새 짐꾼은 `ExitLeft`가 0이 된 뒤 칸마다 늦게 들어온다(사용자 10/23: 다 나간 뒤 입장). 짐꾼 줄 가운데 = 무대 가운데(`ShopPanel` StageLeft·StageRight). 진열 글(이름 · 가격 · 잠김)은 `OfferCard`가 실행 중 `Labels`로 묶어, 짐꾼이 나가는 순간(리롤 `LeaveForReroll` · 구매) 숨기고 새 짐꾼이 도착하면 8px 아래서 2단으로 올린다(0.1초). 팔린 칸 「—」와 잠금 토글은 즉시.
@@ -73,8 +73,8 @@ flowchart TD
    - 구매 → `RunState.FindMergeTarget`이 짝을 찾으면 `RunState.MergeInto`(연쇄 합치기) → `RunState.OfferUpgrade`(합치기 보상 후보를 `Pending`에 쌓는다, AI 탑이면 바로 얻는다) → `RunState.Merged` 이벤트 → `ShopPanel.OnMerged`가 `MergeFx`로 재생(조각 · 트레일 · 폭발은 캔버스 맨 위 연출 판, 후광은 내 탑 바로 뒤 판 — 둘 다 실행 중 만든다. 등급 연출은 재생 길이(`ShopPanel.MergePlaying`)와 따로 돌아 업그레이드 고르기 시점을 바꾸지 않는다).
    - 구매 공통 끝: `RunState.OnBought` → `BuildingPassive.TriggerBuyEffects`(「구매할 때마다,」) · 필드 기물의 `OnAnyBought`.
 4. **업그레이드 고르기** `UpgradePicker.Update` — 이벤트가 아니라 **매 프레임 `RunState.PendingUpgrades`를 본다**. 대기가 있고 AI 턴 재생 중이 아니면 화면을 막고, `ShopPanel.MergePlaying` 동안은 카드 없이 막기만 한다. 카드 클릭 → `RunState.ChooseUpgrade` → `GainUpgrade`(`TowerState.Upgrades`에 추가). 침략 때 남은 대기는 `RunState.Invade`가 무작위로 고른다.
-5. **침략** `WorldManager.Invade` → `Stage.March`, `WorldLords.March`로 내 영주가 걷는다 → `Update`에서 걸음이 끝나면(또는 시간 상한) `WorldManager.StartBattle` → `RunState.Invade`(상대 영주 · 그 탑 · `RunBook.Use(Enemy)` · `WorldRun.SyncSpecials` · 전장 맵 확정 · `Phase = Battle`) → Battle 씬.
-6. **쉬기** `WorldManager.Rest` → `RunState.Rest`(`Phase = Aftermath`) → 곧바로 `PlayAiTurn`.
+5. **침략** `WorldManager.Invade` → `Stage.March`, `WorldLords.March`로 내 영주가 걷는다 → `Update`에서 걸음이 끝나면(또는 시간 상한) `WorldManager.StartBattle` → `RunState.Invade`(상대 영주 · 그 탑 · `RunBook.Use(Enemy)` · `WorldRun.SyncSpecials` · 전장 맵 확정 · `Phase = Battle` · 끝에 `RecordTurn` = 런 기록 한 줄) → Battle 씬.
+6. **쉬기** `WorldManager.Rest` → `RunState.Rest`(`Phase = Aftermath` · `RecordTurn`) → 곧바로 `PlayAiTurn`.
 
 ### Battle 씬 — `BattleManager`
 7. `BattleManager.Awake` — `TowerBook.ClearBattle`, 두 `BoardRunner.Load`(`RunState.Field` · `RunState.EnemyField`), `Base.Destroyed` 구독.
@@ -170,7 +170,7 @@ sequenceDiagram
 | 층 | 무엇 | 바뀌는가 |
 |---|---|---|
 | **정의 (ScriptableObject)** | `BattleConfig`(전투·상점·풀·업그레이드 목록 — `WorldConfig`를 품는다) · `WorldConfig`(지도·영주) · `BuildingDefinition` · `UnitDefinition` · `UpgradeDefinition` · `MapDefinition` · `BaseDefinition` · 능력 SO(`BuildingAction` · `BuildingPassive` · `UnitEffect`) | 런타임에 값을 쓰지 않는다(능력 SO의 진영별 계수 배열 예외 — 아래) |
-| **런 상태 (순수 C#)** | `TowerState`(골드 · `Field` · `Storage` · `Offers` · `Upgrades` · `Book`) · `OwnedBuilding`(정의 + 오른 횟수 · 스택 · 쓴 골드) · `WorldState`/`Lord` | 상점·턴 규칙(`RunState`)만 바꾼다 |
+| **런 상태 (순수 C#)** | `TowerState`(골드 · `Field` · `Storage` · `Offers` · `Upgrades` · `Book`) · `OwnedBuilding`(정의 + 오른 횟수 · 스택 · 쓴 골드) · `WorldState`/`Lord` | 상점·턴 규칙(`RunState`)만 바꾼다. `TowerSnapshot` = TowerState의 JSON 사본(에셋은 `AssetIds`의 GUID) — 다시 세운 탑은 `Reset(config)` 위에 필드·보관함·업그레이드·Book을 덮는다(아직 게임 흐름에 연결 안 됨 — ROADMAP 2-4) |
 | **전투 상태** | `BoardRunner.Slot`(칸 게이지 · 가속 · 정지) · `TeamEffects.Entry`(켜진 효과 · 스택 · 등급) · `StatBook`/`TowerBook`의 전투 목록 · `Unit`/`Base` 인스턴스 | 전투 씬 안에서만 |
 | **뷰 (UI)** | `BoardView`/`SlotView`/`Tower`(탑) · `ShopPanel`/`OfferCard` · `WorldMapView`/`WorldSidePanel`/`WorldLords` · `BuildingTooltip` · `UpgradePicker` | **대부분 `Update`에서 상태를 읽어 그린다**(폴링) — 순간 연출만 이벤트(§5) |
 
@@ -225,7 +225,7 @@ flowchart LR
 | `BuffLinks.Raised` (static) | `BuffLinkFx.OnEnable`(전장 선) · `BoardView.Start`(세로 탑만, UI 선) | 버프 선 |
 | `RunState.Merged` (static) | `ShopPanel.OnEnable` | 합치기 단계별 재생(상태는 이미 끝난 뒤) |
 | `RunState.UpgradesChanged` (static) | 지금 구독자 없음 — `UpgradePicker`는 폴링 | — |
-| `NationCard.Chosen` (국가) | `WorldManager.ShowNations` | 「시작」을 누르면 `RunState.ChooseNation` → `BeginTurn` — 카드(뷰)는 상태를 바꾸지 않는다 |
+| `NationCard.Chosen` (국가) | `WorldManager.ShowNations` | 「시작」을 누르면 `RunState.ChooseNation` → `BeginTurn` — 카드(뷰)는 상태를 바꾸지 않는다. 이번 실행 첫 `Open`이면 먼저 `NicknamePanel.Ask` → 확정 = `RunState.PlayerName` + PlayerPrefs → 다시 `Open` |
 | `ShopPanel.MapRequested` | `WorldManager.Awake` | 상점 닫기 |
 | `WorldMapView.Clicked(int region)` | `WorldManager.Awake` | 땅 고르기 |
 | uGUI `onClick` | `WorldManager.Awake`(침략 · 쉬기 · 상점 · 건너뛰기 · 다음) · `BattleManager.Awake`(결과 버튼) · `ShopPanel.Start` · `SpeedButton.Awake` | 버튼 |

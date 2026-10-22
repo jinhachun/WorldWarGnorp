@@ -26,8 +26,8 @@
 | `Assets/Scripts/Units/` | 유닛·공격·화살·분류 (`Unit` · `UnitDefinition` · `UnitCategory` · `AttackType` · `Projectile`) | 유닛 행동·유닛 SO 정의 |
 | `Assets/Scripts/Units/Effects/` | 유닛 효과 — 효과마다 파일 하나(`UnitEffect` 상속) + 진영별 켜진 효과 `TeamEffects` | 새 유닛 효과 |
 | `Assets/Scripts/Buildings/` | 건물 (`BuildingDefinition` · `BuildingAction`과 액션들 · `OwnedBuilding` · `BoardRunner`) | 건물·발동 액션 |
-| `Assets/Scripts/Run/` | 런 상태·상점 규칙 (`RunState`) | 골드·목숨·구매/판매 규칙 |
-| `Assets/Scripts/World/` | 월드맵 규칙 — 판도·영주·턴 (스펙 `Docs/WorldWarGnorp_아웃게임기획.md`). 규칙 6파일(`WorldGraph` · `Lord` · `LordTemper` · `WorldRules` · `WorldState` · `WorldTurn`)은 **`UnityEngine`을 쓰지 않는다** — Unity 밖에서 수천 판을 돌려 검증하려고(영주의 힘·난수는 밖에서 받는다). SO = `WorldMapDefinition`(손으로 짠 맵 한 장) · `WorldConfig` | 지역·영주·턴 규칙 |
+| `Assets/Scripts/Run/` | 런 상태·상점 규칙 (`RunState`) · 탑 스냅샷(`TowerSnapshot` — 탑 한 채 ↔ JSON, 비동기 유령의 한 턴. 담는 것·안 담는 것은 파일 머리 주석) · 에셋 ID 등록부(`AssetIds` = 에셋 GUID, 메뉴 「GnorpWar → 에셋 ID 등록부 갱신」 · 빌드 직전 자동, 런타임은 `BattleConfig._assetIds`) · 내 런 기록(`RunRecord` — 런 하나 = `persistentDataPath/Ghosts/<런 id>.json` 한 파일, 머리 줄(닉네임 · 국가 · 버전) + 턴마다 탑 스냅샷 한 줄 + 끝 줄(통일 · 게임 오버, 없으면 중간 이탈) · 읽기 `Read` · `ReadAll`, 메뉴 「GnorpWar → 런 기록 폴더 열기」) | 골드·목숨·구매/판매 규칙 |
+| `Assets/Scripts/World/` | 월드맵 규칙 — 판도·영주·턴 (스펙 `Docs/WorldWarGnorp_아웃게임기획.md`). 규칙 6파일(`WorldGraph` · `Lord` · `LordTemper` · `WorldRules` · `WorldState` · `WorldTurn`)은 **`UnityEngine`을 쓰지 않는다** — Unity 밖에서 수천 판을 돌려 검증하려고(영주의 힘·난수는 밖에서 받는다). SO = `WorldMapDefinition`(손으로 짠 맵 한 장) · `WorldConfig`. 유령 영주(`WorldRun` — 영주 = 다른 런 기록, 턴마다 그 턴 스냅샷으로 탑 교체 · 상점 안 돎 · 국가는 `NationOf(lord)` · 이름은 `RunState.NameOf`, 비동기 멀티 3단계 — 기획서 §9-0) | 지역·영주·턴 규칙 |
 | `Assets/Scripts/Bases/` | 본진 (`Base` · `BaseDefinition`) — 본진은 화살을 쏘는 타워 | 본진 로직과 SO 정의 |
 | `Assets/Scripts/Battle/` | 라운드 흐름·전장 (`BattleManager` · `BattleConfig` · `Ground`) | 라운드 단위 규칙 |
 | `Assets/Scripts/UI/` | HUD·상점 화면 (`BoardView` · `SlotView` · `ShopPanel` · `OfferCard` · `RampLabel` · `BaseHealthBar` · `CameraDrag`) | 화면 표시·버튼 |
@@ -109,6 +109,7 @@ World 씬 ─► EndTurn (AI 침략 → 정산) → 사건 목록을 지도에�
 | **스탯을 올리는 기물** | 진영 단위 = `StatBook.AddForBattle`/`AddForRun`(대상 고르기는 `IUnitFilter` — 예: `AddBattleStatAction`) · 유닛 하나 = `Unit.AddModifier`(예: `NeighborSummonStatPassive`) |
 | **새 공격 방식** | `AttackType` enum(**맨 뒤에만**) + `Unit.FixedUpdate`의 공격 분기 |
 | **새 보스** | `Unit_*.asset`(태그 중기병) + `Ally_*`·`Enemy_*` 프리팹(`*_Dino` 복제) + 생산 건물. 점프 착지 충격은 `UnitDefinition`의 Slam 항목(간격 0이면 없음) |
+| **새 기물·업그레이드·기물 능력 에셋(공통)** | 만든 뒤 메뉴 「GnorpWar → 에셋 ID 등록부 갱신」(`Assets/Data/AssetIds.asset`) — 안 하면 테스트 `RegistryHasEveryAsset` 실패 · 탑 스냅샷 적기 예외. 런 상황(골드·목숨·땅 수)을 읽는 새 효과는 `TowerSnapshot.Data`에 칸을 더하고 `CurrentFormat`을 올린다 |
 | 전투·상점 수치 | `Unit_*.asset` · `Building_*.asset` · `BattleConfig.asset`(골드·목숨·가속·적 라운드) · `Base_Test.asset` (코드 X) |
 
 ---

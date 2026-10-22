@@ -47,7 +47,11 @@ namespace GnorpWar
             => _instance != null && _instance._gems != null && (int)rarity < _instance._gems.Length ? _instance._gems[(int)rarity] : null;
         // 상점이 열려 있으면 설명 창이 서는 자리(UI/ShopPanel이 넣고 뺀다) — 화면 안에 있을 때만 쓴다
         public static RectTransform Dock { get; set; }
+        // 화면 테두리 막대가 있는 화면 판(지도 씬 Canvas/Screen — UI/WorldSidePanel이 넣는다). 있으면 떠 있는 판을 막대 안쪽 Pad 안에만 놓는다(UI/FrameBars).
+        // 전투 씬에는 없다(씬이 바뀌면 판이 사라져 null) — 그때는 화면 가장자리에서 Gap
+        public static RectTransform Framed { get; set; }
         private readonly Vector3[] _corners = new Vector3[4];
+        private readonly Vector3[] _framedCorners = new Vector3[4];
         // 판 · 유닛 판의 원래 폭(씬 값) — 상점 자리에 설 때만 그 자리 폭으로 바꾼다
         private float _panelWidth, _cardWidth;
         // 유닛 판끼리 · 기물 판과 유닛 판 사이(px) · 능력치 아이콘 칸의 폭(글이 이 뒤에서 시작한다)
@@ -86,9 +90,9 @@ namespace GnorpWar
         }
 
         // 능력치 아이콘 칸의 색(사용자 10/20 — UI 스탯 아이콘은 색 허용. 숫자 글자 색은 §5-2-9 그대로)
-        private static readonly Color HpIconColor = new Color(0.42f, 0.85f, 0.42f);
-        private static readonly Color HealIconColor = new Color(1f, 0.55f, 0.75f);
-        private static readonly Color AttackIconColor = new Color(0.95f, 0.35f, 0.3f);
+        public static readonly Color HpIconColor = new Color(0.42f, 0.85f, 0.42f);
+        public static readonly Color HealIconColor = new Color(1f, 0.55f, 0.75f);
+        public static readonly Color AttackIconColor = new Color(0.95f, 0.35f, 0.3f);
         private static readonly Color RangeIconColor = new Color(0.55f, 0.72f, 1f);
         // 능력치 줄 — 아이콘과 글 사이 · 줄 사이(px)
         private const float StatIconGap = 8f;
@@ -129,7 +133,7 @@ namespace GnorpWar
         public const string NoteColor = "#9A9AA8";
         public const string EnemyColor = "#FF7A6E";
         // 유닛 판 능력치의 영구 강화분(「공격력 11+1」의 +1) · RANK UP 미리보기의 바뀐 숫자 — 버프 선의 체력 초록(BuffLinkFx)보다 밝은 초록
-        private const string BonusColor = "#5AE66E";
+        public const string BonusColor = "#5AE66E";
         // 글자 크기 — 중요한 것일수록 크게. 능력치 줄은 _unitBody의 글자 크기.
         // 제목 · 유닛 이름 칸은 도트 폰트(12px)라 12의 정수배만 쓰고 굵게(<b>)를 쓰지 않는다 — 합성 굵기가 픽셀을 뭉갠다
         private const int UnitNameSize = 36;
@@ -302,7 +306,7 @@ namespace GnorpWar
             return text;
         }
 
-        private static int Whole(float value) => (int)System.Math.Round(value, System.MidpointRounding.AwayFromZero);
+        public static int Whole(float value) => (int)System.Math.Round(value, System.MidpointRounding.AwayFromZero);
 
         // group을 size 글씨로 붙인다 — 묶음은 글자 크기로만 갈린다(빈 줄은 legacy Text가 본문 크기로 잡아 너무 벌어진다)
         private static void AddGroup(List<string> lines, List<string> group, int size)
@@ -480,6 +484,9 @@ namespace GnorpWar
             return _cards[i];
         }
 
+        // 설명 창이 떠 있나(탑 층 · 칸 · 맵 이름 …) — 유닛 호버 카드(UI/UnitHover)는 이게 떠 있으면 비켜난다
+        public static bool IsOpen => _instance != null && _instance._owner != null;
+
         public static void Hide(Component owner)
         {
             if (_instance != null && _instance._owner == owner)
@@ -554,6 +561,7 @@ namespace GnorpWar
             }
 
             // Overlay 캔버스라 월드 좌표 = 화면 픽셀. 판 왼쪽 위(화면)와, 유닛 판이 놓이는 방향
+            Rect area = Area(gap, out float boardScale);
             ((RectTransform)owner.transform).GetWorldCorners(_corners);   // 0 왼아래 · 1 왼위 · 2 오른위
             bool column = docked;
             int direction = 1;
@@ -565,9 +573,10 @@ namespace GnorpWar
             }
             else
             {
-                bool right = _corners[2].x + gap + width * scale <= Screen.width;
+                float rightLeft = ClearOfBars(_corners[2].x + gap, 1, boardScale);
+                bool right = rightLeft + width * scale <= (boardScale > 0f ? area.xMax : Screen.width);
                 direction = right ? 1 : -1;
-                left = right ? _corners[2].x + gap : _corners[0].x - gap - width * scale;
+                left = right ? rightLeft : ClearOfBars(_corners[0].x - gap, -1, boardScale) - width * scale;
                 wantTop = _corners[1].y;
             }
 
@@ -584,7 +593,7 @@ namespace GnorpWar
                 {
                     float side = direction > 0 ? prevX + prevWidth + CardGap : prevX - CardGap - cardWidth;
                     float screenLeft = left + side * scale;
-                    if (screenLeft >= gap && screenLeft + cardWidth * scale <= Screen.width - gap)
+                    if (screenLeft >= area.xMin && screenLeft + cardWidth * scale <= area.xMax)
                     {
                         x = side;
                         y = prevY;
@@ -602,9 +611,37 @@ namespace GnorpWar
             }
 
             // 윗변을 칸 윗변(또는 자리 윗변)에 맞추고, 화면 위아래를 넘으면 안으로 민다
-            float top = Mathf.Clamp(wantTop, -lowest * scale + gap, Screen.height - gap);
+            float top = Mathf.Clamp(wantTop, area.yMin - lowest * scale, area.yMax);
             _panel.pivot = new Vector2(0f, 1f);
             _panel.position = new Vector3(left, top, 0f);
+        }
+
+        // 떠 있는 판이 들어갈 곳(화면 px) — 지도 씬은 바깥 막대 안쪽 Pad 안, 전투 씬은 화면 가장자리에서 gap 안. boardScale = 화면 판 1px의 화면 px(지도 씬만, 아니면 0)
+        private Rect Area(float gap, out float boardScale)
+        {
+            boardScale = 0f;
+            if (Framed == null || !Framed.gameObject.activeInHierarchy)
+                return Rect.MinMaxRect(gap, gap, Screen.width - gap, Screen.height - gap);
+            Framed.GetWorldCorners(_framedCorners);
+            boardScale = (_framedCorners[2].x - _framedCorners[0].x) / Framed.rect.width;
+            float inset = (FrameBars.InfoLeft + FrameBars.Pad) * boardScale;
+            return Rect.MinMaxRect(_framedCorners[0].x + inset, _framedCorners[0].y + inset, _framedCorners[2].x - inset, _framedCorners[2].y - inset);
+        }
+
+        // 지도 씬 — 판의 가장자리 x(direction 1 = 왼쪽 끝 · -1 = 오른쪽 끝)가 안쪽 세로 막대(탑 기둥 선 · 패널|지도 칸막이)에 걸리거나 Pad 안이면 막대 너머 Pad로 민다
+        private float ClearOfBars(float x, int direction, float boardScale)
+        {
+            if (boardScale <= 0f)
+                return x;
+            Framed.GetWorldCorners(_framedCorners);
+            float origin = _framedCorners[0].x;
+            foreach (float bar in new[] { FrameBars.Pillar, FrameBars.PanelEdge })
+            {
+                float near = origin + (bar - FrameBars.Pad) * boardScale, far = origin + (bar + FrameBars.Bar + FrameBars.Pad) * boardScale;
+                if (x > near && x < far)
+                    x = direction > 0 ? far : near;
+            }
+            return x;
         }
 
         // 상점의 빈 자리 — 화면 안에 다 들어와 있을 때만(팝업이 미끄러지는 중 · 닫힘이면 칸 옆에 띄운다)
@@ -743,7 +780,12 @@ namespace GnorpWar
             card.IconUnit = unit;
             card.IconEnemy = enemy;
             card.IconColor = RunState.LordColor(enemy ? Team.Enemy : Team.Ally);
-            RectTransform icon = card.Icon;
+            DrawUnitIcon(card.Icon, unit, enemy);
+        }
+
+        // 유닛 그림 칸(icon, 왼위 기준)에 그 유닛의 부품 그림을 다시 짜 넣는다 — 유닛 호버 카드(UI/UnitHover)도 같은 그림을 쓴다
+        public static void DrawUnitIcon(RectTransform icon, UnitDefinition unit, bool enemy)
+        {
             for (int i = icon.childCount - 1; i >= 0; i--)
                 Destroy(icon.GetChild(i).gameObject);
 

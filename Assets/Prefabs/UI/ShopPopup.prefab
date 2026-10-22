@@ -920,7 +920,6 @@ MonoBehaviour:
   _archLight: {fileID: 21300000, guid: dca2b2d29cb048f58d65c436a063ff08, type: 3}
   _roundLight: {fileID: 21300000, guid: 97c0cbf8e5314d1da879e7a254b5f459, type: 3}
   _boneLight: {fileID: 21300000, guid: eb65c2efc335448d8e32735a67244e70, type: 3}
-  _gem: {fileID: 0}
 --- !u!1 &1531012229374380415
 GameObject:
   m_ObjectHideFlags: 0
@@ -1399,6 +1398,11 @@ MonoBehaviour:
   _dragGhostWindow: {fileID: 7609522311262077979}
   _insertLine: {fileID: 3801316978438333999}
   _tooltipDock: {fileID: 1834400011777136267}
+  _porters:
+  - {fileID: 11400000, guid: fe3a908e4882e4549bcd0274d35653cf, type: 2}
+  - {fileID: 11400000, guid: b6298655f3645eb4bb2033b8f8d1d83a, type: 2}
+  - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
+  - {fileID: 11400000, guid: e8b64c0623e6336479441667f16688a2, type: 2}
 --- !u!225 &4785472709602694803
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1445,8 +1449,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 420, y: -72}
-  m_SizeDelta: {x: 1500, y: 1008}
+  m_AnchoredPosition: {x: 420, y: -67}
+  m_SizeDelta: {x: 1500, y: 1013}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2866875788853359906
 CanvasRenderer:
@@ -2951,6 +2955,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ButtonHover
   _idle: 0.65
+  _pressDepth: 0
 --- !u!1 &5230382413846459793
 GameObject:
   m_ObjectHideFlags: 0
@@ -3371,7 +3376,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 790, y: -990}
+  m_AnchoredPosition: {x: 780, y: -990}
   m_SizeDelta: {x: 300, y: 96}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4531462802025081869
@@ -3469,6 +3474,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ButtonHover
   _idle: 0.85
+  _pressDepth: 0
 --- !u!1 &5616188643011665753
 GameObject:
   m_ObjectHideFlags: 0
@@ -3737,6 +3743,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ButtonHover
   _idle: 0.65
+  _pressDepth: 0
 --- !u!1 &6121625026260709358
 GameObject:
   m_ObjectHideFlags: 0
@@ -4184,6 +4191,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ButtonHover
   _idle: 0.65
+  _pressDepth: 0
 --- !u!1 &7001639687117728145
 GameObject:
   m_ObjectHideFlags: 0
@@ -4439,7 +4447,6 @@ MonoBehaviour:
   _archLight: {fileID: 21300000, guid: dca2b2d29cb048f58d65c436a063ff08, type: 3}
   _roundLight: {fileID: 21300000, guid: 97c0cbf8e5314d1da879e7a254b5f459, type: 3}
   _boneLight: {fileID: 21300000, guid: eb65c2efc335448d8e32735a67244e70, type: 3}
-  _gem: {fileID: 0}
 --- !u!1 &7892138355717448452
 GameObject:
   m_ObjectHideFlags: 0
@@ -4694,7 +4701,6 @@ MonoBehaviour:
   _archLight: {fileID: 21300000, guid: dca2b2d29cb048f58d65c436a063ff08, type: 3}
   _roundLight: {fileID: 21300000, guid: 97c0cbf8e5314d1da879e7a254b5f459, type: 3}
   _boneLight: {fileID: 21300000, guid: eb65c2efc335448d8e32735a67244e70, type: 3}
-  _gem: {fileID: 0}
 --- !u!1 &7986241665196297654
 GameObject:
   m_ObjectHideFlags: 0
@@ -4939,6 +4945,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ButtonHover
   _idle: 0.65
+  _pressDepth: 0
 --- !u!1 &8441801421854193964
 GameObject:
   m_ObjectHideFlags: 0
@@ -5211,7 +5218,6 @@ MonoBehaviour:
   _archLight: {fileID: 21300000, guid: dca2b2d29cb048f58d65c436a063ff08, type: 3}
   _roundLight: {fileID: 21300000, guid: 97c0cbf8e5314d1da879e7a254b5f459, type: 3}
   _boneLight: {fileID: 21300000, guid: eb65c2efc335448d8e32735a67244e70, type: 3}
-  _gem: {fileID: 0}
 --- !u!1 &9181839626086859179
 GameObject:
   m_ObjectHideFlags: 0

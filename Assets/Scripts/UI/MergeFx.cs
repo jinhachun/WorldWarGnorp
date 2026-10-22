@@ -88,12 +88,78 @@ namespace GnorpWar
             _behind = behind;
         }
 
-        // from = 방금 산 조각이 출발하는 자리, targets[i] = i번째 단계의 짝이 있던 자리(화면 좌표), settle = 결과의 실제 칸을 찾는 함수(재생이 끝날 때 묻는다)
-        public void Play(BuildingDefinition definition, Vector3 from, IReadOnlyList<RunState.MergeStep> steps, Vector3[] targets, System.Func<Vector3> settle)
+        // from = 방금 산 조각이 출발하는 자리, targets[i] = i번째 단계의 짝이 있던 자리(화면 좌표), settle = 결과의 실제 칸을 찾는 함수(재생이 끝날 때 묻는다).
+        // thrown = 짐꾼이 던진 구매(진열 클릭) — 첫 비행이 던지기 포물선(Arc)이다
+        public void Play(BuildingDefinition definition, Vector3 from, IReadOnlyList<RunState.MergeStep> steps, Vector3[] targets, System.Func<Vector3> settle, bool thrown = false)
         {
             Finish();
             Concealed = steps[steps.Count - 1].Into;
-            _playing = StartCoroutine(Run(definition, from, steps, targets, settle));
+            _playing = StartCoroutine(Run(definition, from, steps, targets, settle, thrown));
+        }
+
+        // ── 던지기(사용자 10/23) — 진열을 눌러 사면 짐꾼이 이고 있던 층 조각을 그 기물이 들어간 칸으로 포물선을 그리며 던진다(계단식).
+        // 나는 동안 그 칸은 빈 칸으로 보이고(Thrown — ShopPanel.Concealed로 BoardView가 읽는다), 닿으면 조각이 한 번 눌렸다 사라지며 실제 칸이 나타난다.
+        // 여럿이 동시에 날 수 있고, 합치기 재생(Finish)과 따로 돈다
+        public const float ThrowSeconds = 0.3f;
+        // 출발 · 도착 중 높은 쪽보다 더 솟는 높이(px) · 자리를 끊는 격자(px — 짐꾼 그림 1px, UI/OfferCard) · 닿아서 눌린 채 있는 시간 · 눌린 모양
+        private const float ThrowArc = 160f;
+        private const float ThrowGrid = 6f;
+        private const float LandSeconds = 0.05f;
+        private static readonly Vector3 LandSquash = new Vector3(1.15f, 0.8f, 1f);
+
+        private readonly Dictionary<OwnedBuilding, (Coroutine Run, GameObject Piece)> _throws = new Dictionary<OwnedBuilding, (Coroutine, GameObject)>();
+
+        public bool Thrown(OwnedBuilding building) => building != null && _throws.ContainsKey(building);
+
+        // building = 방금 산 기물(이미 칸에 들어가 있다) · from = 짐꾼 머리 위 층 조각 자리 · target = 그 기물의 실제 칸 자리(매 프레임 묻는다 — 보관함 조각은 움직인다)
+        public void Throw(OwnedBuilding building, Vector3 from, System.Func<Vector3> target)
+        {
+            RectTransform piece = Piece(building.Definition, building.Rarity, from);
+            _made.Remove(piece.gameObject);
+            _throws[building] = (StartCoroutine(RunThrow(building, piece, from, target)), piece.gameObject);
+        }
+
+        // 나는 조각을 다 치우고 실제 칸을 보인다(칸을 집을 때 — ShopPanel)
+        public void FinishThrows()
+        {
+            foreach (var run in _throws.Values)
+            {
+                if (run.Run != null)
+                    StopCoroutine(run.Run);
+                if (run.Piece != null)
+                    Destroy(run.Piece);
+            }
+            _throws.Clear();
+        }
+
+        private IEnumerator RunThrow(OwnedBuilding building, RectTransform piece, Vector3 from, System.Func<Vector3> target)
+        {
+            Layer.SetAsLastSibling();
+            for (float t = 0f; t < ThrowSeconds; t += Step())
+            {
+                piece.position = Arc(from, target(), t / ThrowSeconds);
+                piece.SetAsLastSibling();
+                yield return null;
+            }
+            piece.position = target();
+            piece.localScale = LandSquash;
+            for (float t = 0f; t < LandSeconds; t += Step())
+                yield return null;
+            // 실제 칸이 먼저 나타난 다음 프레임에 조각을 치운다(빈 칸 한 프레임이 안 보이게 — Run과 같다)
+            _throws.Remove(building);
+            yield return null;
+            Destroy(piece.gameObject);
+        }
+
+        // 던지기 포물선 위 k(0~1)의 자리 — 격자로 끊어 계단식으로
+        private Vector3 Arc(Vector3 from, Vector3 to, float k)
+        {
+            float scale = Layer.lossyScale.y;
+            var top = new Vector3((from.x + to.x) * 0.5f, Mathf.Max(from.y, to.y) + ThrowArc * scale, from.z);
+            float u = 1f - k;
+            Vector3 p = u * u * from + 2f * u * k * top + k * k * to;
+            float grid = ThrowGrid * scale;
+            return new Vector3(Mathf.Round(p.x / grid) * grid, Mathf.Round(p.y / grid) * grid, p.z);
         }
 
         // 즉시 끝 상태로 — 그림을 다 치우고 실제 칸을 다시 보인다
@@ -112,6 +178,7 @@ namespace GnorpWar
         private void OnDisable()
         {
             Finish();
+            FinishThrows();
             foreach (GameObject made in _glory)
                 if (made != null)
                     Destroy(made);
@@ -158,7 +225,7 @@ namespace GnorpWar
             return layer;
         }
 
-        private IEnumerator Run(BuildingDefinition definition, Vector3 from, IReadOnlyList<RunState.MergeStep> steps, Vector3[] targets, System.Func<Vector3> settle)
+        private IEnumerator Run(BuildingDefinition definition, Vector3 from, IReadOnlyList<RunState.MergeStep> steps, Vector3[] targets, System.Func<Vector3> settle, bool thrown)
         {
             Layer.SetAsLastSibling();
             // 짝들은 처음부터 제자리에 — 합쳐지기 전 등급의 모습으로
@@ -183,13 +250,21 @@ namespace GnorpWar
                 float tilt = Random.Range(TiltMin, TiltMax) * (Random.value < 0.5f ? -1f : 1f);
                 for (float t = 0f; t < delay; t += Step())
                     yield return null;
+                // 짐꾼이 던진 첫 비행은 던지기 포물선 그대로(바로 출발 · ThrowSeconds) — 닿은 뒤 머무르기는 줄이지 않는다
+                bool arc = thrown && i == 0;
+                if (arc)
+                {
+                    delay = 0f;
+                    flight = ThrowSeconds;
+                    hold = HoldSeconds;
+                }
                 Vector3 trailFrom = start;
                 for (float t = 0f; t < flight; t += Step())
                 {
                     // 빨려 들어가듯 — 점점 빨라진다(휜 길: 2차 베지어)
                     float k = t / flight, e = k * k, u = 1f - e;
-                    mover.position = u * u * start + 2f * u * e * bend + e * e * targets[i];
-                    mover.localEulerAngles = new Vector3(0f, 0f, tilt * e);
+                    mover.position = arc ? Arc(start, targets[i], k) : u * u * start + 2f * u * e * bend + e * e * targets[i];
+                    mover.localEulerAngles = new Vector3(0f, 0f, arc ? 0f : tilt * e);
                     trailFrom = Trail(trailFrom, mover.position, material);
                     mover.SetAsLastSibling();
                     yield return null;

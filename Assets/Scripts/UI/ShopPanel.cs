@@ -36,6 +36,22 @@ namespace GnorpWar
         [SerializeField] private RectTransform _insertLine;
         [Tooltip("상점에서 설명 창이 서는 자리(보이지 않는 칸) — 진열 · 확률 · 보관함을 덮지 않는 빈 곳(사용자 10/20 U5). 비우면 칸 옆에 뜬다")]
         [SerializeField] private RectTransform _tooltipDock;
+        [Tooltip("진열 기물을 이고 선 짐꾼 — 기물 국가마다 유닛 하나(공용 · 킹덤 · 티크톡 · 트라이브 순, 사용자 10/23). 무기는 빼고 그린다")]
+        [SerializeField] private UnitDefinition[] _porters = new UnitDefinition[0];
+
+        // 진열 무대(사용자 10/23) — 땅 선(위끝 = 짐꾼 발) · 먼 산(내 국가의 국가 선택 무대 그림을 원본 크기로 · 국가 선택과 같은 회색). 팝업 좌표(왼쪽 위 기준, px)
+        private const float StageLeft = 420f, StageRight = 1906f, StageTop = 67f;
+        private const float GroundPad = 16f, GroundHeight = 4f;
+        private static readonly Color BackdropTint = new Color(0.14f, 0.14f, 0.14f);
+
+        // 팝업이 다 내려와 누를 수 있게 됐나(WorldManager가 미끄러지는 동안 레이캐스트를 끈다) — 짐꾼은 그 뒤에 걸어 들어온다
+        private CanvasGroup _group;
+        public bool Settled => _group == null || _group.blocksRaycasts;
+
+        // 리롤 퇴장이 끝나기까지 남은 시간(초) — 새 진열의 짐꾼은 이게 0이 된 뒤에 들어온다
+        public float ExitLeft { get; private set; }
+
+        public UnitDefinition PorterOf(BuildingNation nation) => (int)nation < _porters.Length && _porters[(int)nation] != null ? _porters[(int)nation] : _porters.Length > 0 ? _porters[0] : null;
 
         // 「지도로」를 눌렀다 — 상점을 닫는 일은 이 판을 띄운 쪽이 한다
         public event System.Action MapRequested;
@@ -61,23 +77,34 @@ namespace GnorpWar
 
         private void Start()
         {
+            _group = GetComponent<CanvasGroup>();
             _offers = new OfferCard[RunState.Offers.Length];
+            // 짐꾼 줄의 가운데 = 무대(땅 선 · 먼 산)의 가운데(사용자 10/23 — 오른쪽으로 치우쳐 보였다)
+            float first = Mathf.Round((StageLeft + StageRight) * 0.5f - (_offers.Length - 1) * 0.5f * _offerStep);
             for (int i = 0; i < _offers.Length; i++)
             {
                 OfferCard card = Instantiate(_offerTemplate, _offerTemplate.transform.parent);
                 var rect = (RectTransform)card.transform;
-                rect.anchoredPosition = ((RectTransform)_offerTemplate.transform).anchoredPosition + new Vector2(i * _offerStep, 0f);
+                rect.anchoredPosition = new Vector2(first + i * _offerStep, ((RectTransform)_offerTemplate.transform).anchoredPosition.y);
                 int index = i;
                 card.Bind(this, index);
-                card.Button.onClick.AddListener(() =>
-                {
-                    _buyFrom = card.transform.position;
-                    RunState.Buy(index);
-                });
+                card.Button.onClick.AddListener(() => BuyThrown(card, index));
                 card.gameObject.SetActive(true);
                 _offers[i] = card;
             }
-            _reroll.onClick.AddListener(RunState.Reroll);
+            BuildStage(((RectTransform)_offerTemplate.transform).anchoredPosition.y + OfferCard.GroundY);
+            _reroll.onClick.AddListener(() =>
+            {
+                if (!RunState.CanReroll)
+                    return;
+                // 짐을 든 짐꾼이 하나라도 나가면 다 나갈 때까지 새 줄은 기다린다 — 나가는 중에 또 누르면 그 퇴장을 그대로 이어 간다
+                bool leaving = false;
+                foreach (OfferCard card in _offers)
+                    leaving |= card.LeaveForReroll();
+                if (leaving)
+                    ExitLeft = OfferCard.WalkTime;
+                RunState.Reroll();
+            });
             _lock.onClick.AddListener(RunState.ToggleShopLock);
             _raise.onClick.AddListener(RunState.RaiseFloor);
             _sell.onClick.AddListener(SellSelected);
@@ -96,11 +123,43 @@ namespace GnorpWar
             {
                 var field = (RectTransform)_fieldView.transform;
                 field.SetParent(_towerLayer, false);
-                field.anchoredPosition += new Vector2(_towerX - _fieldView.TemplateX, 0f);
+                field.anchoredPosition += new Vector2(_towerX - _fieldView.TemplateX, -FrameBars.Floor - _fieldView.TemplateBottom);   // 1층 아래 끝 = 바닥 막대 위(UI/FrameBars)
                 // 끄는 조각과 끼울 자리 선도 그 층으로 — 팝업 안에 두면 왼쪽 패널 뒤에 그려진다
                 _insertLine.SetParent(_towerLayer, false);
                 _dragGhost.SetParent(_towerLayer, false);
             }
+        }
+
+        // 진열 뒤 무대 — 판(Back) 바로 위에 먼 산(가려 자르는 판 안에 이어 붙임)과 땅 선. groundTop = 땅 선 위끝의 y(팝업 좌표)
+        private void BuildStage(float groundTop)
+        {
+            var stage = (RectTransform)new GameObject("Stage", typeof(RectTransform), typeof(RectMask2D)).transform;
+            stage.SetParent(transform, false);
+            stage.SetSiblingIndex(1);
+            stage.anchorMin = stage.anchorMax = stage.pivot = new Vector2(0f, 1f);
+            stage.anchoredPosition = new Vector2(StageLeft, -StageTop);
+            stage.sizeDelta = new Vector2(StageRight - StageLeft, -StageTop - groundTop);
+            NationShowcase show = RunState.Config.World.Showcase(RunState.NationOf(Team.Ally));
+            Sprite hill = show != null ? show.Backdrop : null;
+            if (hill != null)
+                for (float x = 0f; x < stage.sizeDelta.x; x += hill.rect.width)
+                {
+                    var image = new GameObject("Hill", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                    image.rectTransform.SetParent(stage, false);
+                    image.rectTransform.anchorMin = image.rectTransform.anchorMax = image.rectTransform.pivot = Vector2.zero;
+                    image.rectTransform.anchoredPosition = new Vector2(x, 0f);
+                    image.rectTransform.sizeDelta = hill.rect.size;
+                    image.sprite = hill;
+                    image.color = BackdropTint;
+                    image.raycastTarget = false;
+                }
+            var ground = new GameObject("Ground", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            ground.rectTransform.SetParent(transform, false);
+            ground.rectTransform.SetSiblingIndex(2);
+            ground.rectTransform.anchorMin = ground.rectTransform.anchorMax = ground.rectTransform.pivot = new Vector2(0f, 1f);
+            ground.rectTransform.anchoredPosition = new Vector2(StageLeft + GroundPad, groundTop);
+            ground.rectTransform.sizeDelta = new Vector2(StageRight - StageLeft - GroundPad * 2f, GroundHeight);
+            ground.raycastTarget = false;
         }
 
         // 내 탑을 팝업 밖에 세운다(사용자 10/12: 상점이 열리면 왼쪽 패널의 탑 기둥에 탑 하나만) — layer = 탑이 설 판(화면 전체 크기), x = 1층 가운데의 가로 자리.
@@ -127,15 +186,49 @@ namespace GnorpWar
             for (int i = 0; i < targets.Length; i++)
                 targets[i] = (steps[i].Storage ? _storageView : _fieldView).SlotPosition(steps[i].Index);
             OwnedBuilding result = steps[steps.Count - 1].Into;
-            _merge.Play(result.Definition, _buyFrom, steps, targets, () =>
-            {
-                int index = System.Array.IndexOf(RunState.Field, result);
-                return index >= 0 ? _fieldView.SlotPosition(index) : _storageView.SlotPosition(System.Array.IndexOf(RunState.Storage, result));
-            });
+            _merged = true;
+            _merge.Play(result.Definition, _buyFrom, steps, targets, () => PlaceOf(result), _throwing);
         }
 
-        // 합치기 재생 중 실제 칸을 숨길 기물인가(결과 — 재생이 끝나며 나타난다)
-        public bool Concealed(OwnedBuilding building) => building != null && _merge != null && _merge.Concealed == building;
+        // 진열을 눌러 산다 — 짐꾼이 뛰어오르며 층 조각을 그 기물이 들어간 칸으로 던진다(사용자 10/23). 합치기면 그 던지기가 합치기 재생의 첫 비행이다.
+        // 끌어서 사는 건 손으로 옮긴 것이라 던지지 않는다
+        private bool _throwing;
+
+        private void BuyThrown(OfferCard card, int index)
+        {
+            if (!RunState.CanBuy(index))
+                return;
+            _buyFrom = card.LoadPosition;
+            var before = new System.Collections.Generic.HashSet<OwnedBuilding>(RunState.Field);
+            before.UnionWith(RunState.Storage);
+            card.Jump();
+            _throwing = true;
+            _merged = false;
+            RunState.Buy(index);
+            _throwing = false;
+            if (_merged)
+                return;
+            // 합쳐지지 않았으면 새로 생긴 기물이 들어간 칸으로
+            foreach (OwnedBuilding[] row in new[] { RunState.Field, RunState.Storage })
+                foreach (OwnedBuilding building in row)
+                    if (!OwnedBuilding.IsEmpty(building) && !before.Contains(building))
+                    {
+                        _merge.Throw(building, _buyFrom, () => PlaceOf(building));
+                        return;
+                    }
+        }
+
+        private bool _merged;
+
+        // 그 기물이 지금 놓인 칸의 화면 자리(탑 · 보관함)
+        private Vector3 PlaceOf(OwnedBuilding building)
+        {
+            int index = System.Array.IndexOf(RunState.Field, building);
+            return index >= 0 ? _fieldView.SlotPosition(index) : _storageView.SlotPosition(Mathf.Max(0, System.Array.IndexOf(RunState.Storage, building)));
+        }
+
+        // 합치기 재생 중이거나 던진 조각이 나는 중이라 실제 칸을 숨길 기물인가(재생 · 비행이 끝나며 나타난다)
+        public bool Concealed(OwnedBuilding building) => building != null && _merge != null && (_merge.Concealed == building || _merge.Thrown(building));
 
         // 합치기 재생이 도는 중인가 — 고르기 창(UI/UpgradePicker)이 재생이 끝난 뒤에 카드를 보인다
         public bool MergePlaying => _merge != null && _merge.Playing;
@@ -143,6 +236,7 @@ namespace GnorpWar
         private void OnDisable()
         {
             RunState.Merged -= OnMerged;
+            ExitLeft = 0f;
             if (BuildingTooltip.Dock == _tooltipDock)
                 BuildingTooltip.Dock = null;
             _hasSelection = false;
@@ -174,8 +268,9 @@ namespace GnorpWar
 
         public void BeginDragSlot(BoardView.Source source, int index, PointerEventData eventData)
         {
-            // 재생 중에 조각을 집으면 재생을 바로 끝낸다 — 칸이 끝 상태와 어긋난 채로 집히지 않게
+            // 재생 중에 조각을 집으면 재생을 바로 끝낸다 — 칸이 끝 상태와 어긋난 채로 집히지 않게(나는 던진 조각도)
             _merge.Finish();
+            _merge.FinishThrows();
             if (BattleManager.Fighting || source == BoardView.Source.EnemyField)
                 return;
             OwnedBuilding building = BuildingAt(source, index);
@@ -360,6 +455,8 @@ namespace GnorpWar
         {
             for (int i = 0; i < _offers.Length; i++)
                 _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
+            // 짐꾼 걸음과 같은 시계(프레임당 1/30초까지)
+            ExitLeft = Mathf.Max(0f, ExitLeft - Mathf.Min(Time.unscaledDeltaTime, 1f / 30f));
 
             _reroll.interactable = RunState.CanReroll;
             _rerollLabel.text = $"리롤 {RunState.RerollCost}G";

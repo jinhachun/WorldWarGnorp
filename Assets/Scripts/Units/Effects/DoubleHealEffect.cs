@@ -26,8 +26,7 @@ namespace GnorpWar
                 if (next == null)
                     return;
                 _healed.Add(next);
-                healer.ThrowHeal(next);
-                BuffLinks.EffectFromUnit(healer.Team, this, healer.Position, next.Position, BuffKind.Stat);
+                healer.ThrowHeal(next);   // 사제가 한 번 더 던지는 회복 오브가 곧 연출이다 — 선은 긋지 않는다(사용자 10/23)
             }
         }
 

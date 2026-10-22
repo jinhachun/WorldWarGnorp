@@ -14,8 +14,10 @@ namespace GnorpWar
         {
             foreach (Unit ally in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (ally.IsAlive && ally.Team == unit.Team && (ally.Position - at).sqrMagnitude <= _radius * _radius)
+                {
                     ally.Heal(ally.MaxHp * _ratio);
-            BuffLinks.EffectFromUnitToUnits(unit.Team, this, at, unit.Team, u => (u.Position - at).sqrMagnitude <= _radius * _radius, BuffKind.Stat);
+                    BuffLinks.EffectHeal(unit.Team, this, at, ally);
+                }
         }
 
         public override string Describe(int level) => string.Format(Description, $"{_ratio * 100f:0.#}");

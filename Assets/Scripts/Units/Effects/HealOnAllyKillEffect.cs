@@ -14,7 +14,7 @@ namespace GnorpWar
             if (victim.Team != killer.Team)
                 return;
             killer.Heal(killer.MaxHp * _ratio);
-            BuffLinks.EffectToPoint(killer.Team, this, killer.Position, BuffKind.Stat);
+            BuffLinks.EffectHeal(killer.Team, this, null, killer);
         }
 
         public override string Describe(int level) => string.Format(Description, $"{_ratio * 100f:0.#}");

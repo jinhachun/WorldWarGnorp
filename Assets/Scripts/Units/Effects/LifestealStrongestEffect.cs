@@ -17,7 +17,7 @@ namespace GnorpWar
             if (Strongest.Of(dealer.Team, _rank) != dealer)
                 return;
             dealer.Heal(amount * _ratio);
-            BuffLinks.EffectToPoint(dealer.Team, this, dealer.Position, BuffKind.Stat);
+            BuffLinks.EffectHeal(dealer.Team, this, null, dealer);
         }
 
         public override string Describe(int level) => string.Format(Description, $"{_ratio * 100f:0.#}");

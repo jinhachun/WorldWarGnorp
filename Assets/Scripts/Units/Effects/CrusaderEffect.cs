@@ -30,9 +30,7 @@ namespace GnorpWar
         {
             if (attacker.Size < _healerSize)
                 return;
-            attacker.HealAlliesAround(_healRadius, attacker.AttackDamage);
-            BuffLinks.EffectFromUnitToUnits(attacker.Team, this, attacker.Position, attacker.Team,
-                u => u != attacker && (u.Position - attacker.Position).sqrMagnitude <= _healRadius * _healRadius, BuffKind.Stat);
+            attacker.HealAlliesAround(_healRadius, attacker.AttackDamage, this);
         }
     }
 }

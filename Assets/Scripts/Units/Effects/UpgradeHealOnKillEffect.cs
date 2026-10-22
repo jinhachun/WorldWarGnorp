@@ -6,6 +6,10 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Upgrade Heal On Kill")]
     public class UpgradeHealOnKillEffect : UnitEffect
     {
-        public override void OnKill(Unit killer, Unit victim, int stacks) => killer.Heal(killer.MaxHp * Value(killer.Team) / 100f);
+        public override void OnKill(Unit killer, Unit victim, int stacks)
+        {
+            killer.Heal(killer.MaxHp * Value(killer.Team) / 100f);
+            BuffLinks.EffectHeal(killer.Team, this, null, killer);   // 켠 기물이 없다 — 본진에서 회복 오브
+        }
     }
 }

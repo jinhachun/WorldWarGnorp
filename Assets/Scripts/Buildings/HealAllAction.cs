@@ -16,17 +16,12 @@ namespace GnorpWar
         public override void Execute(BoardRunner board, int slot, int level)
         {
             float ratio = Ratio(level);
-            Vector2 sum = Vector2.zero;
-            int count = 0;
             foreach (Unit unit in Object.FindObjectsByType<Unit>(FindObjectsSortMode.None))
                 if (unit.IsAlive && unit.Team == board.Team)
                 {
                     unit.Heal(unit.MaxHp * ratio);
-                    sum += unit.Position;
-                    count++;
+                    BuffLinks.HealTo(board.Team, slot, unit);
                 }
-            if (count > 0)
-                BuffLinks.ToPoint(board.Team, slot, sum / count, BuffKind.Stat);
         }
 
         public override string Describe(int level) => $"모든 아군이 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";

@@ -16,7 +16,7 @@ namespace GnorpWar
         public override void OnKill(Unit killer, Unit victim, int stacks)
         {
             killer.Heal(killer.MaxHp * Ratio(Level(killer.Team)));
-            BuffLinks.EffectToPoint(killer.Team, this, killer.Position, BuffKind.Stat);
+            BuffLinks.EffectHeal(killer.Team, this, null, killer);
         }
 
         public override string Describe(int level) => string.Format(Description, $"{Ratio(level) * 100f:0.#}");

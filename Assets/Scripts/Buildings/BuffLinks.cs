@@ -7,11 +7,12 @@ namespace GnorpWar
     public enum BuffKind
     {
         Summon,         // 유닛이 더 나오거나 다른 유닛으로 바뀐다 — 추가 · 조건 소환 · 소환 수 늘림 · 변환 · 부활
-        Stat,           // 내 유닛 · 타워의 능력치가 오른다 — 공격력 · 공격속도 · 체력 · 회복 · 크기 · 이동속도 · 사거리 · 화살 수
+        Stat,           // 내 유닛 · 타워의 능력치가 오른다 — 공격력 · 공격속도 · 체력 · 크기 · 이동속도 · 사거리 · 화살 수
         Invulnerable,   // 무적
         Haste,          // 기물의 쿨다운이 빨리 돈다 — 가속 · 쿨다운 감소(유닛 공격속도는 Stat)
         Debuff,         // 적을 약하게 한다 — 적 능력치 감소 · 감속 · 체력을 잃게 함 · 불태움
         Trigger,        // 다른 기물을 즉시 발동시키거나 그 효과를 한 번 더 · 기물을 멈춤(제물의 의식)
+        Heal,           // 체력이 찬다(스탯이 아니다 — 사용자 10/23) — 선 대신 초록 회복 오브가 날아간다(Fx/HealFx). 대상(Target)을 꼭 넣는다(HealTo · EffectHeal · ToTowers)
     }
 
     // 버프 글자(대상 위에 뜨는 「[아이콘] +5%」 — Fx/BuffTexts)의 아이콘. 아이콘이 없는 스탯은 글에 이름을 쓴다
@@ -58,6 +59,8 @@ namespace GnorpWar
         public bool Weak;
         // 대상 위에 띄울 버프 글자(없으면 Text = null)
         public BuffLabel Label;
+        // 대상 유닛 · 타워 그 자체(회복 오브가 따라가고, 체력이 찬 것과 짝짓는다 — Fx/HealFx). 회복이 아니면 비어 있어도 된다
+        public object Target;
     }
 
     // "어떤 기물이 누구에게 무엇을 줬나" 알림 한 곳 — 효과를 거는 그 순간, 건 횟수만큼 부른다(그리는 쪽이 솎는다).
@@ -82,11 +85,11 @@ namespace GnorpWar
                 return;
             Base main = Base.For(team);
             if (main != null && main.IsAlive)
-                Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = main.Muzzle, Tower = 1, Kind = kind, Label = label });
+                Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = main.Muzzle, Tower = 1, Kind = kind, Label = label, Target = main });
             int number = 1;
             foreach (Base small in Base.SmallTowers())
                 if (small.Team == team)
-                    Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = small.Muzzle, Tower = ++number, Kind = kind, Label = label });
+                    Raised.Invoke(new BuffLink { Team = team, From = from, To = -1, At = small.Muzzle, Tower = ++number, Kind = kind, Label = label, Target = small });
         }
 
         // 내 유닛 무리에게(진영 단위 스탯) — 선 하나를 무리 가운데로. filter를 비우면 전부
@@ -163,6 +166,25 @@ namespace GnorpWar
                 EffectToPoint(team, effect, to, kind, label);
             else
                 Raised.Invoke(new BuffLink { Team = team, From = slot, To = -1, FromAt = from, At = to, Kind = kind, Label = label });
+        }
+
+        // 회복(BuffKind.Heal) — 기물의 층에서 회복받은 유닛 하나로. 무리를 회복하면 회복받은 유닛마다 부른다(오브는 대상마다 하나)
+        public static void HealTo(Team team, int from, Unit target)
+            => Raised?.Invoke(new BuffLink { Team = team, From = from, To = -1, At = target.Position, Kind = BuffKind.Heal, Target = target });
+
+        // 유닛 효과가 준 회복 — 유닛이 냈으면(죽은 자리 · 회복한 유닛) from에서, 아니면(자기 회복) 그 효과를 켠 기물의 층에서,
+        // 켠 기물이 없으면(업그레이드 · 합치기 보상) 본진에서(사용자 10/20 Q1과 같은 규칙). 유닛이 냈는데 대상이 바로 옆이고 켠 기물도 없으면 오브 없이 그 자리에서 핀다
+        public static void EffectHeal(Team team, UnitEffect effect, Vector2? from, Unit target)
+        {
+            if (Raised == null)
+                return;
+            int slot = NextSlotOf(team, effect, 0);
+            if (from.HasValue && (target.Position - from.Value).sqrMagnitude >= MinUnitLink * MinUnitLink)
+                Raised.Invoke(new BuffLink { Team = team, From = slot, To = -1, FromAt = from, At = target.Position, Kind = BuffKind.Heal, Target = target });
+            else if (slot >= 0)
+                HealTo(team, slot, target);
+            else if (!from.HasValue && Base.For(team) is Base home && home.IsAlive)
+                Raised.Invoke(new BuffLink { Team = team, From = -1, To = -1, FromAt = home.Muzzle, At = target.Position, Kind = BuffKind.Heal, Target = target });
         }
 
         // 유닛에서 그 진영의 유닛 무리(조건에 맞는 것) 가운데로 — 무리가 없으면 긋지 않는다

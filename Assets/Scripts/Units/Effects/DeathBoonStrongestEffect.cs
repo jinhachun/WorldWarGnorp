@@ -26,8 +26,13 @@ namespace GnorpWar
             if (strongest == null)
                 return;
             if (_healRatio > 0f)
+            {
                 strongest.Heal(strongest.MaxHp * _healRatio);
-            // 버프 글자는 처음 건 스탯 하나(회복뿐이면 글자 없음)
+                BuffLinks.EffectHeal(unit.Team, this, at, strongest);   // 회복은 죽은 자리에서 회복 오브(사용자 10/23)
+            }
+            if (_attackShare <= 0f && _maxHpShare <= 0f && _modifier.Value == 0f)
+                return;
+            // 버프 글자는 처음 건 스탯 하나
             BuffLabel label = default;
             if (_attackShare > 0f)
             {
@@ -48,7 +53,7 @@ namespace GnorpWar
                 if (label.Text == null)
                     label = BuffLabel.Of(_modifier);
             }
-            // 회복도 스탯 색(사용자 10/14 기준) — 죽은 자리에서 받은 유닛으로
+            // 스탯 선 — 죽은 자리에서 받은 유닛으로
             BuffLinks.EffectFromUnit(unit.Team, this, at, strongest.Position, BuffKind.Stat, label);
         }
     }

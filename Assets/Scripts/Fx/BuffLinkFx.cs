@@ -29,6 +29,7 @@ namespace GnorpWar
             new Color(0.4f, 0.85f, 1f),
             new Color(0.95f, 0.45f, 1f),
             Color.white,
+            new Color(0.45f, 1f, 0.5f),   // 회복 — 선으로는 안 긋는다(회복 오브 색, Fx/HealFx)
         };
 
         // 종류별 선 색 — UI 탑의 선·층 표시도 이걸 읽는다
@@ -76,6 +77,19 @@ namespace GnorpWar
             Tower tower = Tower.For(link.Team);
             if (tower == null || link.From >= tower.FloorCount || link.To >= tower.FloorCount || (link.To < 0 && link.At == null))
                 return;
+            // 맵 효과(준 기물 없음)는 그 진영의 출발점 그림에서(얼음 덩이 — Fx/MapMarker), 없으면 탑 꼭대기에서
+            MapMarker marker = MapMarker.For(link.Team);
+            // 유닛이 낸 것은 그 유닛의 자리에서(모양은 층 → 유닛과 같은 위로 불룩한 호)
+            Vector2 from = link.FromAt ?? (link.From >= 0 ? tower.FloorFront(link.From) : marker != null ? marker.Position : tower.RoofTop);
+            Vector2 to = link.To >= 0 ? tower.FloorFront(link.To) : link.At.Value;
+
+            // 회복은 선이 아니라 초록 회복 오브(사용자 10/23) — 솎기 · 글자 없이 대상마다 하나(HealFx가 대상당 하나로 묶는다)
+            if (link.Kind == BuffKind.Heal)
+            {
+                if (InView(from) || InView(to))
+                    HealFx.Launch(from, link.Target, to);
+                return;
+            }
 
             // 대상이 유닛이면 대상 자리와 상관없이 (출발·종류)로 솎는다. 타워면 타워마다 하나씩 남긴다(타워 번호 — 16채부터는 번호가 겹쳐 솎인다)
             // 유닛이 낸 선(FromAt)은 같은 기물의 층에서 나간 선과 따로 솎는다
@@ -84,11 +98,6 @@ namespace GnorpWar
             if (_lastDrawn.TryGetValue(key, out float last) && now - last < MinGap)
                 return;
 
-            // 맵 효과(준 기물 없음)는 그 진영의 출발점 그림에서(얼음 덩이 — Fx/MapMarker), 없으면 탑 꼭대기에서
-            MapMarker marker = MapMarker.For(link.Team);
-            // 유닛이 낸 것은 그 유닛의 자리에서(모양은 층 → 유닛과 같은 위로 불룩한 호)
-            Vector2 from = link.FromAt ?? (link.From >= 0 ? tower.FloorFront(link.From) : marker != null ? marker.Position : tower.RoofTop);
-            Vector2 to = link.To >= 0 ? tower.FloorFront(link.To) : link.At.Value;
             if (!InView(from) && !InView(to))
                 return;
             _lastDrawn[key] = now;

@@ -15,7 +15,8 @@ namespace GnorpWar
         {
             if (!unit.EffectReady(this, unit.AttackInterval))
                 return;
-            bool hit = unit.AreaAttackNearest(_radius, unit.Definition.HealAmount);
+            // 회복량 = 공격력(Unit.ThrowHeal — 사용자 10/10). 예전엔 정의의 _healAmount(사제 20 — 이제 회복에 안 쓰는 값)를 읽어 회복 5인데 강타는 20이었다(사용자 10/22 「데미지가 20씩」)
+            bool hit = unit.AreaAttackNearest(_radius, unit.AttackDamage);
             unit.SetEffectCooldown(this, hit ? unit.AttackInterval : Recheck);
         }
     }

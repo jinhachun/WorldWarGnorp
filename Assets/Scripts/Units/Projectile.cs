@@ -47,7 +47,7 @@ namespace GnorpWar
 
         // 이번 비행 번호 — 풀에서 다시 꺼낼 때마다 오른다(연출이 같은 비행인지 가린다)
         public int Flight { get; private set; }
-        // 그림 칸 — 물리 몸과 따로 움직일 수 있는 자식(갈래 발사 Fx/ArrowFan · 꼬리 Fx/ArrowTrails가 읽는다)
+        // 그림 칸 — 물리 몸과 따로 움직일 수 있는 자식(꼬리 Fx/ArrowTrails가 읽는다)
         public Transform Body => _renderer.transform;
 
         // 처치해서 더 쏜 화살 · 관통 화살의 꼬리 색(Fx/ArrowTrails) · 관통 신화 섬광
@@ -113,6 +113,7 @@ namespace GnorpWar
             _pierce = false;
             _highGround = false;
             _highGroundBoost = false;
+            _slowSeconds = 0f;
             _carried = null;
             _renderer.sprite = _baseSprite;
             _pierced.Clear();
@@ -161,10 +162,24 @@ namespace GnorpWar
 
         private bool _highGroundBoost;
 
+        // Launch 뒤에 — 맞은 적 유닛이 seconds 동안 이동속도 ×factor(뼈 투척 신화)
+        public void SlowOnHit(float factor, float seconds)
+        {
+            _slowFactor = factor;
+            _slowSeconds = seconds;
+        }
+
+        private float _slowFactor = 1f;
+        private float _slowSeconds;
+
         // 적에게 피해를 준다 — 높은 고도에서 쏜 화살이 적 유닛을 맞혔으면 켜진 효과에 알린다
         private void Deal(IDamageable target, Vector2 direction)
         {
-            target.TakeDamage(_damage, direction, _push, Shooter);
+            // 타워(본진 · 작은 타워)의 화살이 건물(본진 · 작은 타워)을 맞히면 피해 ×배율(BattleConfig — 사용자 10/22). 유닛에게는 그대로
+            float damage = _shooter is Base && target is Base ? _damage * BattleManager.TowerVsBuildingDamage : _damage;
+            target.TakeDamage(damage, direction, _push, Shooter);
+            if (_slowSeconds > 0f && target is Unit slowed && slowed.IsAlive)
+                slowed.Slow(_slowFactor, _slowSeconds);
             if (_shooterDefinition != null && target is Unit hit && hit.IsAlive)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                     if (e.Effect.AppliesFor(_team, _shooterDefinition))

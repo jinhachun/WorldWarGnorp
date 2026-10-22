@@ -36,11 +36,12 @@ namespace GnorpWar
             gameObject.AddComponent<BuffLinkFx>().Init(pixel);
             // 전투 시각화 부품(Docs/전투시각화_계획.md) — 모두 같은 픽셀 재질 · 부품마다 메시 하나
             gameObject.AddComponent<ArrowTrails>().Init(pixel);
-            gameObject.AddComponent<ArrowFan>();
             gameObject.AddComponent<RingFx>().Init(pixel);
             gameObject.AddComponent<StatusDots>().Init(pixel);
             gameObject.AddComponent<PillarFx>().Init(pixel);
             gameObject.AddComponent<FloorMultiplier>().Init(pixel);
+            gameObject.AddComponent<AltitudeMark>().Init(pixel);
+            gameObject.AddComponent<HealFx>().Init(pixel);
             gameObject.AddComponent<BattleStartLines>();
             _corpses = gameObject.AddComponent<CorpseFx>();
             // BuffIcon 순서 — None · 공격력 · 체력 · 쿨다운 · 공격속도

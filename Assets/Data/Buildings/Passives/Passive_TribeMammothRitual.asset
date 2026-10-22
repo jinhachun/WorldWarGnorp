@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 151afcbf897dfe445b865ace0d490b81, type: 3}
+  m_Name: Passive_TribeMammothRitual
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MammothRitualPassive
+  _unit: {fileID: 11400000, guid: d3dca02f281c81945abf726bc68df697, type: 2}
+  _count: 1
+  _deaths: 300
+  _deathsPerTier: -50
+  _mythicMark: {fileID: 11400000, guid: d341fa805e3f3dc4e91e674244ccea59, type: 2}

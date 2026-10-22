@@ -88,6 +88,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d2de88763adbdbd43a4ef6d60a409a4e, type: 2}
   - {fileID: 11400000, guid: 32dde15020c942c4c87270e520424cde, type: 2}
   - {fileID: 11400000, guid: 6bcef2093046489aa39194196c0e4353, type: 2}
+  - {fileID: 11400000, guid: 95172ecc4e5335a4e8f70bd33900b418, type: 2}
   _upgrades:
   - {fileID: 11400000, guid: a1c996e8770c95d4bbfac2a051678051, type: 2}
   - {fileID: 11400000, guid: 76cef2535c62d71498521484c452ff02, type: 2}
@@ -239,13 +240,21 @@ MonoBehaviour:
   _rampUnitsPerStep: 0
   _deathmatchSeconds: 180
   _boardGraceSeconds: 10
+  _preDeathmatchSeconds: 5
   _stalemateSeconds: 240
   _stallAdvanceSeconds: 10
+  _towerVsBuildingDamage: 0.25
+  _volleyInterval: 0.06
+  _altitudeLookGrowth: 0.05
+  _altitudeLookGrowthMax: 0.3
   _maxUnitSize: 3
   _stompDamagePerSecond: 0.5
   _climbRest: 1.5
   _climbSlowerThan: 0.5
   _climbJumpExtra: 2
+  _turnBackRange: 4
+  _turnBackExit: 1
+  _targetHold: 0.5
   _powerAreaScale: 2
   _powerHealScale: 1
   _powerDisplayScale: 1

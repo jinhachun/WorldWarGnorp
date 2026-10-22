@@ -23,11 +23,11 @@ MonoBehaviour:
   _unit: {fileID: 0}
   _unitCount: 1
   _actions:
-  - {fileID: 11400000, guid: 8c22f54c94ed90e44949896796fe0d99, type: 2}
+  - {fileID: 11400000, guid: 4c03609a5cdedf54f8bb1525b6fa699d, type: 2}
   _effects: []
   _passives: []
-  _mythicActions:
-  - {fileID: 11400000, guid: a4762f49f8c93194fac02ce047a2a4c4, type: 2}
+  _mythicActions: []
   _mythicEffects: []
-  _mythicPassives: []
+  _mythicPassives:
+  - {fileID: 11400000, guid: fcb7f28c92373084cacb99fcc19c5333, type: 2}
   _mentionedUnits: []

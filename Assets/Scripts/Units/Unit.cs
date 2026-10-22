@@ -454,6 +454,14 @@ namespace GnorpWar
         private float _statAltitude;
         private bool _usesAltitude;
 
+        // 지금 고도로 오른 공격력 배율(1 = 고도 보너스 없음) — 연출(Fx/AltitudeMark · 붉은 기운 · 그림 크기)이 읽는다
+        public float AltitudeAttackScale { get; private set; } = 1f;
+
+        // 고도로 커 보이는 그림 배율 — 고도 1마다 +N%(상한) · 고도로 강해지지 않는 유닛은 1. 충돌 박스 · 키는 그대로(그림만)
+        private float AltitudeLook => AltitudeAttackScale > 1f
+            ? 1f + Mathf.Min(_statAltitude * BattleManager.AltitudeLookGrowth, BattleManager.AltitudeLookGrowthMax)
+            : 1f;
+
         // 최대 체력이 바뀌면 지금 체력도 같은 비율로 — 가득 찬 유닛은 계속 가득. flash = 공격력이 오르면 오라를 반짝이나(고도로 조금씩 오르는 것은 반짝이지 않는다)
         private void RefreshStats(bool flash = true)
         {
@@ -463,6 +471,13 @@ namespace GnorpWar
                     foreach (UnitStat stat in AltitudeStats)
                         _usesAltitude |= e.Effect.AltitudeBonus(_team, stat) != 0f;
             _statAltitude = _usesAltitude ? Mathf.Round(Altitude / AltitudeStep) * AltitudeStep : 0f;
+            // 고도로 오른 공격력 배율(머리 위 「×1.3」 · 붉은 기운 · 커 보이는 그림 — 사용자 10/22)
+            float altitudeAttack = 0f;
+            if (_usesAltitude)
+                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                    if (e.Effect.AppliesFor(_team, _definition))
+                        altitudeAttack += e.Effect.AltitudeBonus(_team, UnitStat.Attack) * _statAltitude;
+            AltitudeAttackScale = 1f + altitudeAttack;
             float oldMaxHp = _stats[(int)UnitStat.MaxHp];
             float oldAttack = _stats[(int)UnitStat.Attack];
             _stats[(int)UnitStat.Attack] = Compute(UnitStat.Attack);
@@ -890,6 +905,7 @@ namespace GnorpWar
             _builtCount = 0;
             _burstLeft = 0;
             _burstAimed.Clear();
+            _volley.Clear();
             _burnTicksLeft = 0;
             _burnDamage = 0f;
             _burnAttacker = null;
@@ -945,6 +961,7 @@ namespace GnorpWar
 
             if (_burstLeft > 0)
                 Burst();
+            _volley.Tick(Time.fixedDeltaTime, _team, WeaponPoint, this);
             // 불타는 중(기름투하대 신화) — 1초마다 피해. 밀치는 힘이 0이라 밀림·경직은 없다
             if (_burnTicksLeft > 0)
             {
@@ -1404,13 +1421,16 @@ namespace GnorpWar
         {
             if (_invulnerableRing != null && _invulnerableRing.enabled != (IsAlive && IsInvulnerable))
                 _invulnerableRing.enabled = IsAlive && IsInvulnerable;
+            // 고도로 강해진 유닛(미노타우로스) — 머리 위 배율 · 붉은 입자(Fx/AltitudeMark, 사용자 10/22 · 10/23). 고도 0이면 없다
+            if (IsAlive && AltitudeAttackScale > 1.05f)
+                AltitudeMark.Watch(this);
             if (_attackAura != null && (_attackAura.enabled || _attackAuraTimer > 0f))
             {
                 _attackAuraTimer -= Time.deltaTime;
-                bool on = IsAlive && _attackAuraTimer > 0f;
-                _attackAura.enabled = on;
-                if (on)
-                    _attackAura.color = new Color(AttackAuraColor.r, AttackAuraColor.g, AttackAuraColor.b, AttackAuraColor.a * _attackAuraTimer / AttackAuraDuration);
+                float alpha = IsAlive && _attackAuraTimer > 0f ? AttackAuraColor.a * _attackAuraTimer / AttackAuraDuration : 0f;
+                _attackAura.enabled = alpha > 0f;
+                if (alpha > 0f)
+                    _attackAura.color = new Color(AttackAuraColor.r, AttackAuraColor.g, AttackAuraColor.b, alpha);
             }
             if (!IsAlive)
             {
@@ -1426,8 +1446,10 @@ namespace GnorpWar
             float wobble = SquashAmount * (1f - t) * Mathf.Cos(t * Mathf.PI * 3f);
             float scaleX = _squashVertical ? 1f + wobble : 1f - wobble;
             float scaleY = _squashVertical ? 1f - wobble : 1f + wobble;
-            _visual.localScale = new Vector3(scaleX * _visualScale.x * Look, scaleY * _visualScale.y, 1f);
-            _visual.localPosition = new Vector3(0f, (scaleY - 1f) * _halfHeight, 0f);
+            // 고도로 커 보이는 그림(그림만 — 충돌 박스 · 키는 그대로, 발은 그 자리)
+            float look = AltitudeLook;
+            _visual.localScale = new Vector3(scaleX * look * _visualScale.x * Look, scaleY * look * _visualScale.y, 1f);
+            _visual.localPosition = new Vector3(0f, (scaleY * look - 1f) * _halfHeight, 0f);
             _squashTime += Time.deltaTime;
 
             if (_flashTimer > 0f)
@@ -1793,7 +1815,7 @@ namespace GnorpWar
 
         // 화살(돌) 한 발(타워 효과를 함께 받는 유닛이면 대상 하나에 그 수만큼) — 고도 보너스 · 높은 고도였나(기름투하대)는 쏘는 순간 그 적 기준,
         // 관통 · 관통 타격마다의 피해 배율(관통탄 특허국)은 켜진 효과에서 읽는다
-        // extra = 처치해서 더 쏜 발(연사 — 노란 꼬리). 여러 발이면 그림만 잠깐 벌어진다(Fx/ArrowFan)
+        // extra = 처치해서 더 쏜 발(연사 — 노란 꼬리). 여러 발이면 첫 발 뒤로 짧은 시차를 두고 연달아 나간다(Units/Volley — 조준점은 지금 정한 그대로)
         private void Shoot(IDamageable target, Vector2 targetPoint, bool extra = false)
         {
             bool pierce = false;
@@ -1810,18 +1832,24 @@ namespace GnorpWar
             float damage = AttackDamage * DamageScale * highGround;
             bool above = IsAbove(target);
             for (int i = 0; i < count; i++)
-            {
-                Projectile shot = Pooled.Get(_definition.Projectile, WeaponPoint, Quaternion.identity);
-                shot.Launch(_team, damage, _definition.PushPower, targetPoint, _definition.ProjectileArcHeight, _definition.ProjectileSplashRadius, this);
-                if (pierce)
-                    shot.Pierce(pierceBonus);
-                if (above)
-                    shot.HighGround(highGround > 1f);
-                if (extra)
-                    shot.MarkExtra();
-                ArrowFan.Fan(shot, i, count);
-            }
+                _volley.Fire(new Volley.Shot
+                {
+                    Prefab = _definition.Projectile,
+                    Target = targetPoint,
+                    Damage = damage,
+                    Push = _definition.PushPower,
+                    Arc = _definition.ProjectileArcHeight,
+                    Splash = _definition.ProjectileSplashRadius,
+                    Pierce = pierce,
+                    PierceBonus = pierceBonus,
+                    HighGround = above,
+                    Boosted = highGround > 1f,
+                    Extra = extra,
+                }, i, _team, WeaponPoint, this);
         }
+
+        // 여러 발의 2번째 발부터 — 짧은 시차로 연달아(Units/Volley). 죽으면 남은 발은 버린다(OnEnable에서 비운다)
+        private readonly Volley _volley = new Volley();
 
         // 연발(궁술수련관 신화) — 남은 발 수 · 다음 발까지 · 발 사이 간격 · 이번 연발에서 이미 노린 적
         private int _burstLeft;
@@ -2025,7 +2053,8 @@ namespace GnorpWar
             float before = _hp;
             _hp = Mathf.Min(_hp + amount, maxHp);
             float healed = _hp - before;
-            DamageNumbers.Heal(this, new Vector2(_rb.position.x, Top), healed);
+            // 회복 숫자 · 초록 십자(출처가 있으면 회복 오브가 닿을 때 — Fx/HealFx)
+            HealFx.Received(this, new Vector2(_rb.position.x, Top), healed, maxHp);
             // 실제로 찬 만큼이 있을 때만 — 가득 찬 유닛은 회복받은 게 아니다(순례지)
             if (healed > 0f)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -2104,8 +2133,8 @@ namespace GnorpWar
             return true;
         }
 
-        // 반경 안의 아군(나 포함) 전부 회복(크루세이더 길드)
-        public void HealAlliesAround(float radius, float amount)
+        // 반경 안의 아군(나 포함) 전부 회복(크루세이더 길드) — 회복 오브는 나에게서 각 아군으로(source = 이 회복을 준 효과)
+        public void HealAlliesAround(float radius, float amount, UnitEffect source)
         {
             Physics2D.OverlapCircle(_rb.position, radius, _allyFilter, _overlaps);
             var allies = new List<Unit>();
@@ -2113,7 +2142,11 @@ namespace GnorpWar
                 if (col.TryGetComponent(out Unit ally) && ally._team == _team && ally.IsAlive)
                     allies.Add(ally);
             foreach (Unit ally in allies)
+            {
                 ally.Heal(amount);
+                if (ally != this)
+                    BuffLinks.EffectHeal(_team, source, _rb.position, ally);
+            }
         }
 
         private bool IsAheadOnBaseUnit()

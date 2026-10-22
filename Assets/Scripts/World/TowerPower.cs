@@ -42,7 +42,7 @@ namespace GnorpWar
         {
             float perSecond;
             if (unit.AttackType == AttackType.Heal)
-                perSecond = unit.HealAmount / unit.AttackInterval * battle.PowerHealScale;
+                perSecond = unit.AttackDamage / unit.AttackInterval * battle.PowerHealScale;   // 회복량 = 공격력(Unit.ThrowHeal)
             else
             {
                 perSecond = unit.AttackDamage / unit.AttackInterval;

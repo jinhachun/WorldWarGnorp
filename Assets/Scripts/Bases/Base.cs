@@ -282,7 +282,11 @@ namespace GnorpWar
             if (_small)
                 Follow();
             if (!CanAttack)
+            {
+                _volley.Clear();
                 return;
+            }
+            _volley.Tick(Time.fixedDeltaTime, _team, _muzzle.position, this);
             _attackCooldown -= Time.fixedDeltaTime;
             if (_attackCooldown > 0f || !FindTargets())
                 return;
@@ -292,7 +296,7 @@ namespace GnorpWar
         }
 
         // 찾아 둔 대상(_targets)에게 화살 arrows발 — 가까운 적부터 한 발씩 나눠 쏜다. 쿨다운은 부르는 쪽이 돌린다.
-        // extra = 처치해서 더 쏜 발(노란 꼬리 — Fx/ArrowTrails). 여러 발이면 그림만 잠깐 벌어진다(Fx/ArrowFan)
+        // extra = 처치해서 더 쏜 발(노란 꼬리 — Fx/ArrowTrails). 여러 발이면 첫 발 뒤로 짧은 시차를 두고 연달아 나간다(Units/Volley — 대상은 지금 정한 그대로)
         private void Shoot(int arrows, bool extra = false)
         {
             float damage = Stat(TowerStat.Attack);
@@ -309,17 +313,24 @@ namespace GnorpWar
             for (int i = 0; i < arrows; i++)
             {
                 var target = _targets[i % _targets.Count];
-                Projectile shot = Pooled.Get(_definition.Projectile, _muzzle.position, Quaternion.identity);
-                shot.Launch(_team, damage * (target.isUnit ? highGround : 1f), _definition.PushPower, target.point, _definition.ProjectileArcHeight, 0f, this);
-                if (pierce)
-                    shot.Pierce(pierceBonus);
-                if (target.isUnit)
-                    shot.HighGround(highGround > 1f);   // 타워는 적 유닛에게 늘 높은 고도(기름투하대)
-                if (extra)
-                    shot.MarkExtra();
-                ArrowFan.Fan(shot, i, arrows);
+                _volley.Fire(new Volley.Shot
+                {
+                    Prefab = _definition.Projectile,
+                    Target = target.point,
+                    Damage = damage * (target.isUnit ? highGround : 1f),
+                    Push = _definition.PushPower,
+                    Arc = _definition.ProjectileArcHeight,
+                    Pierce = pierce,
+                    PierceBonus = pierceBonus,
+                    HighGround = target.isUnit,   // 타워는 적 유닛에게 늘 높은 고도(기름투하대)
+                    Boosted = highGround > 1f,
+                    Extra = extra,
+                }, i, _team, _muzzle.position, this);
             }
         }
+
+        // 여러 발의 2번째 발부터 — 짧은 시차로 연달아(Units/Volley)
+        private readonly Volley _volley = new Volley();
 
         // 데스매치에서는 오버드라이브가 있는 진영의 타워만 쏜다
         private bool CanAttack => !BattleManager.TowersStopped || TowerBook.AttacksInDeathmatch(_team);
@@ -361,7 +372,7 @@ namespace GnorpWar
                 return;
             float before = _hp;
             _hp = Mathf.Min(_hp + MaxHp * ratio, MaxHp);
-            DamageNumbers.Heal(this, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), _hp - before);
+            HealFx.Received(this, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), _hp - before, MaxHp);
         }
 
         // 이 타워의 화살이 적 유닛을 처치했다 — 조준연산코그 · 오버드라이브.

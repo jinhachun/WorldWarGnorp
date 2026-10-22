@@ -99,6 +99,24 @@ namespace GnorpWar
         public float DustAt(float x) => _dust != null ? Sample(_dust, x) : 0f;
         public bool OnBoneDust(float x) => DustAt(x) >= _dustMinDepth;
 
+        // 뼛가루가 가장 두껍게 쌓인 자리의 x(뼛가루 언덕이 없으면 false) — 뼈 투척(BoneThrowAction)이 그 언덕 위에서 던진다
+        public bool DustPeak(out float x)
+        {
+            x = 0f;
+            if (_dust == null)
+                return false;
+            float best = _dustMinDepth;
+            bool found = false;
+            for (int i = 0; i < _dust.Length; i++)
+                if (_dust[i] >= best)
+                {
+                    best = _dust[i];
+                    x = XAt(i);
+                    found = true;
+                }
+            return found;
+        }
+
         // x 자리에 뼛가루 area(칸² — 옆에서 본 넓이)를 seconds 동안 쏟는다. maxSlope = 더미가 흘러내리는 기울기 상한
         public void AddBoneDust(float x, float area, float maxSlope, float seconds)
         {

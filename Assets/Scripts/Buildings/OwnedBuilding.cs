@@ -83,7 +83,7 @@ namespace GnorpWar
 
         public void AddSpent(int gold) => _spentGold += gold;
 
-        // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구 · 스팀바론)의 남은 수 — 전투 중 탑 칸 표시(Bases/Tower · UI/SlotView).
+        // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구 · 스팀바론 · 맘모스 소환의식)의 남은 수 — 전투 중 탑 칸 표시(Bases/Tower · UI/SlotView).
         // 전투 밖이거나 그런 효과가 없으면 0(안 보인다). 미궁은 발동이 끝나면 0
         public int CountdownOf(Team team)
         {
@@ -94,6 +94,8 @@ namespace GnorpWar
                     return killCount.RemainingOf(team);
                 else if (passive is TowerKillBuyPassive towerKill)
                     return towerKill.RemainingOf(team);
+                else if (passive is MammothRitualPassive ritual)
+                    return ritual.RemainingOf(this);   // 런 내내 센다(이 한 채의 스택) — 채우면 0
             foreach (UnitEffect effect in Effects)
                 if (effect is AscensionEffect ascension)
                     return ascension.RemainingOf(team);

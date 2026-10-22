@@ -77,7 +77,7 @@ namespace GnorpWar
         [BoxGroup("화염 · 회복")]
         [SuffixLabel("칸", true)]
         [SerializeField] private float _flameThickness = 2f;
-        [Tooltip("회복 유닛의 회복량은 이제 공격력(Attack Damage)이다 — 이 값은 교황청의 내려치기 피해(SmiteEffect)와 전투력 표시(CombatPower)만 읽는다")]
+        [Tooltip("지금 읽는 곳 없음 — 회복량 · 교황청 내려치기 피해 · 전투력 표시가 모두 공격력(Attack Damage)을 따른다(사용자 10/22)")]
         [BoxGroup("화염 · 회복")]
         [SerializeField] private float _healAmount = 0f;
         [Tooltip("점프 착지 충격(코끼리) — 이 간격(초)마다 제자리에서 뛰었다가, 땅에 닿으면 반경 안의 적 유닛(탑·기지 제외)을 띄우며 피해. 0이면 없음")]

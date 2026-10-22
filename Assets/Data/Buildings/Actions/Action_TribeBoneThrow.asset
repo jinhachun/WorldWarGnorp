@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d961011473fda4aba8d82b41892d97, type: 3}
+  m_Name: Action_TribeBoneThrow
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BoneThrowAction
+  _projectile: {fileID: 5840658882024782479, guid: 1dbe067fa1dd696418590937fdb06100, type: 3}
+  _arcHeight: 3
+  _targets: 3
+  _targetsPerTier: 1
+  _damage: 25
+  _damagePerTier: 0
+  _push: 0.5
+  _slowMark: {fileID: 11400000, guid: fcb7f28c92373084cacb99fcc19c5333, type: 2}

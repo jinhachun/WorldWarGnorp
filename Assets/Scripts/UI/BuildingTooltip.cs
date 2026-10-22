@@ -356,7 +356,16 @@ namespace GnorpWar
             int extra = building.Definition.Unit != null && building.Definition.Cooldown > 0f ? RunState.ExtraSummonsFor(building) : 0;
             string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic, extra);
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
-            if (!enemy && !BattleManager.Fighting && building.Stacks > 0)
+            // 맘모스 소환의식 — 런 내내 센 죽음(스택)은 「작동까지 N기」로 상점·전투 모두(채우면 줄 없음). 이 기물엔 스택 줄을 따로 쓰지 않는다
+            bool ritual = false;
+            foreach (BuildingPassive passive in building.Passives)
+                if (passive is MammothRitualPassive mammoth)
+                {
+                    ritual = true;
+                    if (mammoth.RemainingOf(building) > 0)
+                        body += Note($"작동까지 {mammoth.RemainingOf(building)}기");
+                }
+            if (!enemy && !BattleManager.Fighting && building.Stacks > 0 && !ritual)
                 body += Note($"스택 {building.Stacks}");
             // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구) — 전투 중에만, 그 진영이 센 값으로 남은 수(사용자 10/14). 전투마다 0부터라 상점에서는 쓰지 않는다
             if (BattleManager.Fighting)

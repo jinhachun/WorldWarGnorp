@@ -69,6 +69,13 @@ namespace GnorpWar
         // 데스매치 시각(전투 경과 초) — 화면 표시용. 전투 씬 밖이면 0
         public static float DeathmatchAt => _instance != null ? _instance._config.DeathmatchSeconds : 0f;
         public static float BoardStopAt => _instance != null ? _instance._config.BoardStopSeconds : 0f;
+        // 데스매치 직전(전투 경과 초) — 이 시각에 데스매치 직전 효과(BuildingPassive.OnBeforeDeathmatch)가 한 번 터진다
+        public static bool BeforeDeathmatch => Fighting && Elapsed >= _instance._config.PreDeathmatchAt;
+        // 타워 화살이 건물에 주는 피해 배율 · 여러 발 사이 간격 · 고도로 커 보이는 그림 — 전투 씬 밖이면 그대로 · 0
+        public static float TowerVsBuildingDamage => _instance != null ? _instance._config.TowerVsBuildingDamage : 1f;
+        public static float VolleyInterval => _instance != null ? _instance._config.VolleyInterval : 0f;
+        public static float AltitudeLookGrowth => _instance != null ? _instance._config.AltitudeLookGrowth : 0f;
+        public static float AltitudeLookGrowthMax => _instance != null ? _instance._config.AltitudeLookGrowthMax : 0f;
         // 전투력 계수(CombatPower가 읽는다) — 전투 씬 밖이면 null
         public static BattleConfig Config => _instance != null ? _instance._config : null;
 

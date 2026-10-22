@@ -129,6 +129,7 @@ namespace GnorpWar
                         passive.OnBattleStart(this, i, _slots[i].Building.Level);
             _fireAllTimer = 0f;
             _deathmatchFired = false;
+            _preDeathmatchFired = false;
             _revivals.Clear();
             _running = true;
         }
@@ -185,6 +186,8 @@ namespace GnorpWar
         // 합치기 보상 「야근 수당」 — 데스매치가 시작될 때 쿨다운이 있는 내 모든 기물을 즉시 이만큼 발동(0 = 없음). 한 전투에 한 번
         public int DeathmatchFires;
         private bool _deathmatchFired;
+        // 데스매치 직전 훅(BuildingPassive.OnBeforeDeathmatch — 맘모스 소환의식)을 이번 전투에 불렀나
+        private bool _preDeathmatchFired;
 
         // 자리 효과가 slot층의 기물에서 other층의 기물에 닿는가 — byPosition = 그 능력의 원래 자리 규칙(바로 위 · 아래에 있는 …). 연방제면 내 다른 모든 기물
         public bool Linked(int slot, int other, bool byPosition) => other != slot && (AllAdjacent || byPosition);
@@ -293,6 +296,16 @@ namespace GnorpWar
                 slot.Timer += Time.deltaTime * (slot.Haste > 0f ? HasteRate : 1f) * rate;
                 slot.Haste -= Time.deltaTime;
                 TryFire(i);
+            }
+
+            // 데스매치 직전(BattleConfig — 데스매치 몇 초 전)에 한 번 — 칸 패시브의 OnBeforeDeathmatch
+            if (!_preDeathmatchFired && BattleManager.BeforeDeathmatch)
+            {
+                _preDeathmatchFired = true;
+                for (int i = 0; i < _slots.Length; i++)
+                    if (IsActive(i))
+                        foreach (BuildingPassive passive in _slots[i].Building.Passives)
+                            passive.OnBeforeDeathmatch(this, i, _slots[i].Building.Level);
             }
 
             // 야근 수당 — 데스매치가 시작된 프레임에 한 번. 본진 → 발동한 층마다 흰 선

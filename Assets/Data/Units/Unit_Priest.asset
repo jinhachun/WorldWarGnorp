@@ -18,7 +18,7 @@ MonoBehaviour:
   _enemyPrefab: {fileID: 638779955689807151, guid: 2623f1e166f9da146b2120d9630357e3, type: 3}
   _moveSpeed: 3
   _maxHp: 30
-  _attackDamage: 5
+  _attackDamage: 3
   _attackInterval: 1
   _attackRange: 6
   _hitKnockback: 2
@@ -46,3 +46,5 @@ MonoBehaviour:
   _buildFlatness: 0.25
   _buildSpacing: 2.5
   _buildGateClearance: 3
+  _traitEffects: []
+  _innateEffects: []

@@ -93,6 +93,9 @@ namespace GnorpWar
         [Tooltip("본진이 멈춘 뒤 기물이 이만큼(초) 더 발동하고 멈춘다(생산 포함)")]
         [SuffixLabel("초", true)]
         [SerializeField] private float _boardGraceSeconds = 10f;
+        [Tooltip("데스매치 직전 효과(맘모스 소환의식)가 터지는 시각 = 데스매치 시각 − 이 초")]
+        [SuffixLabel("초", true)]
+        [SerializeField] private float _preDeathmatchSeconds = 5f;
         [Tooltip("교착 — 기물이 멈춘 뒤 이만큼(초) 동안 아무도 피해를 받지 않고 죽지 않으면 아군 승리. 가장 느린 유닛이 가장 느린 맵에서 성에서 성까지 걷는 시간보다 길어야 한다")]
         [SuffixLabel("초", true)]
         [SerializeField] private float _stalemateSeconds = 240f;
@@ -100,7 +103,21 @@ namespace GnorpWar
         [SuffixLabel("초", true)]
         [SerializeField] private float _stallAdvanceSeconds = 10f;
 
+        [Header("화살 — 타워(본진 · 작은 타워)와 궁병")]
+        [Tooltip("타워의 화살이 건물(본진 · 작은 타워)에 줄 때 피해에 곱한다(0.25 = 4분의 1) — 유닛에 주는 피해는 그대로(사용자 10/22)")]
+        [SerializeField] private float _towerVsBuildingDamage = 0.25f;
+        [Tooltip("한 번에 여러 발을 쏠 때 발 사이 간격 — 첫 발은 바로, 나머지는 이 간격으로 연달아(대상은 첫 발 때 정한 그대로, 사용자 10/22)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _volleyInterval = 0.06f;
+
         [Header("유닛")]
+        [Tooltip("고도로 강해지는 유닛(미노타우로스)의 그림 크기 — 고도 1마다 이만큼 커 보인다(0.05 = +5%). 그림만 — 충돌 박스는 그대로")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _altitudeLookGrowth = 0.05f;
+        [Tooltip("위 그림 크기의 상한(0.3 = +30%까지)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _altitudeLookGrowthMax = 0.3f;
         [Tooltip("유닛 크기 상한 — 1 = 기본 크기, 3 = 기본의 3배(+200%). 넘치는 성장은 버린다")]
         [SerializeField] private float _maxUnitSize = 3f;
         [Tooltip("밟기 — 적 머리 위에 서 있는 동안 그 적에게 초당 내 공격력의 이 비율만큼 피해 (모든 유닛)")]
@@ -221,6 +238,11 @@ namespace GnorpWar
         public float StompDamagePerSecond => _stompDamagePerSecond;
         public float DeathmatchSeconds => _deathmatchSeconds;
         public float BoardStopSeconds => _deathmatchSeconds + _boardGraceSeconds;
+        public float PreDeathmatchAt => _deathmatchSeconds - _preDeathmatchSeconds;
+        public float TowerVsBuildingDamage => _towerVsBuildingDamage;
+        public float VolleyInterval => _volleyInterval;
+        public float AltitudeLookGrowth => _altitudeLookGrowth;
+        public float AltitudeLookGrowthMax => _altitudeLookGrowthMax;
         public float StalemateSeconds => _stalemateSeconds;
         public float StallAdvanceSeconds => _stallAdvanceSeconds;
         public int StorageSlots => _storageSlots;

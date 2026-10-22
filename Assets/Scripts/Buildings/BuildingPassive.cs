@@ -23,6 +23,8 @@ namespace GnorpWar
         public virtual void OnTowerKill(BoardRunner board, int slot, Unit victim) { }
         // 유닛이 죽은 직후 — 어느 진영의 유닛이든(약탈족장 라이칸스로프)
         public virtual void OnUnitDied(BoardRunner board, int slot, Unit victim) { }
+        // 데스매치 직전(데스매치 몇 초 전 — BattleConfig) 한 번 — 맘모스 소환의식
+        public virtual void OnBeforeDeathmatch(BoardRunner board, int slot, int level) { }
         // 내 작은 타워가 파괴된 직후(사라지기 전) — 어느 타워를 볼지(이 기물이 세운 것 · 전부)는 능력이 정한다(Base.BuiltBy)
         public virtual void OnSmallTowerDestroyed(BoardRunner board, int slot, Base tower) { }
 

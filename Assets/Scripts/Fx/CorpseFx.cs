@@ -23,6 +23,9 @@ namespace GnorpWar
             public Vector2 Velocity;
             public float Spin;
             public float Age;
+            // 지나온 길의 먼지(DustFx) — 크기 배율 · 다음 조각까지 남은 시간
+            public float Size;
+            public float Puff;
         }
 
         private Corpse[] _corpses;
@@ -56,7 +59,7 @@ namespace GnorpWar
         }
 
         // back = 유닛의 후방(-전방) 부호. 그림은 지금 놓인 그대로(위치·뒤집힘·크기) 본뜬다 — 부르는 쪽이 자세를 기본으로 되돌린 뒤 부른다
-        public void Throw(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back)
+        public void Throw(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back, float size)
         {
             if (_corpses == null || _corpses.Length == 0)
                 return;
@@ -83,6 +86,8 @@ namespace GnorpWar
             c.Velocity = new Vector2(back * Mathf.Cos(angle), Mathf.Sin(angle)) * speed;
             c.Spin = -back * Range(_config.CorpseSpinMin, _config.CorpseSpinMax);
             c.Age = 0f;
+            c.Size = size;
+            c.Puff = DustFx.TrailInterval;
             c.Root.gameObject.SetActive(true);
         }
 
@@ -128,7 +133,14 @@ namespace GnorpWar
                     c.Root.gameObject.SetActive(false);
                     continue;
                 }
-                c.Root.SetPositionAndRotation(new Vector3(c.Origin.x + c.Velocity.x * t, y, 0f), Quaternion.Euler(0f, 0f, c.Spin * t));
+                var at = new Vector2(c.Origin.x + c.Velocity.x * t, y);
+                c.Root.SetPositionAndRotation(at, Quaternion.Euler(0f, 0f, c.Spin * t));
+                c.Puff -= dt;
+                if (c.Puff <= 0f)
+                {
+                    c.Puff = DustFx.TrailInterval;
+                    DustFx.Trail(at, c.Size);
+                }
             }
         }
     }

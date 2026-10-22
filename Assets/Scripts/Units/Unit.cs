@@ -2184,8 +2184,8 @@ namespace GnorpWar
 
             if (FxDirector.Instance != null)
             {
-                FxDirector.Instance.Corpse(_rb.position, _bodyRenderers, _weaponRenderer, -Forward);
-                FxDirector.Instance.DeathPuff(_rb.position);
+                // 먼지 크기 — 키 1 = 1, 키가 클수록 조금 크게(키 2 이상 = 1.5)
+                FxDirector.Instance.Corpse(_rb.position, _bodyRenderers, _weaponRenderer, -Forward, Mathf.Clamp(0.5f + _halfHeight, 1f, 1.5f));
                 FxDirector.Instance.Shake(DeathShake);
             }
             _visual.gameObject.SetActive(false);

@@ -42,6 +42,8 @@ namespace GnorpWar
             gameObject.AddComponent<FloorMultiplier>().Init(pixel);
             gameObject.AddComponent<AltitudeMark>().Init(pixel);
             gameObject.AddComponent<HealFx>().Init(pixel);
+            gameObject.AddComponent<DustFx>().Init(pixel);
+            gameObject.AddComponent<HoverMark>().Init(pixel);
             gameObject.AddComponent<BattleStartLines>();
             _corpses = gameObject.AddComponent<CorpseFx>();
             // BuffIcon 순서 — None · 공격력 · 체력 · 쿨다운 · 공격속도
@@ -69,10 +71,11 @@ namespace GnorpWar
             GetParticle(_deathPuff, position, Quaternion.identity).Play();
         }
 
-        // 죽은 유닛의 모습이 튕겨 날아간다(CorpseFx). back = 유닛의 후방 부호
-        public void Corpse(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back)
+        // 죽은 유닛의 모습이 튕겨 날아간다(CorpseFx) — 죽는 자리에 먼지가 터지고 지나온 길에 먼지가 남는다(DustFx). back = 유닛의 후방 부호 · size = 먼지 크기 배율
+        public void Corpse(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back, float size)
         {
-            _corpses.Throw(position, bodies, weapon, back);
+            DustFx.Burst(position, size);
+            _corpses.Throw(position, bodies, weapon, back, size);
         }
 
         // 풀에서 꺼낸다(Pooled). 재생이 끝나면 파괴 대신 꺼져서 풀로 돌아가게 한다 — 프리팹은 끝나면 파괴(Destroy)로 돼 있다

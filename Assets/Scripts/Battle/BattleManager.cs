@@ -18,9 +18,9 @@ namespace GnorpWar
         [SerializeField] private GameObject _resultPanel;
         [SerializeField] private Text _resultText;
         [SerializeField] private Button _retryButton;
-        [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(이기면 쓰러뜨린 영주의 글 · 지면 행복도 -N)")]
+        [Tooltip("결과 창의 읽는 글 — 내 결과 한 줄(이기면 쓰러뜨린 영주의 글 · 지면 목숨 -1 · 국가 위기에서 지면 무너졌다는 글)")]
         [SerializeField] private Text _resultSummary;
-        [Tooltip("패배 시 내 결과 한 줄(「-1」) 바로 왼쪽에 뜨는 행복도 하트")]
+        [Tooltip("패배 시 내 결과 한 줄(「-1」) 바로 왼쪽에 뜨는 목숨 하트")]
         [SerializeField] private Image _resultHeart;
         [Tooltip("전투 배속 버튼 — 전투 중에만 보인다")]
         [SerializeField] private GameObject _speedButton;
@@ -237,17 +237,19 @@ namespace GnorpWar
             _fighting = false;
             _allyBoard.Stop();
             _enemyBoard.Stop();
-            int happiness = RunState.Happiness;
+            int lives = RunState.Lives;
             Lord opponent = RunState.Opponent;
             RunState.FinishBattle(won);
-            // 결과 창 — 큰 글 · 내 결과 한 줄(이기면 쓰러뜨린 영주의 글, 지면 잃은 행복도) · 「지도로」. 행복도 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다.
+            // 결과 창 — 큰 글 · 내 결과 한 줄(이기면 쓰러뜨린 영주의 글, 지면 잃은 목숨 · 국가 위기에서 졌으면 무너졌다는 글) · 「지도로」. 목숨 · 땅은 결과 창 아이콘 줄(UI/ResultStats)이 그린다.
             // AI 영주들의 턴 · 통일 · 게임 오버는 지도에서 보여 준다
+            bool fell = !won && RunState.IsOver;
             _resultText.text = won ? "승리!" : "패배...";
-            _resultSummary.text = won ? WinLine(opponent) : BuildingTooltip.Highlight($"-{happiness - RunState.Happiness}");
-            // 잃은 행복도는 하트 + 숫자로 — 하트(글의 자식, 글 왼쪽 끝 기준)는 글의 바로 왼쪽. 글은 판 왼쪽 기준선에서 하트 몫만큼 오른쪽으로(결과 창은 왼쪽 정렬 — UI/BattleSummary)
-            _resultHeart.enabled = !won;
+            _resultSummary.text = won ? WinLine(opponent) : fell ? "국가 위기를 넘기지 못했습니다." : BuildingTooltip.Highlight($"-{lives - RunState.Lives}");
+            // 잃은 목숨은 하트 + 숫자로 — 하트(글의 자식, 글 왼쪽 끝 기준)는 글의 바로 왼쪽. 글은 판 왼쪽 기준선에서 하트 몫만큼 오른쪽으로(결과 창은 왼쪽 정렬 — UI/BattleSummary)
+            bool lost = !won && !fell;
+            _resultHeart.enabled = lost;
             RectTransform heart = _resultHeart.rectTransform, summary = _resultSummary.rectTransform;
-            float shift = won ? 0f : heart.sizeDelta.x + ResultHeartGap;
+            float shift = lost ? heart.sizeDelta.x + ResultHeartGap : 0f;
             summary.anchoredPosition = new Vector2(_summaryX + shift, summary.anchoredPosition.y);
             heart.anchoredPosition = new Vector2(heart.sizeDelta.x * 0.5f - shift, heart.anchoredPosition.y);
             _resultPanel.SetActive(true);

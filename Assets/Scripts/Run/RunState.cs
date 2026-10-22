@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 한 런(월드맵 한 판 — 통일하거나 내 행복도가 0이 될 때까지)의 상태. 씬을 다시 불러와도 남도록 static이다.
+    // 한 런(월드맵 한 판 — 통일하거나 국가 위기에서 질 때까지)의 상태. 씬을 다시 불러와도 남도록 static이다.
     // 한 턴 = 턴 시작(BeginTurn — AI 영주들의 상점 · 내 수입) → 지도에서 상점 팝업을 여닫으며 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest)
     // → 전투 결과(FinishBattle) → AI 턴·정산(EndTurn) → 다음 턴.
     // 판도·영주·AI 영주의 탑은 World(World/WorldRun)에, 내 탑은 여기(Player)에 있다. 상점 규칙(구매·판매·리롤·자리 바꾸기)도 여기 — UI는 이 메서드만 부른다
@@ -22,9 +22,10 @@ namespace GnorpWar
 
         public static bool Started { get; private set; }
         public static int Gold { get => _side.Gold; private set => _side.Gold = value; }
-        // 내 행복도(0이 되면 게임 오버) · 내 땅 수(전부면 통일)
-        public static int Happiness => World.State.Player.Happiness;
-        public static int HappinessMax => World.State.Rules.HappinessMax;
+        // 내 목숨(지면 −1 · 늘지 않는다 · 0이면 국가 위기 — 위기에서 지면 게임 오버) · 내 땅 수(전부면 통일). AI 영주는 행복도(Lord.Happiness)
+        public static int Lives => World.State.Lives;
+        public static int LivesMax => World.State.Rules.LivesStart;
+        public static bool InCrisis => World.State.InCrisis;
         public static int Lands => World.State.LandsOf(World.State.Player);
         public static int RegionCount => World.State.Owner.Length;
         // 턴 − 1(0부터) — 턴이 끝날 때마다 +1(쉬어도). 진열 등급 확률 · 성 체력이 읽는다
@@ -124,11 +125,11 @@ namespace GnorpWar
             World.State.Turn = round + 1;
         }
 
-        // 값을 바로 넣는다 — 골드 훅(주식시장 등) 없이. 행복도는 런이 끝나지 않는 범위로
+        // 값을 바로 넣는다 — 골드 훅(주식시장 등) 없이. 목숨은 0(국가 위기 — 고르기 창은 뜨지 않는다)부터 시작 목숨까지
         public static void CheatSetGold(int gold) => Player.Gold = Mathf.Max(0, gold);
-        public static void CheatSetHappiness(int happiness) => World.State.Player.Happiness = Mathf.Clamp(happiness, 1, HappinessMax);
+        public static void CheatSetLives(int lives) => World.State.Lives = Mathf.Clamp(lives, 0, LivesMax);
 
-        // 이어진 영주 하나(땅이 가장 적은 영주)를 전투 없이 이긴 것으로 친다 — 땅 전부 + 행복도. 마지막 영주는 남긴다(통일은 전투로)
+        // 이어진 영주 하나(땅이 가장 적은 영주)를 전투 없이 이긴 것으로 친다 — 땅 전부. 마지막 영주는 남긴다(통일은 전투로)
         public static void CheatConquer()
         {
             WorldState state = World.State;
@@ -264,21 +265,24 @@ namespace GnorpWar
             PreviewRegion = -1;
         }
 
-        // 쉬는 턴 — 침략하지 않는다. 행복도는 그대로다. 이어서 EndTurn(AI 턴)을 부른다
+        // 쉬는 턴 — 침략하지 않는다. 목숨은 그대로다. 이어서 EndTurn(AI 턴)을 부른다
         public static void Rest()
         {
             LastOutcome = Outcome.None;
             Phase = RunPhase.Aftermath;
         }
 
-        // 침략의 결과 — 이기면 상대의 땅을 전부(연합이면 몫만큼 — 침략한 땅부터) 얻고 행복도가 오른다. 지면 상대의 땅 수만큼 행복도가 떨어진다. 이어서 EndTurn(AI 턴)을 부른다
+        // 침략의 결과 — 이기면 상대의 땅을 전부(연합이면 몫만큼 — 침략한 땅부터) 얻는다. 지면 목숨 −1(0이 되는 순간 국가 위기 — OfferCrisis), 위기에서 지면 게임 오버. 이어서 EndTurn(AI 턴)을 부른다
         // 지난 전투로 넘어온 땅들(졌으면 빈 목록) — 지도가 쓰러진 영주를 그 땅에 세웠다가 날린다(World/WorldManager.FellBeaten)
         public static System.Collections.Generic.IReadOnlyList<int> LastGains { get; private set; } = new int[0];
 
         public static void FinishBattle(bool won)
         {
             LastOutcome = won ? Outcome.Win : Outcome.Lose;
+            int lives = Lives;
             LastGains = WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
+            if (lives > 0 && Lives == 0)
+                OfferCrisis();
             Phase = RunPhase.Aftermath;
             NotifyBattleWon(won ? Player : _opponentTower);
             // 지역 특수 업그레이드 — 영주를 멸망시키면(땅을 전부 차지하면) 그 영주가 가졌던 것 중 최대 셋에서 하나를 고른다(사용자 결정 10/13).
@@ -298,6 +302,21 @@ namespace GnorpWar
                 UpgradesChanged?.Invoke();
             }
             ApplyBattleResult(won ? Player : _opponentTower, won ? _opponentTower : Player);
+        }
+
+        // 국가 위기(사용자 10/23) — 목숨이 0이 되는 순간 런에 한 번. 이번 런 지도에 놓이지 않은 지역 특수(WorldRun.UnplacedSpecials) 중 내가 안 가진 것 무작위 셋에서 하나를 고른다.
+        // 고르기 창은 지도로 돌아와 AI 턴 재생이 끝난 뒤에 뜨고(UI/UpgradePicker), 건너뛸 수 없다. 후보가 없으면 위기 상태만 된다
+        private static void OfferCrisis()
+        {
+            // 국가주의는 뺀다 — 목숨 0이라 효과가 0이다(총괄 결정 10/23)
+            var pool = World.UnplacedSpecials.FindAll(special => special.Special != SpecialKind.Nationalism && !Player.Upgrades.Exists(gain => gain.Definition == special));
+            while (pool.Count > UpgradeChoices)
+                pool.RemoveAt(Random.Range(0, pool.Count));
+            Debug.Log($"[World] 국가 위기 — 목숨 0 · 후보 {pool.Count}개(지도에 안 놓인 {World.UnplacedSpecials.Count}개 중): {string.Join(", ", pool.ConvertAll(special => special.DisplayName))}");
+            if (pool.Count == 0)
+                return;
+            Pending.Add(new UpgradeOffer { Rarity = BuildingRarity.Mythic, Choices = pool.ToArray(), Crisis = true });
+            UpgradesChanged?.Invoke();
         }
 
         // 이 탑이 차례인 것처럼 action을 한다 — 얻기(Acquire) 같은 상점 규칙이 그 탑에 걸린다
@@ -435,9 +454,9 @@ namespace GnorpWar
             return _opponentTower ?? PreviewTower;
         }
 
-        // 국가주의가 읽는 행복도 — 나는 지금 행복도, AI 영주는 고정값으로 친다
-        private const int AiHappinessForUpgrades = 3;
-        public static int HappinessFor(Team team) => team == Team.Ally ? Happiness : AiHappinessForUpgrades;
+        // 국가주의가 읽는 목숨 — 나는 지금 목숨, AI 영주는 고정값으로 친다(AI는 목숨이 없다)
+        private const int AiLivesForUpgrades = 3;
+        public static int LivesFor(Team team) => team == Team.Ally ? Lives : AiLivesForUpgrades;
 
         // 전투에서 이긴 탑의 필드 기물들에게 알린다(「전투에서 승리할 때마다,」 — 지금 쓰는 기물 없음) — 그동안 상점 규칙(얻기)은 그 탑에 걸린다.
         // 실제로 싸운 전투만이다 — AI 영주끼리의 승패(World/TowerPower)는 여기를 지나지 않는다
@@ -465,7 +484,7 @@ namespace GnorpWar
 
         // 턴을 닫는다 — AI 영주들의 침략 → 정산(반란 · 새 영주) → 최후의 연합(조건이 찼으면) → 다음 턴. 판도는 바로 끝 상태가 되고, 그 사이에 벌어진 일을 순서대로 돌려준다
         // (지도가 재생한다 — 부르기 전의 「지역 → 주인」 표에 차례로 WorldEvent.Apply하면 지금 표가 된다).
-        // 내 행복도가 0이면 게임 오버(IsOver), 내가 통일했으면 클리어(Cleared) — 그때는 턴이 넘어가지 않는다
+        // 국가 위기에서 졌으면 게임 오버(IsOver), 내가 통일했으면 클리어(Cleared) — 그때는 턴이 넘어가지 않는다
         public static System.Collections.Generic.List<WorldEvent> EndTurn()
         {
             WorldState state = World.State;
@@ -473,7 +492,7 @@ namespace GnorpWar
             Phase = RunPhase.Map;
             Map = CheatMap != null ? CheatMap : ShopMap;
             TurnSummary = "";
-            if (state.Unified || state.Player.Happiness <= 0)
+            if (state.Unified || state.GameOver)
             {
                 World.Settle();
                 return events;
@@ -516,7 +535,7 @@ namespace GnorpWar
                     largest = Mathf.Max(largest, state.LandsOf(lord));
             Round++;
             state.Turn = Round + 1;
-            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 넘어간 땅 {moved}개 · 사라진 영주 {vanished}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition != null ? $"(최후의 연합 — {merged.Count + 1}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 행복도 {Happiness}");
+            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 넘어간 땅 {moved}개 · 사라진 영주 {vanished}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition != null ? $"(최후의 연합 — {merged.Count + 1}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 목숨 {Lives}{(InCrisis ? "(국가 위기)" : "")}");
             // 연합이 이미 뭉친 뒤의 턴에는 AI끼리 벌어지는 일이 없다
             TurnSummary = coalition == null && state.Coalition != null ? $"최후의 연합의 땅은 {largest}개입니다."
                 : $"영주들의 침략으로 땅 {moved}개의 주인이 바뀌었습니다.\n"
@@ -816,6 +835,8 @@ namespace GnorpWar
             public UpgradeDefinition[] Choices;
             // 공화정 — 후보를 이미 모두 얻었다. 화면은 보여 주기만 하고, 닫아도(ChooseUpgrade) 다시 얻지 않는다
             public bool Granted;
+            // 국가 위기(OfferCrisis) — 화면은 위기 머리말을 쓰고 건너뛰기를 숨긴다
+            public bool Crisis;
         }
 
         private const int UpgradeChoices = 3;
@@ -838,8 +859,8 @@ namespace GnorpWar
             UpgradesChanged?.Invoke();
         }
 
-        // 맨 앞 대기가 지역 특수(신화) 고르기면 고르지 않고 골드를 받을 수 있다 — 플레이어만(AI · Invade 직전 자동 고르기는 쓰지 않는다, 사용자 10/15)
-        public static bool CanSkipUpgrade => Pending.Count > 0 && Pending[0].Rarity == BuildingRarity.Mythic && !Pending[0].Granted;
+        // 맨 앞 대기가 지역 특수(신화) 고르기면 고르지 않고 골드를 받을 수 있다 — 플레이어만(AI · Invade 직전 자동 고르기는 쓰지 않는다, 사용자 10/15). 국가 위기는 반드시 고른다
+        public static bool CanSkipUpgrade => Pending.Count > 0 && Pending[0].Rarity == BuildingRarity.Mythic && !Pending[0].Granted && !Pending[0].Crisis;
         public static int UpgradeSkipGold => _config.World.SpecialSkipGold;
 
         public static void SkipUpgrade()

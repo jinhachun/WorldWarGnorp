@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 결과 창의 행복도·땅 줄 — 행복도는 위 줄과 같은 하트 줄(UI/HeartRow), 땅은 왕관 아이콘 + 글. 큰 글(승리!/패배...)과 내 결과 한 줄은 BattleManager가 쓴다
+    // 결과 창의 목숨·땅 줄 — 목숨은 위 줄과 같은 하트 줄(UI/HeartRow), 땅은 왕관 아이콘 + 글. 큰 글(승리!/패배...)과 내 결과 한 줄은 BattleManager가 쓴다
     public class ResultStats : MonoBehaviour
     {
         [Tooltip("하트 줄이 놓일 칸 — 왼쪽 가운데부터 채운다")]

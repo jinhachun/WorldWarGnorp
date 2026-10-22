@@ -5,6 +5,8 @@ namespace GnorpWar
     // 월드맵 규칙의 수치 — 값의 원본은 WorldConfig 에셋이고(ToRules), 여기는 Unity 밖에서도 돌도록 숫자만 든 사본이다
     public class WorldRules
     {
+        // 플레이어의 목숨 — 지면 −1, 늘지 않는다. 0이 되면 국가 위기, 위기에서 지면 게임 오버(WorldTurn.Invade · 사용자 10/23). AI 영주는 아래 행복도
+        public int LivesStart = 6;
         public int HappinessStart = 3;
         public int HappinessMax = 6;
         public int WinHappiness = 1;

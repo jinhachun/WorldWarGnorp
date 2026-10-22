@@ -292,7 +292,7 @@ namespace GnorpWar
         private void DrawRunValues()
         {
             ValueRow("gold", "골드", RunState.Gold, $"{RunState.Gold}", 10f, true, v => RunState.CheatSetGold(Mathf.RoundToInt(v)));
-            ValueRow("happiness", "행복도", RunState.Happiness, $"{RunState.Happiness} / {RunState.HappinessMax}", 1f, true, v => RunState.CheatSetHappiness(Mathf.RoundToInt(v)));
+            ValueRow("lives", "목숨", RunState.Lives, $"{RunState.Lives} / {RunState.LivesMax}", 1f, true, v => RunState.CheatSetLives(Mathf.RoundToInt(v)));
             ValueRow("round", "턴", RunState.Round + 1, $"{RunState.Round + 1}", 1f, Shop, v => SetRound(Mathf.RoundToInt(v) - 1));
             ValueRow("floors", "내 탑 층수", RunState.Floors, $"{RunState.Floors} / {RunState.MaxFloors}", 1f, Shop, v => SetFloors(Mathf.RoundToInt(v)));
         }
@@ -347,7 +347,7 @@ namespace GnorpWar
             if (Button("진열 다시 뽑기", 150f, false, Shop)) RunState.CheatRollOffers();
             if (Button("새 런 시작", 150f, false, Shop)) NewRun();
 
-            Label($"판도 — 내 땅 {RunState.Lands}/{RunState.RegionCount} · 행복도 {RunState.Happiness}/{RunState.HappinessMax} · 남은 영주 {RunState.World.State.AiLords}명", Dim);
+            Label($"판도 — 내 땅 {RunState.Lands}/{RunState.RegionCount} · 목숨 {RunState.Lives}/{RunState.LivesMax}{(RunState.InCrisis ? "(국가 위기)" : "")} ·남은 영주 {RunState.World.State.AiLords}명", Dim);
             if (Button("이웃 영주 먹기", 150f, false, Shop)) Conquer();
             Text("땅이 가장 적은 이웃 영주를 전투 없이 이긴 것으로 친다", 460f, Dim);
             NewLine();

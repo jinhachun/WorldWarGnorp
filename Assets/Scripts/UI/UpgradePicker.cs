@@ -7,6 +7,7 @@ namespace GnorpWar
     // 업그레이드 고르기 창(아웃게임기획 §4, 사용자 10/13) — 고를 것(RunState.PendingUpgrades)이 있으면 지도 씬 어디서든 카드가 뜨고, 하나를 누르면 닫힌다(대기가 남았으면 다음 것).
     //   합치기 보상: 상점에서 합치기 연출이 끝난 직후, 카드 셋.
     //   지역 특수 업그레이드(신화): 국가를 고른 직후(시작) · 영주를 멸망시키고 지도로 돌아와 AI 턴 재생이 끝난 뒤, 카드 1~3장 + 머리말 + 카드 아래 「건너뛰기 +N골드」 버튼.
+    //   국가 위기(신화 — 목숨이 0이 된 전투 뒤 지도로 돌아와 AI 턴 재생이 끝난 뒤, 사용자 10/23): 카드 1~3장 + 「국가 위기」 머리말 + 그 아래 읽는 글 한 줄. 건너뛰기 없음.
     //   공화정(이미 셋을 모두 얻었다 — UpgradeOffer.Granted, 사용자 10/14): 합치기 보상처럼 카드 셋 + 공화정 머리말. 고르는 게 아니라 카드 · 판 어디를 눌러도 닫히고, 카드 강조가 없다.
     // 떠 있는 동안에는 화면 전체를 덮는 판이 지도 · 상점 조작을 막는다.
     // 카드 = 등급 색 외곽선(기물 등급 테두리와 같은 색 · 같은 강조 — BuildingRarity.FrameColor, UI/ButtonHover) · 아이콘(원본 크기) · 이름 · 그 등급의 효과 한 줄.
@@ -47,9 +48,14 @@ namespace GnorpWar
         // 카드 외곽선의 두께(px) — 이만큼 겹쳐 놓는다
         private const float Outline = 4f;
         private const string RepublicHeader = "공화정 — 모두 얻었습니다";
+        // 국가 위기(RunState.UpgradeOffer.Crisis, 사용자 10/23) — 머리말(도트) 아래 읽는 글 한 줄(깔끔 — 카드 효과 글의 복제). 머리말은 그 한 줄만큼 위로 올린다
+        private const string CrisisHeader = "국가 위기";
+        private const string CrisisBody = "백성들이 새로운 국가 구조를 요구합니다. 하나를 고르십시오.";
 
         private float _dimAlpha;
         private string _specialHeader;
+        private Vector2 _headerHome;
+        private Text _crisisBody;
         private RunState.UpgradeOffer _shown;
         private float _shownAt;
 
@@ -57,6 +63,8 @@ namespace GnorpWar
         {
             _dimAlpha = _dim.color.a;
             _specialHeader = _header.text;
+            _headerHome = _header.rectTransform.anchoredPosition;
+            _crisisBody = CrisisLine();
             for (int i = 0; i < _cards.Length; i++)
             {
                 int choice = i;
@@ -81,6 +89,24 @@ namespace GnorpWar
             mark.raycastTarget = false;
             mark.enabled = false;
             return mark;
+        }
+
+        // 위기 글 한 줄 — 머리말의 원래 자리(같은 틀 · 가운데 정렬)에 놓는다. 글꼴 · 크기 · 색은 카드 효과 글 그대로
+        private Text CrisisLine()
+        {
+            Text line = Instantiate(_cards[0].Body, _header.transform.parent);
+            line.name = "CrisisBody";
+            RectTransform rect = line.rectTransform, header = _header.rectTransform;
+            rect.anchorMin = header.anchorMin;
+            rect.anchorMax = header.anchorMax;
+            rect.pivot = header.pivot;
+            rect.sizeDelta = header.sizeDelta;
+            rect.anchoredPosition = _headerHome;
+            line.alignment = TextAnchor.MiddleCenter;
+            line.horizontalOverflow = HorizontalWrapMode.Overflow;
+            line.text = CrisisBody;
+            line.enabled = false;
+            return line;
         }
 
         private void Skip()
@@ -126,6 +152,7 @@ namespace GnorpWar
             {
                 // 머리말은 카드와 함께 뜬다(공화정 항목은 합치기 연출 동안 이미 대기열에 있다)
                 _header.enabled = false;
+                _crisisBody.enabled = false;
                 _shown = null;
                 return;
             }
@@ -139,7 +166,9 @@ namespace GnorpWar
             _shown = offer;
             _shownAt = Time.unscaledTime;
             _header.enabled = offer.Rarity == BuildingRarity.Mythic || offer.Granted;
-            _header.text = offer.Granted ? RepublicHeader : _specialHeader;
+            _header.text = offer.Granted ? RepublicHeader : offer.Crisis ? CrisisHeader : _specialHeader;
+            _crisisBody.enabled = offer.Crisis;
+            _header.rectTransform.anchoredPosition = _headerHome + (offer.Crisis ? new Vector2(0f, _header.rectTransform.sizeDelta.y) : Vector2.zero);
             _skip.gameObject.SetActive(RunState.CanSkipUpgrade);
             _skipLabel.text = $"건너뛰기 <color={BuildingTooltip.NumberColor}>+{RunState.UpgradeSkipGold}</color>골드";
             int count = offer.Choices.Length;

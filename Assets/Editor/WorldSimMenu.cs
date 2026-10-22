@@ -187,11 +187,11 @@ namespace GnorpWar.Editor
                             if (coalitionBattle)
                             {
                                 coalitionBattles++;
-                                if (state.Player.Happiness <= 0)
+                                if (state.GameOver)
                                     coalitionOver++;
                             }
                         }
-                        if (state.Player.Happiness <= 0)
+                        if (state.GameOver)
                         {
                             over++;
                             finished = true;

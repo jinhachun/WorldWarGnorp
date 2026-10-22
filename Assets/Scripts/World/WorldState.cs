@@ -22,12 +22,16 @@ namespace GnorpWar
         public int[] CoalitionMembers;
         // 1부터
         public int Turn = 1;
+        // 플레이어의 목숨(AI 영주는 Lord.Happiness) — 0이면 국가 위기: 그 뒤 한 번이라도 지면 게임 오버
+        public int Lives;
+        public bool InCrisis => Lives <= 0 && Player.Alive;
 
         // 영주가 지역마다 하나씩 — playerRegion의 영주 자리에 플레이어가 들어간다
         public WorldState(WorldGraph graph, WorldRules rules, int playerRegion, Random random)
         {
             Graph = graph;
             Rules = rules;
+            Lives = rules.LivesStart;
             Owner = new int[graph.RegionCount];
             for (int region = 0; region < graph.RegionCount; region++)
             {

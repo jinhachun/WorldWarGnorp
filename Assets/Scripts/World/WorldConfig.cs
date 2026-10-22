@@ -10,7 +10,10 @@ namespace GnorpWar
         [Tooltip("이번 런의 월드맵 한 장")]
         [SerializeField] private WorldMapDefinition _map;
 
-        [Header("행복도 — 0이 되면 반란으로 멸망한다(플레이어는 게임 오버)")]
+        [Header("목숨 — 플레이어만. 지면 −1(이겨도 늘지 않는다) · 0이 되면 국가 위기 · 위기에서 지면 게임 오버")]
+        [SerializeField] private int _livesStart = 6;
+
+        [Header("행복도 — AI 영주만. 0이 되면 반란으로 멸망한다")]
         [SerializeField] private int _happinessStart = 3;
         [SerializeField] private int _happinessMax = 6;
         [Tooltip("침략에 이기면 오르는 값 — 상대의 땅 크기와 상관없다")]
@@ -145,6 +148,7 @@ namespace GnorpWar
 
         public WorldRules ToRules() => new WorldRules
         {
+            LivesStart = _livesStart,
             HappinessStart = _happinessStart,
             HappinessMax = _happinessMax,
             WinHappiness = _winHappiness,

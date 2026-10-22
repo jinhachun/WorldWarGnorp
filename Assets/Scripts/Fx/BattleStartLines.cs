@@ -73,7 +73,7 @@ namespace GnorpWar
             switch (upgrade.Special)
             {
                 case SpecialKind.Nationalism:
-                    var attack = new StatModifier(UnitStat.Attack, StatOp.Percent, holding.Value / 100f * RunState.HappinessFor(team));
+                    var attack = new StatModifier(UnitStat.Attack, StatOp.Percent, holding.Value / 100f * RunState.LivesFor(team));
                     BuffLinks.FromBase(team, UnitsOr(team, null, board), BuffKind.Stat, BuffLabel.Of(attack));
                     return true;
                 case SpecialKind.Monarchy:

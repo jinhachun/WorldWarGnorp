@@ -44,7 +44,7 @@ namespace GnorpWar
         Communism,         // 공산주의 — 상점의 모든 기물과 리롤이 N골드
         Theocracy,         // 신정 — 내 유닛은 처음 죽을 때 체력을 모두 회복하고 다시 일어난다(_effect)
         Imperialism,       // 제국주의 — 영주를 이길 때마다 그 영주의 기물 1개를 얻는다
-        Nationalism,       // 민족주의 — 행복도 1마다 내 유닛의 공격력 +N%
+        Nationalism,       // 국가주의 — 내 목숨 1마다 내 유닛의 공격력 +N%(AI 영주는 고정값 — RunState.LivesFor)
         Industrial,        // 산업혁명 — 전투 시작 후 N초 동안 내 모든 기물이 가속
         Federation,        // 연방제 — 내 모든 기물은 서로 인접한 것으로 취급
         NeutralDiplomacy,  // 중립외교 — 진열 칸이 N% 확률로 한 등급 오른 기물
@@ -284,7 +284,7 @@ namespace GnorpWar
                 case SpecialKind.Federation: board.AllAdjacent = true; break;
                 case SpecialKind.Guillotine: board.GuillotineInterval = value; break;
                 case SpecialKind.Nationalism:
-                    StatBook.AddForBattle(team, this, new StatModifier(UnitStat.Attack, StatOp.Percent, value / 100f * RunState.HappinessFor(team)));
+                    StatBook.AddForBattle(team, this, new StatModifier(UnitStat.Attack, StatOp.Percent, value / 100f * RunState.LivesFor(team)));
                     break;
             }
         }

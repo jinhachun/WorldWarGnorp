@@ -35,7 +35,7 @@ namespace GnorpWar
         [SerializeField] private BattleConfig _config;
         [SerializeField] private WorldMapView _map;
         [SerializeField] private WorldSidePanel _panel;
-        [Tooltip("위 줄 — 턴 · 골드 · 행복도 · 땅")]
+        [Tooltip("위 줄 — 턴 · 골드 · 목숨 · 땅")]
         [SerializeField] private Text _topBar;
         [SerializeField] private Button _invade;
         [SerializeField] private Text _invadeLabel;
@@ -358,7 +358,7 @@ namespace GnorpWar
             _selected = WorldMapView.None;
             _skip.gameObject.SetActive(false);
             ShowNotice(RunState.Cleared ? "통일!" : "게임 오버",
-                RunState.Cleared ? $"턴 {_turn}에 모든 땅을 차지했습니다." : $"턴 {_turn}에 행복도가 0이 되어 반란으로 무너졌습니다.", "새 런");
+                RunState.Cleared ? $"턴 {_turn}에 모든 땅을 차지했습니다." : $"턴 {_turn}에 국가 위기를 넘기지 못하고 무너졌습니다.", "새 런");
         }
 
         private void Next()

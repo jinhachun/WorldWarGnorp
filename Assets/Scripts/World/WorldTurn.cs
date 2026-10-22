@@ -56,10 +56,10 @@ namespace GnorpWar
             return best;
         }
 
-        // region 땅을 침략한 결과(기획 §7-2) — 상대는 그 땅의 영주다. 이기면 행복도가 오르고 땅이 넘어온다(넘어온 땅들을 돌려준다):
+        // region 땅을 침략한 결과(기획 §7-2) — 상대는 그 땅의 영주다. 이기면 땅이 넘어오고(넘어온 땅들을 돌려준다) AI 영주면 행복도가 오른다:
         //   AI 영주가 이기면 그 땅 하나 · 내가 이기면 그 영주의 땅 전부 · 내가 연합을 이기면 몫만큼(WorldState.CoalitionTake — 침략한 땅부터 가까운 순).
-        // 땅이 0개가 된 영주는 사라진다. 지면 상대의 땅 수만큼 행복도가 떨어진다(막아 낸 쪽은 그대로) — 빈 목록.
-        // 행복도가 바닥난 영주의 멸망은 여기가 아니라 Settle에서
+        // 땅이 0개가 된 영주는 사라진다. 지면 AI 영주는 상대의 땅 수만큼 행복도가, 플레이어는 목숨 1이 떨어진다(막아 낸 쪽은 그대로) — 빈 목록.
+        // 행복도가 바닥난 AI 영주의 멸망은 여기가 아니라 Settle에서 · 플레이어의 목숨은 이겨도 그대로다
         public static List<int> Invade(WorldState state, Lord attacker, int region, bool won)
         {
             WorldRules rules = state.Rules;
@@ -68,7 +68,15 @@ namespace GnorpWar
             attacker.WonLastInvasion = won;
             if (!won)
             {
-                attacker.Happiness = Math.Max(0, attacker.Happiness - rules.LossDrop(state.LandsOf(target)));
+                // 플레이어는 목숨 −1(상대의 땅 수와 상관없다). 이미 0(국가 위기)이면 게임 오버 — 사용자 10/23
+                if (attacker.IsPlayer)
+                {
+                    if (state.Lives <= 0)
+                        attacker.Alive = false;
+                    state.Lives = Math.Max(0, state.Lives - 1);
+                }
+                else
+                    attacker.Happiness = Math.Max(0, attacker.Happiness - rules.LossDrop(state.LandsOf(target)));
                 return taken;
             }
             if (!attacker.IsPlayer)
@@ -84,7 +92,9 @@ namespace GnorpWar
                 state.Owner[land] = attacker.Id;
             if (state.LandsOf(target) == 0)
                 target.Alive = false;
-            attacker.Happiness = Math.Min(rules.HappinessMax, attacker.Happiness + rules.WinHappiness);
+            // 플레이어의 목숨은 이겨도 늘지 않는다
+            if (!attacker.IsPlayer)
+                attacker.Happiness = Math.Min(rules.HappinessMax, attacker.Happiness + rules.WinHappiness);
             return taken;
         }
 
@@ -155,7 +165,7 @@ namespace GnorpWar
             return target;
         }
 
-        // ④ 정산 — 행복도가 0인 영주는 반란으로 멸망한다. 플레이어면 게임 오버(WorldState.GameOver), AI면 그 영주의 땅마다 새 영주가 들어선다.
+        // ④ 정산 — 행복도가 0인 AI 영주는 반란으로 멸망하고, 그 영주의 땅마다 새 영주가 들어선다. 플레이어는 행복도가 없다(목숨 — 게임 오버는 Invade에서).
         // 새로 들어선 영주들을 돌려준다(부르는 쪽이 탑을 세운다) — 다음 턴부터 움직인다
         public static List<Lord> Settle(WorldState state, Random random)
         {
@@ -164,11 +174,9 @@ namespace GnorpWar
             for (int i = 0; i < count; i++)
             {
                 Lord lord = state.Lords[i];
-                if (!lord.Alive || lord.Happiness > 0)
+                if (!lord.Alive || lord.IsPlayer || lord.Happiness > 0)
                     continue;
                 lord.Alive = false;
-                if (lord.IsPlayer)
-                    continue;
                 for (int region = 0; region < state.Owner.Length; region++)
                     if (state.Owner[region] == lord.Id)
                         created.Add(state.AddLord(region, random));

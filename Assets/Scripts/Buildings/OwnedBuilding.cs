@@ -20,6 +20,16 @@ namespace GnorpWar
             _definition = definition;
         }
 
+        // 저장해 둔 한 채를 다시 세운다(Run/TowerSnapshot) — 위 필드 전부를 그대로
+        public OwnedBuilding(BuildingDefinition definition, int upgrades, int stacks, int spentGold, float cooldownScale)
+        {
+            _definition = definition;
+            _upgrades = upgrades;
+            _stacks = stacks;
+            _spentGold = spentGold;
+            _cooldownScale = cooldownScale;
+        }
+
         public BuildingDefinition Definition => _definition;
         public int Upgrades => _upgrades;
         public BuildingRarity Rarity => (BuildingRarity)((int)_definition.Rarity + _upgrades);

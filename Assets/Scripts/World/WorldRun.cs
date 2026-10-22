@@ -58,8 +58,77 @@ namespace GnorpWar
                 return;
             tower.LandSpecials.Clear();
             for (int region = 0; region < RegionSpecial.Length; region++)
-                if (RegionSpecial[region] != null && State.Owner[region] == lord.Id)
-                    tower.LandSpecials.Add(RegionSpecial[region]);
+                if (RegionSpecial[region] != null && State.Owner[region] == lord.Id && !tower.Upgrades.Exists(gain => gain.Definition == RegionSpecial[region]))
+                    tower.LandSpecials.Add(RegionSpecial[region]);   // 이미 얻은 신화(유령 영주가 자기 런에서 고른 것)와 같으면 한 번만 친다
+        }
+
+        // ── 유령 영주(아웃게임기획 §9-0 · ROADMAP 2-4 3번) — 영주 한 명 = 다른 런 기록 하나(Run/RunRecord). 내 턴 N에 그 영주의 탑 = 그 기록의 턴 N 스냅샷(일찍 끝났으면 마지막).
+        // 유령은 상점을 돌지 않는다(골드를 안 씀 · 업그레이드는 기록에 든 그대로) — 턴이 열릴 때(ShopPhase) 탑을 갈아 끼운다. 땅 신화는 AI처럼 쥔 동안(SyncSpecials).
+        // 영주끼리의 전쟁 · 행복도 · 반란 · 연합은 AI와 같다. 기록 하나는 한 런에서 한 영주에만 — 모자라면 나머지는 AI
+        public class Ghost
+        {
+            public RunRecord.Loaded Record;
+            // 지금 세운 스냅샷의 턴 · 목숨(국가주의가 읽는다 — RunState.LivesFor)
+            public int Turn;
+            public int Lives;
+            public BuildingNation Nation;
+        }
+
+        private readonly Dictionary<int, Ghost> _ghosts = new Dictionary<int, Ghost>();
+        // 아직 영주에 안 붙은 기록(오래 버틴 것부터) — 반란으로 선 새 영주가 받는다
+        private readonly List<RunRecord.Loaded> _ghostPool = new List<RunRecord.Loaded>();
+
+        public Ghost GhostOf(Lord lord) => _ghosts.TryGetValue(lord.Id, out Ghost ghost) ? ghost : null;
+        public int GhostCount => _ghosts.Count;
+
+        // 영주의 국가 — 유령이면 그 기록의 국가, AI면 빌드 방향의 국가(나는 RunState.Nation)
+        public BuildingNation NationOf(Lord lord) => GhostOf(lord) is Ghost ghost ? ghost.Nation : _world.Map.BuildOf(lord.Build).Nation;
+
+        // 런을 시작할 때 — records(오래 버틴 것부터)를 살아 있는 AI 영주에게 무작위 자리로 하나씩 붙인다. 남은 기록은 반란 영주 몫
+        public void AddGhosts(List<RunRecord.Loaded> records)
+        {
+            _ghostPool.AddRange(records);
+            var lords = new List<Lord>();
+            foreach (Lord lord in State.Lords)
+                if (lord.Alive && !lord.IsPlayer && !_ghosts.ContainsKey(lord.Id))
+                    lords.Add(lord);
+            while (lords.Count > 0 && _ghostPool.Count > 0)
+            {
+                int pick = _random.Next(lords.Count);
+                Haunt(lords[pick]);
+                lords.RemoveAt(pick);
+            }
+        }
+
+        // lord에 남은 기록 중 맨 앞(가장 오래 버틴 것)을 붙인다
+        private void Haunt(Lord lord)
+        {
+            if (_ghostPool.Count == 0)
+                return;
+            _ghosts[lord.Id] = new Ghost { Record = _ghostPool[0], Nation = _ghostPool[0].Nation };
+            _ghostPool.RemoveAt(0);
+        }
+
+        // 유령의 탑을 이번 턴(State.Turn)의 스냅샷으로 — 유령이면 true. 세우지 못하면 경고 로그를 남기고 그 영주는 지금 탑 그대로 AI가 된다(false)
+        private bool Possess(Lord lord)
+        {
+            if (!(GhostOf(lord) is Ghost ghost))
+                return false;
+            try
+            {
+                TowerSnapshot snapshot = TowerSnapshot.FromJson(ghost.Record.SnapshotAt(State.Turn), Team.Enemy, _battle.AssetIds, _battle);
+                _towers[lord.Id] = snapshot.Tower;
+                ghost.Turn = snapshot.Turn;
+                ghost.Lives = snapshot.Lives;
+                SyncSpecials(lord);
+                return true;
+            }
+            catch (TowerSnapshot.InvalidException e)
+            {
+                Debug.LogWarning($"[Ghost] 영주 {lord.Id}의 기록 「{ghost.Record.RunId}」를 못 세움 — AI로 · {e.Message}");
+                _ghosts.Remove(lord.Id);
+                return false;
+            }
         }
 
         public WorldMapDefinition Map => _world.Map;
@@ -73,12 +142,20 @@ namespace GnorpWar
         public int IncomeOf(Lord lord)
             => RunState.TurnGold(_towers[lord.Id], State.LandsOf(lord)) + WorldTurn.UnderdogGold(State, lord) + (lord.WonLastInvasion ? _battle.WinBonus : 0);
 
-        // ① 살아 있는 AI 영주 전원이 상점을 한 번씩
+        // ① 살아 있는 AI 영주 전원이 상점을 한 번씩 — 유령 영주는 상점 대신 이번 턴의 스냅샷으로
         public void ShopPhase()
         {
+            var haunted = new List<string>();
             foreach (Lord lord in State.Lords)
                 if (lord.Alive && !lord.IsPlayer)
-                    Shop(lord);
+                {
+                    if (Possess(lord))
+                        haunted.Add($"{lord.Id}번({GhostOf(lord).Record.RunId} 턴 {GhostOf(lord).Turn}/{GhostOf(lord).Record.LastTurn})");
+                    else
+                        Shop(lord);
+                }
+            if (haunted.Count > 0)
+                Debug.Log($"[Ghost] 턴 {State.Turn} — 유령 영주 {haunted.Count}명: {string.Join(" · ", haunted)}");
         }
 
         // ③ AI 침략 — 한 번의 침략마다 report(침략한 영주, 대상, 침략한 땅, 이겼나)
@@ -103,12 +180,19 @@ namespace GnorpWar
             List<Lord> created = WorldTurn.Settle(State, _random);
             foreach (Lord lord in State.Lords)
                 if (!lord.Alive)
+                {
                     _towers.Remove(lord.Id);
+                    _ghosts.Remove(lord.Id);   // 그 기록은 이번 런에 다시 쓰지 않는다
+                }
             foreach (Lord lord in created)
             {
                 _towers[lord.Id] = NewTower();
-                for (int i = 0; i < _world.NewLordShops; i++)
-                    Shop(lord);
+                Haunt(lord);   // 남은 기록이 있으면 유령, 없으면 AI
+                if (Possess(lord))
+                    Debug.Log($"[Ghost] 반란으로 선 영주 {lord.Id}번 = 기록 {GhostOf(lord).Record.RunId}(턴 {GhostOf(lord).Turn})");
+                else
+                    for (int i = 0; i < _world.NewLordShops; i++)
+                        Shop(lord);
             }
         }
 
@@ -123,6 +207,9 @@ namespace GnorpWar
             Lord leader = WorldTurn.FormCoalition(State, PowerOf, merged);
             if (leader == null)
                 return null;
+            // 연합의 바탕이 유령이면 그 탑 그대로 AI가 된다 — 연합의 탑은 모은 골드로 상점을 돌며 연합전 내내 이어져야 한다(유령은 턴마다 갈아 끼운다)
+            if (_ghosts.Remove(leader.Id))
+                Debug.Log($"[Ghost] 최후의 연합의 바탕 영주 {leader.Id}번 — 유령에서 AI로");
             int gold = 0, sold = 0;
             foreach (Lord lord in merged)
             {
@@ -133,6 +220,7 @@ namespace GnorpWar
                         if (!OwnedBuilding.IsEmpty(building))
                             sold += RunState.SellValue(building);
                 _towers.Remove(lord.Id);
+                _ghosts.Remove(lord.Id);
             }
             gold += Mathf.RoundToInt(sold * _world.CoalitionGoldScale);
             // 모은 골드는 상점마다 고르게 나눠 받는다(나머지는 첫 상점에) — 못 쓴 골드는 탑에 남아 다음 상점으로 넘어간다

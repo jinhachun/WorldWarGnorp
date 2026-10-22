@@ -19,6 +19,11 @@ namespace GnorpWar
         [Header("월드맵 — 런 한 판의 판도 · 영주 · 턴 규칙")]
         [SerializeField] private WorldConfig _world;
 
+        [Header("런 기록 — 턴마다 내 탑 스냅샷을 남긴다(Run/RunRecord)")]
+        [Tooltip("에셋 ID 등록부(Assets/Data/AssetIds) — 스냅샷이 기물 · 업그레이드를 이 ID로 적는다. 비면 런 기록이 멈춘다(경고 로그)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private AssetIds _assetIds;
+
         [Header("런")]
         [Tooltip("턴이 하나 오를 때마다 양쪽 성 최대 체력에 더하는 값 — N턴 = 성 에셋 체력 + 이 값 × (N - 1). 기물의 성 체력 보너스(+%·×)는 이 합에 붙는다")]
         [SerializeField] private float _baseHpPerRound = 0f;
@@ -220,6 +225,7 @@ namespace GnorpWar
         public float AxeSpin => _axeSpin;
 
         public WorldConfig World => _world;
+        public AssetIds AssetIds => _assetIds;
         public int StartFloors => _startFloors;
         public int MaxFloors => _maxFloors;
         // raises = 지금까지 올린 횟수(0부터)

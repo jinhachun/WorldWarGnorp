@@ -54,7 +54,7 @@ namespace GnorpWar
             nation.font = _nationFont;
             nation.fontSize = NationSize;
             nation.color = Color.white;
-            nation.text = (mine ? RunState.Nation : RunState.World.Map.BuildOf(lord.Build).Nation).DisplayName();
+            nation.text = (mine ? RunState.Nation : RunState.World.NationOf(lord)).DisplayName();
             float lineHeight = Mathf.Max(name.preferredHeight, nation.preferredHeight);
             float nameWidth = Fit(name, lineHeight), nationWidth = Fit(nation, lineHeight);
             // 읽는 순서는 양쪽 다 「이름 국가」 — 적은 줄 전체를 오른쪽 끝에 맞춘다

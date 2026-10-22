@@ -69,7 +69,9 @@ namespace GnorpWar
         public static Color LordKeyColor => _config.LordKeyColor;
         public static Color ColorOf(Lord lord) => lord.IsPlayer ? _config.LordKeyColor : World.ColorOf(lord);
         // 영주의 닉네임(표시용 — 규칙은 읽지 않는다). 런 동안 영주 번호에 고정이고, 런마다 목록의 다른 자리에서 시작한다
-        public static string NameOf(Lord lord) => _config.World.LordName(lord.Id, _nameOffset);
+        // 유령 영주는 그 기록의 닉네임(비었으면 AI처럼 목록의 이름)
+        public static string NameOf(Lord lord)
+            => World?.GhostOf(lord) is WorldRun.Ghost ghost && !string.IsNullOrEmpty(ghost.Record.Nickname) ? ghost.Record.Nickname : _config.World.LordName(lord.Id, _nameOffset);
         private static int _nameOffset;
         // 적 진영 = 침략한 영주, 고르기 전에는 미리 보는 땅의 영주(없으면 흰색)
         public static Color LordColor(Team team)
@@ -87,7 +89,7 @@ namespace GnorpWar
             Lord lord = Opponent ?? (PreviewRegion >= 0 ? World.State.OwnerOf(PreviewRegion) : null);
             if (lord == null)
                 return BuildingNation.Common;
-            return lord.IsPlayer ? Nation : World.Map.BuildOf(lord.Build).Nation;
+            return lord.IsPlayer ? Nation : World.NationOf(lord);
         }
         // 상점 효과(골드 훅 등)를 받는 진영 — 지금 상점을 도는 쪽
         public static Team ActingTeam => _side.Team;
@@ -100,6 +102,7 @@ namespace GnorpWar
         private static void ResetStatics()
         {
             Started = false;
+            _record = null;
             _side = Player;
             CheatMap = null;
             CheatEnemyField = null;
@@ -162,6 +165,8 @@ namespace GnorpWar
         {
             _config = config;
             Started = true;
+            // 새 런 = 새 기록 파일(첫 턴을 찍을 때 생긴다). 지난 런이 끝 표시 없이 남으면 그 파일은 중간 이탈
+            _record = new RunRecord(RunRecord.Folder, config.AssetIds);
             Round = 0;
             Phase = RunPhase.Map;
             LastOutcome = Outcome.None;
@@ -182,6 +187,13 @@ namespace GnorpWar
             // 새 런 = 새 월드 — 영주가 지역마다 하나씩, 그중 무작위 한 자리가 나
             var random = new System.Random(Random.Range(0, int.MaxValue));
             World = new WorldRun(config.World, config, random.Next(config.World.Map.RegionCount), random);
+            // 유령 영주 — 저장된 다른 런 기록(같은 게임 버전)을 AI 영주 자리에. 플레이 중에만(에디터 시뮬레이션 · 표는 AI만으로 잰다)
+            if (Application.isPlaying)
+            {
+                System.Collections.Generic.List<RunRecord.Loaded> records = RunRecord.ReadAll(RunRecord.Folder, config.AssetIds, config, _record.FilePath);
+                World.AddGhosts(records);
+                Debug.Log($"[Ghost] 새 런 — 읽힌 기록 {records.Count}개 · 유령 영주 {World.GhostCount}명(나머지 AI)");
+            }
             // 내 국가는 지도의 첫 화면에서 고른다(ChooseNation) — 그 전의 임시값은 풀의 첫 국가
             NationChosen = false;
             SetNation(NationChoices[0]);
@@ -263,6 +275,7 @@ namespace GnorpWar
             Map = CheatMap != null ? CheatMap : World.Map.TerrainOf(region);
             Phase = RunPhase.Battle;
             PreviewRegion = -1;
+            RecordTurn();
         }
 
         // 쉬는 턴 — 침략하지 않는다. 목숨은 그대로다. 이어서 EndTurn(AI 턴)을 부른다
@@ -270,7 +283,16 @@ namespace GnorpWar
         {
             LastOutcome = Outcome.None;
             Phase = RunPhase.Aftermath;
+            RecordTurn();
         }
+
+        // 내 런 기록(Run/RunRecord) — 런 하나에 하나. 이번 턴에 싸우러 나간 탑(침략 확정 — 남은 고르기까지 끝난 뒤) · 쉰 턴은 그 턴의 탑을 한 줄. 유령 영주의 턴 N = 이 줄
+        private static RunRecord _record;
+
+        private static void RecordTurn() => _record?.Add(Player, Nation, _config.LordKeyColor, Lives, Round + 1, PlayerName);
+
+        // 플레이어 닉네임 — 게임 시작 화면(UI)이 넣는다. 런 기록의 머리에 적혀, 그 기록이 남의 판에 유령 영주로 나가면 그 영주의 이름이 된다(NameOf)
+        public static string PlayerName { get; set; } = "";
 
         // 침략의 결과 — 이기면 상대의 땅을 전부(연합이면 몫만큼 — 침략한 땅부터) 얻는다. 지면 목숨 −1(0이 되는 순간 국가 위기 — OfferCrisis), 위기에서 지면 게임 오버. 이어서 EndTurn(AI 턴)을 부른다
         // 지난 전투로 넘어온 땅들(졌으면 빈 목록) — 지도가 쓰러진 영주를 그 땅에 세웠다가 날린다(World/WorldManager.FellBeaten)
@@ -283,6 +305,8 @@ namespace GnorpWar
             LastGains = WorldTurn.Invade(World.State, World.State.Player, _invadedRegion, won);
             if (lives > 0 && Lives == 0)
                 OfferCrisis();
+            if (World.State.Unified || World.State.GameOver)
+                _record?.End(World.State.Unified ? RunRecord.Ending.Unified : RunRecord.Ending.GameOver, Round + 1);
             Phase = RunPhase.Aftermath;
             NotifyBattleWon(won ? Player : _opponentTower);
             // 지역 특수 업그레이드 — 영주를 멸망시키면(땅을 전부 차지하면) 그 영주가 가졌던 것 중 최대 셋에서 하나를 고른다(사용자 결정 10/13).
@@ -454,9 +478,14 @@ namespace GnorpWar
             return _opponentTower ?? PreviewTower;
         }
 
-        // 국가주의가 읽는 목숨 — 나는 지금 목숨, AI 영주는 고정값으로 친다(AI는 목숨이 없다)
+        // 국가주의가 읽는 목숨 — 나는 지금 목숨, 유령 영주(상대)는 그 스냅샷의 목숨, AI 영주는 고정값으로 친다(AI는 목숨이 없다)
         private const int AiLivesForUpgrades = 3;
-        public static int LivesFor(Team team) => team == Team.Ally ? Lives : AiLivesForUpgrades;
+        public static int LivesFor(Team team)
+        {
+            if (team == Team.Ally)
+                return Lives;
+            return Opponent != null && World.GhostOf(Opponent) is WorldRun.Ghost ghost ? ghost.Lives : AiLivesForUpgrades;
+        }
 
         // 전투에서 이긴 탑의 필드 기물들에게 알린다(「전투에서 승리할 때마다,」 — 지금 쓰는 기물 없음) — 그동안 상점 규칙(얻기)은 그 탑에 걸린다.
         // 실제로 싸운 전투만이다 — AI 영주끼리의 승패(World/TowerPower)는 여기를 지나지 않는다

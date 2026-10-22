@@ -88,6 +88,12 @@ namespace GnorpWar
         [Tooltip("전장 본진(성) 그림(Bases/Tower) — 칸 순서 = BuildingNation, 그 진영 국가의 것을 쓴다(사용자 10/22). 128×64 · 같은 몸통 · 같은 성문 자리 · 가운데 성벽 윗면은 아래에서 35px(탑 1층 바닥). 파란 자리(#81ABFF)는 영주 색. 비면 씬에 놓인 그림 그대로")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _castles = new Sprite[0];
+        [Tooltip("영주 깃발 가운데 사진(UI/WorldLords.PhotoOf) — 비동기 멀티가 되면 영주마다 스팀 프로필 사진으로 바뀐다. 지금은 AI 영주가 모두 이 임시 그림 하나를 쓴다(사용자 10/23). 영주 색으로 칠하지 않는다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _tempProfilePhoto;
+        [Tooltip("플레이어(나)의 깃발 사진 — 임시(사용자 10/23). 정사각이 아니어도 된다(칸 안에 비율을 지켜 맞춘다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _playerProfilePhoto;
 
         [Header("영주 닉네임 — 지도의 영주 그림 위 · 왼쪽 패널 · 승리 글(임시 이름, 사용자 10/12)")]
         [Tooltip("이름 목록(값은 에셋에 — 흔한 외국 이름의 한글 표기, 사용자 10/12) — 한 런에서 영주마다 하나씩 겹치지 않게 돌려 쓰고, 다 쓰면 뒤에 숫자를 붙인다(제임스2)")]
@@ -136,6 +142,8 @@ namespace GnorpWar
         public Sprite FrameEdge(BuildingNation nation) => (int)nation < _frameEdges.Length ? _frameEdges[(int)nation] : null;
         public Sprite FrameCorner(BuildingNation nation) => (int)nation < _frameCorners.Length ? _frameCorners[(int)nation] : null;
         public Sprite Castle(BuildingNation nation) => (int)nation < _castles.Length ? _castles[(int)nation] : null;
+        public Sprite TempProfilePhoto => _tempProfilePhoto;
+        public Sprite PlayerProfilePhoto => _playerProfilePhoto;
         public string NationDescription(BuildingNation nation) => (int)nation < _nationDescriptions.Length ? _nationDescriptions[(int)nation] : "";
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;

@@ -209,7 +209,7 @@ namespace GnorpWar
                 foreach (int member in state.CoalitionMembers)
                     fallen.Add(state.Lords[member]);
             for (int i = 0; i < fallen.Count; i++)
-                _map.Lords.Fell(gains[i % gains.Count], state.Player.Id, RunState.ColorOf(fallen[i]));
+                _map.Lords.Fell(gains[i % gains.Count], state.Player.Id, fallen[i].Id, RunState.ColorOf(fallen[i]));
         }
 
         // 걸음이 끝났다 — 침략을 확정하고 전투 씬으로

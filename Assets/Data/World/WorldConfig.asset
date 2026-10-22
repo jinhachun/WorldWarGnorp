@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: WorldConfig
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.WorldConfig
   _map: {fileID: 11400000, guid: 45ed4a3aa8297fb478ccf5bf445c4563, type: 2}
+  _livesStart: 6
   _happinessStart: 3
   _happinessMax: 6
   _winHappiness: 1
@@ -170,6 +171,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: c6ab868672e7ad248a0132372644729b, type: 3}
   - {fileID: 21300000, guid: 0d7e2e4d86a743ac8fc1df8bf2ce4fbb, type: 3}
   - {fileID: 21300000, guid: f1fcd5080e684f229d704fe370435e91, type: 3}
+  _tempProfilePhoto: {fileID: 21300000, guid: d1ed7f78adbe45ba817cd805b80452b8, type: 3}
+  _playerProfilePhoto: {fileID: 21300000, guid: 4febb8909fdc4ea88879a31785361c17, type: 3}
   _lordNames:
   - "\uC81C\uC784\uC2A4"
   - "\uBA54\uB9AC"

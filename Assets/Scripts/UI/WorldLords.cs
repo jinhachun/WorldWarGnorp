@@ -24,11 +24,15 @@ namespace GnorpWar
         private const int PixelScale = 3;
         // 머리 위 닉네임 — 글자 크기(도트 폰트는 12의 정수배) · 몸 한가운데에서 글 한가운데까지(px, 깃발 끝 위)
         private const int NameSize = 12;
-        private const float NameY = 30f;
-        // 깃발 그림의 왼쪽 아래 자리(몸 그림의 왼쪽 아래에서, 원본 px) — 깃발 그림을 좌우로 뒤집어 든다(사용자 10/11): 깃대가 몸 바로 뒤에 붙고 천이 몸 바깥(뒤쪽)으로 펄럭인다
-        private static readonly Vector2 FlagAt = new Vector2(-7f, 3f);
-        // 표시 자리(기준점)에서 좌우 · 위 · 아래로 비우는 칸 — 아이콘 판 둘과 번호에, 깃발을 든 그림과 머리 위 닉네임의 크기(깃발 쪽 8칸 · 위로 10칸 · 아래로 3칸)를 더한 것
-        private const int MarkHalfWidth = 17, MarkAbove = 11, MarkBelow = 19;
+        private const float NameY = 42f;
+        // 깃발 그림의 왼쪽 아래 자리(몸 그림의 왼쪽 아래에서, 원본 px) — 깃발 그림을 좌우로 뒤집어 든다(사용자 10/11): 깃대가 몸 바로 뒤에 붙고 천이 몸 바깥(뒤쪽)으로 펄럭인다.
+        // 네모 깃발(사용자 10/23)도 같다 — 천이 몸 옆에 서서 몸을 덮지 않는다. 장대 아래 끝은 몸 중간 그대로, 장대를 위로 늘려 천을 머리보다 높이 올린다(사용자 10/23)
+        private static readonly Vector2 FlagAt = new Vector2(-8f, 3f);
+        // 깃발 천 안 사진 — 한가운데 자리(뒤집기 전 깃발 그림의 왼쪽 아래에서, 원본 px) · 한 변(원본 px). 천 7×7 = 영주 색 테두리 1칸 + 사진 5×5
+        private static readonly Vector2 PhotoAt = new Vector2(4.5f, 8.5f);
+        private const int PhotoSize = 5;
+        // 표시 자리(기준점)에서 좌우 · 위 · 아래로 비우는 칸 — 아이콘 판 둘과 번호에, 깃발을 든 그림과 머리 위 닉네임의 크기(깃발 쪽 8칸 · 위로 13칸 · 아래로 3칸)를 더한 것
+        private const int MarkHalfWidth = 17, MarkAbove = 11, MarkBelow = 22;
 
         private class Walker
         {
@@ -37,6 +41,8 @@ namespace GnorpWar
             public RectTransform Rect;
             // 머리 위 닉네임(없으면 null) — 그림이 뒤집힐 때 글자는 뒤집히지 않게 같이 뒤집어 되돌린다
             public RectTransform Label;
+            // 깃발 가운데 사진(없으면 null) — 닉네임처럼 그림이 뒤집혀도 거울상이 되지 않게 되돌린다
+            public RectTransform Photo;
             // 지도 칸 좌표(위 왼쪽이 0, 0)
             public Vector2 Cell, Target, From;
             public bool HasTarget;
@@ -208,8 +214,8 @@ namespace GnorpWar
             rect.SetParent(transform, false);
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.sizeDelta = Vector2.zero;
-            Figure(rect, _body, _flag, color, PixelScale);
-            var walker = new Walker { Lord = home, Rect = rect, Label = NameLabel(rect, NameOf?.Invoke(lord), lord == _pointed), Cell = Scatter(home, region), Rest = RestMin + (float)_random.NextDouble() * (RestMax - RestMin) };
+            RectTransform photo = Figure(rect, _body, _flag, PhotoOf(lord), color, PixelScale);
+            var walker = new Walker { Lord = home, Rect = rect, Photo = photo, Label = NameLabel(rect, NameOf?.Invoke(lord), lord == _pointed), Cell = Scatter(home, region), Rest = RestMin + (float)_random.NextDouble() * (RestMax - RestMin) };
             Place(walker, 1f);
             return walker;
         }
@@ -254,8 +260,9 @@ namespace GnorpWar
         }
 
         // 깃발 든 영주 그림 한 벌을 parent 아래에 그린다 — parent의 자리가 몸의 한가운데, scale = 원본 1px이 화면 몇 px인지(정수).
-        // 깃발은 영주 색으로 통째로 칠하고, 몸은 파란 자리만 영주 색(Core/LordPaint). 지도의 그림과 왼쪽 패널의 초상화(UI/WorldSidePanel)가 같이 쓴다
-        public static void Figure(RectTransform parent, Sprite body, Sprite flag, Color color, int scale)
+        // 깃발은 영주 색으로 통째로 칠하고, 몸은 파란 자리만 영주 색(Core/LordPaint). 사진(PhotoOf)은 칠하지 않고 천 한가운데에 얹는다 — 돌려주는 값이 그 사진(없으면 null).
+        // 지도의 그림과 왼쪽 패널의 초상화(UI/WorldSidePanel)가 같이 쓴다
+        public static RectTransform Figure(RectTransform parent, Sprite body, Sprite flag, Sprite photo, Color color, int scale)
         {
             // 몸 그림의 왼쪽 아래를 (0, 0)으로 깃발의 왼쪽 아래가 FlagAt
             Vector2 flagAt = (FlagAt + flag.rect.size / 2f - body.rect.size / 2f) * scale;
@@ -265,6 +272,24 @@ namespace GnorpWar
             Part(parent, painted, Vector2.zero, Color.black, true, false, scale);
             Part(parent, flag, flagAt, color, false, true, scale);
             Part(parent, painted, Vector2.zero, Color.white, false, false, scale);
+            if (photo == null)
+                return null;
+            // 깃발이 좌우로 뒤집혀 있으니 천 안 자리도 뒤집어 읽는다. 사진은 도트보다 고해상도로 보여도 된다(사용자 10/23) — 칸 5×5에 맞춰 줄인다, Simple + Preserve Aspect
+            var image = new GameObject("Photo", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            image.transform.SetParent(parent, false);
+            image.raycastTarget = false;
+            image.sprite = photo;
+            image.preserveAspect = true;
+            image.rectTransform.sizeDelta = Vector2.one * PhotoSize * scale;
+            image.rectTransform.anchoredPosition = flagAt + new Vector2(flag.rect.width / 2f - PhotoAt.x, PhotoAt.y - flag.rect.height / 2f) * scale;
+            return image.rectTransform;
+        }
+
+        // 영주 → 깃발 가운데 사진. 지금은 나 = WorldConfig 「플레이어 임시 프로필 사진」, AI 영주 = 「임시 프로필 사진」 하나 — 비동기 멀티가 되면 여기서 영주마다 스팀 프로필 사진을 돌려준다(사용자 10/23)
+        public static Sprite PhotoOf(int lord)
+        {
+            WorldConfig world = RunState.Config.World;
+            return lord == RunState.World.State.Player.Id ? world.PlayerProfilePhoto : world.TempProfilePhoto;
         }
 
         // 그림 한 겹 — 원본 크기의 정수배(scale). outline이면 검은 테두리를 두르고, mirror면 좌우로 뒤집어 그린다
@@ -411,7 +436,7 @@ namespace GnorpWar
         }
 
         // 지도를 열기 전에 죽은 영주(color = 그 영주의 색)를 region 땅에 세워 둔다 — striker 영주(나)가 달려들어 치면 날아간다
-        public void Fell(int region, int striker, Color color)
+        public void Fell(int region, int striker, int lord, Color color)
         {
             _striker = striker;
             _fallen.Add(standing =>
@@ -420,7 +445,7 @@ namespace GnorpWar
                 rect.SetParent(transform, false);
                 rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
                 rect.sizeDelta = Vector2.zero;
-                Figure(rect, _body, _flag, color, PixelScale);
+                Figure(rect, _body, _flag, PhotoOf(lord), color, PixelScale);
                 Vector2 cell = _spots[region] + new Vector2(_random.Next(-6, 7), _random.Next(-6, 7));
                 rect.anchoredPosition = new Vector2(Mathf.Round(cell.x * _scale), -Mathf.Round(cell.y * _scale));
                 standing.Add(rect);
@@ -701,6 +726,8 @@ namespace GnorpWar
                 walker.Rect.localScale = new Vector3(dx < 0f ? -1f : 1f, 1f, 1f);
                 if (walker.Label != null)
                     walker.Label.localScale = walker.Rect.localScale;
+                if (walker.Photo != null)
+                    walker.Photo.localScale = walker.Rect.localScale;
             }
         }
     }

@@ -21,7 +21,7 @@ namespace GnorpWar
         private const int PortraitScale = 8;
         private const float PortraitTop = FrameBars.InfoLeft + FrameBars.Pad;
         // 초상화가 차지하는 높이(원본 px, 몸 한가운데에서) — 깃발 든 그림의 위 · 아래 끝
-        private const float FigureUp = 7f, FigureDown = -4f;
+        private const float FigureUp = 11f, FigureDown = -4f;
         // 아이콘 줄(px) — 아이콘 한 변 · 아이콘과 그 옆 글 사이 · 줄 높이 · 「지형 :」 머리말의 폭
         private const float IconSize = 32f;
         private const float LabelGap = 4f;
@@ -157,7 +157,7 @@ namespace GnorpWar
                 _portrayed = lord;
                 foreach (Transform part in _portrait)
                     Destroy(part.gameObject);
-                WorldLords.Figure(_portrait, _lordSprite, _lordFlag, RunState.ColorOf(lord), PortraitScale);
+                WorldLords.Figure(_portrait, _lordSprite, _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), PortraitScale);
             }
             float y = -PortraitTop;
             _portrait.anchoredPosition = new Vector2(center, y - FigureUp * PortraitScale);
@@ -172,7 +172,7 @@ namespace GnorpWar
                 _share.text = $"땅 {state.LandsOf(lord)}개 · 앞으로 {state.CoalitionWinsLeft}번";
                 y = Place(_share.rectTransform, center, y) - LineGap;
             }
-            _nation.text = (mine ? RunState.Nation : world.Map.BuildOf(lord.Build).Nation).DisplayName();
+            _nation.text = (mine ? RunState.Nation : RunState.World.NationOf(lord)).DisplayName();
             y = PlaceText(_nation, center, y);
             // 그 영주가 가진 업그레이드 — 내 것은 위 줄에 있다
             var holdings = mine ? new System.Collections.Generic.List<UpgradeHolding>() : RunState.UpgradesOf(lord);

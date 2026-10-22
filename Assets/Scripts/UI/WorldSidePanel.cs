@@ -9,7 +9,7 @@ namespace GnorpWar
     //   지형 : [아이콘] 이름 / (지역 특수 업그레이드가 놓인 땅이면) [아이콘] 이름 + 효과 글 / 패배시 · [하트] -N
     // 고른 땅이 없으면 같은 배치로 나(구분선 아래는 안내 글만), 내 땅을 고르면 나 + 그 땅의 지형.
     // 내가 가진 업그레이드는 여기가 아니라 위 줄의 「땅 n/30」 오른쪽에 늘어놓는다(ShowStatus — 넘치면 좌우로 끌어서 민다).
-    // 지형 · 가진 업그레이드의 효과는 글로 쓰지 않는다 — 아이콘에 마우스를 올리면 뜬다(UI/UpgradeIcon). 고른 땅의 지역 특수 업그레이드만 효과를 글로도 쓴다. 행복도는 하트 아이콘이다.
+    // 지형 · 가진 업그레이드의 효과는 글로 쓰지 않는다 — 아이콘에 마우스를 올리면 뜬다(UI/UpgradeIcon). 고른 땅의 지역 특수 업그레이드만 효과를 글로도 쓴다. 목숨은 하트 아이콘이다.
     // 오른쪽 기둥에는 그 영주의 탑이 선다 — 상점 탑과 같은 층 그림(SlotView)이고 층에 마우스를 올리면 기물 설명 창이 뜬다. 내 땅을 고르거나 아무 땅도 안 고르면 내 탑.
     // 무엇을 고를지 · 명령 버튼은 WorldManager가 정한다
     public class WorldSidePanel : MonoBehaviour
@@ -19,7 +19,7 @@ namespace GnorpWar
         private const float LineGap = 6f;
         // 초상화 — 원본 1px이 화면 몇 px인지(몸 8×8 → 64px, 전의 패널 아이콘의 2배) · 패널 위 끝에서 그림 위 끝까지(px)
         private const int PortraitScale = 8;
-        private const float PortraitTop = 28f;
+        private const float PortraitTop = FrameBars.InfoLeft + FrameBars.Pad;
         // 초상화가 차지하는 높이(원본 px, 몸 한가운데에서) — 깃발 든 그림의 위 · 아래 끝
         private const float FigureUp = 7f, FigureDown = -4f;
         // 아이콘 줄(px) — 아이콘 한 변 · 아이콘과 그 옆 글 사이 · 줄 높이 · 「지형 :」 머리말의 폭
@@ -47,7 +47,7 @@ namespace GnorpWar
         [Tooltip("영주 그림 — 유닛 몸 그림(파란 자리를 그 영주의 색으로 칠한다)과 드는 깃발(흰 그림). 지도의 영주 그림과 같은 것")]
         [SerializeField] private Sprite _lordSprite;
         [SerializeField] private Sprite _lordFlag;
-        [Tooltip("행복도 아이콘(하트) — 위 줄과 「패배시」 줄")]
+        [Tooltip("목숨 아이콘(하트) — 위 줄과 「패배시」 줄")]
         [SerializeField] private Sprite _heartIcon;
         [Tooltip("위 줄 아이콘 — 턴(해) · 골드(동전, 숫자와 같은 노랑으로 칠한다) · 땅(왕관 — 지도의 내 땅 표시와 같은 그림). 글 대신 아이콘 + 숫자")]
         [SerializeField] private Sprite _turnIcon;
@@ -88,7 +88,7 @@ namespace GnorpWar
         private UpgradeRow _mine;
         private RectTransform _mineView;
 
-        // 위 줄 — [해] N · [동전] G · 행복도 하트(UI/HeartRow) · [왕관] n/30 · 내가 가진 업그레이드 아이콘 줄(UI/UpgradeRow). 낱말 없이 아이콘 + 숫자(10/21 He is Coming풍).
+        // 위 줄 — [해] N · [동전] G · 목숨 하트(UI/HeartRow — 국가 위기면 빨갛게 두근거리는 빈 하트 하나) · [왕관] n/30 · 내가 가진 업그레이드 아이콘 줄(UI/UpgradeRow). 낱말 없이 아이콘 + 숫자(10/21 He is Coming풍).
         // bar = 그 줄의 글(왼쪽 가운데 정렬) — 글은 비우고 숫자 글의 틀로만 쓴다. 업그레이드 줄은 bar의 오른쪽 끝까지가 창이고, 넘치면 좌우로 끌어서 민다(스크롤바 없음)
         public void ShowStatus(Text bar, int turn)
         {
@@ -131,7 +131,7 @@ namespace GnorpWar
         }
 
         // 탑 기둥의 가로 자리(1층 틀 칸의 가운데)
-        public float TowerX => ((RectTransform)_slotTemplate.transform).anchoredPosition.x;
+        public float TowerX => FrameBars.TowerCenter;
 
         // selected = 고른 땅(없으면 WorldMapView.None). land = 고른 땅 · 영주 · 탑을 보여 주나 — 끄면 나만(그 아래 자리는 WorldManager의 알림이 쓴다).
         // shop = 상점 팝업이 보이나 — 그동안에는 나만 보여 주고 탑 기둥은 상점의 내 탑에 내준다
@@ -141,8 +141,7 @@ namespace GnorpWar
             WorldState state = world.State;
             if (_owned == null)
                 Build();
-            // 글 기둥의 한가운데 · 왼쪽 끝
-            float left = _title.rectTransform.anchoredPosition.x - _title.rectTransform.sizeDelta.x * 0.5f;
+            // 글 기둥의 한가운데
             float center = _title.rectTransform.anchoredPosition.x;
 
             // 상점이 열린 동안에는 고른 땅과 상관없이 나를 보여 준다(사용자 10/12 — 탑 기둥도 내 탑이다). 그 아래는 비운다
@@ -207,8 +206,8 @@ namespace GnorpWar
             }
 
             y -= BlockGap * 0.5f;
-            // 구분선 그림은 글 기둥 폭 그대로의 원본 크기(§5-1) — 그 높이만큼 내려간다
-            _divider.rectTransform.anchoredPosition = new Vector2(left, y);
+            // 구분선 그림은 원본 크기(§5-1)로 기둥 가운데에 — 그 높이만큼 내려간다
+            _divider.rectTransform.anchoredPosition = new Vector2(Mathf.Round(center - _divider.rectTransform.sizeDelta.x * 0.5f), y);
             y -= _divider.rectTransform.sizeDelta.y + BlockGap * 0.5f;
 
             MapDefinition terrain = world.Map.TerrainOf(selected);
@@ -229,7 +228,8 @@ namespace GnorpWar
             {
                 y -= BlockGap * 0.5f;
                 y = Place(_loseTitle.rectTransform, center, y);
-                _loseLine.Name.text = BuildingTooltip.Highlight($"-{state.Rules.LossDrop(state.LandsOf(lord))}");
+                // 지면 목숨 −1 — 국가 위기(목숨 0)면 지는 순간 게임 오버
+                _loseLine.Name.text = RunState.InCrisis ? "게임 오버" : BuildingTooltip.Highlight("-1");
                 y = Line(_loseLine, center, y);
                 // 상태 줄(효과가 아닌 것)은 회색, 맨 아래 — 「침략」이 왜 꺼졌는지
                 if (!invadable)
@@ -244,6 +244,14 @@ namespace GnorpWar
         // 코드가 만드는 줄들 — 글은 씬의 닉네임 글(도트 폰트)을 본떠 같은 폰트 · 크기로
         private void Build()
         {
+            // 떠 있는 설명 창도 화면 테두리 막대 안쪽에만(UI/BuildingTooltip.Framed) — 이 패널의 부모 = 화면 판
+            BuildingTooltip.Framed = (RectTransform)transform.parent;
+            // 글 기둥 = 정보 기둥 안쪽에서 양옆 막대와 Pad씩 띄운 폭(UI/FrameBars). 아래에서 복제하는 글도 이 자리 · 폭을 따른다
+            foreach (Text text in new[] { _title, _nation, _landBody })
+            {
+                text.rectTransform.anchoredPosition = new Vector2(FrameBars.InfoCenter, text.rectTransform.anchoredPosition.y);
+                text.rectTransform.sizeDelta = new Vector2(FrameBars.InfoWidth - FrameBars.Pad * 2f, text.rectTransform.sizeDelta.y);
+            }
             _title.alignment = TextAnchor.MiddleCenter;
             _nation.alignment = _landBody.alignment = TextAnchor.UpperCenter;
             _portrait = NewRoot("Portrait");
@@ -257,12 +265,9 @@ namespace GnorpWar
             // 정보 기둥과 탑 기둥 사이의 세로 구분선(사용자 10/12) — 패널 위에서 바닥까지. 가로 구분선과 같은 굵기 · 색
             if (_slotTemplate != null)
             {
-                var slot = (RectTransform)_slotTemplate.transform;
-                float columnRight = _title.rectTransform.anchoredPosition.x + _title.rectTransform.sizeDelta.x * 0.5f;
-                float towerLeft = slot.anchoredPosition.x - slot.rect.width * 0.5f;
                 Image pillar = _pillar = NewImage((RectTransform)transform, "Pillar");
                 Anchor(pillar.rectTransform, new Vector2(0f, 1f));
-                pillar.rectTransform.anchoredPosition = new Vector2(Mathf.Round((columnRight + towerLeft - DividerHeight) * 0.5f), 0f);
+                pillar.rectTransform.anchoredPosition = new Vector2(FrameBars.Pillar, 0f);
                 pillar.rectTransform.sizeDelta = new Vector2(DividerHeight, ((RectTransform)transform).rect.height);
             }
             _terrainLine = NewLine("Terrain", "지형 :", true);
@@ -408,7 +413,9 @@ namespace GnorpWar
             // 층은 처음 그릴 때 만든다 — 런이 시작된 뒤여야 최대 층 수를 안다
             if (_slots == null)
             {
-                _origin = ((RectTransform)_slotTemplate.transform).anchoredPosition;
+                // 1층 = 탑 기둥 가운데, 바닥 막대 위에 선다(UI/FrameBars)
+                var slot = (RectTransform)_slotTemplate.transform;
+                _origin = new Vector2(FrameBars.TowerCenter, -FrameBars.Floor + slot.rect.height * slot.pivot.y);
                 _slots = new SlotView[RunState.MaxFloors];
                 for (int i = 0; i < _slots.Length; i++)
                 {

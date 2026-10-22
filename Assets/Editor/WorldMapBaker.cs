@@ -9,7 +9,8 @@ namespace GnorpWar.Editor
     // UnityEngine을 쓰지 않는다 — Unity 밖 검산(시안 생성기 · 규칙 러너)이 같은 코드를 읽는다
     internal class WorldMapBaker
     {
-        public const int Width = 375, Height = 252;
+        // 지도 1칸 = 화면 4px — 높이는 지도 칸(화면 테두리 막대 사이 999px, UI/FrameBars)에 들어가게 249칸(사용자 10/23)
+        public const int Width = 375, Height = 249;
         public const int Sea = -1;
         // 이만큼(칸) 이상 국경을 맞대야 이어진 땅이다 — 짧게 스치는 접점은 길이 아니다
         public const int MinBorder = 6;

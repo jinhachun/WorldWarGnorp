@@ -200,6 +200,15 @@ namespace GnorpWar
         public Source Kind => _source;
         // 틀 칸(1층)의 가로 자리 — 탑을 다른 기둥으로 옮겨 세울 때 얼마나 옮길지 잰다(UI/ShopPanel.PlaceTower)
         public float TemplateX => ((RectTransform)_template.transform).anchoredPosition.x;
+        // 틀 칸(1층)의 아래 끝 — 같은 일의 세로 자리
+        public float TemplateBottom
+        {
+            get
+            {
+                var rect = (RectTransform)_template.transform;
+                return rect.anchoredPosition.y - rect.rect.height * rect.pivot.y;
+            }
+        }
         // index칸 그림의 화면 자리(지금 그려진 모습 기준)
         public Vector3 SlotPosition(int index) => _views[index].transform.position;
 

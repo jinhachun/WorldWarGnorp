@@ -225,7 +225,7 @@ flowchart LR
 | `BuffLinks.Raised` (static) | `BuffLinkFx.OnEnable`(전장 선) · `BoardView.Start`(세로 탑만, UI 선) | 버프 선 |
 | `RunState.Merged` (static) | `ShopPanel.OnEnable` | 합치기 단계별 재생(상태는 이미 끝난 뒤) |
 | `RunState.UpgradesChanged` (static) | 지금 구독자 없음 — `UpgradePicker`는 폴링 | — |
-| `NationCard.Chosen` (국가) | `WorldManager.ShowNations` | 「시작」을 누르면 `RunState.ChooseNation` → `BeginTurn` — 카드(뷰)는 상태를 바꾸지 않는다. 이번 실행 첫 `Open`이면 먼저 `NicknamePanel.Ask` → 확정 = `RunState.PlayerName` + PlayerPrefs → 다시 `Open` |
+| `NationCard.Chosen` (국가) | `WorldManager.ShowNations` | 「시작」을 누르면 `RunState.ChooseNation` → `BeginTurn` — 카드(뷰)는 상태를 바꾸지 않는다. 이번 런 첫 `Open`이면 먼저 `NicknamePanel.Ask` → 확정 = `RunState.PlayerName` + PlayerPrefs → 다시 `Open` |
 | `ShopPanel.MapRequested` | `WorldManager.Awake` | 상점 닫기 |
 | `WorldMapView.Clicked(int region)` | `WorldManager.Awake` | 땅 고르기 |
 | uGUI `onClick` | `WorldManager.Awake`(침략 · 쉬기 · 상점 · 건너뛰기 · 다음) · `BattleManager.Awake`(결과 버튼) · `ShopPanel.Start` · `SpeedButton.Awake` | 버튼 |

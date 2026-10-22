@@ -64,7 +64,7 @@ namespace GnorpWar
         [SerializeField] private Button _start;
         [Tooltip("판 전체 — 시작할 때 사라지는 단위")]
         [SerializeField] private CanvasGroup _group;
-        [Tooltip("국가 고르기 앞에 닉네임을 묻는 판(UI/NicknamePanel) — 실행마다 한 번")]
+        [Tooltip("국가 고르기 앞에 닉네임을 묻는 판(UI/NicknamePanel) — 새 런마다 한 번")]
         [SerializeField] private NicknamePanel _nickname;
 
         // 「시작」을 눌렀다 — 고른 국가. 판은 스스로 닫힌다
@@ -92,7 +92,7 @@ namespace GnorpWar
         // choices = 고를 수 있는 국가(목록 순서) · world = 국가마다의 무대 내용
         public void Open(BuildingNation[] choices, WorldConfig world)
         {
-            // 이번 실행에서 아직 닉네임을 안 물었으면 그 판부터 — 확정하면 여기로 다시 온다
+            // 이번 런에서 아직 닉네임을 안 물었으면 그 판부터 — 확정하면 여기로 다시 온다
             if (_nickname != null && _nickname.Ask(() => Open(choices, world)))
                 return;
             _choices = choices;

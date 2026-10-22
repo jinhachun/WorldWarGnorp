@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // 닉네임 묻기 판 — 게임을 켜고 국가 고르기(UI/NationCard) 직전에 한 번(실행마다 한 번 · 지난 값을 미리 채움, 사용자 10/23 「게임 시작할 때」).
+    // 닉네임 묻기 판 — 게임을 켜고 국가 고르기(UI/NationCard) 직전에 한 번(새 런마다 한 번 · 지난 값을 미리 채움, 사용자 10/23).
     // 값은 RunState.PlayerName에 넣는다 — 내 런 기록이 남의 판에 유령 영주로 나갈 때의 이름. 이 기기에서 다음에 미리 채울 값은 PlayerPrefs.
     // 이 오브젝트 = 판 전체(검은 바탕 · 켜고 끄는 단위)
     public class NicknamePanel : MonoBehaviour
@@ -28,8 +28,8 @@ namespace GnorpWar
         [SerializeField] private Button _confirm;
         [SerializeField] private CanvasGroup _group;
 
-        // 이번 실행에서 이미 물었다 — 다음 런(같은 실행)에는 묻지 않는다
-        private static bool _asked;
+        // 이번 런에서 이미 물었다 — 국가 고르기(NationCard.Open)는 런마다 국가를 고르기 전에만 열리고, 런 사이에는 World 씬을 다시 불러 이 값이 비므로 새 런마다 한 번 묻는다(사용자 10/23)
+        private bool _asked;
 
         private System.Action _done;
         private Vector2 _boxHome, _rowHome;
@@ -40,9 +40,6 @@ namespace GnorpWar
         private float _exitClock = -1f;
         // 같은 프레임에 Enter가 두 길(입력 칸의 onSubmit · 키보드)로 들어와도 한 번만
         private int _confirmFrame = -1;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => _asked = false;
 
         private void Awake()
         {
@@ -56,7 +53,7 @@ namespace GnorpWar
             _confirm.onClick.AddListener(Confirm);
         }
 
-        // 이번 실행에서 아직 안 물었으면 판을 열고 true — 확정하면 done을 부른다. 이미 물었으면 false(부르는 쪽이 바로 이어 간다)
+        // 이번 런에서 아직 안 물었으면 판을 열고 true — 확정하면 done을 부른다. 이미 물었으면 false(부르는 쪽이 바로 이어 간다)
         public bool Ask(System.Action done)
         {
             if (_asked)

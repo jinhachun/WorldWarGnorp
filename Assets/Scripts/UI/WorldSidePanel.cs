@@ -31,8 +31,8 @@ namespace GnorpWar
         private const float CellWidth = 84f;
         private const int RowColumns = 3;
         private const float CellInk = 68f;
-        // 구분선의 두께(px)
-        private const float DividerHeight = 2f;
+        // 구분선의 두께(px) — 화면 테두리 막대와 같은 6px 흰 막대(사용자 10/23)
+        private const float DividerHeight = 6f;
         // 위 줄 — 글과 하트 사이(px)
         private const float StatusGap = 48f;
 

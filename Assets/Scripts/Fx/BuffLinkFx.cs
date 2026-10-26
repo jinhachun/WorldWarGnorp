@@ -104,8 +104,11 @@ namespace GnorpWar
             // 굽는 쪽 — 위·탑 앞쪽
             float forward = link.Team == Team.Ally ? 1f : -1f;
             // 스탯 · 쿨다운 선이면 대상 위에 무슨 버프인지(약하게 다시 알리는 선은 빼고). 대상이 층 · 타워면 탑을 가리지 않게 앞쪽으로 붙인다
+            // 대상이 층이면 닿는 순간 맞음 표시(섬광 → 선 색 링 — Fx/HitRingFx), 글자는 그 층이 튀는 프레임에 뜬다(사용자 10/26 A안)
+            if (link.To >= 0)
+                HitRingFx.Show(link.Team, link.To, Colors[(int)link.Kind], link.Weak);
             if (!link.Weak)
-                BuffTexts.Show(to, link.Label, link.To >= 0 || link.Tower > 0 ? forward : 0f);
+                BuffTexts.Show(to, link.Label, link.To >= 0 || link.Tower > 0 ? forward : 0f, link.To >= 0 ? HitRingShape.EffectDelay : BuffLinkShape.ArriveTime);
 
             Line line = _free.Count > 0 ? _free.Pop() : new Line();
             BuffLinkShape.Fill(line.Points, from, to, BuffLinkShape.NewSeed(), new Vector2(forward * 0.5f, 1f), MinBulge, MaxBulge, Pixel * 0.5f);
@@ -159,51 +162,70 @@ namespace GnorpWar
             _mesh.bounds = new Bounds(Vector3.zero, new Vector3(10000f, 10000f, 1f));
         }
 
-        // 선의 보이는 구간을 격자에 맞춘 네모들로 쓴다 — 같은 칸에 같은 크기로 또 찍지 않는다
+        // 선의 보이는 구간을 격자에 맞춘 네모들로 쓴다 — 같은 칸에 같은 크기로 또 찍지 않는다.
+        // 두 번 훑는다: 색 네모 전부 → 그 위에 머리 쪽 흰 심지(뒤 네모가 앞 심지를 덮지 않게)
         private void Write(Line line)
         {
             BuffLinkShape.Visible(line.Age, out float tail, out float head);
+            bool arrived = BuffLinkShape.Arrived(line.Age);
             int count = line.Points.Count;
-            int lastX = int.MinValue, lastY = 0, lastSize = 0;
-            for (int i = Mathf.FloorToInt(tail * (count - 1)); i < count; i++)
+            for (int pass = 0; pass < 2; pass++)
             {
-                float t = i / (count - 1f);
-                int size = BuffLinkShape.Pixels(t, tail, head, line.Weak);
-                if (size == 0)
+                int lastX = int.MinValue, lastY = 0, lastSize = 0;
+                for (int i = Mathf.FloorToInt(tail * (count - 1)); i < count; i++)
                 {
-                    if (t > head)
-                        break;
-                    continue;
-                }
-                // 네모의 왼쪽 아래 칸 — 점이 네모 가운데에 오게
-                Vector2 point = line.Points[i];
-                int x = Mathf.RoundToInt(point.x / Pixel - size * 0.5f), y = Mathf.RoundToInt(point.y / Pixel - size * 0.5f);
-                if (x == lastX && y == lastY && size == lastSize)
-                    continue;
-                lastX = x;
-                lastY = y;
-                lastSize = size;
+                    float t = i / (count - 1f);
+                    int size = BuffLinkShape.Pixels(t, tail, head, line.Weak, arrived);
+                    if (size == 0)
+                    {
+                        if (t > head)
+                            break;
+                        continue;
+                    }
+                    // 네모의 왼쪽 아래 칸 — 점이 네모 가운데에 오게
+                    Vector2 point = line.Points[i];
+                    int x = Mathf.RoundToInt(point.x / Pixel - size * 0.5f), y = Mathf.RoundToInt(point.y / Pixel - size * 0.5f);
+                    if (x == lastX && y == lastY && size == lastSize)
+                        continue;
+                    lastX = x;
+                    lastY = y;
+                    lastSize = size;
 
-                Color32 color = line.Color;
-                color.a = (byte)(255f * BuffLinkShape.Alpha(t, tail, head, line.Weak));
-                float left = x * Pixel, bottom = y * Pixel, side = size * Pixel;
-                int v = _vertices.Count;
-                _vertices.Add(new Vector3(left, bottom, 0f));
-                _vertices.Add(new Vector3(left, bottom + side, 0f));
-                _vertices.Add(new Vector3(left + side, bottom + side, 0f));
-                _vertices.Add(new Vector3(left + side, bottom, 0f));
-                for (int k = 0; k < 4; k++)
-                {
-                    _uvs.Add(new Vector2(0.5f, 0.5f));
-                    _colors.Add(color);
+                    Color32 color = pass == 0 ? line.Color : (Color32)Color.white;
+                    color.a = (byte)(255f * BuffLinkShape.Alpha(t, tail, head, line.Weak));
+                    if (pass == 1)
+                    {
+                        int core = line.Weak ? 0 : BuffLinkShape.Core(size);
+                        if (core == 0)
+                            continue;
+                        x += (size - core) / 2;
+                        y += (size - core) / 2;
+                        size = core;
+                    }
+                    Quad(x, y, size, color);
                 }
-                _triangles.Add(v);
-                _triangles.Add(v + 1);
-                _triangles.Add(v + 2);
-                _triangles.Add(v);
-                _triangles.Add(v + 2);
-                _triangles.Add(v + 3);
             }
+        }
+
+        private void Quad(int x, int y, int size, Color32 color)
+        {
+            float left = x * Pixel, bottom = y * Pixel, side = size * Pixel;
+            int v = _vertices.Count;
+            _vertices.Add(new Vector3(left, bottom, 0f));
+            _vertices.Add(new Vector3(left, bottom + side, 0f));
+            _vertices.Add(new Vector3(left + side, bottom + side, 0f));
+            _vertices.Add(new Vector3(left + side, bottom, 0f));
+            for (int k = 0; k < 4; k++)
+            {
+                _uvs.Add(new Vector2(0.5f, 0.5f));
+                _colors.Add(color);
+            }
+            _triangles.Add(v);
+            _triangles.Add(v + 1);
+            _triangles.Add(v + 2);
+            _triangles.Add(v);
+            _triangles.Add(v + 2);
+            _triangles.Add(v + 3);
         }
     }
 }

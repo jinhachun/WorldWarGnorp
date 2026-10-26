@@ -75,17 +75,20 @@ namespace GnorpWar
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
+            // 두 번 훑는다: 색 네모 전부 → 그 위에 머리 쪽 흰 심지(뒤 네모가 앞 심지를 덮지 않게)
+            for (int pass = 0; pass < 2; pass++)
             foreach (Line line in _lines)
             {
                 BuffLinkShape.Visible(line.Age, out float tail, out float head);
+                bool arrived = BuffLinkShape.Arrived(line.Age);
                 int last = line.Points.Count - 1;
                 Vector2 lastCell = new Vector2(float.NaN, 0f);
                 int lastPixels = 0;
                 for (int i = 0; i <= last; i++)
                 {
                     float t = (float)i / last;
-                    // 네모 한 변 = 굵기(그림 픽셀 수) × 3px — 머리 9px → 꼬리 3px
-                    int pixels = BuffLinkShape.Pixels(t, tail, head, line.Weak);
+                    // 네모 한 변 = 굵기(그림 픽셀 수) × 3px — 머리 15px → 꼬리 3px
+                    int pixels = BuffLinkShape.Pixels(t, tail, head, line.Weak, arrived);
                     if (pixels == 0)
                         continue;
                     // 점이 네모 가운데 — 왼쪽 아래 칸을 격자에 물린다(전장 선과 같은 법)
@@ -95,9 +98,19 @@ namespace GnorpWar
                         continue;
                     lastCell = cell;
                     lastPixels = pixels;
+                    Color tint = line.Color;
+                    if (pass == 1)
+                    {
+                        int core = line.Weak ? 0 : BuffLinkShape.Core(pixels);
+                        if (core == 0)
+                            continue;
+                        cell += Vector2.one * ((pixels - core) / 2);
+                        pixels = core;
+                        tint = Color.white;
+                    }
                     Vector2 min = cell * Pixel;
                     float size = pixels * Pixel;
-                    Color32 color = new Color(line.Color.r, line.Color.g, line.Color.b, BuffLinkShape.Alpha(t, tail, head, line.Weak));
+                    Color32 color = new Color(tint.r, tint.g, tint.b, BuffLinkShape.Alpha(t, tail, head, line.Weak));
                     int v = vh.currentVertCount;
                     vh.AddVert(min, color, Vector2.zero);
                     vh.AddVert(min + new Vector2(0f, size), color, Vector2.zero);

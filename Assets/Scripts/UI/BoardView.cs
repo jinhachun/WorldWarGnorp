@@ -31,6 +31,8 @@ namespace GnorpWar
         private Vector2 _origin;
         // 탑(세로 줄)만 — 층 → 층 버프 선
         private UiBuffLinkLines _links;
+        // 탑만 — 선이 닿은 칸의 맞음 표시
+        private UiHitRings _rings;
 
         private void Start()
         {
@@ -76,6 +78,19 @@ namespace GnorpWar
                 rect.sizeDelta = Vector2.zero;
                 _links = lines.AddComponent<UiBuffLinkLines>();
                 _links.raycastTarget = false;
+
+                // 맞음 표시 — 선이 닿은 칸의 섬광 · 링. 층들 위에 그린다(마지막 형제) · 좌표는 선과 같은 "1층 기준"
+                var rings = new GameObject("HitRings", typeof(RectTransform));
+                var ringRect = (RectTransform)rings.transform;
+                ringRect.SetParent(slot.parent, false);
+                ringRect.SetAsLastSibling();
+                ringRect.anchorMin = slot.anchorMin;
+                ringRect.anchorMax = slot.anchorMax;
+                ringRect.pivot = slot.pivot;
+                ringRect.anchoredPosition = _origin;
+                ringRect.sizeDelta = Vector2.zero;
+                _rings = rings.AddComponent<UiHitRings>();
+                _rings.raycastTarget = false;
             }
         }
 
@@ -109,6 +124,9 @@ namespace GnorpWar
             Vector2 from = link.From < 0 && _marker != null && _marker.enabled ? edge + MarkerOffset(side) : edge + new Vector2(0f, (link.From >= 0 ? link.From : count + 0.5f) * _step);
             Vector2 to = edge + new Vector2(0f, link.To * _step);
             _links.Add(from, to, side, link.Kind, link.Weak, ((link.From + 1) * 4096 + link.To * 64 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0));
+            // 닿는 순간 그 칸에 맞음 표시(섬광 → 선 색 링), 그 칸의 튐 · 받는 효과 표시는 닿고 2프레임에(사용자 10/26 A안)
+            if (_rings.Add(link.To, new Rect(slot.rect.position + new Vector2(0f, link.To * _step), slot.rect.size), BuffLinkFx.ColorOf(link.Kind), link.Weak))
+                _views[link.To].Hold(HitRingShape.EffectDelay);
         }
 
         // ── 맵 효과의 출발점 그림(얼음 맵의 얼음 — 전장의 Fx/MapMarker와 같은 그림) — 전투 화면의 UI 탑 옆, 화면 안쪽에 살짝 떠 있다.
@@ -258,7 +276,10 @@ namespace GnorpWar
             int count = Count;
             ShowMarker(visible);
             if (_links != null && !visible)
+            {
                 _links.Clear();
+                _rings.Clear();
+            }
             if (_roof != null)
             {
                 if (_roof.gameObject.activeSelf != visible)
@@ -283,7 +304,7 @@ namespace GnorpWar
                     continue;
                 // 1층이 틀 칸 자리(바닥 고정) — 층이 늘면 위로 자란다. 아군·적 탑의 높이를 바닥부터 견줘 보게(사용자 10/8)
                 if (_stack)
-                    ((RectTransform)_views[i].transform).anchoredPosition = _origin + new Vector2(0f, i * _step);
+                    ((RectTransform)_views[i].transform).anchoredPosition = _origin + new Vector2(0f, i * _step + _views[i].JumpCells * UiHitRings.Pixel);   // 맞음 표시 때 위로 튐
 
                 BoardRunner.Slot running = _source != Source.Storage && BattleManager.Fighting ? Runner.Slots[i] : null;
                 // 가속받은 칸도 튄다 — 쿨다운 없는 칸은 가속이 아무 일도 안 하므로 빼고

@@ -40,6 +40,8 @@ namespace GnorpWar
         private int _index;
         private bool _hovered;
         private float _bounce = BounceDuration;
+        // 버프 선이 닿아 맞음 표시가 효과를 보여 주는 때(실제 시간) — 그 전엔 받는 효과 표시를 그대로 두고, 그때 위로 튄다(Hold)
+        private float _holdUntil;
         // 데스매치 동안 오버드라이브 칸의 번개(Fx/OverdriveMark) — 가속 표시를 본떠 처음 뜰 때 만든다
         private GameObject _overdriveMark;
         // 맵이 작동을 끈 칸의 정지 표시(Fx/StoppedMark) — 같은 식으로 처음 뜰 때 만든다
@@ -53,7 +55,20 @@ namespace GnorpWar
 
         private void Awake() => _frameColor = _frame.color;
 
-        public void Bounce() => _bounce = 0f;
+        // 버프 선이 닿기를 기다리는 동안 받은 튐(커짐)은 건너뛴다 — 닿는 순간의 위로 튐(JumpCells)이 대신한다
+        public void Bounce() => _bounce = Time.unscaledTime < _holdUntil ? BounceDuration : 0f;
+
+        // 탑 칸만 — 버프 선이 이 칸에 맞음 표시를 켰다(UI/UiHitRings). seconds 뒤(선이 닿고 2프레임)에 칸이 위로 튀고 받는 효과 표시가 바뀐다(효과는 이미 걸렸다).
+        // 이 프레임에 이미 시작한 튐(같은 발동이 선보다 먼저 알린다 — BoardRunner.FireOnce)도 그 튐으로 대신한다
+        public void Hold(float seconds)
+        {
+            _holdUntil = Time.unscaledTime + seconds;
+            if (_bounce == 0f)
+                _bounce = BounceDuration;
+        }
+
+        // 맞음 표시로 지금 위로 튄 칸 수(격자 칸) — 탑 칸 자리는 BoardView가 놓으므로 거기서 더한다
+        public int JumpCells => HitRingShape.JumpCells(Time.unscaledTime - _holdUntil);
 
         // 마우스를 올리지 않은 테두리는 한 단계 어둡게 — 올리면(끄는 중 놓을 자리 포함) 제 밝기로 강조된다
         private const float IdleDim = 0.65f;
@@ -106,7 +121,8 @@ namespace GnorpWar
             frame.a = dragged ? DraggedAlpha : _frameColor.a;
             _frame.color = frame;
 
-            if (_hasteMark != null)
+            // 버프 선이 닿기 전에는 받는 효과 표시를 바꾸지 않는다(지난 모습 그대로 — 맞는 순간 새 값)
+            if (_hasteMark != null && Time.unscaledTime >= _holdUntil)
             {
                 // 전장 탑 표시(TowerBadge.ShowSeconds)와 같은 숫자 — 0.1초 단위 반올림, 0이 되면 숨고, 10초부터는 내림 정수.
                 // 쿨다운 없는 칸은 값이 0 · 1로 온다(안 보인다)

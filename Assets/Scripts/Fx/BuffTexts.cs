@@ -93,17 +93,17 @@ namespace GnorpWar
                 _instance = null;
         }
 
-        // 선이 대상에 닿는 때(BuffLinkShape.ArriveTime) 뜨도록 나이를 그만큼 음수에서 시작한다
+        // 선이 대상에 닿는 때(delay — 보통 BuffLinkShape.ArriveTime, 층이면 그 층이 튀는 때 HitRingShape.EffectDelay) 뜨도록 나이를 그만큼 음수에서 시작한다
         // side = 0이면 at 가운데 위 · +1이면 at에서 오른쪽으로 · -1이면 at에서 왼쪽으로(탑 층 · 타워가 대상일 때 탑을 가리지 않게)
-        public static void Show(Vector2 at, BuffLabel label, float side = 0f)
+        public static void Show(Vector2 at, BuffLabel label, float side = 0f, float delay = BuffLinkShape.ArriveTime)
         {
             if (_instance != null && _instance._font != null && label.Text != null)
-                _instance.Add(at, label, side);
+                _instance.Add(at, label, side, delay);
         }
 
         private static int GlyphIndex(char c) => c >= '0' && c <= '9' ? c - '0' : Extra.IndexOf(c) is int i && i >= 0 ? 10 + i : -1;
 
-        private void Add(Vector2 at, BuffLabel label, float side)
+        private void Add(Vector2 at, BuffLabel label, float side, float delay)
         {
             foreach (Entry old in _active)
                 if (old.Side == side && old.Label.Icon == label.Icon && (old.Origin - at).sqrMagnitude < MergeDistance * MergeDistance
@@ -122,7 +122,7 @@ namespace GnorpWar
             e.Label = label;
             e.At = at + new Vector2(Random.Range(-JitterX, JitterX), Random.Range(-JitterY, JitterY));
             e.Side = side;
-            e.Age = -BuffLinkShape.ArriveTime;
+            e.Age = -delay;
             e.Root.SetActive(false);
             _active.Add(e);
         }

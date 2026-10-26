@@ -18,8 +18,10 @@ namespace GnorpWar
 
         public override void OnDied(Unit unit, Vector2 at, int stacks)
         {
+            if (unit.ChainBorn)
+                return;   // 연계로 태어난 유닛의 죽음은 다시 소환하지 않는다(사용자 10/26)
             Vector2 ground = new Vector2(at.x, Ground.Instance.HeightAt(at.x));
-            BoardRunner.For(unit.Team).Summon(_summon, Count(Level(unit.Team)), -1, ground, Source(unit.Team));
+            BoardRunner.For(unit.Team).Summon(_summon, Count(Level(unit.Team)), -1, ground, Source(unit.Team), chained: true);
             // 죽은 자리에 나온다 — 유닛에서 그으면 길이가 없어 켠 기물의 층에서 그 자리로
             BuffLinks.EffectToPoint(unit.Team, this, ground, BuffKind.Summon);
         }

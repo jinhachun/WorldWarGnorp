@@ -360,7 +360,22 @@ namespace GnorpWar
             Fire(index);
         }
 
+        // 발동 안에서 또 발동한 깊이가 상한이면 건너뛴다(Battle/ChainGuard — 서로 즉시 발동시키는 기물끼리 끝없이 돌지 않게)
         private void Fire(int index)
+        {
+            if (!ChainGuard.EnterFire(_slots[index].Building.Definition))
+                return;
+            try
+            {
+                FireOnce(index);
+            }
+            finally
+            {
+                ChainGuard.ExitFire();
+            }
+        }
+
+        private void FireOnce(int index)
         {
             OwnedBuilding building = _slots[index].Building;
             BuildingDefinition definition = building.Definition;
@@ -398,10 +413,27 @@ namespace GnorpWar
         // 이 진영의 모든 소환이 거치는 곳 — 기획서 §5 처리 순서: ① 추가 소환 ② 변환. 그다음 한 마리씩 소환 이벤트.
         // sourceSlot = 소환한 기물의 칸(기물이 아니면 -1) · at = 소환 자리(없으면 성문 — 넓은 유닛은 큰 유닛 소환 지점)
         // source = 낳은 기물(Unit.SummonedBy) — 칸에서 소환하면 그 칸의 기물이고, 칸 없이 소환하는 유닛 효과는 자기를 켠 기물을 넘긴다(UnitEffect.Source)
-        public void Summon(UnitDefinition unit, int count, int sourceSlot, Vector2? at = null, BuildingDefinition source = null)
+        // chained = 연계 소환(「소환하면 · 죽으면 · 처치하면 소환」 효과) — 나온 유닛에 Unit.ChainBorn을 단다. 그 유닛의 죽음 · 처치는 연계 소환을 다시 부르지 않는다(효과 쪽이 본다)
+        // 안전 상한(Battle/ChainGuard): 소환 안에서 또 소환한 깊이가 상한이면 통째로 건너뛰고, 스텝당 소환 수 · 전장 유닛 수는 남은 만큼만 낸다
+        public void Summon(UnitDefinition unit, int count, int sourceSlot, Vector2? at = null, BuildingDefinition source = null, bool chained = false)
         {
             if (source == null && HasBuilding(sourceSlot))
                 source = _slots[sourceSlot].Building.Definition;
+            LastSpawned = null;   // 상한으로 건너뛰면 부른 쪽이 지난 소환의 유닛에 선을 긋지 않게
+            if (!ChainGuard.EnterSummon(unit, source))
+                return;
+            try
+            {
+                SummonOnce(unit, count, sourceSlot, at, source, chained);
+            }
+            finally
+            {
+                ChainGuard.ExitSummon();
+            }
+        }
+
+        private void SummonOnce(UnitDefinition unit, int count, int sourceSlot, Vector2? at, BuildingDefinition source, bool chained)
+        {
             int baseCount = count;   // 추가 소환 전 — 더 나온 몫에 기둥(Fx/PillarFx)
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
@@ -411,6 +443,9 @@ namespace GnorpWar
                     if (extra > 0 && sourceSlot >= 0)
                         BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Summon);
                 }
+            count = ChainGuard.Allow(_team, count, unit, source);
+            if (count <= 0)
+                return;
             UnitEffect converter = null;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, unit))
@@ -445,7 +480,7 @@ namespace GnorpWar
 
             void SpawnGroup(Vector2 from)
             {
-                for (int i = 0; i < count; i++)
+                for (int i = 0; i < count && !ChainGuard.UnitsFull(_team); i++)   // 파견 사무소 신화는 같은 수를 타워마다 내므로 한 기씩도 본다
                 {
                     Unit spawned = fromFloor ? Unit.SpawnStanding(prefab, tower.SpawnFeet(sourceSlot, i, Mathf.Max(1f, width))) : Unit.Spawn(prefab, from);
                     LastSpawned = spawned;
@@ -454,7 +489,7 @@ namespace GnorpWar
                     // 기둥 — 그 자리 소환의 첫 기 · 추가 소환으로 더 나온 기(대량보급) · 다른 유닛으로 바뀌어 나온 기(교황청 · 노동의 기계화)
                     if ((inPlace && i == 0) || i >= baseCount || converter != null)
                         PillarFx.Rise(new Vector2(spawned.Position.x, spawned.Feet), spawned.Top - spawned.Feet);
-                    spawned.NotifySummoned(sourceSlot, source);
+                    spawned.NotifySummoned(sourceSlot, source, chained);
                     // 다른 층의 기물이 ~를 소환할 때마다 (군기 · 성당기사단) — 어느 층을 볼지는 능력이 정한다
                     if (sourceSlot >= 0)
                         for (int other = 0; other < _slots.Length; other++)

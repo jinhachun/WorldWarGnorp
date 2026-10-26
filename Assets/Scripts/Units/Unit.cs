@@ -141,6 +141,8 @@ namespace GnorpWar
         public int Life { get; private set; }
         // 이 유닛을 낳은 기물(BoardRunner.Summon이 적는다) — 「이 기물이 소환한 ~」을 가리는 효과가 읽는다. 기물이 낳지 않았으면 null
         public BuildingDefinition SummonedBy { get; private set; }
+        // 연계로 태어났나 — 「소환하면 · 죽으면 · 처치하면 소환」 효과가 낸 유닛(BoardRunner.Summon의 chained). 이 유닛의 죽음 · 처치는 그런 연계 소환을 다시 부르지 않는다(사용자 10/26: 서로 영향 주는 연계는 한 번만)
+        public bool ChainBorn { get; private set; }
         // 이 유닛을 낸 칸(BoardRunner.Summon의 sourceSlot) — 칸 없는 소환이면 -1. 준 피해를 그 칸 몫으로 센다(Battle/DamageMeter)
         public int SourceSlot { get; private set; } = -1;
 
@@ -283,20 +285,24 @@ namespace GnorpWar
             _hp = Mathf.Min(_hp, 0f);
             if (!revives)
                 Die();
+            // 아래 훅들은 소환할 수 있다 — 소환된 유닛이 처음 켜는 효과(_innateEffects)가 목록에 붙으므로 foreach 대신 지금 개수까지만 돈다
             if (attacker is Unit killer && killer.IsAlive)
             {
-                foreach (TeamEffects.Entry e in TeamEffects.For(killer._team))
-                    if (e.Effect.AppliesFor(killer._team, killer._definition))
-                        e.Effect.OnKill(killer, this, e.Stacks);
+                List<TeamEffects.Entry> killerEffects = TeamEffects.For(killer._team);
+                for (int i = 0, n = killerEffects.Count; i < n; i++)
+                    if (killerEffects[i].Effect.AppliesFor(killer._team, killer._definition))
+                        killerEffects[i].Effect.OnKill(killer, this, killerEffects[i].Stacks);
             }
             else if (attacker is Base tower)
                 tower.NotifyKill(this);
-            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesFor(_team, _definition))
-                    e.Effect.OnDied(this, at, e.Stacks);
+            List<TeamEffects.Entry> own = TeamEffects.For(_team);
+            for (int i = 0, n = own.Count; i < n; i++)
+                if (own[i].Effect.AppliesFor(_team, _definition))
+                    own[i].Effect.OnDied(this, at, own[i].Stacks);
             Team foe = _team == Team.Ally ? Team.Enemy : Team.Ally;
-            foreach (TeamEffects.Entry e in TeamEffects.For(foe))
-                e.Effect.OnEnemyDied(foe, this, at, e.Stacks);
+            List<TeamEffects.Entry> foes = TeamEffects.For(foe);
+            for (int i = 0, n = foes.Count; i < n; i++)
+                foes[i].Effect.OnEnemyDied(foe, this, at, foes[i].Stacks);
             // 양 진영의 기물이 죽은 수를 센다(약탈족장 라이칸스로프 — 아군·적 구분 없이)
             BoardRunner.For(Team.Ally)?.NotifyUnitDied(this);
             BoardRunner.For(Team.Enemy)?.NotifyUnitDied(this);
@@ -323,7 +329,23 @@ namespace GnorpWar
             gameObject.SetActive(false);
         }
 
-        private void OnDisable() => Builders.Remove(this);
+        private void OnDisable()
+        {
+            Builders.Remove(this);
+            Uncount();
+        }
+
+        // 유닛 수 상한(Battle/ChainGuard)은 살아 있는 유닛만 센다 — 켜질 때 세고, 죽는 순간(Die) 또는 죽지 않고 꺼질 때(소모 · 건축가 퇴장 · 씬 내림) 한 번만 뺀다.
+        // 죽지 않는 전사의 부활은 Die를 지나지 않으므로 그대로 센다
+        private bool _counted;
+
+        private void Uncount()
+        {
+            if (!_counted)
+                return;
+            _counted = false;
+            ChainGuard.UnitDisabled(_team);
+        }
 
         // 건축가 한 스텝 — 이번 스텝의 가로 속도. 싸우지 않는다. 자리가 없으면 바로 돌아가고, 성(앞쪽 끝)에 닿으면 조용히 사라진다(죽음 아님)
         private float BuildStep()
@@ -698,13 +720,16 @@ namespace GnorpWar
         private float _attackScale = 1f;
 
         // 소환됐다(BoardRunner.Summon) — 소환 이벤트
-        public void NotifySummoned(int sourceSlot, BuildingDefinition source)
+        public void NotifySummoned(int sourceSlot, BuildingDefinition source, bool chained)
         {
             SummonedBy = source;
             SourceSlot = sourceSlot;
-            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesFor(_team, _definition))
-                    e.Effect.OnSummoned(this, sourceSlot, e.Stacks);
+            ChainBorn = chained;
+            // 훅이 또 소환하면 그 유닛의 효과가 목록에 붙는다 — 지금 개수까지만(Perish와 같다)
+            List<TeamEffects.Entry> effects = TeamEffects.For(_team);
+            for (int i = 0, n = effects.Count; i < n; i++)
+                if (effects[i].Effect.AppliesFor(_team, _definition))
+                    effects[i].Effect.OnSummoned(this, sourceSlot, effects[i].Stacks);
         }
         public float Feet => _rb.position.y - _halfHeight;
         public float Top => _rb.position.y + _halfHeight;
@@ -841,8 +866,11 @@ namespace GnorpWar
         {
             Life++;
             SummonedBy = null;
+            ChainBorn = false;
             SourceSlot = -1;
             CombatPower.NoteSpawn(_team);
+            _counted = true;
+            ChainGuard.UnitEnabled(_team);
             if (Size != 1f)
                 SetSize(1f);
             _ownModifiers.Clear();
@@ -2170,6 +2198,7 @@ namespace GnorpWar
 
         private void Die()
         {
+            Uncount();   // 시체는 유닛 수 상한에 세지 않는다
             // 물리 제거 — 콜라이더가 꺼지면 위에 서 있던 유닛들이 빈자리로 내려앉는다
             foreach (Collider2D col in GetComponents<Collider2D>())
                 col.enabled = false;

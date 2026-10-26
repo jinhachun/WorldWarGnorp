@@ -273,3 +273,7 @@ MonoBehaviour:
   _axeFlightSeconds: 0.9
   _axeArcHeight: 8
   _axeSpin: 900
+  _maxSummonDepth: 8
+  _maxStepSummons: 400
+  _maxUnits: 999
+  _maxFireDepth: 8

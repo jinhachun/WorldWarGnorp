@@ -16,10 +16,11 @@ namespace GnorpWar
 
         public override void OnEnemyDied(Team team, Unit victim, Vector2 at, int stacks)
         {
+            // 적은 연계로 태어났어도 전부 센다(사용자 10/26). 내가 낸 유닛은 연계로 태어남(chained) — 그 유닛의 죽음은 내 쪽 연계를 다시 부르지 않는다
             if (_victims.Length != 0 && !UnitAliases.IsAny(victim.Team, victim.Definition, _victims))
                 return;
             Vector2 ground = new Vector2(at.x, Ground.Instance.HeightAt(at.x));
-            BoardRunner.For(team).Summon(_summon, _count, -1, ground, Source(team));
+            BoardRunner.For(team).Summon(_summon, _count, -1, ground, Source(team), chained: true);
             BuffLinks.EffectToPoint(team, this, ground, BuffKind.Summon);
         }
 

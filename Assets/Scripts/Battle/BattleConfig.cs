@@ -207,6 +207,22 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _axeSpin = 900f;
 
+        [Header("안전 상한 — 끝없는 소환 · 발동 사슬 방어(Battle/ChainGuard). 넘친 것은 버리고 콘솔 경고 한 줄. 정상 빌드에서 잰 최대보다 넉넉히(10/26)")]
+        [Tooltip("소환 안에서 또 소환한 깊이(유닛이 나오는 순간의 효과가 또 소환 …) — 넘는 소환은 건너뛴다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _maxSummonDepth = 8;
+        [Tooltip("물리 스텝 하나에 한 진영이 소환하는 수 — 넘친 몫은 버린다(「죽으면 소환 → 즉사 → 소환」처럼 스텝을 넘는 폭주)")]
+        [SuffixLabel("기", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _maxStepSummons = 400;
+        [Tooltip("전장 유닛 수(양 진영 합 · 살아 있는 유닛만 — 시체는 세지 않는다) — 진영마다 이 값의 절반을 넘으면 그 진영 소환을 멈춘다(한쪽이 넘쳐도 다른 쪽은 막지 않게). 성능 목표 500기")]
+        [SuffixLabel("기", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _maxUnits = 999;
+        [Tooltip("발동 안에서 또 발동한 깊이(즉시 발동 → 그 기물이 또 즉시 발동 …) — 넘는 발동은 건너뛴다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _maxFireDepth = 8;
+
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
@@ -223,6 +239,10 @@ namespace GnorpWar
         public float AxeFlightSeconds => _axeFlightSeconds;
         public float AxeArcHeight => _axeArcHeight;
         public float AxeSpin => _axeSpin;
+        public int MaxSummonDepth => _maxSummonDepth;
+        public int MaxStepSummons => _maxStepSummons;
+        public int MaxUnits => _maxUnits;
+        public int MaxFireDepth => _maxFireDepth;
 
         public WorldConfig World => _world;
         public AssetIds AssetIds => _assetIds;

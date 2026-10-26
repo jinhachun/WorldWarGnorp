@@ -153,6 +153,8 @@ namespace GnorpWar
                 // 머리말은 카드와 함께 뜬다(공화정 항목은 합치기 연출 동안 이미 대기열에 있다)
                 _header.enabled = false;
                 _crisisBody.enabled = false;
+                // 건너뛰기도 카드와 함께 — 안 끄면 지난 지역 특수 고르기의 버튼이 합치기 연출 동안 남아 보인다
+                _skip.gameObject.SetActive(false);
                 _shown = null;
                 return;
             }

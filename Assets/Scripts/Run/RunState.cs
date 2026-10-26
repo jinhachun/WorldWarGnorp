@@ -6,7 +6,7 @@ namespace GnorpWar
     // 한 턴 = 턴 시작(BeginTurn — AI 영주들의 상점 · 내 수입) → 지도에서 상점 팝업을 여닫으며 침략할 땅을 고름(Invade — 전투 씬으로) 또는 쉬기(Rest)
     // → 전투 결과(FinishBattle) → AI 턴·정산(EndTurn) → 다음 턴.
     // 판도·영주·AI 영주의 탑은 World(World/WorldRun)에, 내 탑은 여기(Player)에 있다. 상점 규칙(구매·판매·리롤·자리 바꾸기)도 여기 — UI는 이 메서드만 부른다
-    public static class RunState
+    public static partial class RunState
     {
         public enum Outcome { None, Win, Lose }
         // 씬이 뜰 때 그 씬의 매니저가 본다 — Map 지도(상점은 지도 위 팝업) · Battle 전투 · Aftermath 내 차례가 끝나 AI 턴(EndTurn)을 돌릴 차례
@@ -27,7 +27,8 @@ namespace GnorpWar
         public static int LivesMax => World.State.Rules.LivesStart;
         public static bool InCrisis => World.State.InCrisis;
         public static int Lands => World.State.LandsOf(World.State.Player);
-        public static int RegionCount => World.State.Owner.Length;
+        // 영주 땅 수(이벤트 땅 제외 — 통일 = 이만큼)
+        public static int RegionCount => World.State.Graph.LordRegionCount;
         // 턴 − 1(0부터) — 턴이 끝날 때마다 +1(쉬어도). 진열 등급 확률 · 성 체력이 읽는다
         public static int Round { get; private set; }
         public static RunPhase Phase { get; private set; }
@@ -180,13 +181,15 @@ namespace GnorpWar
             }
             _shopEnteredRound = _shopCueRound = -1;
             Pending.Clear();
+            _visit = null;
             StatBook.ClearRun();
             TowerBook.ClearRun();
             // 닉네임이 시작하는 자리 — 규칙의 난수와 섞이지 않게 따로 뽑는다
             _nameOffset = new System.Random().Next(1000);
-            // 새 런 = 새 월드 — 영주가 지역마다 하나씩, 그중 무작위 한 자리가 나
+            // 새 런 = 새 월드 — 이벤트 땅을 뽑고, 영주가 남은 땅마다 하나씩, 그중 무작위 한 자리가 나
             var random = new System.Random(Random.Range(0, int.MaxValue));
-            World = new WorldRun(config.World, config, random.Next(config.World.Map.RegionCount), random);
+            World = new WorldRun(config.World, config, random);
+            Debug.Log($"[World] 새 런 — 이벤트 땅 {EventRegions().Count}칸(자리 고정 · 종류만 섞음): {string.Join(" · ", EventRegions().ConvertAll(e => $"{e + 1:00} {EventLands.Name(World.State.EventKind[e])}"))}");
             // 유령 영주 — 저장된 다른 런 기록(같은 게임 버전)을 AI 영주 자리에. 플레이 중에만(에디터 시뮬레이션 · 표는 AI만으로 잰다)
             if (Application.isPlaying)
             {
@@ -260,6 +263,20 @@ namespace GnorpWar
                             regions.Add(next);
             return regions;
         }
+
+        // 이번 런의 이벤트 땅들(지도 번호 순 — 닫힌 것 포함) · 지금 방문할 수 있는 이벤트 땅들(내 땅과 국경을 맞댄 · 안 닫힌 것)
+        public static System.Collections.Generic.List<int> EventRegions()
+        {
+            var regions = new System.Collections.Generic.List<int>();
+            for (int region = 0; region < World.State.Graph.RegionCount; region++)
+                if (World.State.Graph.IsEvent[region])
+                    regions.Add(region);
+            return regions;
+        }
+
+        public static System.Collections.Generic.List<int> VisitableEvents() => World.State.VisitableEvents(World.State.Player);
+
+        // 이벤트 땅 방문(BeginVisit → ChooseVisit / DeclineVisit)은 Run/RunState.Events
 
         // region을 침략한다 — 그 땅의 영주가 상대, 그 땅의 지형이 전장. 씬은 부른 쪽이 다시 불러온다(Phase = Battle이라 상점 없이 전투로 뜬다)
         public static void Invade(int region)

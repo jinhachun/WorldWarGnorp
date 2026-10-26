@@ -26,9 +26,12 @@ namespace GnorpWar
         private const float ShopOpenSeconds = 0.3f, ShopCloseSeconds = 0.2f;
         // 못 누르는 버튼의 글 색(상점과 같다)
         private static readonly Color DisabledText = new Color(0.6f, 0.6f, 0.66f);
+        // 이벤트 땅의 임시 색(회색 — 지도가 이 색을 어둡게 깔아 칠한다). 이벤트 땅 그림은 다음 단계(ROADMAP 2-5)
+        private static readonly Color EventLandColor = new Color(0.85f, 0.85f, 0.85f);
 
         // Choose = 런의 첫 화면 — 내 국가를 고르는 중(고르면 첫 턴이 열린다). March = 「침략」을 눌러 내 영주가 그 땅으로 걸어가는 중(도착하면 전투 씬)
-        private enum Stage { Choose, Command, March, Replay, Summary }
+        // Visit = 이벤트 땅 방문 장면(UI/EventVisitPopup)이 떠 있다 — 끝나면 쉬기와 같은 길(AI 턴 재생)
+        private enum Stage { Choose, Command, March, Visit, Replay, Summary }
 
         private static WorldManager _instance;
 
@@ -53,6 +56,8 @@ namespace GnorpWar
         [SerializeField] private Text _nextLabel;
         [Tooltip("런을 시작할 때 내 국가를 고르는 판(UI/NationCard) — 순서 = RunState.NationChoices, 「시작」을 누르면 Chosen으로 알려 온다")]
         [SerializeField] private NationCard _nationCard;
+        [Tooltip("이벤트 땅 방문 장면(UI/EventVisitPopup) — 「방문」으로 열고, 다 끝나면 Finished로 알려 온다")]
+        [SerializeField] private EventVisitPopup _visit;
 
         private Stage _stage;
         private bool _shopOpen;
@@ -103,6 +108,9 @@ namespace GnorpWar
             _skip.gameObject.SetActive(false);
             _notice.SetActive(false);
             _nationCard.gameObject.SetActive(false);
+            // 방문을 마쳤다(RunState.ChooseVisit · DeclineVisit가 효과 · 닫힘 · Phase = Aftermath까지) — 쉬기와 같은 길
+            if (_visit != null)
+                _visit.Finished += PlayAiTurn;
             _shopPopup.MapRequested += () => SetShop(false);
             _shopRect = (RectTransform)_shopPopup.transform;
             _shopHome = _shopRect.anchoredPosition;
@@ -177,15 +185,24 @@ namespace GnorpWar
                 SetShop(true);
         }
 
-        // 땅을 눌렀다 — 고른다(바다 · 지도 밖을 누르면 푼다)
+        // 땅을 눌렀다 — 고른다(바다 · 지도 밖을 누르면 푼다). 이벤트 땅은 아직 고르지 않고 로그만(방문 화면은 다음 단계 — 지금은 치트 패널의 「방문」, ROADMAP 2-5)
         private void Select(int region)
         {
-            if (_stage == Stage.Command && !_shopOpen && _shopSlide == 0f)
-                _selected = region;
+            if (_stage != Stage.Command || _shopOpen || _shopSlide != 0f)
+                return;
+            // 이벤트 땅도 고른다 — 왼쪽 패널이 그 이벤트를 보여 주고 「침략」이 「방문」이 된다(UI/WorldSidePanel)
+            _selected = region;
         }
 
         private void Invade()
         {
+            // 이벤트 땅이면 걷지 않고 방문 장면을 연다(전투 씬 없음)
+            if (_stage == Stage.Command && _visit != null && RunState.VisitableEvents().Contains(_selected))
+            {
+                if (_visit.Open(_selected))
+                    _stage = Stage.Visit;
+                return;
+            }
             if (_stage != Stage.Command || !RunState.InvadableRegions().Contains(_selected))
                 return;
             // 내 영주가 그 땅으로 걸어 들어간 뒤에 전투로(사용자 10/12) — AI 턴 재생의 침략 걸음(UI/WorldLords.March)과 같은 걸음이다.
@@ -416,7 +433,8 @@ namespace GnorpWar
             bool command = _stage == Stage.Command;
             // 고른 땅은 런 상태에 둔다 — 상점에 다녀와도 남고, 상점 패널이 같은 땅을 보여 준다
             if (command)
-                RunState.Preview(_selected);
+                // 이벤트 땅은 영주가 없다 — 미리 보는 상대(탑 · 업그레이드)로 넘기지 않는다
+                RunState.Preview(_selected >= 0 && state.Graph.IsEvent[_selected] ? WorldMapView.None : _selected);
             List<int> invadable = command ? RunState.InvadableRegions() : null;
             bool[] open = null;
             if (invadable != null)
@@ -428,14 +446,14 @@ namespace GnorpWar
             // 상점 팝업이 지도를 다 덮은 동안에는 영주들이 걷지 않는다(보이지 않는 일을 하지 않는다)
             _map.Lords.enabled = !(_shopOpen && _shopSlide == 1f);
             _map.Lords.Group(state.Coalition != null ? state.Coalition.Id : -1, state.CoalitionMembers);
-            _map.Show(_shown ?? state.Owner, lord => RunState.ColorOf(state.Lords[lord]), state.Player.Id, open, _selected);
+            _map.Show(_shown ?? state.Owner, lord => lord == WorldState.NoOwner ? EventLandColor : RunState.ColorOf(state.Lords[lord]), state.Player.Id, open, _selected);
             // 명령을 받는 동안에만 고른 땅 · 명령 버튼이 보인다 — 그 밖에는 그 자리에 알림(AI 턴 · 요약 · 끝)
             // 상점의 내 탑은 팝업이 보이는 동안(미끄러지는 동안 포함) 제자리에 서 있고, 팝업을 못 누르는 동안에는 같이 못 누른다
             bool shopShown = _shopOpen || _shopSlide > 0f;
             if (_shopTower.gameObject.activeSelf != shopShown)
                 _shopTower.gameObject.SetActive(shopShown);
             _shopTowerGroup.blocksRaycasts = _shopGroup.blocksRaycasts;
-            _panel.Show(_selected, command || _stage == Stage.March, shopShown);
+            _panel.Show(_selected, command || _stage == Stage.March || _stage == Stage.Visit, shopShown);
             if (!command && _shopOpen)
                 SetShop(false);
             // 상점이 열린 동안에는 명령 버튼 셋을 다 숨긴다 — 닫는 길은 팝업 안의 큰 「지도로」 하나(사용자 10/11), 닫아야 지도에서 고른다
@@ -445,7 +463,7 @@ namespace GnorpWar
                 if (button.gameObject.activeSelf != shown)
                     button.gameObject.SetActive(shown);
             }
-            _invade.interactable = command && invadable.Contains(_selected);
+            _invade.interactable = command && (invadable.Contains(_selected) || RunState.VisitableEvents().Contains(_selected));
             _invadeLabel.color = _invade.interactable ? Color.white : DisabledText;
             _panel.ShowStatus(_topBar, _turn);
         }

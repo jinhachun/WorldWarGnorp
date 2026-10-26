@@ -62,6 +62,10 @@ namespace GnorpWar
         [SuffixLabel("골드", true)]
         [SerializeField] private int _underdogGoldMax = 10;
 
+        [Header("이벤트 땅 — 자리는 지도에 고정(산맥 · 강 띠 — 월드 지도 굽기), 종류만 런마다 섞는다(아웃게임기획 §3-1)")]
+        [Tooltip("종류마다 하나 — 이름 · 아이콘 · 툴팁 글 · 수치(World/EventLandDefinition)")]
+        [SerializeField] private EventLandDefinition[] _events = new EventLandDefinition[0];
+
         [Header("영주 색 — 유닛 그림의 파란 자리 · 탑 지붕 · 깃발(Core/LordPaint). 내 색(파랑)은 BattleConfig의 열쇠 색")]
         [Tooltip("AI 영주의 색 — 영주 번호마다 11칸씩 건너뛰며 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
         [HideIf(nameof(HideNonBalance))]
@@ -132,6 +136,7 @@ namespace GnorpWar
         }
 
         public WorldMapDefinition Map => _map;
+        public EventLandDefinition EventOf(EventLandKind kind) => System.Array.Find(_events, e => e != null && e.Kind == kind);
         // 번호가 이웃한 영주(시작 때 = 이웃한 땅)의 색이 색상환에서 멀어지게 건너뛰며 고른다 — 건너뛰는 폭은 색 수(28)와 서로소여야 전부 한 번씩 돈다
         private const int ColorStride = 11;
         public Color LordColor(int lord) => _lordColors[lord * ColorStride % _lordColors.Length];

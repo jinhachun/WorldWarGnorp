@@ -70,8 +70,8 @@ namespace GnorpWar.Editor
             Debug.Log($"[World] 월드 에셋 {made}개를 만들었다({Folder}) — 이미 있던 것은 그대로 뒀다");
         }
 
-        // 땅 번호 지도(그림 한 장)를 다시 그려 저장하고, 그 그림에서 뽑은 이웃 · 표시 자리를 맵 에셋에 적는다 — 지형은 건드리지 않는다.
-        // 지도의 모양은 WorldMapBaker의 숫자가 정한다(늘 같은 그림이 나온다)
+        // 땅 번호 지도(그림 한 장)를 다시 그려 저장하고, 그 그림에서 뽑은 이웃 · 표시 자리 · 땅마다 지형 · 이벤트 땅(띠) 표시를 맵 에셋에 적는다(땅 40칸 = 영주 땅 30 + 띠 10, 10/26).
+        // 지도의 모양은 WorldMapBaker의 숫자가 정한다(늘 같은 그림이 나온다). 굽기 전에 검사(Inspect)하고, 못 맞추면 지금 파일을 건드리지 않는다
         [MenuItem("GnorpWar/월드 지도 굽기")]
         private static void BakeMain()
         {
@@ -88,7 +88,15 @@ namespace GnorpWar.Editor
         private static void Bake(WorldMapDefinition map)
         {
             var baker = new WorldMapBaker();
-            const int width = WorldMapBaker.Width, height = WorldMapBaker.Height;
+            // 굽기 검사 — 못 맞추면 지금 파일을 건드리지 않고 그만둔다
+            string refusal = Inspect(baker, out string report);
+            Debug.Log(report);
+            if (refusal != null)
+            {
+                Debug.LogError($"[World] 지도를 굽지 않았다 — {refusal}. 씨앗 · 손잡이(WorldMapBaker)를 다시 볼 것");
+                return;
+            }
+            int width = baker.Width, height = baker.Height;
             var pixels = new Color32[width * height];
             // 텍스처는 아래 줄부터 든다
             for (int y = 0; y < height; y++)
@@ -118,9 +126,13 @@ namespace GnorpWar.Editor
             var so = new SerializedObject(map);
             so.FindProperty("_regionMap").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             SerializedProperty regions = so.FindProperty("_regions");
+            regions.arraySize = WorldMapTable.RegionCount;
             for (int i = 0; i < regions.arraySize; i++)
             {
                 SerializedProperty region = regions.GetArrayElementAtIndex(i);
+                MapDefinition terrain = AssetDatabase.LoadAssetAtPath<MapDefinition>($"Assets/Data/Maps/{TerrainAssets[WorldMapTable.TerrainLetters.IndexOf(baker.Terrain[i])]}.asset");
+                region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Terrain)).objectReferenceValue = terrain;
+                region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Event)).boolValue = i >= WorldMapRidges.LordCount;
                 SerializedProperty to = region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Links));
                 to.arraySize = baker.Links[i].Length;
                 for (int k = 0; k < baker.Links[i].Length; k++)
@@ -131,7 +143,67 @@ namespace GnorpWar.Editor
             int links = 0;
             foreach (int[] row in baker.Links)
                 links += row.Length;
-            Debug.Log($"[World] 지도를 구웠다 — {path} ({width}×{height}) · 땅 {regions.arraySize}개 · 이웃 {links / 2}쌍(국경 {WorldMapBaker.MinBorder}칸 이상)");
+            Debug.Log($"[World] 지도를 구웠다 — {path} ({width}×{height}) · 땅 {regions.arraySize}개(영주 땅 {WorldMapRidges.LordCount} + 띠 {WorldMapRidges.RidgeCount}) · 이웃 {links / 2}쌍(국경 {WorldMapBaker.MinBorder}칸 이상)");
+        }
+
+        // 굽기 검사(10/26 — 영주 땅 30 + 산맥 · 강 띠 10) — 못 맞춘 까닭(맞으면 null)과 잰 값 한 줄:
+        // 땅이 다 있음 · 띠 10개 · 영주 땅끼리 이어짐 · 영주 땅마다 영주 이웃 둘 이상 · 가장 작은 영주 땅의 내접 반지름 · 얼음이 늪지/정글과 안 맞닿음
+        // · 띠마다 영주 땅 셋 이상과 맞닿음 · 띠끼리 안 맞닿음 · 띠 넓이 상한
+        private const int MinRadius = 8;
+
+        private static string Inspect(WorldMapBaker baker, out string report)
+        {
+            int lords = WorldMapRidges.LordCount, count = WorldMapTable.RegionCount;
+            var reached = new System.Collections.Generic.HashSet<int> { 0 };
+            var queue = new System.Collections.Generic.Queue<int>(reached);
+            while (queue.Count > 0)
+                foreach (int next in baker.Links[queue.Dequeue()])
+                    if (next < lords && reached.Add(next))
+                        queue.Enqueue(next);
+            int ice = 0, minRadius = int.MaxValue, minDegree = int.MaxValue, missing = 0, minTouch = int.MaxValue, maxRidge = 0, ridgeContacts = 0;
+            for (int a = 0; a < count; a++)
+            {
+                if (baker.Area[a] == 0)
+                    missing++;
+                int lordNeighbors = 0;
+                foreach (int b in baker.Links[a])
+                    if (b < lords)
+                        lordNeighbors++;
+                if (a < lords)
+                {
+                    minRadius = Mathf.Min(minRadius, baker.Radius[a]);
+                    minDegree = Mathf.Min(minDegree, lordNeighbors);
+                    foreach (int b in baker.Links[a])
+                        if (b < lords && a < b && WorldMapRidges.IceClash(baker.Terrain[a], baker.Terrain[b]))
+                            ice++;
+                    continue;
+                }
+                minTouch = Mathf.Min(minTouch, lordNeighbors);
+                maxRidge = Mathf.Max(maxRidge, baker.Area[a]);
+                for (int b = lords; b < count; b++)
+                    if (b != a && baker.BorderLength[a, b] > 0)
+                        ridgeContacts++;
+            }
+            report = $"[World] 굽기 검사 — {baker.Width}×{baker.Height}칸 · 땅 {count - missing}/{count} · 띠 {baker.RidgesMade}/{WorldMapRidges.RidgeCount} · 영주 땅 이어짐 {reached.Count}/{lords} · 영주 이웃 최소 {minDegree} · 영주 땅 내접 반지름 최소 {minRadius}칸 · 얼음-늪지/정글 맞닿음 {ice} · 띠가 맞닿은 영주 땅 최소 {minTouch} · 띠끼리 맞닿음 {ridgeContacts / 2} · 띠 넓이 최대 {maxRidge}칸";
+            if (missing > 0)
+                return $"땅 {missing}개가 비었다";
+            if (baker.RidgesMade < WorldMapRidges.RidgeCount)
+                return $"띠를 {baker.RidgesMade}개밖에 못 깎았다";
+            if (reached.Count < lords)
+                return $"영주 땅이 다 이어지지 않는다({reached.Count}/{lords})";
+            if (minDegree < 2)
+                return "영주 이웃이 하나뿐인 땅이 있다";
+            if (minRadius < MinRadius)
+                return $"가장 작은 영주 땅의 내접 반지름 {minRadius} < {MinRadius}";
+            if (ice > 0)
+                return $"얼음이 늪지 · 정글과 {ice}쌍 맞닿는다";
+            if (minTouch < 3)
+                return $"영주 땅 {minTouch}개와만 맞닿은 띠가 있다";
+            if (ridgeContacts > 0)
+                return "띠끼리 맞닿는다";
+            if (maxRidge > WorldMapRidges.AreaCap)
+                return $"띠 넓이 {maxRidge} > {WorldMapRidges.AreaCap}";
+            return null;
         }
 
         // 있으면 그대로 돌려주고, 없으면 만들어 fill로 채운다

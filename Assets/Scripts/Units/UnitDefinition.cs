@@ -4,8 +4,11 @@ using UnityEngine;
 namespace GnorpWar
 {
     [CreateAssetMenu(menuName = "GnorpWar/Unit Definition")]
-    public class UnitDefinition : ScriptableObject
+    // IUnitFilter — 이 유닛 하나만 고른다. 「영구히」 강화의 출처가 유닛 자신일 때(훈련장 — 고른 유닛마다 한 줄 · 탑 스냅샷이 이 에셋의 ID로 적는다)
+    public class UnitDefinition : ScriptableObject, IUnitFilter
     {
+        public bool AppliesTo(UnitDefinition unit) => unit == this;
+
         [Tooltip("버튼에 뜨는 이름")]
         [BoxGroup("기본")]
         [HideIf(nameof(HideNonBalance))]

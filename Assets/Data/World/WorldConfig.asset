@@ -36,6 +36,16 @@ MonoBehaviour:
   _underdog: 1
   _underdogGoldPerLand: 1
   _underdogGoldMax: 10
+  _eventLands: 10
+  _events:
+  - {fileID: 11400000, guid: 8b304020e2d872e41a38a784e0efc9e1, type: 2}
+  - {fileID: 11400000, guid: 1d04dbc5c46dcf64ca3e6d78cc361e4d, type: 2}
+  - {fileID: 11400000, guid: 726b06388723f744ebf6e02707d1a83d, type: 2}
+  - {fileID: 11400000, guid: 059e6b3d6d2614c48865614a1e44babe, type: 2}
+  - {fileID: 11400000, guid: 83b9d5e90b4a6194b878db4d74897834, type: 2}
+  - {fileID: 11400000, guid: ba0b5d763533d35419436031a8185c35, type: 2}
+  - {fileID: 11400000, guid: 75617cd23701ff64e8404c57101429bb, type: 2}
+  - {fileID: 11400000, guid: 976dd71e95dbc3b40bee9ec981045914, type: 2}
   _lordColors:
   - {r: 0.5916666, g: 0.3, b: 1, a: 1}
   - {r: 0.83095247, g: 0.6, b: 1, a: 1}

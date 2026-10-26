@@ -17,13 +17,21 @@ namespace GnorpWar
         // [영주 번호] = 그 AI 영주의 탑 — 땅을 다 잃거나 멸망하면 사라진다
         private readonly Dictionary<int, TowerState> _towers = new Dictionary<int, TowerState>();
 
-        // 영주의 상점(RunState.ShopAs)은 런이 시작돼 있어야 돈다 — RunState.StartNew가 이것을 만든다
-        public WorldRun(WorldConfig world, BattleConfig battle, int playerRegion, System.Random random)
+        // 영주의 상점(RunState.ShopAs)은 런이 시작돼 있어야 돈다 — RunState.StartNew가 이것을 만든다.
+        // 순서(아웃게임기획 §3-1): 지도의 영주 땅으로 규칙 그래프(이벤트 땅 = 지도에 고정된 산맥 · 강 띠 — 종류만 WorldState가 섞는다) · 영주들 → 내 시작 땅(영주 땅 중 무작위) → 지역 특수(영주 땅에만)
+        public WorldRun(WorldConfig world, BattleConfig battle, System.Random random)
         {
             _world = world;
             _battle = battle;
             _random = random;
-            State = new WorldState(world.Map.ToGraph(), world.ToRules(), playerRegion, random);
+            WorldRules rules = world.ToRules();
+            WorldGraph graph = world.Map.ToGraph();
+            var lordRegions = new List<int>();
+            for (int region = 0; region < graph.RegionCount; region++)
+                if (!graph.IsEvent[region])
+                    lordRegions.Add(region);
+            int playerRegion = lordRegions[random.Next(lordRegions.Count)];
+            State = new WorldState(graph, rules, playerRegion, random);
             foreach (Lord lord in State.Lords)
                 if (!lord.IsPlayer)
                     _towers[lord.Id] = NewTower();
@@ -32,7 +40,7 @@ namespace GnorpWar
             RegionSpecial = new UpgradeDefinition[State.Owner.Length];
             UnplacedSpecials.AddRange(battle.SpecialUpgrades);
             var lands = new List<int>();
-            for (int region = 0; region < RegionSpecial.Length; region++)
+            foreach (int region in lordRegions)
                 if (region != playerRegion && System.Array.IndexOf(State.Graph.Links[playerRegion], region) < 0)
                     lands.Add(region);
             for (int i = 0; i < battle.SpecialRegions && UnplacedSpecials.Count > 0 && lands.Count > 0; i++)

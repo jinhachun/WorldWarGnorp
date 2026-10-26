@@ -7,11 +7,11 @@ using UnityEngine;
 namespace GnorpWar.Editor
 {
     // 에셋 ID 등록부(Run/AssetIds) 채우기 — 메뉴 「GnorpWar → 에셋 ID 등록부 갱신」 · 빌드 직전에 자동.
-    // 스냅샷에 적힐 수 있는 종류(기물 · 업그레이드 · 기물 능력)를 프로젝트에서 전부 찾아 GUID와 함께 적는다. 등록부가 없으면 만든다
+    // 스냅샷에 적힐 수 있는 종류(기물 · 업그레이드 · 기물 능력 · 유닛 — 훈련장의 영구 강화 출처)를 프로젝트에서 전부 찾아 GUID와 함께 적는다. 등록부가 없으면 만든다
     internal class AssetIdsMenu : IPreprocessBuildWithReport
     {
         public const string Path = "Assets/Data/AssetIds.asset";
-        public static readonly System.Type[] Kinds = { typeof(BuildingDefinition), typeof(UpgradeDefinition), typeof(BuildingPassive) };
+        public static readonly System.Type[] Kinds = { typeof(BuildingDefinition), typeof(UpgradeDefinition), typeof(BuildingPassive), typeof(UnitDefinition) };
 
         public int callbackOrder => 0;
 

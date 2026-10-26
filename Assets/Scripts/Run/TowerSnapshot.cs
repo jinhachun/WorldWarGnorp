@@ -159,7 +159,7 @@ namespace GnorpWar
                 throw new InvalidException($"모르는 등급 {(int)rarity}");
         }
 
-        // 영구 강화의 출처는 에셋이어야 ID로 적힌다(지금은 RunStatPassive뿐)
+        // 영구 강화의 출처는 에셋이어야 ID로 적힌다(RunStatPassive · 훈련장의 UnitDefinition)
         private static ScriptableObject SourceAsset(IUnitFilter source)
             => source as ScriptableObject ?? throw new InvalidException($"영구 강화의 출처 {source?.GetType().Name}가 에셋이 아님 — 스냅샷에 못 적는다");
     }

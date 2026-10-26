@@ -106,6 +106,8 @@ namespace GnorpWar
         [SerializeField] private UnitStat _unitStat;
         [Tooltip("UnitStat — 계산 방식(기획서 §6 표기). Flat = +N(톱니 갑옷) · Percent = +N%")]
         [SerializeField] private StatOp _unitOp = StatOp.Percent;
+        [Tooltip("UnitStat — 이 지형의 땅에서 싸울 때만(지형 성소 — 이벤트 땅). 비우면 늘")]
+        [SerializeField] private MapDefinition _terrain;
         [Tooltip("UnitStat · 공격력 — 전투 시작 글자를 「회복량」으로 쓴다(성유 — 회복 유닛은 공격력이 회복량). 계산은 그대로")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private bool _healLabel;
@@ -144,6 +146,8 @@ namespace GnorpWar
         public SpecialKind Special => _kind == UpgradeKind.Special ? _special : SpecialKind.None;
         // 타워 스탯에 거는 종류면 그 스탯(전투 시작 알림 Fx/BattleStartLines의 버프 글자)
         public TowerStat TowerStat => _towerStat;
+        // 이 지형에서 싸울 때만 걸린다(지형 성소) — null = 늘
+        public MapDefinition Terrain => _terrain;
 
         // 그 등급의 값 — 신화 등급 업그레이드는 없다(전설 둘을 합쳐도 전설 값)
         public float ValueAt(BuildingRarity rarity) => _values[Mathf.Min((int)rarity, _values.Length - 1)];
@@ -226,11 +230,12 @@ namespace GnorpWar
             }
         }
 
-        // 유닛 스탯에 거는 종류면 그 값 — 전투 시작(Apply)과 유닛 카드 미리 보기(RunStats.Preview)가 같이 읽는다
+        // 유닛 스탯에 거는 종류면 그 값 — 전투 시작(Apply)과 유닛 카드 미리 보기(RunStats.Preview)가 같이 읽는다.
+        // 지형이 정해진 것(지형 성소)은 지금 전장(RunState.Map — 침략한 땅의 지형, 유령의 탑이 내 판에서 싸울 때도 그 판의 지형)이 그 지형일 때만
         public bool UnitModifier(float value, out StatModifier modifier)
         {
             modifier = new StatModifier(_unitStat, _unitOp, _unitOp == StatOp.Percent ? value / 100f : value);
-            return _kind == UpgradeKind.UnitStat;
+            return _kind == UpgradeKind.UnitStat && (_terrain == null || RunState.Map == _terrain);
         }
 
         // 전투 시작 ① — 양쪽 보드가 돌기 전에: 스탯과 유닛 효과를 건다(전투 동안). count = 이 줄에 든 개수(Each만 1보다 클 수 있다)

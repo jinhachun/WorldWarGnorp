@@ -95,6 +95,9 @@ namespace GnorpWar
         [Tooltip("전장에 그리는 지형 연출(Fx/TerrainFx) — 땅 장식(풀 · 덩굴 · 물웅덩이 …) · 떠다니는 입자(눈발 · 낙엽 …)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private TerrainLook _look;
+        [Tooltip("월드 지도에서 이 지형인 남의 땅 속을 칠하는 색(UI/WorldMapView — 사용자 10/26 「지형색 바탕 + 영주 색 띠」). 침략할 수 없는 땅은 이보다 어둡게")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Color _mapColor = new Color32(156, 140, 106, 255);
 
         [TitleGroup("유닛 — 전투 동안 양 진영에"), ShowIf(nameof(ShowUnitRules))]
         [SerializeField] private UnitRule[] _unitRules = new UnitRule[0];
@@ -129,6 +132,7 @@ namespace GnorpWar
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
         public TerrainLook Look => _look;
+        public Color MapColor => _mapColor;
         // 설명 글 — 아래 수치 필드에서 만든다(값을 고치면 글이 따라간다, CLAUDE.md §5-2 6번). 수치로 나오는 줄이 없는 맵(기본)만 _description
         public string Description
         {

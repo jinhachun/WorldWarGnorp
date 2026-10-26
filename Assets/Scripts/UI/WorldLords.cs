@@ -31,8 +31,10 @@ namespace GnorpWar
         // 깃발 천 안 사진 — 한가운데 자리(뒤집기 전 깃발 그림의 왼쪽 아래에서, 원본 px) · 한 변(원본 px). 천 7×7 = 영주 색 테두리 1칸 + 사진 5×5
         private static readonly Vector2 PhotoAt = new Vector2(4.5f, 8.5f);
         private const int PhotoSize = 5;
-        // 표시 자리(기준점)에서 좌우 · 위 · 아래로 비우는 칸 — 아이콘 판 둘과 번호에, 깃발을 든 그림과 머리 위 닉네임의 크기(깃발 쪽 8칸 · 위로 13칸 · 아래로 3칸)를 더한 것
-        private const int MarkHalfWidth = 17, MarkAbove = 11, MarkBelow = 22;
+        // 깃발을 든 그림과 머리 위 닉네임의 크기(px, 몸 한가운데에서) — 깃발 쪽 · 위 · 아래. 그림이 서는 칸이 표시 자리(WorldMapView가 넘긴 칸)에서 이만큼 비킨다
+        private const float FigureSidePx = 32f, FigureAbovePx = 52f, FigureBelowPx = 12f;
+        // 몸의 반 폭(px) — 서는 칸에서 이만큼 둘레가 다 그 땅이어야 넉넉한 자리다
+        private const float BodyHalfPx = 12f;
 
         private class Walker
         {
@@ -62,6 +64,9 @@ namespace GnorpWar
         private int _width, _height;
         private float _scale;
         private Vector2Int[] _anchors, _spots;
+        // 땅마다 표시 자리가 차지한 칸 · 그 둘레로 그림이 비키는 칸 수(옆 · 위 · 아래) · 넉넉한 자리의 반 폭(칸)
+        private RectInt[] _marks;
+        private int _padSide, _padAbove, _padBelow, _bodyReach;
         private Sprite _body, _flag;
         private Font _font;
         private int[] _owner;
@@ -75,13 +80,19 @@ namespace GnorpWar
         public int Count => _walkers.Count;
 
         // cells = [y × width + x] 땅 번호(바다는 음수), scale = 지도 한 칸의 크기(px), anchors = 땅마다 표시 자리, body = 유닛 몸 그림(영주 색으로 칠한다), flag = 드는 깃발(흰 그림 — 영주 색을 입힌다), font = 닉네임 글(도트 폰트)
-        public void Init(int[] cells, int width, int height, float scale, Vector2Int[] anchors, Sprite body, Sprite flag, Font font)
+        // marks = 땅마다 표시 자리(아이콘 판 · 왕관)가 차지한 칸
+        public void Init(int[] cells, int width, int height, float scale, Vector2Int[] anchors, RectInt[] marks, Sprite body, Sprite flag, Font font)
         {
             _cells = cells;
             _width = width;
             _height = height;
             _scale = scale;
             _anchors = anchors;
+            _marks = marks;
+            _padSide = Mathf.CeilToInt(FigureSidePx / scale);
+            _padAbove = Mathf.CeilToInt(FigureAbovePx / scale);
+            _padBelow = Mathf.CeilToInt(FigureBelowPx / scale);
+            _bodyReach = Mathf.CeilToInt(BodyHalfPx / scale);
             _body = body;
             _flag = flag;
             _font = font;
@@ -98,20 +109,50 @@ namespace GnorpWar
             foreach (Vector2Int offset in around)
                 if (Roomy(region, anchor + offset))
                     return anchor + offset;
+            // 둘레에 없으면(작고 가는 땅) 그 땅 안쪽으로 가장 깊은 칸 — 표시 자리와 안 겹치는 칸 · 넉넉한 칸을 먼저(사용자 10/25)
+            Vector2Int best = anchor;
+            int bestScore = -1;
             for (int i = 0; i < _cells.Length; i++)
-                if (_cells[i] == region && Roomy(region, new Vector2Int(i % _width, i / _width)))
-                    return new Vector2Int(i % _width, i / _width);
-            return anchor;
+            {
+                if (_cells[i] != region)
+                    continue;
+                var cell = new Vector2Int(i % _width, i / _width);
+                int score = Depth(region, cell) + (Roomy(region, cell) ? 1000 : 0) + (OnMark(cell.x, cell.y) ? 0 : 2000) + (BodyOnMark(region, cell) ? 0 : 4000);
+                if (score > bestScore)
+                {
+                    best = cell;
+                    bestScore = score;
+                }
+            }
+            return best;
         }
 
-        // 국경에서 두 칸은 떨어지고 표시 자리 밖인 칸인가
+        // 국경에서 몸의 반 폭만큼은 떨어지고 표시 자리 밖인 칸인가
         private bool Roomy(int region, Vector2Int cell)
         {
-            for (int y = -2; y <= 2; y++)
-                for (int x = -2; x <= 2; x++)
+            for (int y = -_bodyReach; y <= _bodyReach; y++)
+                for (int x = -_bodyReach; x <= _bodyReach; x++)
                     if (RegionAt(cell.x + x, cell.y + y) != region)
                         return false;
             return !OnMark(cell.x, cell.y);
+        }
+
+        // 몸(깃발 · 닉네임 빼고)이 표시 자리와 겹치나 — 아주 작은 땅에서 OnMark를 다 피할 수 없을 때 적어도 몸은 아이콘을 안 덮게
+        private bool BodyOnMark(int region, Vector2Int cell)
+        {
+            RectInt mark = _marks[region];
+            return cell.x + _bodyReach >= mark.xMin && cell.x - _bodyReach < mark.xMax && cell.y + _bodyReach >= mark.yMin && cell.y - _bodyReach < mark.yMax;
+        }
+
+        // 그 칸에서 가장 가까운 남의 칸까지의 거리(칸, 정사각형 둘레로 잰다 — 땅 안쪽 깊이). 몸 폭의 세 배까지만 잰다
+        private int Depth(int region, Vector2Int cell)
+        {
+            for (int r = 1; r <= _bodyReach * 3; r++)
+                for (int k = -r; k <= r; k++)
+                    if (RegionAt(cell.x + k, cell.y - r) != region || RegionAt(cell.x + k, cell.y + r) != region
+                        || RegionAt(cell.x - r, cell.y + k) != region || RegionAt(cell.x + r, cell.y + k) != region)
+                        return r - 1;
+            return _bodyReach * 3;
         }
 
         private int RegionAt(int x, int y) => x < 0 || y < 0 || x >= _width || y >= _height ? -1 : _cells[y * _width + x];
@@ -121,8 +162,9 @@ namespace GnorpWar
             int region = RegionAt(x, y);
             if (region < 0)
                 return false;
-            Vector2Int anchor = _anchors[region];
-            return Mathf.Abs(x - anchor.x) <= MarkHalfWidth && y >= anchor.y - MarkAbove && y <= anchor.y + MarkBelow;
+            // 그림(깃발 · 닉네임 포함)이 표시 자리와 겹치는 칸인가 — 그림은 선 칸에서 위로 길고 아래로 짧다
+            RectInt mark = _marks[region];
+            return x >= mark.xMin - _padSide && x < mark.xMax + _padSide && y >= mark.yMin - _padBelow && y < mark.yMax + _padAbove;
         }
 
         // 그 칸이 lord의 땅인가
@@ -197,7 +239,7 @@ namespace GnorpWar
                 _walkers.Remove(lord);
             }
             for (int region = 0; region < owner.Length; region++)
-                if (!_walkers.ContainsKey(owner[region]))
+                if (owner[region] >= 0 && !_walkers.ContainsKey(owner[region]))   // 이벤트 땅(주인 없음 -1)에는 영주 그림이 서지 않는다
                     _walkers[owner[region]] = NewWalker(owner[region], owner[region], region, colorOf(owner[region]));
             if (_members == null || System.Array.IndexOf(owner, _coalition) < 0)
                 return;

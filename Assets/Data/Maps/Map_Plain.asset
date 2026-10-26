@@ -16,6 +16,7 @@ MonoBehaviour:
   _description: "\uD3C9\uBC94\uD55C \uC9C0\uD615\uC785\uB2C8\uB2E4."
   _icon: {fileID: 21300000, guid: ade6a645d5654959bb64c20bf5e29201, type: 3}
   _look: 0
+  _mapColor: {r: 0.98431, g: 0.72549, b: 0.32941, a: 1}
   _unitRules: []
   _cooldownRate: 1
   _fireAllInterval: 0

@@ -79,7 +79,6 @@ namespace GnorpWar.Editor
             var world = AssetDatabase.LoadAssetAtPath<WorldConfig>(WorldConfigPath);
             var battle = AssetDatabase.LoadAssetAtPath<BattleConfig>(BattleConfigPath);
             runs = Mathf.Clamp(runs, 1, MaxRuns);
-            int regions = world.Map.RegionCount;
             int builds = world.Map.BuildCount;
             const int Tempers = 4, Shown = 10;
 
@@ -115,7 +114,7 @@ namespace GnorpWar.Editor
                 {
                     Random.InitState(seed + r);
                     var random = new System.Random(seed + r);
-                    var run = new WorldRun(world, battle, random.Next(regions), random);
+                    var run = new WorldRun(world, battle, random);
                     WorldState state = run.State;
                     foreach (Lord lord in state.Lords)
                         if (!lord.IsPlayer)
@@ -242,7 +241,7 @@ namespace GnorpWar.Editor
                             lordsSamples[t]++;
                         }
                         if (state.Turn == 3 || state.Turn == 5)
-                            for (int id = 0; id < regions; id++)
+                            for (int id = 0; id < state.Graph.LordRegionCount; id++)
                             {
                                 Lord lord = state.Lords[id];
                                 if (lord.IsPlayer || !lord.Alive)

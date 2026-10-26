@@ -351,6 +351,10 @@ namespace GnorpWar
             if (Button("이웃 영주 먹기", 150f, false, Shop)) Conquer();
             Text("땅이 가장 적은 이웃 영주를 전투 없이 이긴 것으로 친다", 460f, Dim);
             NewLine();
+            System.Collections.Generic.List<int> visitable = RunState.VisitableEvents();
+            if (Button("이벤트 땅 방문", 150f, false, Shop && visitable.Count > 0)) Visit();
+            Text(visitable.Count > 0 ? $"방문할 수 있는 이벤트 땅 {string.Join(" · ", visitable.ConvertAll(e => $"{e + 1:00} {EventLands.Name(RunState.World.State.EventKind[e])}"))} — 첫 땅을 방문(이번 턴의 침략 대신)" : "국경을 맞댄 열린 이벤트 땅이 없다", 460f, Dim);
+            NewLine();
             if (Button(_enemyOn ? "치트 적 보드: 켬" : "치트 적 보드: 끔", 180f, _enemyOn))
                 SetEnemyOverride(!_enemyOn);
             Text("켜면 적 탑 = 기물 탭 「적 탑」 편집본", 320f, Dim);
@@ -579,6 +583,16 @@ namespace GnorpWar
             if (!Shop)
                 return;
             RunState.CheatConquer();
+            Reload();
+        }
+
+        // 국경을 맞댄 첫 이벤트 땅을 방문한다(쉬기와 같은 길) — 지도를 다시 불러오면 AI 턴이 돈다
+        public void Visit()
+        {
+            System.Collections.Generic.List<int> visitable = RunState.VisitableEvents();
+            if (!Shop || visitable.Count == 0)
+                return;
+            RunState.Visit(visitable[0]);
             Reload();
         }
 

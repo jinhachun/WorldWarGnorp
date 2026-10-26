@@ -5,7 +5,7 @@ namespace GnorpWar
 {
     // 월드맵 한 턴의 규칙(기획 §2 · §5 · §6) — 판도(WorldState)만 바꾼다. 탑·상점·실제 전투는 모른다:
     // 영주의 힘은 power로 바깥에서 받고(탑 전투력), 플레이어의 승패는 부르는 쪽이 정해서 Invade에 넘긴다.
-    // 한 턴 = (상점 — 바깥) → 플레이어의 Invade(쉬면 안 부른다) → AiPhase → Settle → Turn + 1.
+    // 한 턴 = (상점 — 바깥) → 플레이어의 Invade 또는 Visit(이벤트 땅 · 쉬면 둘 다 안 부른다) → AiPhase → Settle → Turn + 1.
     // UnityEngine을 쓰지 않고 난수도 받아 쓴다 — Unity 밖에서 같은 씨앗으로 수백 판 돌려 볼 수 있게
     public static class WorldTurn
     {
@@ -96,6 +96,17 @@ namespace GnorpWar
             if (!attacker.IsPlayer)
                 attacker.Happiness = Math.Min(rules.HappinessMax, attacker.Happiness + rules.WinHappiness);
             return taken;
+        }
+
+        // 플레이어가 이벤트 땅 region을 방문한다(아웃게임기획 §3-1) — 그 턴의 침략 대신. 전투가 아니라 목숨 · 판도 · 승리 보너스는 그대로이고, 그 땅은 닫힌다(런에 다시 못 씀 · 방문 상한은 없다).
+        // 방문할 수 없는 땅(국경을 안 맞댐 · 닫힘 · 이벤트 땅 아님)이면 예외. 그 땅의 종류를 돌려준다
+        public static EventLandKind Visit(WorldState state, int region)
+        {
+            if (!state.VisitableEvents(state.Player).Contains(region))
+                throw new ArgumentException($"방문할 수 없는 땅 {region}");
+            state.EventClosed[region] = true;
+            state.Player.WonLastInvasion = false;
+            return state.EventKind[region];
         }
 
         // region의 영주가 가진 땅 중 region에서 가까운 순으로 count개 — region이 맨 앞이고, 그 영주의 땅을 따라 국경을 맞댄 땅부터 번져 간다(거리가 같으면 지도의 이웃 순서).

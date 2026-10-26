@@ -129,7 +129,7 @@ namespace GnorpWar.Editor.Tests
 
         // ── 만들기
 
-        private WorldRun NewRun() => new WorldRun(_config.World, _config, 0, new System.Random(7));
+        private WorldRun NewRun() => new WorldRun(_config.World, _config, new System.Random(7));
 
         private static Lord GhostLord(WorldRun run)
         {

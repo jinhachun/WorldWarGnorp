@@ -45,7 +45,8 @@ namespace GnorpWar
             switch (upgrade.Kind)
             {
                 case UpgradeKind.UnitStat:
-                    upgrade.UnitModifier(holding.Value, out StatModifier modifier);
+                    if (!upgrade.UnitModifier(holding.Value, out StatModifier modifier))
+                        return false;   // 다른 지형의 지형 성소
                     BuffLinks.FromBase(team, UnitsOr(team, upgrade, board), BuffKind.Stat, upgrade.HealLabel ? BuffLabel.Heal(modifier) : BuffLabel.Of(modifier));
                     return true;
                 case UpgradeKind.UnitEffect:

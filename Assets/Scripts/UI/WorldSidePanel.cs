@@ -55,11 +55,25 @@ namespace GnorpWar
         [SerializeField] private Sprite _landIcon;
         [Tooltip("가로 구분선 그림 — 2중 선 + 양 끝 매듭(글 기둥 폭 그대로, 원본 크기)")]
         [SerializeField] private Sprite _dividerSprite;
+        [Header("부품 프리팹 (Assets/Prefabs/UI/Parts)")]
+        [Tooltip("가진 업그레이드 줄(위 줄 · 영주 줄)의 칸 하나 — UI_UpgradeCell_Hover")]
+        [SerializeField] private Image _upgradeCell;
+        [Tooltip("위 줄 목숨 하트 한 칸 — UI_Heart")]
+        [SerializeField] private Image _heart;
         [Header("영주의 탑")]
         [Tooltip("틀 층(꺼져 있음) — 이 자리가 1층, 위로 쌓는다. 비우면 탑을 그리지 않는다")]
         [SerializeField] private SlotView _slotTemplate;
         [SerializeField] private RectTransform _roof;
         [SerializeField] private float _step = 120f;
+        [Header("명령 버튼 — 고른 땅이 이벤트 땅이면 「침략」이 「방문」이 된다(같은 버튼 · 같은 자리)")]
+        [SerializeField] private Text _actionLabel;
+        [SerializeField] private Image _actionIcon;
+        [SerializeField] private Sprite _invadeIcon;
+        [SerializeField] private Sprite _visitIcon;
+        [Tooltip("미지의 땅(방문 전 이벤트 땅) 초상화 — 「?」 64(UI/UnknownLand)")]
+        [SerializeField] private Sprite _unknownIconLarge;
+        // 닫힌 이벤트 땅의 초상화(흐리게 — 지도 칸과 같은 알파)
+        private static readonly Color ClosedPortrait = new Color(1f, 1f, 1f, 0.35f);
 
         // 머리말 + 아이콘 + 글 한 줄
         private class IconLine
@@ -87,6 +101,23 @@ namespace GnorpWar
         private Image _turnImage, _goldImage, _landImage;
         private UpgradeRow _mine;
         private RectTransform _mineView;
+        // 이벤트 땅을 골랐을 때의 초상화(그 이벤트의 큰 아이콘)
+        private Image _eventPortrait;
+
+        // ── 방문 장면(UI/EventVisitPopup)이 읽는 자리 — 탑 기둥의 i층(안 보이면 null) · 위 줄 내 업그레이드 줄의 끝 · 골드 아이콘 · 탑 지붕
+        public SlotView FloorAt(int i) => _slots != null && i >= 0 && i < _slots.Length && _slots[i].gameObject.activeInHierarchy ? _slots[i] : null;
+        // 위 줄 내 업그레이드 줄에서 그 아이콘 칸의 한가운데 — 없으면 줄의 왼쪽 끝
+        public Vector3 UpgradeCellOf(Sprite icon)
+        {
+            if (_mineView == null)
+                return transform.position;
+            foreach (Image image in _mine.Root.GetComponentsInChildren<Image>())
+                if (image.name == "Icon" && image.sprite == icon)
+                    return image.rectTransform.TransformPoint(image.rectTransform.rect.center);
+            return _mineView.TransformPoint(new Vector3(UpgradeRow.BoxSize * 0.5f, 0f, 0f));
+        }
+        public RectTransform GoldIcon => _goldImage != null ? _goldImage.rectTransform : null;
+        public RectTransform Roof => _roof;
 
         // 위 줄 — [해] N · [동전] G · 목숨 하트(UI/HeartRow — 국가 위기면 빨갛게 두근거리는 빈 하트 하나) · [왕관] n/30 · 내가 가진 업그레이드 아이콘 줄(UI/UpgradeRow). 낱말 없이 아이콘 + 숫자(10/21 He is Coming풍).
         // bar = 그 줄의 글(왼쪽 가운데 정렬) — 글은 비우고 숫자 글의 틀로만 쓴다. 업그레이드 줄은 bar의 오른쪽 끝까지가 창이고, 넘치면 좌우로 끌어서 민다(스크롤바 없음)
@@ -101,7 +132,7 @@ namespace GnorpWar
                 _turnImage = StatusIcon(bar, _turnIcon, Color.white);
                 _goldImage = StatusIcon(bar, _goldIcon, ColorUtility.TryParseHtmlString(BuildingTooltip.NumberColor, out Color gold) ? gold : Color.white);
                 _landImage = StatusIcon(bar, _landIcon, Color.white);
-                _hearts = new HeartRow(bar.rectTransform, _heartIcon);
+                _hearts = new HeartRow(bar.rectTransform, _heart);
 
                 var view = new GameObject("Upgrades", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
                 _mineView = (RectTransform)view.transform;
@@ -109,7 +140,7 @@ namespace GnorpWar
                 Anchor(_mineView, new Vector2(0f, 0.5f));
                 // 끌기를 받는 투명한 판
                 view.GetComponent<Image>().color = Color.clear;
-                _mine = new UpgradeRow(_mineView, _title, CellWidth, int.MaxValue, false);
+                _mine = new UpgradeRow(_mineView, _upgradeCell, CellWidth, int.MaxValue, false);
                 var scroll = view.GetComponent<ScrollRect>();
                 scroll.viewport = _mineView;
                 scroll.content = _mine.Root;
@@ -146,6 +177,16 @@ namespace GnorpWar
 
             // 상점이 열린 동안에는 고른 땅과 상관없이 나를 보여 준다(사용자 10/12 — 탑 기둥도 내 탑이다). 그 아래는 비운다
             bool any = land && !shop && selected >= 0;
+            // 이벤트 땅 — 영주 대신 그 이벤트(시안 Captures/EventUI/2_panel_*), 명령 버튼은 「방문」
+            bool visit = any && state.Graph.IsEvent[selected];
+            ShowAction(visit);
+            _portrait.gameObject.SetActive(!visit);
+            _eventPortrait.enabled = visit;
+            if (visit)
+            {
+                ShowEvent(selected, center);
+                return;
+            }
             Lord lord = any ? state.OwnerOf(selected) : state.Player;
             bool mine = lord == state.Player;
             bool coalition = lord == state.Coalition;
@@ -241,6 +282,76 @@ namespace GnorpWar
             ShowTower(mine ? RunState.Field : world.TowerOf(lord).Field, !mine, RunState.ColorOf(lord));
         }
 
+        // 「침략」 ↔ 「방문」 — 글과 아이콘만 바꾼다(켜고 끄기 · 못 누름은 WorldManager)
+        private void ShowAction(bool visit)
+        {
+            if (_actionLabel == null)
+                return;
+            // 못 누를 때는 아이콘도 글과 같은 회색(글 색은 WorldManager가 칠한다)
+            _actionIcon.color = _actionLabel.color;
+            if (_actionLabel.text == (visit ? "방문" : "침략"))
+                return;
+            _actionLabel.text = visit ? "방문" : "침략";
+            _actionIcon.sprite = visit ? _visitIcon : _invadeIcon;
+            _actionIcon.SetNativeSize();
+        }
+
+        // 이벤트 땅을 골랐다 — 영주 땅과 같은 문법: 그림 · 이름 · 한 줄 · 구분선 · 지형 줄 · 효과 · 상태 줄(회색, 「방문」이 왜 꺼졌는지). 탑 기둥은 내 탑
+        private void ShowEvent(int region, float center)
+        {
+            WorldState state = RunState.World.State;
+            EventLandDefinition definition = RunState.EventOf(region);
+            float y = -PortraitTop;
+            float band = (FigureUp - FigureDown) * PortraitScale;
+            // 미지의 땅(가기 전) = 「?」 + 이름 · 한 줄만 / 닫힌 땅 = 무엇이었는지 흐리게(사용자 10/26)
+            bool hidden = UnknownLand.Hidden(region), closed = state.EventClosed[region];
+            Sprite icon = hidden ? _unknownIconLarge : definition.IconLarge != null ? definition.IconLarge : definition.Icon;
+            if (_eventPortrait.sprite != icon)
+            {
+                _eventPortrait.sprite = icon;
+                _eventPortrait.SetNativeSize();
+            }
+            _eventPortrait.color = closed ? ClosedPortrait : Color.white;
+            _eventPortrait.rectTransform.anchoredPosition = new Vector2(center, y - band * 0.5f);
+            y -= band + BlockGap;
+            _title.text = hidden ? UnknownLand.Name : closed ? $"<color={BuildingTooltip.NoteColor}>{definition.DisplayName}</color>" : definition.DisplayName;
+            y = Place(_title.rectTransform, center, y) - LineGap;
+            _share.gameObject.SetActive(false);
+            _nation.text = $"<color={BuildingTooltip.NoteColor}>이벤트 땅</color>";
+            y = PlaceText(_nation, center, y);
+            _owned.Show(new System.Collections.Generic.List<UpgradeHolding>());
+            if (_pillar != null)
+                _pillar.enabled = true;
+            _divider.enabled = true;
+            y -= BlockGap * 0.5f;
+            _divider.rectTransform.anchoredPosition = new Vector2(Mathf.Round(center - _divider.rectTransform.sizeDelta.x * 0.5f), y);
+            y -= _divider.rectTransform.sizeDelta.y + BlockGap * 0.5f;
+            MapDefinition terrain = RunState.World.Map.TerrainOf(region);
+            _terrainLine.Root.gameObject.SetActive(true);
+            _terrainLine.Tip.Set(terrain.Icon, terrain.DisplayName, BuildingTooltip.Highlight(terrain.Description));
+            _terrainLine.Name.text = terrain.DisplayName;
+            y = Line(_terrainLine, center, y);
+            _specialLine.Root.gameObject.SetActive(false);
+            _specialBody.gameObject.SetActive(true);
+            _specialBody.text = hidden ? UnknownLand.Line : BuildingTooltip.Highlight(RunState.EventText(region));
+            y = PlaceText(_specialBody, center, y) - LineGap;
+            _loseTitle.gameObject.SetActive(false);
+            _loseLine.Root.gameObject.SetActive(false);
+            // 상태 줄(효과가 아닌 것) — 회색, 맨 아래
+            // 미지의 땅은 정체가 드러나는 줄(피의 제단의 목숨)을 쓰지 않는다
+            string status = closed ? "이미 방문했습니다."
+                : !RunState.VisitableEvents().Contains(region) ? "내 땅과 국경을 맞대지 않았습니다."
+                : !hidden && definition.Kind == EventLandKind.BloodAltar && RunState.Lives <= definition.LifeCost ? "목숨이 모자라 바칠 수 없습니다."
+                : "";
+            _landBody.enabled = status != "";
+            if (status != "")
+            {
+                _landBody.text = $"<color={BuildingTooltip.NoteColor}>{status}</color>";
+                PlaceText(_landBody, center, y - BlockGap * 0.5f);
+            }
+            ShowTower(RunState.Field, false, RunState.ColorOf(state.Player));
+        }
+
         // 코드가 만드는 줄들 — 글은 씬의 닉네임 글(도트 폰트)을 본떠 같은 폰트 · 크기로
         private void Build()
         {
@@ -255,9 +366,12 @@ namespace GnorpWar
             _title.alignment = TextAnchor.MiddleCenter;
             _nation.alignment = _landBody.alignment = TextAnchor.UpperCenter;
             _portrait = NewRoot("Portrait");
+            _eventPortrait = NewImage((RectTransform)transform, "EventPortrait");
+            _eventPortrait.rectTransform.anchorMin = _eventPortrait.rectTransform.anchorMax = new Vector2(0f, 1f);
+            _eventPortrait.enabled = false;
             _share = Instantiate(_title, transform);
             _share.name = "Share";
-            _owned = new UpgradeRow((RectTransform)transform, _title, CellWidth, RowColumns, false);
+            _owned = new UpgradeRow((RectTransform)transform, _upgradeCell, CellWidth, RowColumns, false);
             _divider = NewImage((RectTransform)transform, "Divider");
             Anchor(_divider.rectTransform, new Vector2(0f, 1f));
             _divider.sprite = _dividerSprite;

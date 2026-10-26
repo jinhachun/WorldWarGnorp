@@ -16,6 +16,7 @@ MonoBehaviour:
   _description: 
   _icon: {fileID: 21300000, guid: 59ec2470dac44e1086b185d6885adcf9, type: 3}
   _look: 1
+  _mapColor: {r: 0.13725, g: 0.56471, b: 0.38824, a: 1}
   _unitRules:
   - _categories:
     - {fileID: 11400000, guid: 728ccb888483bab4cabe8181bd3e2725, type: 2}

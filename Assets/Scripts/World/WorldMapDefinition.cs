@@ -9,8 +9,8 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/World Map")]
     public class WorldMapDefinition : ScriptableObject
     {
-        // 땅 번호 지도의 칸 값 = (땅 번호 + 1) × 이 값, 바다는 0 — 그림으로 열어 봐도 땅이 갈려 보이게 띄운다
-        public const int RegionMapStep = 8;
+        // 땅 번호 지도의 칸 값 = (땅 번호 + 1) × 이 값, 바다는 0 — 그림으로 열어 봐도 땅이 갈려 보이게 띄운다. 칸 값은 255까지라 땅은 255 ÷ 이 값 − 1 = 41개까지(40칸 지도 — 10/25)
+        public const int RegionMapStep = 6;
         public const int Sea = -1;
 
         [System.Serializable]
@@ -20,8 +20,10 @@ namespace GnorpWar
             public MapDefinition Terrain;
             [Tooltip("국경을 맞댄 지역의 칸 번호(0부터) — 침략할 수 있는 이웃. 양쪽 지역에 서로 적는다")]
             public int[] Links = new int[0];
-            [Tooltip("땅 번호 지도에서 이 땅의 아이콘 · 번호를 놓을 칸(위 왼쪽이 0, 0) — 경계에서 가장 먼 자리")]
+            [Tooltip("땅 번호 지도에서 이 땅의 아이콘 · 번호를 놓을 칸(위 왼쪽이 0, 0) — 경계에서 가장 먼 자리(띠는 가장 굵은 곳)")]
             public Vector2Int Anchor;
+            [Tooltip("이벤트 땅(산맥 · 강 띠 — 영주 판도 밖, 자리 고정 · 종류는 런마다 섞는다). 굽기가 적는다")]
+            public bool Event;
         }
 
         [System.Serializable]
@@ -86,6 +88,7 @@ namespace GnorpWar
             return cells;
         }
 
+        // 규칙 그래프 — 이벤트 땅(Region.Event)을 뺀 영주 땅끼리의 길(WorldGraph.WithEvents).
         // 지형 번호 = 지형 표(_terrainBuilds)의 줄, 빌드 방향 번호들 = 그 줄의 방향들(BuildOf의 번호)
         public WorldGraph ToGraph()
         {
@@ -110,7 +113,11 @@ namespace GnorpWar
                 terrain[i] = System.Array.FindIndex(_terrainBuilds, row => row.Terrain == region.Terrain);
                 builds[i] = rowBuilds[terrain[i]];
             }
-            return new WorldGraph(links, terrain, builds);
+            var events = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < count; i++)
+                if (_regions[i].Event)
+                    events.Add(i);
+            return new WorldGraph(links, terrain, builds).WithEvents(events.ToArray());
         }
     }
 }

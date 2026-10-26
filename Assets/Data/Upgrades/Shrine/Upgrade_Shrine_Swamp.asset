@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
+  m_Name: Upgrade_Shrine_Swamp
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
+  _displayName: "\uC9C0\uD615 \uC131\uC18C \xB7 \uB2AA\uC9C0"
+  _icon: {fileID: 21300000, guid: d40d7e5a2d314a49a642d69f8ce4ad3a, type: 3}
+  _description: "\uC774\uBC88 \uB7F0 \uB3D9\uC548 \uB2AA\uC9C0 \uB545\uC5D0\uC11C
+    \uC2F8\uC6B8 \uB54C, \uB0B4 \uC720\uB2DB\uC758 \uACF5\uACA9\uC18D\uB3C4 +{0}%"
+  _values:
+  - 10
+  - 0
+  - 0
+  - 0
+  - 0
+  _stack: 0
+  _max: 0
+  _inPool: 0
+  _nation: 0
+  _gainMax: 0
+  _kind: 0
+  _categories: []
+  _units: []
+  _unitStat: 3
+  _unitOp: 1
+  _terrain: {fileID: 11400000, guid: 2ccbff11129eeb144973b79762c715c6, type: 2}
+  _healLabel: 0
+  _towerStat: 0
+  _effect: {fileID: 0}
+  _lineKind: 1
+  _lineTarget: 0
+  _unit: {fileID: 0}
+  _smallTower: {fileID: 0}
+  _special: 0
+  _alsoAs: {fileID: 0}

@@ -3,13 +3,19 @@ using System.Collections.Generic;
 
 namespace GnorpWar
 {
-    // 판도 — 지역마다 주인, 영주 목록, 턴. 규칙은 WorldTurn이 이 값을 바꾼다. UnityEngine을 쓰지 않는다
+    // 판도 — 지역마다 주인, 영주 목록, 턴. 규칙은 WorldTurn이 이 값을 바꾼다. UnityEngine을 쓰지 않는다.
+    // 이벤트 땅(Graph.IsEvent — 아웃게임기획 §3-1)은 판도 밖이다: 주인이 없고(NoOwner) 통일 · 연합 · 수입에 세지 않는다. 그 땅의 종류 · 닫힘도 여기 든다
     public class WorldState
     {
+        public const int NoOwner = -1;
+
         public readonly WorldGraph Graph;
         public readonly WorldRules Rules;
-        // [지역] = 주인 영주의 번호
+        // [지역] = 주인 영주의 번호(이벤트 땅은 NoOwner)
         public readonly int[] Owner;
+        // [이벤트 땅] = 종류 · 한 번 방문해 닫혔나(영주 땅의 칸은 쓰지 않는다)
+        public readonly EventLandKind[] EventKind;
+        public readonly bool[] EventClosed;
         // [번호] = 영주 — 죽은 영주도 남는다(Alive = false)
         public readonly List<Lord> Lords = new List<Lord>();
         public readonly Lord Player;
@@ -26,15 +32,24 @@ namespace GnorpWar
         public int Lives;
         public bool InCrisis => Lives <= 0 && Player.Alive;
 
-        // 영주가 지역마다 하나씩 — playerRegion의 영주 자리에 플레이어가 들어간다
+        // 영주가 영주 땅마다 하나씩 — playerRegion(영주 땅)의 영주 자리에 플레이어가 들어간다. 이벤트 땅에는 종류를 섞어 놓는다(EventLands.Deal)
         public WorldState(WorldGraph graph, WorldRules rules, int playerRegion, Random random)
         {
             Graph = graph;
             Rules = rules;
             Lives = rules.LivesStart;
             Owner = new int[graph.RegionCount];
+            EventKind = new EventLandKind[graph.RegionCount];
+            EventClosed = new bool[graph.RegionCount];
+            var events = new List<int>();
             for (int region = 0; region < graph.RegionCount; region++)
             {
+                if (graph.IsEvent[region])
+                {
+                    Owner[region] = NoOwner;
+                    events.Add(region);
+                    continue;
+                }
                 Lord lord = AddLord(region, random);
                 if (region == playerRegion)
                 {
@@ -42,6 +57,9 @@ namespace GnorpWar
                     Player = lord;
                 }
             }
+            EventLandKind[] kinds = EventLands.Deal(events.Count, random);
+            for (int i = 0; i < events.Count; i++)
+                EventKind[events[i]] = kinds[i];
         }
 
         // region에 새 영주를 세운다(런 시작 · 반란 뒤) — 빌드 방향은 그 땅의 방향들 중 하나(둘 이상이면 고르게 뽑는다), 성향은 새로 뽑는다
@@ -60,7 +78,18 @@ namespace GnorpWar
             return lord;
         }
 
-        public Lord OwnerOf(int region) => Lords[Owner[region]];
+        // 이벤트 땅이면 null
+        public Lord OwnerOf(int region) => Owner[region] == NoOwner ? null : Lords[Owner[region]];
+
+        // lord가 방문할 수 있는 이벤트 땅 = lord의 땅과 국경을 맞댄, 아직 안 닫힌 이벤트 땅(지도 번호 순). 방문은 플레이어만 한다(AI는 이벤트 땅을 무시한다)
+        public List<int> VisitableEvents(Lord lord)
+        {
+            var events = new List<int>();
+            for (int region = 0; region < Owner.Length; region++)
+                if (Graph.IsEvent[region] && !EventClosed[region] && Array.Exists(Graph.EventBorders[region], land => Owner[land] == lord.Id))
+                    events.Add(region);
+            return events;
+        }
 
         public int LandsOf(Lord lord)
         {
@@ -113,7 +142,7 @@ namespace GnorpWar
         public int CoalitionWinsLeft
             => Math.Max(1, Math.Min(Rules.CoalitionWins - CoalitionWins, (LandsOf(Coalition) + CoalitionShare - 1) / CoalitionShare));
 
-        public bool Unified => LandsOf(Player) == Owner.Length;
+        public bool Unified => LandsOf(Player) == Graph.LordRegionCount;
         public bool GameOver => !Player.Alive;
     }
 }

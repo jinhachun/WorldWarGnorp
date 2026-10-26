@@ -27,6 +27,8 @@ namespace GnorpWar
         [SerializeField] private Text _error;
         [SerializeField] private Button _confirm;
         [SerializeField] private CanvasGroup _group;
+        // 나타나고 사라지는 것은 가운데 판만 — 검은 바탕(_group)까지 옅어지면 뒤의 지도가 비쳤다가 국가 고르기가 뜬다(사용자 10/27 「어색하다」)
+        private CanvasGroup _boxGroup;
 
         // 이번 런에서 이미 물었다 — 국가 고르기(NationCard.Open)는 런마다 국가를 고르기 전에만 열리고, 런 사이에는 World 씬을 다시 불러 이 값이 비므로 새 런마다 한 번 묻는다(사용자 10/23)
         private bool _asked;
@@ -45,6 +47,9 @@ namespace GnorpWar
         {
             _row = (RectTransform)_input.transform.parent;
             _boxHome = _box.anchoredPosition;
+            _boxGroup = _box.GetComponent<CanvasGroup>();
+            if (_boxGroup == null)
+                _boxGroup = _box.gameObject.AddComponent<CanvasGroup>();
             _rowHome = _row.anchoredPosition;
             _input.characterLimit = MaxLength;
             _input.lineType = InputField.LineType.SingleLine;
@@ -62,7 +67,8 @@ namespace GnorpWar
             gameObject.SetActive(true);
             _input.text = PlayerPrefs.GetString(PrefsKey, "");
             _error.gameObject.SetActive(false);
-            _group.alpha = 0f;
+            _group.alpha = 1f;
+            _boxGroup.alpha = 0f;
             _exitClock = _shakeClock = -1f;
             _openClock = 0f;
             _input.ActivateInputField();
@@ -76,7 +82,7 @@ namespace GnorpWar
             {
                 _exitClock += Time.unscaledDeltaTime;
                 float fade = _exitClock / FadeTime;
-                _group.alpha = fade < 1f / 3f ? 2f / 3f : fade < 2f / 3f ? 1f / 3f : 0f;
+                _boxGroup.alpha = fade < 1f / 3f ? 2f / 3f : fade < 2f / 3f ? 1f / 3f : 0f;
                 if (fade >= 1f)
                     Finish();
                 return;
@@ -86,7 +92,7 @@ namespace GnorpWar
                 _openClock += Time.unscaledDeltaTime;
                 int step = Mathf.Min(Mathf.FloorToInt(_openClock / StepTime), OpenDrop.Length - 1);
                 _box.anchoredPosition = _boxHome + new Vector2(0f, OpenDrop[step]);
-                _group.alpha = (step + 1f) / OpenDrop.Length;
+                _boxGroup.alpha = (step + 1f) / OpenDrop.Length;
                 if (step == OpenDrop.Length - 1)
                     _openClock = -1f;
             }

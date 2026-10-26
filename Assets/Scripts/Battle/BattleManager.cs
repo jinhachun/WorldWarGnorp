@@ -141,6 +141,7 @@ namespace GnorpWar
             TowerBook.ClearBattle();
             UnitAliases.Clear();
             DamageMeter.Clear();
+            ChainGuard.Clear();
             // 맵의 「전부 발동」(얼음) — 양쪽 성 근처에 출발점 그림을 띄운다
             if (RunState.Map != null && RunState.Map.FireAllInterval > 0f)
                 foreach (Team team in new[] { Team.Ally, Team.Enemy })
@@ -252,9 +253,19 @@ namespace GnorpWar
             float shift = lost ? heart.sizeDelta.x + ResultHeartGap : 0f;
             summary.anchoredPosition = new Vector2(_summaryX + shift, summary.anchoredPosition.y);
             heart.anchoredPosition = new Vector2(heart.sizeDelta.x * 0.5f - shift, heart.anchoredPosition.y);
-            _resultPanel.SetActive(true);
             _speedButton.SetActive(false);
+            // 판은 그 자리에 멈추고, 진 쪽 본진이 땅속으로 무너진 뒤(실제 시간 — Fx/BaseCollapse, 클릭하면 건너뜀) 결과 창
             Time.timeScale = 0f;
+            Base loser = won ? _enemyBase : _allyBase;
+            BaseCollapse.Play(loser, loser.Definition.CollapseCameraSeconds, loser.Definition.CollapseSeconds);
+            StartCoroutine(OpenResultAfterCollapse());
+        }
+
+        private System.Collections.IEnumerator OpenResultAfterCollapse()
+        {
+            while (BaseCollapse.Busy)
+                yield return null;
+            _resultPanel.SetActive(true);
         }
 
         // 승리 글 한 줄(사용자 10/12) — 쓰러뜨린 영주의 닉네임으로. 최후의 연합은 여러 번 이겨야 멸망한다 — 그 전에는 물러났다고 하고 남은 승리 수를 붙인다

@@ -34,6 +34,7 @@ namespace GnorpWar
             // 버프 선 — 파편과 같은 픽셀 재질(FX_Pixel)로 그린다
             Material pixel = _hitSpark.GetComponent<ParticleSystemRenderer>().sharedMaterial;
             gameObject.AddComponent<BuffLinkFx>().Init(pixel);
+            gameObject.AddComponent<HitRingFx>().Init(pixel);
             // 전투 시각화 부품(Docs/전투시각화_계획.md) — 모두 같은 픽셀 재질 · 부품마다 메시 하나
             gameObject.AddComponent<ArrowTrails>().Init(pixel);
             gameObject.AddComponent<RingFx>().Init(pixel);
@@ -43,6 +44,7 @@ namespace GnorpWar
             gameObject.AddComponent<AltitudeMark>().Init(pixel);
             gameObject.AddComponent<HealFx>().Init(pixel);
             gameObject.AddComponent<DustFx>().Init(pixel);
+            gameObject.AddComponent<BaseCollapse>().Init();
             gameObject.AddComponent<HoverMark>().Init(pixel);
             gameObject.AddComponent<BattleStartLines>();
             _corpses = gameObject.AddComponent<CorpseFx>();

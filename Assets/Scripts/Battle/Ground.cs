@@ -20,7 +20,7 @@ namespace GnorpWar
         private const float FeatureEdgeMargin = 4f;
         // 그리는 순서 — 뒷배경(겹마다 +1) < 땅 속 < 탑(-1) < 유닛·땅 선(0)
         private const int BackdropSortingOrder = -30;
-        private const int FillSortingOrder = -10;
+        public const int FillSortingOrder = -10;
 
         [Tooltip("밑이 평평해야 하는 것(탑) — 콜라이더 폭 + 여유만큼 평평한 단을 만들고, 밑면을 단 위에 맞춰 옮긴다")]
         [SerializeField] private BoxCollider2D[] _flatAnchors = new BoxCollider2D[0];
@@ -48,6 +48,9 @@ namespace GnorpWar
         private float[] _heights;
 
         public static Ground Instance { get; private set; }
+        // 맵 양 끝(월드 x) — 본진 무너짐 카메라(Fx/BaseCollapse)가 화면을 이 안에 묶는다
+        public float MinX => _minX;
+        public float MaxX => _maxX;
 
         // 땅 윗면의 높이 — 원래 지형 + 그 위에 쌓인 뼛가루(전투 중에 자란다)
         public float HeightAt(float x)

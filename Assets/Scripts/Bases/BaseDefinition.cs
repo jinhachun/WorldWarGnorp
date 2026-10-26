@@ -26,6 +26,15 @@ namespace GnorpWar
         [Tooltip("본진 최대 체력(라운드 보너스 포함, 기물 보너스 전) × 이 값")]
         [SerializeField] private float _smallHpScale = 0.25f;
 
+        [Tooltip("전투가 끝나면 진 쪽 본진이 땅속으로 꺼지는 연출(Fx/BaseCollapse) 길이 — 다 꺼진 뒤 결과 창이 뜬다. 0이면 바로")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _collapseSeconds = 1f;
+        [Tooltip("무너지기 전에 카메라가 진 쪽 본진으로 옮겨 가며 확대되는 길이(계단식)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _collapseCameraSeconds = 0.4f;
+
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
@@ -38,5 +47,7 @@ namespace GnorpWar
         public float ProjectileArcHeight => _projectileArcHeight;
         public float SmallAttackScale => _smallAttackScale;
         public float SmallHpScale => _smallHpScale;
+        public float CollapseSeconds => _collapseSeconds;
+        public float CollapseCameraSeconds => _collapseCameraSeconds;
     }
 }

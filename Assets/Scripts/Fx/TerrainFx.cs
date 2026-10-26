@@ -332,7 +332,7 @@ namespace GnorpWar
             {
                 Tower tower = Tower.For(team);
                 BoardRunner board = BoardRunner.For(team);
-                if (tower == null || board == null)
+                if (tower == null || board == null || BaseCollapse.Sinks(team))   // 무너지는 탑엔 창 표시를 얹지 않는다 — 땅 속까지 그려진다
                     continue;
                 int cx = PixelMesh.ToGrid(tower.transform.position.x);
                 int half = Mathf.RoundToInt(Mathf.Abs(tower.FloorFront(0).x - tower.transform.position.x) / Pixel);

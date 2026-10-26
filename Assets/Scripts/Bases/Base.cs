@@ -103,6 +103,7 @@ namespace GnorpWar
         }
 
         public bool IsSmall => _small;
+        public BaseDefinition Definition => _definition;
         public Bounds Bounds => _collider.bounds;
         // 화살이 나가는 자리 — 내 타워를 강화하는 버프 선이 여기로 간다(BuffLinks.ToTowers)
         public Vector2 Muzzle => _muzzle.position;
@@ -281,7 +282,7 @@ namespace GnorpWar
         {
             if (_small)
                 Follow();
-            if (!CanAttack)
+            if (!IsAlive || !CanAttack)
             {
                 _volley.Clear();
                 return;
@@ -381,8 +382,10 @@ namespace GnorpWar
         public void NotifyKill(Unit victim)
         {
             BoardRunner.For(_team).NotifyTowerKill(victim);
-            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                e.Effect.OnTowerKill(_team, this, victim);
+            // 훅이 소환하면 그 유닛의 효과가 목록에 붙는다 — 지금 개수까지만(Unit.Perish와 같다)
+            System.Collections.Generic.List<TeamEffects.Entry> effects = TeamEffects.For(_team);
+            for (int i = 0, n = effects.Count; i < n; i++)
+                effects[i].Effect.OnTowerKill(_team, this, victim);
             int extra = TowerBook.ArrowsOnKillOf(_team);
             if (extra > 0 && IsAlive && CanAttack && FindTargets())
                 Shoot(extra, true);
@@ -424,12 +427,15 @@ namespace GnorpWar
             else if (!IsAlive)
             {
                 Debug.Log($"[Base] {_team} 기지 파괴");
-                gameObject.SetActive(false);
-                Destroyed?.Invoke(this);
+                Destroyed?.Invoke(this);   // 그림은 무너짐 연출(Fx/BaseCollapse)이 땅속으로 내린 뒤 끈다
             }
             else if (!_small)
-                foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                    e.Effect.OnBaseDamaged(this);
+            {
+                // 왕성 수비대가 여기서 소환한다 — 지금 개수까지만(Unit.Perish와 같다)
+                System.Collections.Generic.List<TeamEffects.Entry> effects = TeamEffects.For(_team);
+                for (int i = 0, n = effects.Count; i < n; i++)
+                    effects[i].Effect.OnBaseDamaged(this);
+            }
         }
 
         // 막은 고리를 다시 띄우기까지(초) — 화살이 몰려도 고리가 겹쳐 쌓이지 않게

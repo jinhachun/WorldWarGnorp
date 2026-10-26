@@ -1340,7 +1340,7 @@
 | 적 골드 = 플레이어와 같은 식 · 플레이어가 지면 적 +3 | 영주마다 플레이어와 같은 식(자기 땅 수로) | 됨 — `WorldRun.IncomeOf` |
 | 라운드 골드 18 + 2 × (라운드 − 1) · 승리 +3 | 땅 수에 묶음 [결정] — 첫 값 18 + 내 땅 수 × 2 · 승리 +3 | 됨 — `RunState.Income` · `BattleConfig._roundGoldStart` 18 · `_winBonus` 3 · `WorldConfig._goldPerLand` 2 |
 | 진열 등급 확률 1라운드 60 · 30 · 10 · 0 · 0 → 10라운드 15 · 25 · 30 · 20 · 10 | 상점 등급 단계가 15턴에 걸쳐 오른다 [제안]. 단계별 확률은 §4 「상점 등급 단계별 등장 확률」 표 [결정 10/13] — 단계 0은 70 · 22 · 8 · 0 · 0, 단계 8 · 9는 21 · 21 · 28 · 19 · 11 | 됨 — 단계는 14턴에 걸쳐 0 → 9(`WorldConfig._shopTierTurns` 14 · `_shopTierMax` 9) · 단계별 확률 표(`BattleConfig._rarityWeightsByTier` — 「등급 단계별 가중치」). 값의 원본은 `BattleConfig` 에셋. 런 길이 · 통일 비율에 주는 영향은 가리지 못했다(§4) |
-| 본진 체력 라운드마다 +100 | 턴마다 +50 [제안 — 15턴에 맞춤] | 됨 — `BattleConfig._baseHpPerRound` 50 |
+| 본진 체력 라운드마다 +100 | 턴마다 +50 [제안 — 15턴에 맞춤] | 됨 — `BattleConfig._baseHpPerRound` 50 → 75(사용자 10/26 「상승량을 늘려」) |
 | 맵 = 1라운드 기본, 그 뒤 6종 중 무작위 | 침략한 땅의 지형 [결정] | 됨 — `RunState.Invade` · `WorldMapDefinition.TerrainOf` |
 | 탑 시작 3층 · 최대 8층 · 층 값 8 · 14 · 28 · 44 · 64 | 그대로 — 탑은 영주당 하나 [결정] | 그대로 — `_startFloors` · `_maxFloors` · `_floorCosts` |
 | 등급가 4 · 9 · 16 · 26 · 40 · 리롤 2 | 그대로 | 그대로 — `_rarityPrices` · `_rerollCost` |

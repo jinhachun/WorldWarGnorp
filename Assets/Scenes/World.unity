@@ -4177,6 +4177,7 @@ MonoBehaviour:
   _crown: {fileID: 21300000, guid: 1ffe9efc6d517f6468230e6e90828448, type: 3}
   _upgradeCell: {fileID: 431879117832594417, guid: 59f87ae1b3938c840b94457eccafff05, type: 3}
   _unknownIcon: {fileID: 21300000, guid: d0b19eeb34924475b4c57647108bb532, type: 3}
+  _shader: {fileID: 4800000, guid: ed563bada2b596a4aab2a1f799454d23, type: 3}
 --- !u!1 &987006822
 GameObject:
   m_ObjectHideFlags: 0

@@ -9,7 +9,8 @@ namespace GnorpWar
     // 남의 땅 속은 그 땅의 지형색(MapDefinition.MapColor), 안쪽 둘레는 영주 색 띠, 영주 사이 국경 · 해안선은 검은 선(사용자 10/26 「지형색 바탕 + 영주 색 띠」).
     // 내 땅만 내 색으로 밝게 채워 굵은 흰 테두리를 두른다(지도에서 가장 먼저 보여야 한다 — 사용자 10/11 · 10/26). 같은 영주의 땅 사이는 옅은 선. 침략할 수 있는 땅에는 내 땅에서 그 땅으로 화살표 하나
     // (국경을 가장 길게 맞댄 내 땅에서, 여덟 방향 도트 도장) — _hatch를 켜면 그 땅에 그 영주 색 빗금도. 고른 땅은 노란 테두리, 가리킨 땅은 조금 밝게.
-    // 판도 · 고른 땅 · 가리킨 땅이 바뀔 때마다 그림을 통째로 다시 칠한다(375×249칸).
+    // 그림은 셰이더(Shaders/WorldMap)가 그린다(사용자 10/27 「셰이더로」) — 안 바뀌는 것(땅 번호 · 이웃 땅 · 해안까지 거리 · 기복도 · 장식)은 Build에서 텍스처로 한 번 굽고,
+    // 판도 · 침략 가능 · 이벤트 상태는 땅 수만 한 표(_lands), 고른 땅 · 가리킨 땅 · 내 영주는 머티리얼 값, 화살표는 바뀔 때만 따로 그리는 텍스처.
     // 땅마다 지역 특수 표시 · 이벤트 칸 · 내 땅 왕관은 구운 표시 자리(AnchorOf)에 한 번 놓는다(지형 아이콘은 띄우지 않는다 — 땅 카드 UI/LandHover, 사용자 10/26).
     // 누름 · 가리킴은 화면 좌표를 칸으로 바꿔 땅 번호를 읽는다 — 무엇을 할지는 WorldManager가 정한다
     [RequireComponent(typeof(RawImage))]
@@ -17,29 +18,29 @@ namespace GnorpWar
     {
         public const int None = -1;
 
-        // 채움 밝기 — 남의 땅 · 가리킨 남의 땅 · 침략할 수 있는 땅 · 가리킨 그 땅은 지형색 × 이 값, 내 땅 · 가리킨 내 땅은 내 색 × 이 값. 같은 영주의 땅 사이 선(채움 대비)
+        // 채움 밝기 — 남의 땅 · 가리킨 남의 땅 · 침략할 수 있는 땅 · 가리킨 그 땅은 지형색 × 이 값, 내 땅 · 가리킨 내 땅은 내 색 × 이 값
         // 침략할 수 있는 땅만 지형색 그대로, 나머지는 조금 눌러 둔다(사용자 10/20 U4 — 내 땅 · 갈 수 있는 땅이 묻히지 않게)
         private const float Fill = 0.9f;   // 지형색이 Resurrect 64 팔레트 그대로 보이게 살짝만 어둡게(사용자 10/26 「칙칙하다」) — 침략할 수 있는 땅(OpenFill)과는 갈린다
         private const float HoverFill = 1f;
-        private const float OpenFill = 1f;
         private const float OpenHoverFill = 1.2f;
         private const float MineFill = 0.8f;
-        private const float MineHoverFill = 1f;
         // 같은 영주의 땅 사이 선 = 채움을 반투명 검정으로 누른 1칸(영주 색 띠는 없다 — 영토는 한 덩어리로, 사용자 10/26)
         private const float InnerLine = 0.55f;
-        // 남의 영토(같은 주인의 땅 전부) 바깥 둘레의 영주 색 띠 — 두께(칸, 국경선 포함) · 밝기(영주 색 × 이 값). 국경 · 해안선은 검은 선(EdgeColor)
-        // 두께 4칸 = 1배 12px · 2배 24px(사용자 10/26 「더 두껍게」 — 2칸 · 3칸 · 4칸을 같은 런에서 찍어 골랐다)
-        private const int LordBand = 4;
+        // 남의 영토 바깥 둘레의 영주 색 띠 밝기(영주 색 × 이 값) — 띠 두께(4칸, 사용자 10/26)는 셰이더
         private const float BandFill = 0.8f;
-        private static readonly Color32 EdgeColor = new Color32(16, 16, 16, 255);
-        // 내 땅 덩어리의 바깥 테두리 두께(칸) · 빗금 간격(칸) · 고른 땅 테두리 두께(칸)
-        private const int MineBorder = 2;
-        // 내 땅 국경 강조(사용자 10/15 「내 땅이 잘 안 보인다」 — 4X식 국경) — 흰 테두리 안쪽 띠(칸, 테두리 포함 두께) · 그 띠의 흰색 섞는 비율 · 바깥(남의 땅 쪽) 검은 그림자(칸)
-        private const int MineGlow = 4;
+        // 내 땅 국경 강조(사용자 10/15 「내 땅이 잘 안 보인다」 — 4X식 국경) — 흰 테두리 안쪽 띠의 흰색 섞는 비율(띠 두께는 셰이더)
         private const float GlowWhite = 0.45f;
-        private const int MineShadow = 1;
-        private const int HatchStep = 5;
-        private const int SelectedWidth = 2;
+        // 이벤트 땅(상태 없음) 빗금 밝기(땅 색 × 이 값) · 가리켰을 때
+        private const float EventHatch = 0.45f, EventHatchHover = 0.8f;
+        // 이벤트 땅 밝기 — 닫힘 · 깜박임 · 방문 가능(가리킴) · 방문 가능 · 열림(가리킴)
+        private const float EventClosedLight = 0.5f, EventLitLight = 1.45f, EventVisitableHoverLight = 1.35f, EventVisitableLight = 1.2f, EventHoverLight = 1.15f;
+        // 지형 장식 — 내 땅(내 색)은 살짝 밝게, 남의 땅(지형색)은 살짝 어둡게. 지형색만으로 갈리지 않는 눈(적록 색맹)에도 지형이 읽히게 남긴다
+        private const float DecorBrightness = 0.22f;
+        private const float DecorShade = 0.3f;
+        // 선 · 띠 두께 · 선 색은 셰이더(Shaders/WorldMap) 위쪽에 있다
+        // 주인에 따라 달라지는 선이 보는 거리(칸) — 셰이더의 가장 넓은 것(영주 색 띠 · 내 땅 번짐 4칸)까지 이웃 땅을 굽는다 · 칸마다 굽는 이웃 땅 수
+        private const int NearReach = 4;
+        private const int NearSlots = 4;
         // 침략 화살표 — 손으로 찍은 도장 둘(오른쪽 · 오른쪽 아래)을 90도씩 돌려 여덟 방향으로 쓴다(임의 각도로 그으면 4px 격자에서 계단이 깨진다).
         // # = 흰 몸, 검은 테두리는 몸을 한 칸 고르게 두른다
         private static readonly string[] ArrowEast =
@@ -72,7 +73,6 @@ namespace GnorpWar
         private const float ArrowAdvance = 2.5f;
         private const float ArrowClearance = 11f;
         private const float ArrowMinPoke = 2f;
-        private static readonly Color32 SelectedColor = new Color32(255, 217, 90, 255);
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 SeaColor = new Color32(0, 0, 0, 255);
 
@@ -96,10 +96,18 @@ namespace GnorpWar
         [SerializeField] private Image _upgradeCell;
         [Tooltip("미지의 땅(방문 전 이벤트 땅) 표시 — 「?」 아이콘 32(UI/UnknownLand)")]
         [SerializeField] private Sprite _unknownIcon;
+        [Tooltip("지도 그림 셰이더 — Shaders/WorldMap")]
+        [SerializeField] private Shader _shader;
 
         private RawImage _image;
-        private Texture2D _texture;
-        private Color32[] _pixels;
+        private Material _material;
+        // 구운 지도(칸 · 이웃 땅 번호 · 그 거리) · 땅마다의 표 · 화살표
+        private Texture2D _cellTexture, _nearIds, _nearDist, _lands, _arrows, _ramp, _lut;
+        private Color32[] _landPixels, _arrowPixels;
+        // 화살표가 칠한 칸(텍스처 순서) — 다시 그릴 때 이것만 지운다
+        private readonly List<int> _arrowPlotted = new List<int>();
+        // 땅마다 화살표를 그렸나 — 판도 · 침략 가능 · 방문 가능이 바뀌어도 이것이 같으면 다시 그리지 않는다
+        private bool[] _arrowWanted;
         private int[] _cells;
         private int _width, _height;
         private Vector2Int[] _anchors;
@@ -131,9 +139,8 @@ namespace GnorpWar
         private int _hovered = None;
         private int _mine = None;
         private bool _painted;
-        // 바다 칸의 픽셀 자리(텍스처 순서) · 마지막으로 물결을 칠한 틱(WaveTick 단위)
-        private int[] _sea;
-        private int _waveTick;
+        // 마지막으로 셰이더에 넘긴 물결 틱(WaveTick 단위)
+        private int _waveTick = -1;
 
         // 가리키고 있는 땅(없으면 None)
         public int Hovered { get; private set; } = None;
@@ -149,9 +156,6 @@ namespace GnorpWar
             _image = GetComponent<RawImage>();
             _home = ((RectTransform)transform).anchoredPosition;
             _cells = map.ReadCells(out _width, out _height);
-            _texture = new Texture2D(_width, _height, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            _pixels = new Color32[_width * _height];
-            _image.texture = _texture;
             int regions = map.RegionCount;
             _owner = new int[regions];
             _colors = new Color32[regions];
@@ -186,12 +190,6 @@ namespace GnorpWar
                         cells.Add(new Vector2Int(x, y));
                     }
                 }
-            var sea = new List<int>();
-            for (int y = 0; y < _height; y++)
-                for (int x = 0; x < _width; x++)
-                    if (_cells[y * _width + x] < 0)
-                        sea.Add((_height - 1 - y) * _width + x);
-            _sea = sea.ToArray();
 
             var rect = (RectTransform)transform;
             // 한 칸 = 지도 영역에 다 들어가는 가장 큰 정수 px(도트 유지) — 375×249칸이면 4px, 500×249칸이면 3px(임시 — 큰 지도 조작은 ROADMAP 2-5 5번). 그림을 그 크기로 왼쪽 위에 둔다
@@ -248,6 +246,7 @@ namespace GnorpWar
                 cell.gameObject.SetActive(false);
             }
             BuildDecor(map);
+            Bake();
             // 살아 있는 세계(파티클) — 첫 자식 오버레이라 표시 칸 · 영주 그림 아래에 그려진다
             new GameObject("Ambience", typeof(RectTransform), typeof(RawImage), typeof(WorldAmbience)).GetComponent<WorldAmbience>().Init(transform, map, _cells, _width, _height, _owner, _events, _marks);
             Lords = gameObject.AddComponent<WorldLords>();
@@ -344,8 +343,9 @@ namespace GnorpWar
 
         private void OnDestroy()
         {
-            if (_texture != null)
-                Destroy(_texture);
+            foreach (Object made in new Object[] { _cellTexture, _nearIds, _nearDist, _lands, _arrows, _ramp, _lut, _material })
+                if (made != null)
+                    Destroy(made);
         }
 
         // owner[땅] = 영주 번호, colorOf(영주 번호) = 그 영주의 색, mine = 내 영주 번호, invadable[땅] = 침략할 수 있는 땅(명령을 못 내리는 동안은 null — 화살표 · 빗금 없음),
@@ -361,14 +361,15 @@ namespace GnorpWar
                 Vector2 size = ((RectTransform)transform).rect.size;
                 Place(_home + new Vector2(size.x, -size.y) * 0.5f - at * _zoom);
             }
-            bool changed = ShowEvents(invadable != null);
-            changed |= !_painted || selected != _selected || Hovered != _hovered || mine != _mine;
+            bool lands = ShowEvents(invadable != null) || !_painted, owners = !_painted || mine != _mine;
             for (int region = 0; region < _owner.Length; region++)
             {
                 Color32 color = colorOf(owner[region]);
                 bool open = invadable != null && invadable[region];
+                if (owner[region] != _owner[region])
+                    owners = true;
                 if (owner[region] != _owner[region] || open != _invadable[region] || !color.Equals(_colors[region]))
-                    changed = true;
+                    lands = true;
                 _owner[region] = owner[region];
                 bool crowned = owner[region] == mine;
                 if (_crowns[region].gameObject.activeSelf != crowned)
@@ -376,32 +377,64 @@ namespace GnorpWar
                 _colors[region] = color;
                 _invadable[region] = open;
             }
-            if (!changed)
+            bool pointed = !_painted || selected != _selected || Hovered != _hovered || mine != _mine;
+            if (!lands && !pointed)
                 return;
             _selected = selected;
             _hovered = Hovered;
             _mine = mine;
             _painted = true;
-            Paint(_pixels, _cells, _width, _height, _owner, _colors, _terrain, _mine, _invadable, _hatch ? _invadable : null, _selected, _hovered, _events);
-            // 지형 장식 — 내 땅(내 색)은 살짝 밝게, 남의 땅(지형색)은 살짝 어둡게(화살표는 그 위에 찍는다). 지형색만으로 갈리지 않는 눈(적록 색맹)에도 지형이 읽히게 남긴다
-            foreach (int pixel in _decor)
+            if (pointed)
             {
-                // 이벤트 땅은 비운다(A안 — 장식 없이 국경 · 빗금만)
-                int land = _cells[(_height - 1 - pixel / _width) * _width + pixel % _width];
-                if (land >= 0 && _events[land] != EventNone)
-                    continue;
-                _pixels[pixel] = land >= 0 && _owner[land] == _mine
-                    ? Color32.Lerp(_pixels[pixel], White, DecorBrightness)
-                    : Color32.Lerp(_pixels[pixel], SeaColor, DecorShade);
+                SetFloat(MineId, _mine);
+                SetFloat(HoveredId, _hovered);
+                SetFloat(SelectedId, _selected);
             }
-            Arrows = 0;
-            for (int region = 0; region < _owner.Length; region++)
-                if ((_invadable[region] || _events[region] == EventVisitable) && DrawArrow(region))
-                    Arrows++;
-            DrawSea(_waveTick * WaveTick);
-            _texture.SetPixels32(_pixels);
-            _texture.Apply();
+            if (lands || owners)
+                WriteLands(owners);
             Lords.Sync(_owner, colorOf, _mine);
+        }
+
+        private static readonly int MineId = Shader.PropertyToID("_Mine"), HoveredId = Shader.PropertyToID("_Hovered"), SelectedId = Shader.PropertyToID("_Selected"),
+            HatchId = Shader.PropertyToID("_Hatch"), WaveShiftId = Shader.PropertyToID("_WaveShift"), WaveShift4Id = Shader.PropertyToID("_WaveShift4");
+
+        // 마스크 안이면 uGUI가 머티리얼 사본(스텐실)으로 그린다 — 사본에도 넣는다
+        private void SetFloat(int id, float value)
+        {
+            _material.SetFloat(id, value);
+            Material shown = _image.materialForRendering;
+            if (shown != _material)
+                shown.SetFloat(id, value);
+        }
+
+        // 땅마다의 표(주인 색 · 주인 · 지형색 · 이벤트 상태 · 침략 가능)를 다시 쓰고, 화살표가 달라졌으면 다시 그린다. owners = 판도나 내 영주가 바뀌었다
+        private void WriteLands(bool owners)
+        {
+            int regions = _owner.Length;
+            bool arrows = owners;
+            for (int region = 0; region < regions; region++)
+            {
+                Color32 color = _colors[region], terrain = _terrain[region];
+                _landPixels[region] = new Color32(color.r, color.g, color.b, (byte)(_owner[region] + 1));
+                _landPixels[regions + region] = new Color32(terrain.r, terrain.g, terrain.b, (byte)(_events[region] | (_invadable[region] ? 8 : 0)));
+                bool wanted = _invadable[region] || _events[region] == EventVisitable;
+                if (wanted != _arrowWanted[region])
+                    arrows = true;
+                _arrowWanted[region] = wanted;
+            }
+            _lands.SetPixels32(_landPixels);
+            _lands.Apply();
+            if (!arrows)
+                return;
+            foreach (int pixel in _arrowPlotted)
+                _arrowPixels[pixel] = default;
+            _arrowPlotted.Clear();
+            Arrows = 0;
+            for (int region = 0; region < regions; region++)
+                if (_arrowWanted[region] && DrawArrow(region))
+                    Arrows++;
+            _arrows.SetPixels32(_arrowPixels);
+            _arrows.Apply();
         }
 
         // 내 땅에서 region으로 화살표 하나 — 국경을 가장 길게 맞댄 내 땅과의 국경 한가운데에서, region의 표시 자리 쪽(여덟 방향 중 가장 가까운 쪽)으로.
@@ -437,7 +470,7 @@ namespace GnorpWar
             return true;
         }
 
-        // 도장을 시계 방향으로 90도씩 turns번 돌려 center에 찍는다 — 흰 몸과, 몸에 닿은(대각선 포함) 빈 칸의 검은 테두리
+        // 도장을 시계 방향으로 90도씩 turns번 돌려 center에 찍는다(화살표 텍스처에) — 흰 몸과, 몸에 닿은(대각선 포함) 빈 칸의 검은 테두리
         private void Stamp(string[] shape, int turns, Vector2 center)
         {
             int rows = shape.Length, columns = shape[0].Length;
@@ -470,180 +503,180 @@ namespace GnorpWar
 
         private void Plot(Vector2Int cell, Color32 color)
         {
-            if (cell.x >= 0 && cell.y >= 0 && cell.x < _width && cell.y < _height)
-                _pixels[(_height - 1 - cell.y) * _width + cell.x] = color;
+            if (cell.x < 0 || cell.y < 0 || cell.x >= _width || cell.y >= _height)
+                return;
+            int pixel = (_height - 1 - cell.y) * _width + cell.x;
+            _arrowPixels[pixel] = color;
+            _arrowPlotted.Add(pixel);
         }
 
-        // cells = [y × width + x] 땅 번호(위 왼쪽이 0번 칸), pixels = 텍스처 순서(아래 줄부터). open = 침략할 수 있는 땅(밝게만 — 점선 띠는 국경과 따로 놀아 뺐다, 사용자 10/21), hatch = 빗금을 칠 땅(없으면 null)
-        // events[땅] = 이벤트 땅의 상태(EventState — 없으면 null: 이벤트 땅을 옛 임시 빗금으로)
-        // terrain[땅] = 그 땅의 지형색(남의 땅 속)
-        public static void Paint(Color32[] pixels, int[] cells, int width, int height, int[] owner, Color32[] colors, Color32[] terrain, int mine, bool[] open, bool[] hatch, int selected, int hovered, byte[] events = null)
-        {
-            for (int y = 0; y < height; y++)
-                for (int x = 0; x < width; x++)
-                {
-                    int region = cells[y * width + x];
-                    Color32 pixel = SeaColor;
-                    if (region >= 0)
-                    {
-                        Color32 color = colors[region];
-                        bool own = owner[region] == mine;
-                        bool reachable = !own && open != null && open[region];
-                        float fill = own ? (region == hovered ? MineHoverFill : MineFill)
-                            : reachable ? (region == hovered ? OpenHoverFill : OpenFill)
-                            : region == hovered ? HoverFill : Fill;
-                        Color32 ground = own ? color : terrain[region];
-                        pixel = Scaled(ground, fill);
-                        if (hatch != null && hatch[region] && (x + y) % HatchStep == 0)
-                            pixel = color;
-                        // 이벤트 땅(주인 없음) — 바깥 땅의 고른 회색과 갈리게 검은 바탕에 옅은 빗금(임시 — 그림은 ROADMAP 2-5 3번)
-                        if (owner[region] < 0)
-                            pixel = (x + y) % HatchStep == 0 ? Scaled(color, region == hovered ? EventHatchHover : EventHatch) : SeaColor;
-                        // 이벤트 땅(A안 10/25) — 거의 검게 비우고 국경 · 빗금만: 열림 = 회색 국경 + 옅은 빗금 / 방문 가능 = 흰 굵은 국경 + 밝은 빗금 / 닫힘 = 까만 구멍
-                        if (events != null && events[region] != EventNone)
-                        {
-                            pixel = EventPixel(cells, width, height, x, y, region, events[region], region == hovered);
-                            if (region == selected && NearEdge(cells, width, height, x, y, region, SelectedWidth))
-                                pixel = SelectedColor;
-                            pixels[(height - 1 - y) * width + x] = pixel;
-                            continue;
-                        }
-                        // 선은 한 줄만 — 오른쪽 · 아래 칸과 주인이 다르면 국경선, 주인은 같고 땅만 다르면 옅은 선. 바다와 닿은 칸은 해안선(지도 끝은 선이 없다 — 대륙이 판 밖으로 이어진다, 10/25)
-                        bool coast = NearShore(cells, width, height, x, y, CoastWidth);
-                        bool lordEdge = false, landEdge = false;
-                        for (int k = 0; k < 2; k++)
-                        {
-                            int other = k == 0 ? At(cells, width, height, x + 1, y) : At(cells, width, height, x, y + 1);
-                            if (other >= 0 && other != region)   // 바다 쪽은 위 coast(CoastWidth칸 굵기)
-                            {
-                                if (owner[other] != owner[region])
-                                    lordEdge = true;
-                                else
-                                    landEdge = true;
-                            }
-                        }
-                        // 내 땅 덩어리의 바깥 가장자리는 굵게 · 그 안쪽은 내 색이 밝게 번진 띠 · 맞닿은 남의 땅 쪽에는 검은 그림자
-                        // 남의 땅 국경 · 해안선은 검은 선, 그 안쪽 둘레는 영주 색 띠 — 흰 국경은 내 땅만(사용자 10/15 · 10/26)
-                        if (own && (coast || lordEdge || NearOther(cells, width, height, x, y, owner, mine, MineBorder)))
-                            pixel = White;
-                        else if (own && NearOther(cells, width, height, x, y, owner, mine, MineGlow))
-                            pixel = Color32.Lerp(color, White, GlowWhite);
-                        else if (!own && NearMine(cells, width, height, x, y, owner, mine))
-                            pixel = SeaColor;
-                        else if (coast || lordEdge)
-                            pixel = EdgeColor;
-                        else if (!own && NearOther(cells, width, height, x, y, owner, owner[region], LordBand))
-                            pixel = Scaled(color, BandFill);
-                        else if (landEdge)
-                            pixel = Scaled(ground, fill * InnerLine);
-                        // 고른 땅 테두리는 이웃 땅 쪽에 그려진 국경선(흰 선 · 그림자 · 영주 색 선)까지 덮는다 — 안 덮으면 노란 선 밖으로 다른 선이 비친다(사용자 10/15)
-                        if (region == selected ? NearEdge(cells, width, height, x, y, region, SelectedWidth)
-                            : selected >= 0 && Near(cells, width, height, x, y, selected, own ? MineBorder : MineShadow))
-                            pixel = SelectedColor;
-                    }
-                    else
-                        pixel = SeaPixel(x, y);
-                    pixels[(height - 1 - y) * width + x] = pixel;
-                }
-        }
-
-        // ── 바다(사용자 10/25 「삼국지 지도처럼」 — 남 · 동은 바다와 맞닿는 해안) — 어두운 파랑에 옅은 물결 줄. 남의 땅 채움(지형색)보다 어둡게
-        private static readonly Color32 SeaFill = new Color32(31, 78, 140, 255), SeaWave = new Color32(58, 110, 178, 255);   // 남청(사용자 10/25 「1안」)
-        // 이벤트 땅 빗금 밝기(땅 색 × 이 값) · 가리켰을 때
-        private const float EventHatch = 0.45f, EventHatchHover = 0.8f;
-        // 물결 — 이 칸 간격의 줄마다 짧은 가로 줄(줄마다 어긋나게)
-        private const int WaveRow = 6, WaveSpan = 14, WaveLength = 3;
-
-        // 물결 흐름(사용자 10/26) — 줄이 오른쪽으로 흐른다(칸/초), 줄마다 빠르기를 0.6~1.4배로 달리 · 다시 칠하는 간격(초)
+        // 물결 흐름(사용자 10/26) — 줄이 오른쪽으로 흐른다(칸/초), 줄마다 빠르기를 0.6~1.4배(다섯 갈래)로 달리 · 0.1초 계단. 물결 무늬는 셰이더에
         private const float WaveSpeed = 1.5f, WaveTick = 0.1f;
+        private const int WaveSpeeds = 5;
+        // 밝기 표(_lut)의 줄 수 — 줄 순서는 Bake · 셰이더 ROW_와 같다
+        private const int LutRows = 19;
 
-        // time = 흐른 시각(초) — 0이면 멈춘 물결
-        private static Color32 SeaPixel(int x, int y, float time = 0f)
-        {
-            int row = y / WaveRow;
-            int shift = Mathf.FloorToInt(time * WaveSpeed * (0.6f + row * 7 % 5 * 0.2f));
-            return y % WaveRow == 0 && ((x - shift + row * (WaveSpan / 2)) % WaveSpan + WaveSpan) % WaveSpan < WaveLength ? SeaWave : SeaFill;
-        }
+        // 1보다 크면 그만큼 흰색 쪽으로(1.2 = 흰색 20% 섞음)
+        private static Color32 Scaled(Color32 color, float scale)
+            => scale > 1f ? Color32.Lerp(color, White, scale - 1f) : new Color32((byte)(color.r * scale), (byte)(color.g * scale), (byte)(color.b * scale), 255);
 
-        // 바다 칸만 지금 시각의 물결로 다시 칠한다 — 화살표 도장이 덮은 칸은 둔다. 바뀐 칸이 있으면 true
-        private bool DrawSea(float time)
+        // 빠르기 갈래 speed(0~4)의 물결이 time초에 흘러간 칸 — 셰이더에는 이 값을 넘긴다(옛 칠하기와 같은 내림)
+        private static int WaveShift(float time, int speed) => Mathf.FloorToInt(time * WaveSpeed * (0.6f + speed * 0.2f));
+        // 땅 가장자리 띠 두께(칸) — 이벤트 땅 흰 테두리 · 고른 땅 노란 테두리
+        private const int EdgeBand = 2;
+
+        // 안 바뀌는 그림을 텍스처로 굽고 머티리얼을 만든다(Build에서 한 번). 텍스처는 모두 아래 줄부터(텍스처 순서) · Point
+        // 칸 : R = 땅 + 1(0 = 바다) · G = 오른쪽 칸의 다른 땅 + 1 · B = 아래 칸의 다른 땅 + 1 · A = 지도 안 바다까지 거리(0~7) | 가장자리 2칸 안 << 3 | 장식 << 4 | 기복도 톤 << 5
+        // 이웃 땅 : NearReach칸(체비쇼프) 안의 다른 땅을 가까운 순으로 NearSlots개(+ 1, 0 = 없음) · 그 거리
+        private void Bake()
         {
-            bool changed = false;
-            foreach (int pixel in _sea)
-            {
-                Color32 now = _pixels[pixel];
-                if (!now.Equals(SeaFill) && !now.Equals(SeaWave))
-                    continue;
-                Color32 next = SeaPixel(pixel % _width, _height - 1 - pixel / _width, time);
-                if (!next.Equals(now))
+            int count = _width * _height, regions = _owner.Length;
+            var cells = new Color32[count];
+            var ids = new Color32[count];
+            var dists = new Color32[count];
+            byte[] tones = Relief(_cells, _width, _height);
+            var decor = new bool[count];
+            foreach (int pixel in _decor)
+                decor[pixel] = true;
+            // 칸마다 이웃 땅 → 가장 가까운 거리(창 안에서 처음 본 순서대로)
+            var near = new int[(NearReach * 2 + 1) * (NearReach * 2 + 1)];
+            var nearDistance = new int[near.Length];
+            var id = new byte[NearSlots];
+            var gap = new byte[NearSlots];
+            int crowded = 0;
+            for (int y = 0; y < _height; y++)
+                for (int x = 0; x < _width; x++)
                 {
-                    _pixels[pixel] = next;
-                    changed = true;
+                    int region = _cells[y * _width + x], pixel = (_height - 1 - y) * _width + x;
+                    if (region < 0)
+                        continue;
+                    int found = 0, sea = 7;
+                    for (int dy = -NearReach; dy <= NearReach; dy++)
+                        for (int dx = -NearReach; dx <= NearReach; dx++)
+                        {
+                            int nx = x + dx, ny = y + dy;
+                            if (nx < 0 || ny < 0 || nx >= _width || ny >= _height)
+                                continue;   // 지도 밖은 바다도 남의 땅도 아니다(대륙이 판 밖으로 이어진다)
+                            int other = _cells[ny * _width + nx], distance = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
+                            if (other < 0)
+                                sea = Mathf.Min(sea, distance);
+                            if (other < 0 || other == region)
+                                continue;
+                            int slot = System.Array.IndexOf(near, other, 0, found);
+                            if (slot < 0)
+                            {
+                                slot = found++;
+                                near[slot] = other;
+                                nearDistance[slot] = distance;
+                            }
+                            else
+                                nearDistance[slot] = Mathf.Min(nearDistance[slot], distance);
+                        }
+                    if (found > NearSlots)
+                    {
+                        crowded++;
+                        System.Array.Sort(nearDistance, near, 0, found);
+                    }
+                    System.Array.Clear(id, 0, NearSlots);
+                    System.Array.Clear(gap, 0, NearSlots);
+                    for (int slot = 0; slot < Mathf.Min(found, NearSlots); slot++)
+                    {
+                        id[slot] = (byte)(near[slot] + 1);
+                        gap[slot] = (byte)nearDistance[slot];
+                    }
+                    ids[pixel] = new Color32(id[0], id[1], id[2], id[3]);
+                    dists[pixel] = new Color32(gap[0], gap[1], gap[2], gap[3]);
+                    int right = At(_cells, _width, _height, x + 1, y), down = At(_cells, _width, _height, x, y + 1);
+                    int flags = sea | (NearEdge(_cells, _width, _height, x, y, region, EdgeBand) ? 8 : 0) | (decor[pixel] ? 16 : 0) | tones[y * _width + x] << 5;
+                    cells[pixel] = new Color32((byte)(region + 1), (byte)(right >= 0 && right != region ? right + 1 : 0), (byte)(down >= 0 && down != region ? down + 1 : 0), (byte)flags);
                 }
+            // 다섯 땅 이상이 4칸 안에 모이는 칸은 가까운 넷만 본다 — 지금 지도(40칸)에는 없다
+            if (crowded > 0)
+                Debug.LogWarning($"WorldMapView: 이웃 땅이 {NearSlots}개를 넘는 칸 {crowded}개 — 가까운 {NearSlots}개만 본다");
+            _cellTexture = DataTexture(_width, _height, cells, true);
+            _nearIds = DataTexture(_width, _height, ids, true);
+            _nearDist = DataTexture(_width, _height, dists, true);
+            _landPixels = new Color32[regions * 2];
+            _lands = DataTexture(regions, 2, _landPixels, false);
+            _arrowPixels = new Color32[count];
+            _arrows = DataTexture(_width, _height, _arrowPixels, false);
+            _arrowWanted = new bool[regions];
+            // 밝기 표 — [줄 × 256 + 값] = 그 값을 그 줄의 밝기로 바꾼 값. 셰이더가 줄 번호(ROW_)로 읽는다.
+            // 내림 경계(220 × 0.9 = 197.99…)에서 GPU의 float 곱과 C#이 갈리므로, 옛 칠하기와 같은 C# 식으로 여기서 계산해 둔다
+            float[] fills = { Fill, HoverFill, OpenHoverFill, MineFill };
+            var lut = new Color32[LutRows * 256];
+            for (int value = 0; value < 256; value++)
+            {
+                var gray = new Color32((byte)value, (byte)value, (byte)value, 255);
+                for (int row = 0; row < fills.Length; row++)
+                {
+                    float fill = fills[row];
+                    lut[row * 256 + value] = Scaled(gray, fill);
+                    lut[(row + 4) * 256 + value] = Scaled(gray, fill * InnerLine);
+                }
+                float[] scales = { BandFill, EventHatch, EventHatchHover, EventClosedLight, EventLitLight, EventVisitableHoverLight, EventVisitableLight, EventHoverLight };
+                for (int k = 0; k < scales.Length; k++)
+                    lut[(8 + k) * 256 + value] = Scaled(gray, scales[k]);
+                lut[16 * 256 + value] = Color32.Lerp(gray, White, GlowWhite);
+                lut[17 * 256 + value] = Color32.Lerp(gray, White, DecorBrightness);
+                lut[18 * 256 + value] = Color32.Lerp(gray, SeaColor, DecorShade);
             }
-            return changed;
+            _lut = DataTexture(256, LutRows, lut, true);
+            // 0~255 → 화면 색 — 옛 그림(sRGB 텍스처)과 같은 변환을 타게 sRGB 텍스처로 둔다
+            var ramp = new Color32[256];
+            for (int i = 0; i < ramp.Length; i++)
+                ramp[i] = new Color32((byte)i, (byte)i, (byte)i, 255);
+            _ramp = new Texture2D(ramp.Length, 1, TextureFormat.RGBA32, false, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            _ramp.SetPixels32(ramp);
+            _ramp.Apply(false, true);
+
+            _material = new Material(_shader) { name = "WorldMap (지도)" };
+            _material.SetTexture("_NearIds", _nearIds);
+            _material.SetTexture("_NearDist", _nearDist);
+            _material.SetTexture("_Lands", _lands);
+            _material.SetTexture("_Arrows", _arrows);
+            _material.SetTexture("_Ramp", _ramp);
+            _material.SetTexture("_Lut", _lut);
+            _material.SetFloat(HatchId, _hatch ? 1f : 0f);
+            _image.texture = _cellTexture;
+            _image.material = _material;
         }
 
+        // 값을 그대로 읽는 텍스처(색 공간 변환 · 거르기 없음). frozen = 다시 쓰지 않는다(CPU 쪽 사본을 버린다)
+        private static Texture2D DataTexture(int width, int height, Color32[] pixels, bool frozen)
+        {
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            texture.SetPixels32(pixels);
+            texture.Apply(false, frozen);
+            return texture;
+        }
+
+        // 바다 물결 — 셰이더가 칸마다 그리고, 여기서는 0.1초마다 갈래별로 흘러간 칸 다섯 개만 넘긴다
         private void Update()
         {
             int tick = Mathf.FloorToInt(Time.unscaledTime / WaveTick);
-            if (!_painted || tick == _waveTick)
+            if (_material == null || tick == _waveTick)
                 return;
             _waveTick = tick;
-            if (!DrawSea(tick * WaveTick))
-                return;
-            _texture.SetPixels32(_pixels);
-            _texture.Apply();
+            SetWave(tick * WaveTick);
         }
 
-        // 해안선 굵기(칸) — 국경선(1칸)보다 한 단계 굵게(사용자 10/25)
-        private const int CoastWidth = 2;
-
-        // (x, y)에서 range칸 안에 지도 안의 바다 칸이 있나(지도 밖은 바다가 아니다)
-        private static bool NearShore(int[] cells, int width, int height, int x, int y, int range)
+        private void SetWave(float time)
         {
-            for (int dy = -range; dy <= range; dy++)
-                for (int dx = -range; dx <= range; dx++)
-                {
-                    int nx = x + dx, ny = y + dy;
-                    if (nx >= 0 && ny >= 0 && nx < width && ny < height && cells[ny * width + nx] < 0)
-                        return true;
-                }
-            return false;
+            var shifts = new Vector4(WaveShift(time, 0), WaveShift(time, 1), WaveShift(time, 2), WaveShift(time, 3));
+            _material.SetVector(WaveShiftId, shifts);
+            _material.SetFloat(WaveShift4Id, WaveShift(time, WaveSpeeds - 1));
+            Material shown = _image.materialForRendering;
+            if (shown != _material)
+            {
+                shown.SetVector(WaveShiftId, shifts);
+                shown.SetFloat(WaveShift4Id, WaveShift(time, WaveSpeeds - 1));
+            }
         }
 
         // 지도 밖은 바다로 친다
         private static int At(int[] cells, int width, int height, int x, int y)
             => x < 0 || y < 0 || x >= width || y >= height ? WorldMapDefinition.Sea : cells[y * width + x];
-
-        // 내 땅의 칸 (x, y)에서 range칸 안에 내 땅이 아닌 칸(남의 땅 · 바다)이 있나
-        private static bool NearOther(int[] cells, int width, int height, int x, int y, int[] owner, int mine, int range)
-        {
-            for (int dx = -range; dx <= range; dx++)
-                for (int dy = -range; dy <= range; dy++)
-                {
-                    int nx = x + dx, ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= width || ny >= height)
-                        continue;   // 지도 밖은 남의 칸이 아니다 — 대륙이 판 밖으로 이어진다(10/25)
-                    int other = cells[ny * width + nx];
-                    if (other < 0 || owner[other] != mine)
-                        return true;
-                }
-            return false;
-        }
-
-        // 남의 땅의 칸 (x, y)에서 MineShadow칸 안에 내 땅이 있나
-        private static bool NearMine(int[] cells, int width, int height, int x, int y, int[] owner, int mine)
-        {
-            for (int dx = -MineShadow; dx <= MineShadow; dx++)
-                for (int dy = -MineShadow; dy <= MineShadow; dy++)
-                {
-                    int other = At(cells, width, height, x + dx, y + dy);
-                    if (other >= 0 && owner[other] == mine)
-                        return true;
-                }
-            return false;
-        }
 
         // 그 땅의 가장자리에서 range칸 안인가
         private static bool NearEdge(int[] cells, int width, int height, int x, int y, int region, int range)
@@ -655,23 +688,9 @@ namespace GnorpWar
             return false;
         }
 
-        // (x, y)에서 range칸 안에 그 땅이 있나
-        private static bool Near(int[] cells, int width, int height, int x, int y, int region, int range)
-        {
-            for (int dx = -range; dx <= range; dx++)
-                for (int dy = -range; dy <= range; dy++)
-                    if (At(cells, width, height, x + dx, y + dy) == region)
-                        return true;
-            return false;
-        }
-
         // 이벤트 땅 = 산맥 띠 — 음영 기복도(사용자 10/26 참고 그림: 아이콘 없이 등성이 한쪽은 빛 · 반대쪽은 그림자, 비탈에 깃털 같은 잔 골짜기, 따뜻한 갈색~주황).
-        // 높이 = 띠 가장자리에서 떨어진 거리(가운데가 등성이) − 골짜기 노이즈. 빛은 왼쪽 위에서 — 기울기로 잰 밝기를 RockTones 다섯 톤으로 칠한다.
-        // 상태: 열림 = 그대로 · 방문 가능 = 밝아짐 + 흰 굵은 테두리(화살표는 Show가) · 반짝임 = 더 밝게 · 닫힘 = 어둡게(아이콘 반투명은 칸이)
-        private static readonly Color32[] RockTones =
-        {
-            new Color32(70, 45, 30, 255), new Color32(120, 82, 52, 255), new Color32(180, 120, 66, 255),
-        };
+        // 높이 = 띠 가장자리에서 떨어진 거리(가운데가 등성이) − 골짜기 노이즈. 빛은 왼쪽 위에서 — 기울기로 잰 밝기를 톤 셋으로 나눠 굽는다(색은 셰이더 RockTone).
+        // 상태(셰이더): 열림 = 그대로 · 방문 가능 = 밝아짐 + 흰 굵은 테두리(화살표는 Show가) · 반짝임 = 더 밝게 · 닫힘 = 어둡게(아이콘 반투명은 칸이)
         // 톤 경계(빛 세기) — 평지(기울기 없음, 0.73)가 가운데 톤. 톤 셋 · 큰 골짜기만(사용자 10/26 「너무 구체적 — 밀도를 낮춰」)
         private static readonly float[] ToneSteps = { 0.6f, 0.85f };
         // 등성이 높이(가장자리에서 1칸당) · 골짜기 깊이 · 골짜기 노이즈 한 덩이 크기(칸)
@@ -680,15 +699,7 @@ namespace GnorpWar
         private static int[] _reliefCells;
         private static byte[] _relief;
 
-        private static Color32 EventPixel(int[] cells, int width, int height, int x, int y, int region, byte state, bool hovered)
-        {
-            float light = state == EventClosed ? 0.5f : state == EventLit ? 1.45f : state == EventVisitable ? (hovered ? 1.35f : 1.2f) : hovered ? 1.15f : 1f;
-            if (state != EventClosed && state != EventOpen && NearEdge(cells, width, height, x, y, region, 2))
-                return White;
-            return Scaled(RockTones[Relief(cells, width, height)[y * width + x]], light);
-        }
-
-        // 땅 칸마다 기복도 톤 번호(RockTones) — 이벤트 땅에만 쓰지만 모양만 보므로 모든 땅을 한 번에 잰다
+        // 땅 칸마다 기복도 톤 번호(0~2) — 이벤트 땅에만 쓰지만 모양만 보므로 모든 땅을 한 번에 잰다
         private static byte[] Relief(int[] cells, int width, int height)
         {
             if (_reliefCells == cells)
@@ -777,10 +788,6 @@ namespace GnorpWar
             return (h ^ (h >> 16)) / (float)uint.MaxValue;
         }
 
-        // 1보다 크면 그만큼 흰색 쪽으로(1.2 = 흰색 20% 섞음)
-        private static Color32 Scaled(Color32 color, float scale)
-            => scale > 1f ? Color32.Lerp(color, White, scale - 1f) : new Color32((byte)(color.r * scale), (byte)(color.g * scale), (byte)(color.b * scale), 255);
-
         // 화면 좌표의 땅 번호 — 바다 · 지도 밖이면 None
         public int RegionAt(Vector2 screen, Camera camera)
         {
@@ -796,8 +803,6 @@ namespace GnorpWar
 
         // ── 지형 장식(사용자 10/11 — 임시 그림) — 땅 안에 그 지형의 작은 도장을 드문드문. 지도 한 칸 = 도장의 한 점.
         // 자리는 땅 번호로 씨앗을 고정한다(턴마다 그대로). 국경 · 표시 자리(아이콘 · 번호)에서 떨어뜨린다. 땅 모양(번호 지도)은 건드리지 않고 칠할 때 얹기만 한다
-        private const float DecorBrightness = 0.22f;
-        private const float DecorShade = 0.3f;
         // 땅 넓이(칸) 이만큼에 도장 하나 · 땅마다 최대 개수 · 국경에서 띄우는 칸 · 도장끼리 띄우는 칸
         private const int DecorArea = 260;
         private const int DecorMax = 7;

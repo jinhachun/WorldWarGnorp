@@ -42,7 +42,7 @@
 | `UI_Chip` | 글에 맞춤 × 32 | 검은 판 + Outline 2(등급/국가 색) · 아이콘(원본 크기) · `UI_Text_Dot24` | — | 툴팁 제목 아래 등급 · 국가 칩 | `UI_Chip.png` |
 | `UI_StatLine` | 글에 맞춤 | 스탯 아이콘 32(스탯 색) + `UI_Text_Noto22` | — | 툴팁 유닛 판 체력 · 공격력 · 사거리 줄 | `UI_StatLine.png` |
 | `UI_UnitCard` | 700×300(높이는 코드가 글에 맞춤) | 검은 판 + NationFrame 테두리 · 유닛 그림 칸 64 · 이름(도트) · 본문(깔끔 22) | — | 기물 툴팁의 유닛 판(World · Battle) | `UI_UnitCard.png` |
-| `UI_LandCard` | 420 × 글에 맞춤 | 검은 판 + NationFrame · 그림 칸 64(영주 그림 ×4 / 이벤트 64 아이콘) · 이름(도트 36 + 한 줄 24) · 본문(깔끔 22) · 패배시 줄(하트 + 글) · 레이캐스트 안 막음 | — | 지도 땅 호버 카드(`UI/LandHover` — 주인 · 국가 · 땅 수 · 지형 + 효과 · 지역 특수 · 패배시) | (캡처 `Captures/LandCard/land_*.png`) |
+| `UI_LandCard` | 440 × 글에 맞춤 | 검은 판 + NationFrame · 그림 칸 64(영주 그림 ×4 / 이벤트 64 아이콘) · 이름(도트 36) + [국가] 국가 [왕관 LandsIcon] 땅 수 줄 · 오른쪽 위 [하트] -1 배지(도트 24) · 본문(깔끔 22, 줄 안 아이콘) · 지형 · 특수 줄은 코드가 Awake에서 복제 · 레이캐스트 안 막음 | — | 지도 땅 호버 카드(`UI/LandHover` — 시안 B 10/27: 아이콘 + 짧은 값, 지형 효과 줄은 §5-2 1번 예외) | (캡처 `Captures/LandCard/final_*.png`) |
 | `UI_PowerBar` | 360×22 | `UI_PowerBar` 틀 + `UI_PowerBarFill`(Filled, 영주 색) | — | 전투 유닛 호버 카드 체력 막대 | (호버 때만 보임 — 캡처 없음) |
 | `UI_PowerBarVersus` | 360×22 | 틀 + 적 채움 + 아군 채움(Filled) + 가운데 눈금 | — | 전투 위 가운데 유닛 수 비교 | `UI_PowerBarVersus.png` |
 | `UI_Frame` | 판에 꽉 참 | 회색(#A6A6A6) 2px 단색 변 넷 + `UI_FrameKnot` 14 매듭 넷 | — | 결과 창 판(스타일 가이드 「판 선」) | `UI_Frame.png` |

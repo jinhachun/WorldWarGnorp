@@ -10,12 +10,9 @@ namespace GnorpWar
     // 왼쪽 패널 · 위 줄(UI/WorldSidePanel)과 전투 화면의 본진 체력바 아래(UI/BaseUpgradeRow)가 같이 쓴다
     public class UpgradeRow
     {
-        // 아이콘 한 변 · 외곽선 두께 · 아이콘과 「×N」 사이 · 줄 간격(px)
+        // 아이콘 한 변 · 외곽선 두께 · 줄 간격(px). 「×N」은 칸 프리팹 안에 있다 — 도트 12, 칸 아래쪽에 붙인다(사용자 10/14: 개수 표시는 작게)
         private const float IconSize = 32f;
         private const float Frame = 2f;
-        private const float LabelGap = 2f;
-        // 「×N」 글자 크기 — 도트 폰트의 가장 작은 단계(12), 칸 아래쪽에 붙인다(사용자 10/14: 개수 표시는 작게)
-        public const int CountSize = 12;
         private const float CellHeight = 40f;
         // 외곽선까지 친 칸의 한 변(px) — 한 줄의 높이
         public const float BoxSize = IconSize + Frame * 2f;
@@ -23,7 +20,7 @@ namespace GnorpWar
         private readonly List<Image> _frames = new List<Image>();
         private readonly List<UpgradeIcon> _icons = new List<UpgradeIcon>();
         private readonly List<Text> _counts = new List<Text>();
-        private readonly Text _labelTemplate;
+        private readonly Image _cell;
         private readonly float _cellWidth;
         private readonly int _columns;
         private readonly bool _fromRight;
@@ -31,10 +28,10 @@ namespace GnorpWar
         // 줄의 기준점 — 왼쪽 위(fromRight면 오른쪽 위). 자리는 부르는 쪽이 놓는다
         public readonly RectTransform Root;
 
-        // labelTemplate = 「×N」 글의 본(도트 폰트 글 하나 — 같은 폰트 · 크기로 본뜬다). fromRight = 기준점에서 왼쪽으로 늘어놓는다
-        public UpgradeRow(RectTransform parent, Text labelTemplate, float cellWidth, int columns, bool fromRight)
+        // cell = 칸 하나의 프리팹(Parts/UI_UpgradeCell_Hover — 판 · 속 · 아이콘 · 「×N」). fromRight = 기준점에서 왼쪽으로 늘어놓는다
+        public UpgradeRow(RectTransform parent, Image cell, float cellWidth, int columns, bool fromRight)
         {
-            _labelTemplate = labelTemplate;
+            _cell = cell;
             _cellWidth = cellWidth;
             _columns = columns;
             _fromRight = fromRight;
@@ -44,38 +41,17 @@ namespace GnorpWar
             Root.sizeDelta = Vector2.zero;
         }
 
-        // i번째 칸을 만든다 — 가진 종류가 늘 때마다 하나씩. 외곽선 = 그림 없는 등급 색 판 위에 검은 판을 얹은 것(늘려 쓰는 그림이 없다)
+        // i번째 칸을 만든다 — 가진 종류가 늘 때마다 하나씩. 외곽선 = 그림 없는 등급 색 판 위에 검은 판을 얹은 것(늘려 쓰는 그림이 없다) · 「×N」은 칸 오른쪽(프리팹 안 자리)
         private void AddCell()
         {
             int i = _icons.Count, column = i % _columns;
             var cell = new Vector2(_fromRight ? -(column + 1) * _cellWidth : column * _cellWidth, -(i / _columns) * CellHeight);
-            Image frame = NewImage("Frame", Root, cell, BoxSize);
+            Image frame = Object.Instantiate(_cell, Root);
+            frame.name = "Frame";
+            Place(frame.rectTransform, Root, cell);
             _frames.Add(frame);
-            NewImage("Fill", frame.rectTransform, new Vector2(Frame, -Frame), IconSize).color = Color.black;
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(UpgradeIcon)).GetComponent<UpgradeIcon>();
-            Place((RectTransform)icon.transform, frame.rectTransform, new Vector2(Frame, -Frame));
-            icon.GetComponent<Image>().preserveAspect = true;
-            _icons.Add(icon);
-
-            Text count = Object.Instantiate(_labelTemplate, Root);
-            count.name = "Count";
-            count.enabled = true;
-            count.fontSize = CountSize;
-            count.alignment = TextAnchor.LowerLeft;
-            count.horizontalOverflow = HorizontalWrapMode.Overflow;
-            count.raycastTarget = false;
-            Place(count.rectTransform, Root, cell + new Vector2(BoxSize + LabelGap, 0f));
-            count.rectTransform.sizeDelta = new Vector2(0f, BoxSize);
-            _counts.Add(count);
-        }
-
-        private static Image NewImage(string name, RectTransform parent, Vector2 position, float size)
-        {
-            var image = new GameObject(name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            image.raycastTarget = false;
-            Place(image.rectTransform, parent, position);
-            image.rectTransform.sizeDelta = new Vector2(size, size);
-            return image;
+            _icons.Add(frame.transform.Find("Icon").GetComponent<UpgradeIcon>());
+            _counts.Add(frame.transform.Find("Count").GetComponent<Text>());
         }
 
         private static void Place(RectTransform rect, RectTransform parent, Vector2 position)
@@ -105,7 +81,7 @@ namespace GnorpWar
                 _frames[i].color = holdings[i].Rarity.FrameColor();
                 _icons[i].Set(holdings[i]);
                 _counts[i].text = $"×<color={BuildingTooltip.NumberColor}>{holdings[i].Count}</color>";
-                Width = Mathf.Abs(_counts[i].rectTransform.anchoredPosition.x) + _counts[i].preferredWidth;
+                Width = Mathf.Abs(_frames[i].rectTransform.anchoredPosition.x + _counts[i].rectTransform.anchoredPosition.x) + _counts[i].preferredWidth;
             }
             return cells == 0 ? 0f : ((cells - 1) / _columns + 1) * CellHeight - (CellHeight - BoxSize);
         }

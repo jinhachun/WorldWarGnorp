@@ -16,14 +16,14 @@ namespace GnorpWar
         private const float NationGap = 12f;
         private const float LineGap = 4f;
         private const float TowerGap = 12f;
-        // 국가 글자 크기 — 지도 왼쪽 패널의 국가 줄과 같다(깔끔 폰트)
-        private const int NationSize = 20;
 
         [SerializeField] private Team _team;
-        [Tooltip("「×N」 · 영주 이름 글의 본 — 도트 폰트 글 하나(같은 폰트로 본뜬다)")]
+        [Tooltip("영주 이름 글의 본 — 도트 폰트 글 하나(같은 폰트로 본뜬다)")]
         [SerializeField] private Text _labelTemplate;
-        [Tooltip("국가 이름의 폰트 — 지도 왼쪽 패널의 국가 줄과 같은 깔끔 폰트")]
-        [SerializeField] private Font _nationFont;
+        [Tooltip("국가 이름 글 — 부품 프리팹 UI_Text_Noto20(지도 왼쪽 패널의 국가 줄과 같은 깔끔 폰트)")]
+        [SerializeField] private Text _nationText;
+        [Tooltip("업그레이드 칸 하나 — 부품 프리팹 UI_UpgradeCell_Hover")]
+        [SerializeField] private Image _upgradeCell;
         [Tooltip("이 진영의 타워 UI — 겹치면 이 줄을 그 바깥으로 민다")]
         [SerializeField] private BoardView _tower;
 
@@ -49,11 +49,8 @@ namespace GnorpWar
             name.name = "LordName";
             name.enabled = true;
             name.text = mine ? "내 영지" : lord == RunState.World.State.Coalition ? "연합" : RunState.NameOf(lord);
-            Text nation = new GameObject("Nation", typeof(RectTransform)).AddComponent<Text>();
-            nation.transform.SetParent(_content, false);
-            nation.font = _nationFont;
-            nation.fontSize = NationSize;
-            nation.color = Color.white;
+            Text nation = Instantiate(_nationText, _content);
+            nation.name = "Nation";
             nation.text = (mine ? RunState.Nation : RunState.World.NationOf(lord)).DisplayName();
             float lineHeight = Mathf.Max(name.preferredHeight, nation.preferredHeight);
             float nameWidth = Fit(name, lineHeight), nationWidth = Fit(nation, lineHeight);
@@ -61,7 +58,7 @@ namespace GnorpWar
             Place(name.rectTransform, FromRight ? -(nationWidth + NationGap + nameWidth) : 0f);
             Place(nation.rectTransform, FromRight ? -nationWidth : nameWidth + NationGap);
 
-            var row = new UpgradeRow(_content, _labelTemplate, CellWidth, Columns, FromRight);
+            var row = new UpgradeRow(_content, _upgradeCell, CellWidth, Columns, FromRight);
             float rowHeight = row.Show(RunState.UpgradesOf(lord));
             row.Root.anchoredPosition = new Vector2(0f, -(lineHeight + LineGap));
             _height = lineHeight + (rowHeight > 0f ? LineGap + rowHeight : 0f);

@@ -39,6 +39,13 @@ namespace GnorpWar
         [SerializeField] private Sprite _hpIcon;
         [SerializeField] private Sprite _attackIcon;
         [SerializeField] private Sprite _rangeIcon;
+        [Header("부품 프리팹 (Assets/Prefabs/UI/Parts)")]
+        [Tooltip("「걸려 있는 업그레이드」 줄의 칸 하나 — UI_UpgradeCell(올림 설명 없음)")]
+        [SerializeField] private Image _upgradeCell;
+        [Tooltip("제목 아래 등급 · 국가 칩 — UI_Chip")]
+        [SerializeField] private RectTransform _chip;
+        [Tooltip("유닛 판 능력치 줄 한 줄 — UI_StatLine")]
+        [SerializeField] private RectTransform _statLine;
 
         private static BuildingTooltip _instance;
 
@@ -403,36 +410,20 @@ namespace GnorpWar
                 _instance.Place(owner, title, body, units, board, enemy, upgrades, tags);
         }
 
-        // 칩 하나 — 검은 판(테두리 = Outline) · 아이콘(원본 크기) · 흰 도트 글. 내용은 SetChip이 채운다
+        // 칩 하나 — 부품 프리팹 UI_Chip(검은 판 · 테두리 = Outline · 아이콘(원본 크기) · 흰 도트 글). 내용은 SetChip이 채운다
         private Chip NewChip(RectTransform parent, string name)
         {
-            var chip = new Chip { Root = (RectTransform)new GameObject(name, typeof(RectTransform)).transform };
-            chip.Root.SetParent(parent, false);
-            chip.Root.anchorMin = chip.Root.anchorMax = chip.Root.pivot = new Vector2(0f, 1f);
-            chip.Box = new GameObject("Box", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            chip.Box.rectTransform.SetParent(chip.Root, false);
-            chip.Box.rectTransform.anchorMin = Vector2.zero;
-            chip.Box.rectTransform.anchorMax = Vector2.one;
-            chip.Box.rectTransform.offsetMin = chip.Box.rectTransform.offsetMax = Vector2.zero;
-            chip.Box.color = Color.black;
-            chip.Box.raycastTarget = false;
-            chip.Border = chip.Box.gameObject.AddComponent<Outline>();
-            chip.Border.effectDistance = new Vector2(ChipBorder, -ChipBorder);
-            chip.Icon = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            chip.Icon.rectTransform.SetParent(chip.Root, false);
-            chip.Icon.rectTransform.anchorMin = chip.Icon.rectTransform.anchorMax = chip.Icon.rectTransform.pivot = new Vector2(0f, 0.5f);
-            chip.Icon.preserveAspect = true;
-            chip.Icon.raycastTarget = false;
-            chip.Label = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
-            chip.Label.rectTransform.SetParent(chip.Root, false);
-            chip.Label.rectTransform.anchorMin = chip.Label.rectTransform.anchorMax = chip.Label.rectTransform.pivot = new Vector2(0f, 0.5f);
-            chip.Label.font = _title.font;
-            chip.Label.fontSize = ChipTextSize;
-            chip.Label.color = Color.white;
-            chip.Label.raycastTarget = false;
-            chip.Label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            chip.Label.verticalOverflow = VerticalWrapMode.Overflow;
-            return chip;
+            RectTransform root = Instantiate(_chip, parent);
+            root.name = name;
+            Image box = root.Find("Box").GetComponent<Image>();
+            return new Chip
+            {
+                Root = root,
+                Box = box,
+                Border = box.GetComponent<Outline>(),
+                Icon = root.Find("Icon").GetComponent<Image>(),
+                Label = root.Find("Label").GetComponent<Text>(),
+            };
         }
 
         // 칩을 채우고 폭을 돌려준다 — icon(원본 크기)이 없으면 글자만
@@ -457,7 +448,7 @@ namespace GnorpWar
             return width;
         }
 
-        private UpgradeLines NewLines(RectTransform panel) => new UpgradeLines(panel, Side, panel.rect.width - Side * 2f, _title.font);
+        private UpgradeLines NewLines(RectTransform panel) => new UpgradeLines(panel, Side, panel.rect.width - Side * 2f, _upgradeCell);
 
         // i번째 유닛 판 — 모자라면 첫 장을 복제한다
         private UnitCard Card(int i)
@@ -750,26 +741,17 @@ namespace GnorpWar
             return y;
         }
 
-        // 능력치 줄 한 줄 — 아이콘(원본 크기) + 본문과 같은 글꼴의 글
-        private static (Image, Text) NewStatRow(UnitCard card)
+        // 능력치 줄 한 줄 — 부품 프리팹 UI_StatLine(아이콘(원본 크기) + 글). 글꼴 값은 판의 본문을 따른다
+        private (Image, Text) NewStatRow(UnitCard card)
         {
-            var icon = new GameObject("StatIcon", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            icon.rectTransform.SetParent(card.Stats, false);
-            icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0f, 1f);
-            icon.raycastTarget = false;
-            icon.preserveAspect = true;
-            var text = new GameObject("StatText", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
-            text.rectTransform.SetParent(card.Stats, false);
-            text.rectTransform.anchorMin = text.rectTransform.anchorMax = text.rectTransform.pivot = new Vector2(0f, 1f);
+            RectTransform row = Instantiate(_statLine, card.Stats);
+            row.name = "StatLine";
+            Image icon = row.Find("StatIcon").GetComponent<Image>();
+            Text text = row.Find("StatText").GetComponent<Text>();
             text.font = card.Body.font;
             text.fontSize = card.Body.fontSize;
             text.color = card.Body.color;
             text.lineSpacing = card.Body.lineSpacing;
-            text.supportRichText = true;
-            text.alignment = TextAnchor.UpperLeft;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.raycastTarget = false;
             return (icon, text);
         }
 

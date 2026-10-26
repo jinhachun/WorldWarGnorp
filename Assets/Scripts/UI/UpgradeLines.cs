@@ -9,15 +9,11 @@ namespace GnorpWar
     // 폭을 넘으면 아랫줄. 무엇인지는 화면 위쪽 가진 업그레이드 줄에 마우스를 올려 본다(사용자 10/14 — 판의 효과 글이 묻히지 않게)
     public class UpgradeLines
     {
-        // 아이콘 한 변 · 외곽선 두께 · 칸 사이 · 칸과 「×N」 사이(가진 업그레이드 줄과 같다) · 줄 사이(px)
-        private const float IconSize = 32f;
-        private const float Frame = 2f;
-        private const float Box = IconSize + Frame * 2f;
+        // 칸 한 변(외곽선까지) · 칸 사이 · 칸과 「×N」 사이(칸 프리팹 안 자리와 같다) · 줄 사이(px)
+        private const float Box = UpgradeRow.BoxSize;
         private const float IconsGap = 4f;
         private const float CountGap = 2f;
         private const float RowGap = 4f;
-        // 「×N」 글자 크기 · 자리 — 가진 업그레이드 줄과 같다(칸 아래쪽에 붙인다)
-        private const int CountSize = UpgradeRow.CountSize;
 
         private class Line
         {
@@ -30,14 +26,14 @@ namespace GnorpWar
         private float _width;
         // 판 폭이 바뀌면(설명 창이 상점 자리에 설 때 — BuildingTooltip) 줄의 폭도 바꾼다
         public float Width { set => _width = value; }
-        private readonly Font _dot;
+        private readonly Image _cell;
         private readonly List<Line> _lines = new List<Line>();
 
-        // panel = 줄이 들어갈 판(위쪽 기준), side = 판 왼쪽 여백, width = 줄의 폭
-        public UpgradeLines(RectTransform panel, float side, float width, Font dot)
+        // panel = 줄이 들어갈 판(위쪽 기준), side = 판 왼쪽 여백, width = 줄의 폭, cell = 칸 하나의 프리팹(Parts/UI_UpgradeCell — 올림 설명 없음)
+        public UpgradeLines(RectTransform panel, float side, float width, Image cell)
         {
             _width = width;
-            _dot = dot;
+            _cell = cell;
             _root = NewRect("Upgrades", panel);
             _root.anchoredPosition = new Vector2(side, 0f);
         }
@@ -51,34 +47,18 @@ namespace GnorpWar
             return rect;
         }
 
-        private static Image NewImage(string name, RectTransform parent, float position, float size)
-        {
-            RectTransform rect = NewRect(name, parent);
-            rect.anchoredPosition = new Vector2(position, -position);
-            rect.sizeDelta = new Vector2(size, size);
-            var image = rect.gameObject.AddComponent<Image>();
-            image.raycastTarget = false;
-            return image;
-        }
-
+        // 칸 하나 = 칸 프리팹 하나(외곽선 = 그림 없는 등급 색 판 위에 검은 판을 얹은 것 — 늘려 쓰는 그림이 없다). 칸 자체가 줄의 뿌리다
         private Line NewLine()
         {
-            var line = new Line { Root = NewRect("Line", _root) };
-            // 외곽선 = 그림 없는 등급 색 판 위에 검은 판을 얹은 것(늘려 쓰는 그림이 없다)
-            line.Frame = NewImage("Frame", line.Root, 0f, Box);
-            NewImage("Fill", line.Root, Frame, IconSize).color = Color.black;
-            line.Icon = NewImage("Icon", line.Root, Frame, IconSize);
-            line.Icon.preserveAspect = true;
-            line.Count = NewRect("Count", line.Root).gameObject.AddComponent<Text>();
-            line.Count.font = _dot;
-            line.Count.fontSize = CountSize;
-            line.Count.color = Color.white;
-            line.Count.alignment = TextAnchor.LowerLeft;
-            line.Count.raycastTarget = false;
-            line.Count.horizontalOverflow = HorizontalWrapMode.Overflow;
-            line.Count.verticalOverflow = VerticalWrapMode.Overflow;
-            line.Count.rectTransform.anchoredPosition = new Vector2(Box + CountGap, 0f);
-            return line;
+            Image frame = Object.Instantiate(_cell, _root);
+            frame.name = "Frame";
+            return new Line
+            {
+                Root = frame.rectTransform,
+                Frame = frame,
+                Icon = frame.transform.Find("Icon").GetComponent<Image>(),
+                Count = frame.transform.Find("Count").GetComponent<Text>(),
+            };
         }
 
         // 판 위쪽에서 y만큼 내려 놓고(y는 음수) 줄의 높이를 돌려준다(걸린 것이 없으면 0)

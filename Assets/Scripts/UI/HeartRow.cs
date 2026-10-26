@@ -15,21 +15,14 @@ namespace GnorpWar
         private readonly Image[] _hearts;
         private readonly HeartPulse _crisis;
 
-        public HeartRow(RectTransform parent, Sprite heart)
+        // heart = 하트 한 칸의 프리팹(Parts/UI_Heart — 원본 크기, 왼쪽 가운데 기준 · 두근거릴 때 제자리에서 커지게 피벗은 가운데)
+        public HeartRow(RectTransform parent, Image heart)
         {
             _hearts = new Image[RunState.LivesMax];
             for (int i = 0; i < _hearts.Length; i++)
             {
-                _hearts[i] = new GameObject("Heart", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-                _hearts[i].transform.SetParent(parent, false);
-                _hearts[i].raycastTarget = false;
-                _hearts[i].preserveAspect = true;
-                _hearts[i].sprite = heart;
-                _hearts[i].SetNativeSize();
-                RectTransform rect = _hearts[i].rectTransform;
-                rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
-                // 두근거릴 때 제자리에서 커지게 가운데 기준
-                rect.pivot = new Vector2(0.5f, 0.5f);
+                _hearts[i] = Object.Instantiate(heart, parent);
+                _hearts[i].name = "Heart";
             }
             _crisis = _hearts[0].gameObject.AddComponent<HeartPulse>();
             _crisis.Rest = EmptyColor;

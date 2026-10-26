@@ -8,7 +8,8 @@ namespace GnorpWar
     {
         [Tooltip("하트 줄이 놓일 칸 — 왼쪽 가운데부터 채운다")]
         [SerializeField] private RectTransform _hearts;
-        [SerializeField] private Sprite _heartIcon;
+        [Tooltip("하트 한 칸 — 부품 프리팹 UI_Heart")]
+        [SerializeField] private Image _heart;
         [SerializeField] private Text _wins;
         [Tooltip("아이콘 줄 아래 회색 한 줄 — 이번 전투 길이(분:초)")]
         [SerializeField] private Text _time;
@@ -20,7 +21,7 @@ namespace GnorpWar
             int seconds = (int)RampLabel.LastElapsed;
             _time.text = $"전투 시간 {seconds / 60}:{seconds % 60:00}";
             if (_row == null)
-                _row = new HeartRow(_hearts, _heartIcon);
+                _row = new HeartRow(_hearts, _heart);
             _row.Show(0f);
             _wins.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
         }

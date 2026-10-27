@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_T_SteamPressure
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "증기 압력"
+  _displayName: "\uC99D\uAE30 \uC555\uB825"
   _icon: {fileID: 21300000, guid: 905ac032764d4e79a4936386320e41fa, type: 3}
-  _description: "내 타워들이 적을 처치할 때마다, 무작위 내 기물 1개를 {0}초간 가속합니다."
+  _description: "\uD0C0\uC6CC\uAC00 \uCC98\uCE58\uD558\uBA74 \uBB34\uC791\uC704 \uAE30\uBB3C\uC744
+    {0}\uCD08\uAC04 \uAC00\uC18D\uD569\uB2C8\uB2E4."
   _values:
   - 0
   - 0.5
@@ -31,6 +32,8 @@ MonoBehaviour:
   _units: []
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 11400000, guid: 12aaea5dce1d435a8cde022436b0332d, type: 2}
   _lineKind: 3

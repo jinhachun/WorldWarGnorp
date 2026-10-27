@@ -69,7 +69,7 @@ namespace GnorpWar.Editor.Tests
             var passive = AssetDatabase.LoadAssetAtPath<TowerAndUnitRangePassive>("Assets/Data/Buildings/Passives/Passive_Telescope.asset");
             Assert.AreEqual(0.10f, passive.PercentAt(1), 1e-5f);
             Assert.AreEqual(0.30f, passive.PercentAt(5), 1e-5f);
-            StringAssert.Contains("내 타워들과 궁병의 사거리 +10%", passive.Describe(1));
+            StringAssert.Contains("타워와 궁병 사거리 +10%", passive.Describe(1));
         }
 
         [Test]

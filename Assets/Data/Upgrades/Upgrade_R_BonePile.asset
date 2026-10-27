@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_R_BonePile
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "뼈 쌓기"
+  _displayName: "\uBF08 \uC313\uAE30"
   _icon: {fileID: 21300000, guid: 29ac35699e3a4fd5b372f0ccc2c2fe76, type: 3}
-  _description: "내 뼛가루 언덕이 쌓이는 양 +{0}%"
+  _description: "\uBF1B\uAC00\uB8E8 \uC5B8\uB355\uC774 \uC313\uC774\uB294 \uC591
+    +{0}%"
   _values:
   - 10
   - 15
@@ -31,6 +32,8 @@ MonoBehaviour:
   _units: []
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 11400000, guid: ba516d885572468b923a298053a2f2e2, type: 2}
   _lineKind: 1

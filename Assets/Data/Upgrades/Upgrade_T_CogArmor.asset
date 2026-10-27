@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_T_CogArmor
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "톱니 갑옷"
+  _displayName: "\uD1B1\uB2C8 \uAC11\uC637"
   _icon: {fileID: 21300000, guid: 4a1ae0b156154185a6d2e238d07a5a3f, type: 3}
-  _description: "내 톱니병사의 체력 +{0}"
+  _description: "\uD1B1\uB2C8\uBCD1\uC0AC \uCCB4\uB825 +{0}"
   _values:
   - 5
   - 7
@@ -32,6 +32,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
   _unitStat: 1
   _unitOp: 0
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 0}
   _lineKind: 1

@@ -46,7 +46,7 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"전장에 {_consume.DisplayName}가 {_consumeCount}기 이상이면 {_consumeCount}기를 소모하여 {_summon.DisplayName} {SummonCount(level)}기를 소환합니다.";
+            => $"{_consume.DisplayName} {_consumeCount}기로 {_summon.DisplayName} {SummonCount(level)}기를 만듭니다.";
         public override string Headline(int level) => $"{SummonCount(level)}기";
     }
 }

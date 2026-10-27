@@ -316,17 +316,17 @@ namespace GnorpWar
 
             var traits = new List<string>();
             if (unit.ChargeDamageMultiplier > 1f)
-                traits.Add(ColorNumbers($"달려와 처음 때리는 공격은 피해 ×{unit.ChargeDamageMultiplier:0.#}입니다."));
+                traits.Add(ColorNumbers($"첫 공격 피해 ×{unit.ChargeDamageMultiplier:0.#}"));
             if (unit.ProjectileSplashRadius > 0f)
-                traits.Add("맞은 자리 주변의 적도 피해를 입습니다.");
+                traits.Add("주변 적도 함께 맞습니다.");
             if (unit.AttackType == AttackType.Flame)
                 traits.Add("앞에 있는 적을 한꺼번에 불태웁니다.");
             if (unit.AttackType == AttackType.Sweep)
                 traits.Add("앞에 있는 적을 한꺼번에 칩니다.");
             if (unit.AttackType == AttackType.Build)
-                traits.Add("가까운 땅에 작은 타워를 설치합니다.");
+                traits.Add("작은 타워를 짓습니다.");
             if (unit.Flies)
-                traits.Add("하늘을 날아, 원거리 공격과 그 높이까지 올라선 적에게만 맞습니다.");
+                traits.Add("하늘을 날아 원거리 공격에만 맞습니다.");
             if (unit.SlamInterval > 0f)
                 traits.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄웁니다."));
             // 타고난 특성(UnitDefinition.TraitLines) — 그 유닛이면 늘 가진 효과. 숫자는 에셋 값으로 채워져 온다

@@ -15,12 +15,13 @@ MonoBehaviour:
   _categories:
   - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
   _units: []
-  _description: "전투당 한 번, 내 경보병이 {0}기 죽으면 미노타우로스 {1}기를 소환합니다."
-  _trait:
+  _description: "\uACBD\uBCF4\uBCD1\uC774 {0}\uAE30 \uC8FD\uC73C\uBA74 \uBBF8\uB178\uD0C0\uC6B0\uB85C\uC2A4
+    {1}\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _trait: 
   _deaths: 40
+  _deathsPerTier: -5
   _summon: {fileID: 11400000, guid: a8e6e39f004afe0498fbe788c4abca20, type: 2}
   _count: 1
-  _deathsPerTier: -5
   _mythicMark: {fileID: 11400000, guid: 0153e8a968a54470a86091e15276af89, type: 2}
   _mythicExtra: {fileID: 11400000, guid: e8b64c0623e6336479441667f16688a2, type: 2}
   _mythicExtraCount: 5

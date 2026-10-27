@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf839adad5592a545afbe951289895e0, type: 3}
   m_Name: Passive_LookoutMythic
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NotePassive
-  _text: "\uB0B4 \uC791\uC740 \uD0C0\uC6CC\uB4E4\uB3C4 \uD568\uAED8 \uC3E9\uB2C8\uB2E4."
+  _text: "\uC791\uC740 \uD0C0\uC6CC\uB4E4\uB3C4 \uD568\uAED8 \uC3E9\uB2C8\uB2E4."

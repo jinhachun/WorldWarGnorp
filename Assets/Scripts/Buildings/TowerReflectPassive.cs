@@ -9,6 +9,6 @@ namespace GnorpWar
     {
         public override void OnBattleStart(BoardRunner board, int slot, int level) => TowerBook.ReflectDamage(board.Team);
 
-        public override string Describe(int level) => "내 타워들이 피해를 받을 때마다, 공격한 적에게 같은 피해를 돌려줍니다.";
+        public override string Describe(int level) => "타워가 받은 피해를 그대로 돌려줍니다.";
     }
 }

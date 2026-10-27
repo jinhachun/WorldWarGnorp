@@ -14,10 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HighGroundEffect
   _categories: []
   _units: []
-  _description: "\uB0B4 \uC720\uB2DB\uACFC \uB0B4 \uD0C0\uC6CC\uB4E4\uC774 \uC0C1\uB300\uBCF4\uB2E4
-    \uB192\uC740 \uACE0\uB3C4\uC5D0 \uC788\uC73C\uBA74 \uC8FC\uB294 \uD53C\uD574
-    +{0}%\n\uB0B4 \uD0C0\uC6CC\uB4E4\uC740 \uC5B8\uC81C\uB098 \uB192\uC740 \uACE0\uB3C4\uB85C
-    \uCDE8\uAE09\uD569\uB2C8\uB2E4."
+  _description: "\uB192\uC740 \uACE0\uB3C4\uC5D0\uC11C \uD53C\uD574 +{0}%\n\uD0C0\uC6CC\uB294
+    \uB298 \uB192\uC740 \uACE0\uB3C4\uC785\uB2C8\uB2E4."
   _trait: 
   _bonus: 0.5
   _bonusPerTier: 0.25

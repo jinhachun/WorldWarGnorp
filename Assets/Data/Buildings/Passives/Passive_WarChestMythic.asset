@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf839adad5592a545afbe951289895e0, type: 3}
   m_Name: Passive_WarChestMythic
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NotePassive
-  _text: "\u300C\uD310\uB9E4 \uC2DC,\u300D \uC9C0\uAE08\uAE4C\uC9C0 \uC900 \uACE8\uB4DC\uB9CC\uD07C
-    \uD55C \uBC88 \uB354 \uBC1B\uC2B5\uB2C8\uB2E4."
+  _text: "\u300C\uD310\uB9E4 \uC2DC,\u300D \uADF8 \uACE8\uB4DC\uB97C \uD55C \uBC88
+    \uB354 \uBC1B\uC2B5\uB2C8\uB2E4."

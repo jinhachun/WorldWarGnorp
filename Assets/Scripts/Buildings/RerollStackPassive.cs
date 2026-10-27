@@ -36,9 +36,9 @@ namespace GnorpWar
 
         public override string Describe(int level)
         {
-            string target = _units.Length == 0 ? "내 유닛들" : "내 " + string.Join("·", System.Array.ConvertAll(_units, u => u.DisplayName));
-            string stats = string.Join(", ", System.Array.ConvertAll(_stats, s => new StatModifier(s, StatOp.Multiply, _perStack).Name));
-            return $"상점을 리롤할 때마다 스택을 1 얻습니다.\n스택마다 {target}의 {stats} ×{_perStack:0.##}";
+            string target = _units.Length == 0 ? "" : string.Join("·", System.Array.ConvertAll(_units, u => u.DisplayName)) + " ";
+            string stats = string.Join("·", System.Array.ConvertAll(_stats, s => new StatModifier(s, StatOp.Multiply, _perStack).Name));
+            return $"리롤할 때마다 스택을 1 얻습니다.\n스택마다 {target}{stats} ×{_perStack:0.##}";
         }
     }
 }

@@ -29,6 +29,6 @@ namespace GnorpWar
         public override bool Reaches(int slot, int other, BuildingDefinition target) => other == slot + 1 && target.Unit == _when;
 
         public override bool UsesAdjacency => true;
-        public override string Describe(int level) => $"바로 위 기물이 {_when.DisplayName}를 소환할 때마다 {_summon.DisplayName} {Count(level)}기를 소환합니다.";
+        public override string Describe(int level) => $"바로 위 기물이 {_when.DisplayName}를 소환하면 {_summon.DisplayName} {Count(level)}기를 소환합니다.";
     }
 }

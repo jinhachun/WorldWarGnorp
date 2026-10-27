@@ -19,6 +19,6 @@ namespace GnorpWar
         }
 
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => BuildingTargets.Cooling(field, other);
-        public override string Describe(int level) => $"전투 시작 시, 내 모든 기물을 즉시 {_times}회 발동시킵니다.";
+        public override string Describe(int level) => $"전투 시작 시, 모든 기물을 {_times}회 발동시킵니다.";
     }
 }

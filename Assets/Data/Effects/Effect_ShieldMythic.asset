@@ -15,6 +15,6 @@ MonoBehaviour:
   _categories:
   - {fileID: 11400000, guid: 3a39e5b8cf800ec4a90e5827c089bfe9, type: 2}
   _units: []
-  _description: "\uB0B4 \uC911\uBCF4\uBCD1\uC758 \uD06C\uAE30\uAC00 {0}\uBC30\uAC00
-    \uB429\uB2C8\uB2E4."
+  _description: "\uC911\uBCF4\uBCD1\uC758 \uD06C\uAE30\uAC00 {0}\uBC30\uC785\uB2C8\uB2E4."
+  _trait: 
   _factor: 2

@@ -26,6 +26,6 @@ namespace GnorpWar
                 PillarFx.Rise(new Vector2(rebuilt.transform.position.x, rebuilt.Bounds.min.y), rebuilt.Bounds.size.y);
         }
 
-        public override string Describe(int level) => "이 작은 타워가 파괴되면, 다시 세워집니다.";
+        public override string Describe(int level) => "작은 타워가 부서지면 다시 세웁니다.";
     }
 }

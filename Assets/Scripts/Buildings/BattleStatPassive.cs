@@ -31,8 +31,8 @@ namespace GnorpWar
                 names.Add(c.DisplayName);
             foreach (UnitDefinition u in _units)
                 names.Add(u.DisplayName);
-            string who = names.Count == 0 ? "내 유닛들" : $"내 {string.Join(" · ", names)}";
-            return $"{who}의 {_modifier.Describe()}";
+            string who = names.Count == 0 ? "" : $"{string.Join("·", names)} ";
+            return $"{who}{_modifier.Describe()}";
         }
     }
 }

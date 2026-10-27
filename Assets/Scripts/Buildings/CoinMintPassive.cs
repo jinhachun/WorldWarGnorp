@@ -53,7 +53,7 @@ namespace GnorpWar
             }
         }
 
-        public override string Describe(int level) => $"전투 중 {_seconds:0}초마다 이 기물의 판매가 영구히 +{Gold(level)}골드";
+        public override string Describe(int level) => $"전투 중 {_seconds:0}초마다 판매가 영구히 +{Gold(level)}골드";
         public override string Headline(int level) => $"{Gold(level)}골드";
     }
 }

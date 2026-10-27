@@ -49,6 +49,6 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"내 유닛이 영구히 {Required(level)}기 죽기 전까지는 작동하지 않습니다.\n데스매치 시작 직전, {_unit.DisplayName} {_count}기를 소환합니다.";
+            => $"유닛이 영구히 {Required(level)}기 죽어야 작동합니다.\n데스매치 직전, {_unit.DisplayName} {_count}기를 소환합니다.";
     }
 }

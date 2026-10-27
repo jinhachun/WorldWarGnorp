@@ -27,7 +27,7 @@ namespace GnorpWar
             }
         }
 
-        public override string Describe(int level) => $"가장 작은 {_category.DisplayName}의 크기 +{Amount(level) * 100f:0.#}%";
+        public override string Describe(int level) => $"가장 작은 {_category.DisplayName} 크기 +{Amount(level) * 100f:0.#}%";
         public override string Headline(int level) => $"+{Amount(level) * 100f:0.#}%";
     }
 }

@@ -12,5 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf839adad5592a545afbe951289895e0, type: 3}
   m_Name: Passive_CoinMintMythic
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NotePassive
-  _text: "\uD310\uB9E4\uAC00\uAC00 \uC624\uB97C \uB54C\uB9C8\uB2E4 \uACE8\uB4DC 1\uB3C4
-    \uBC14\uB85C \uC5BB\uC2B5\uB2C8\uB2E4."
+  _text: "\uD310\uB9E4\uAC00\uAC00 \uC624\uB974\uBA74 \uACE8\uB4DC 1\uB3C4 \uC5BB\uC2B5\uB2C8\uB2E4."

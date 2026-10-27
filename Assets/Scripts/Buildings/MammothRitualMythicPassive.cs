@@ -13,6 +13,6 @@ namespace GnorpWar
 
         public int Extra => _extra;
 
-        public override string Describe(int level) => $"데스매치 시작 직전, {_unit.DisplayName} {_extra}기를 더 소환합니다.";
+        public override string Describe(int level) => $"{_unit.DisplayName} {_extra}기를 더 소환합니다.";
     }
 }

@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ReviveChanceEffect
   _categories: []
   _units: []
-  _description: "\uB2E4\uC2DC \uC77C\uC5B4\uB09C \uC720\uB2DB\uC740 \uC804\uD22C
-    \uB3D9\uC548 \uACF5\uACA9\uB825 {1}"
+  _description: "\uB2E4\uC2DC \uC77C\uC5B4\uB09C \uC720\uB2DB \uACF5\uACA9\uB825
+    {1}"
+  _trait: 
   _chance: 0
   _onRevive:
     Stat: 0

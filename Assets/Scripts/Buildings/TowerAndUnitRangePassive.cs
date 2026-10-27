@@ -31,7 +31,7 @@ namespace GnorpWar
             var names = new System.Collections.Generic.List<string>();
             foreach (UnitCategory category in _categories)
                 names.Add(category.DisplayName);
-            return $"내 타워들과 {string.Join(" · ", names)}의 사거리 {new TowerModifier(TowerStat.Range, StatOp.Percent, PercentAt(level)).ValueText}";
+            return $"타워와 {string.Join("·", names)} 사거리 {new TowerModifier(TowerStat.Range, StatOp.Percent, PercentAt(level)).ValueText}";
         }
 
         public override string Headline(int level) => $"{PercentAt(level) * 100f:0.##}%";

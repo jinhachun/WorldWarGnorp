@@ -58,7 +58,7 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(self.Building);
         }
 
-        public override string Describe(int level) => $"내 {_category.DisplayName}이 {_deaths}기 죽을 때마다, {_summon.DisplayName} {CountAt(level)}기를 소환합니다.";
+        public override string Describe(int level) => $"{_category.DisplayName}이 {_deaths}기 죽을 때마다 {_summon.DisplayName} {CountAt(level)}기를 소환합니다.";
         public override string Headline(int level) => $"{CountAt(level)}기";
     }
 }

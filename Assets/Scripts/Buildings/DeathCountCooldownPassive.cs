@@ -31,6 +31,6 @@ namespace GnorpWar
         // 다음 쿨다운 감소까지 남은 죽음 수(설명 창의 회색 줄 · 탑 칸 숫자)
         public int RemainingOf(Team team) => BattleManager.Fighting ? _deaths - _count[(int)team] : _deaths;   // 전투 밖(상점)에서는 지난 전투의 값이 남아 있으므로 처음 값
 
-        public override string Describe(int level) => $"전투 동안 유닛이 {_deaths}기 죽을 때마다, 이 기물의 쿨다운 영구히 ×{_factor:0.##}";
+        public override string Describe(int level) => $"유닛이 {_deaths}기 죽을 때마다 쿨다운 영구히 ×{_factor:0.##}";
     }
 }

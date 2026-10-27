@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf839adad5592a545afbe951289895e0, type: 3}
   m_Name: Passive_TribeLycanMythic
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NotePassive
-  _text: "\uC989\uC2DC \uBC1C\uB3D9\uC2DC\uD0A8 \uAE30\uBB3C\uC740 \uADF8 \uBC1C\uB3D9\uC758
-    \uD6A8\uACFC\uB97C 2\uBC88 \uB0C5\uB2C8\uB2E4."
+  _text: "\uBC1C\uB3D9\uC2DC\uD0A8 \uAE30\uBB3C\uC740 \uD6A8\uACFC\uB97C 2\uBC88
+    \uB0C5\uB2C8\uB2E4."

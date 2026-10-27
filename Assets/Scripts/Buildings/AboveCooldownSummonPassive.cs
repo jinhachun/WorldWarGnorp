@@ -50,6 +50,6 @@ namespace GnorpWar
         public override string Describe(int level) => Describe(level, false);
         // 한 줄 = 한 효과(CLAUDE.md §5-2-2) — 툴팁이 패시브 하나를 한 줄로 붙이므로 두 효과를 줄바꿈으로 나눈다
         public override string Describe(int level, bool mythic)
-            => $"바로 위 기물의 쿨다운 +{CooldownAdd(level, mythic):0.#}초\n바로 위 기물이 소환하는 유닛 수 +{ExtraSummons(mythic)}";
+            => $"바로 위 기물의 쿨다운 {CooldownAdd(level, mythic):+0.#;-0.#}초\n바로 위 기물의 소환 수 +{ExtraSummons(mythic)}";
     }
 }

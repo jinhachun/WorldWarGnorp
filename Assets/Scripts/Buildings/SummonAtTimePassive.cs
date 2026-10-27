@@ -58,6 +58,6 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(self);
         }
 
-        public override string Describe(int level) => $"전투마다 한 번, {_seconds:0}초에 {_unit.DisplayName} {_count}기를 소환합니다.";
+        public override string Describe(int level) => $"전투 {_seconds:0}초에 {_unit.DisplayName} {_count}기를 소환합니다.";
     }
 }

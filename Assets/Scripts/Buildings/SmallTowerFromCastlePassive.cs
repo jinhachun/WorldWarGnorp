@@ -28,6 +28,6 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
         }
 
-        public override string Describe(int level) => $"내 작은 타워가 파괴되면, 내 성에서 작은 타워 {_count}개가 걸어 나옵니다.";
+        public override string Describe(int level) => $"작은 타워가 부서지면 성에서 {_count}개가 걸어 나옵니다.";
     }
 }

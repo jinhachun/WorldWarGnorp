@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_T_Overproduction
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "초과 생산"
+  _displayName: "\uCD08\uACFC \uC0DD\uC0B0"
   _icon: {fileID: 21300000, guid: 77c13252d1414ca49cec2792dbc53a5f, type: 3}
-  _description: "내가 톱니병사를 소환할 때마다, {0}% 확률로 1기를 추가로 소환합니다."
+  _description: "\uD1B1\uB2C8\uBCD1\uC0AC \uC18C\uD658 \uC2DC {0}% \uD655\uB960\uB85C
+    1\uAE30\uB97C \uB354 \uC18C\uD658\uD569\uB2C8\uB2E4."
   _values:
   - 0
   - 10
@@ -32,6 +33,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 11400000, guid: cad66b944ff744b9b520aed44d529ad4, type: 2}
   _lineKind: 0

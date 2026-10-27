@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_K_Knighthood
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "기사 서임"
+  _displayName: "\uAE30\uC0AC \uC11C\uC784"
   _icon: {fileID: 21300000, guid: 0c87956e09c04f3dbf4b09c2f5eddd1d, type: 3}
-  _description: "내 경보병이 적 {0}기를 처치하면, 기사로 바뀝니다."
+  _description: "\uACBD\uBCF4\uBCD1\uC774 {0}\uAE30\uB97C \uCC98\uCE58\uD558\uBA74
+    \uAE30\uC0AC\uAC00 \uB429\uB2C8\uB2E4."
   _values:
   - 0
   - 0
@@ -32,6 +33,8 @@ MonoBehaviour:
   _units: []
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 11400000, guid: 2b22d90240b94ac7b39821bf308a778e, type: 2}
   _lineKind: 0

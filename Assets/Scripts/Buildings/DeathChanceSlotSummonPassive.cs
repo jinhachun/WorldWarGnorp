@@ -26,6 +26,6 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(board.Slots[slot].Building);
         }
 
-        public override string Describe(int level) => $"내 {_victim.DisplayName}가 죽을 때 {_chance:0.##}% 확률로 {_summon.DisplayName} {_count}기를 소환합니다.";
+        public override string Describe(int level) => $"{_victim.DisplayName}가 죽으면 {_chance:0.##}% 확률로 {_summon.DisplayName} {_count}기를 소환합니다.";
     }
 }

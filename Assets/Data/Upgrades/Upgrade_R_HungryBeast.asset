@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_R_HungryBeast
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "굶주린 짐승"
+  _displayName: "\uAD76\uC8FC\uB9B0 \uC9D0\uC2B9"
   _icon: {fileID: 21300000, guid: 136a01390ec746c9a60edf88fa08335e, type: 3}
-  _description: "내 중기병이 적을 처치할 때마다, 최대 체력의 {0}%를 회복합니다."
+  _description: "\uC911\uAE30\uBCD1\uC774 \uCC98\uCE58\uD558\uBA74 \uCD5C\uB300 \uCCB4\uB825\uC758
+    {0}%\uB97C \uD68C\uBCF5\uD569\uB2C8\uB2E4."
   _values:
   - 0
   - 6
@@ -32,6 +33,8 @@ MonoBehaviour:
   _units: []
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 11400000, guid: afdcbdb68e9d40d4a8b90d316f2fc075, type: 2}
   _lineKind: 1

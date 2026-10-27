@@ -24,7 +24,7 @@ namespace GnorpWar
             return true;
         }
 
-        public override string Describe(int level) => $"전투 동안 내 타워들의 {_modifier.Name} {_modifier.Scaled(_perTier, level).ValueText}";
+        public override string Describe(int level) => $"타워 {_modifier.Name} {_modifier.Scaled(_perTier, level).ValueText}";
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
     }
 }

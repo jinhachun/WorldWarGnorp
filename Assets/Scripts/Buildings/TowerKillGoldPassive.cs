@@ -33,6 +33,6 @@ namespace GnorpWar
 
         private float Chance(int level) => OwnedBuilding.Scaled(_chancePercent, _chancePerTier, level);
 
-        public override string Describe(int level) => $"내 타워들이 적을 처치할 때마다, {Chance(level):0.##}% 확률로 골드 {_gold}을 얻습니다.";
+        public override string Describe(int level) => $"타워가 처치하면 {Chance(level):0.##}% 확률로 골드 {_gold}을 얻습니다.";
     }
 }

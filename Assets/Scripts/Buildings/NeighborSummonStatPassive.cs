@@ -26,7 +26,17 @@ namespace GnorpWar
 
         public override bool UsesAdjacency => true;
         public override string Describe(int level)
-            => $"위에 있는 모든 기물이 소환하는 유닛의 {string.Join(", ", System.Array.ConvertAll(_modifiers, m => m.Scaled(_perTier, level).Describe()))}";
+            => $"위에 있는 모든 기물의 유닛 {Stats(level)}";
+
+        // 값이 모두 같으면 낱말만 잇는다 — 「체력·공격력 +90%」. 다르면 「체력 +30%, 공격력 +20%」
+        private string Stats(int level)
+        {
+            StatModifier[] scaled = System.Array.ConvertAll(_modifiers, m => m.Scaled(_perTier, level));
+            bool same = System.Array.TrueForAll(scaled, m => m.ValueText == scaled[0].ValueText);
+            return same
+                ? $"{string.Join("·", System.Array.ConvertAll(scaled, m => m.Name))} {scaled[0].ValueText}"
+                : string.Join(", ", System.Array.ConvertAll(scaled, m => m.Describe()));
+        }
 
         public override string Headline(int level) => _modifiers.Length == 0 ? null : _modifiers[0].Scaled(_perTier, level).ValueText;
     }

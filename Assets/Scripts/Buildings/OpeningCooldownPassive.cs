@@ -29,7 +29,7 @@ namespace GnorpWar
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => BuildingTargets.Cooling(field, other);
         public override string Describe(int level) => Describe(level, false);
         public override string Describe(int level, bool mythic)
-            => $"전투 시작 후 {Seconds(mythic):0.#}초 동안 내 모든 기물의 쿨다운 ×{_early:0.##}, 그 뒤로는 ×{_late:0.##}";
+            => $"처음 {Seconds(mythic):0.#}초간 모든 기물 쿨다운 ×{_early:0.##}\n그 뒤로는 쿨다운 ×{_late:0.##}";
         public override string Headline(int level) => $"{_seconds:0.#}초";
     }
 }

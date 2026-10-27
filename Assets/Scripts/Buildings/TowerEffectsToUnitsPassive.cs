@@ -24,7 +24,7 @@ namespace GnorpWar
             var names = new System.Collections.Generic.List<string>();
             foreach (UnitCategory category in _categories)
                 names.Add(category.DisplayName);
-            return $"내 {string.Join("·", names)}이 내 타워들의 효과를 함께 받습니다.";
+            return $"{string.Join("·", names)}이 타워 효과를 함께 받습니다.";
         }
     }
 }

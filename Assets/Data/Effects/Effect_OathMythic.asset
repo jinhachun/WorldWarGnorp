@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.InvulnerableDurationEffect
   _categories: []
   _units: []
-  _description: "\uB0B4 \uBAA8\uB4E0 \uBB34\uC801 \uD6A8\uACFC\uC758 \uC9C0\uC18D\uC2DC\uAC04
-    +{0}\uCD08"
+  _description: "\uBB34\uC801 \uC9C0\uC18D\uC2DC\uAC04 +{0}\uCD08"
+  _trait: 
   _seconds: 2

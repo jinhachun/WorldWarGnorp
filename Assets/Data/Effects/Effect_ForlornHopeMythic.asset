@@ -15,6 +15,6 @@ MonoBehaviour:
   _categories:
   - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
   _units: []
-  _description: "\uBB34\uC801\uC774 \uB05D\uB0A0 \uB54C \uCCB4\uB825\uC744 {0}% \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _description: "\uBB34\uC801\uC774 \uB05D\uB098\uBA74 \uCCB4\uB825 {0}%\uB97C \uD68C\uBCF5\uD569\uB2C8\uB2E4."
   _trait: 
   _percent: 30

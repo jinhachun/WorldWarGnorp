@@ -88,13 +88,12 @@ namespace GnorpWar
         {
             // 전투 시작에 영구히 거는 것(조준연산코그 신화)은 전투마다 쌓이므로 언제 쌓이는지를 밝힌다
             string when = _trigger == Trigger.Buy ? "「구매할 때마다,」 "
-                : _trigger == Trigger.TowerKill ? "내 타워들이 적을 처치할 때마다, "
+                : _trigger == Trigger.TowerKill ? "타워가 처치하면 "
                 : _permanent ? "전투 시작 시, " : "";
-            // 전투 시작에 거는 건 늘 켜진 것처럼 읽히므로 "전투 동안"을 붙이지 않는다(성채 "내 타워의 체력 +50%")
-            string battle = !_permanent && _trigger != Trigger.BattleStart ? "전투 동안 " : "";
+            // "전투 동안"은 쓰지 않는다 — 영구히가 아니면 전투 동안이 기본(사용자 10/28 「글이 길다」)
             string permanent = _permanent ? " 영구히" : "";
             string cap = Capped ? $", 최대 ×{_maxMultiplier:0.##}" : "";
-            return $"{when}{battle}내 타워들의 {_modifier.Name}{permanent} {_modifier.Scaled(_perTier, level).ValueText}{cap}";
+            return $"{when}타워 {_modifier.Name}{permanent} {_modifier.Scaled(_perTier, level).ValueText}{cap}";
         }
     }
 }

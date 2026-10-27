@@ -13,6 +13,6 @@ namespace GnorpWar
 
         public override void OnBattleStart(BoardRunner board, int slot, int level) => TowerBook.AddArrowsOnKill(board.Team, _arrows);
 
-        public override string Describe(int level) => $"내 타워들이 적을 처치할 때마다, 화살 {_arrows}발을 즉시 더 발사합니다.";
+        public override string Describe(int level) => $"타워가 처치하면 화살 {_arrows}발을 더 쏩니다.";
     }
 }

@@ -8,6 +8,6 @@ namespace GnorpWar
     {
         public override void OnBattleStart(BoardRunner board, int slot, int level) => TowerBook.AttackInDeathmatch(board.Team);
 
-        public override string Describe(int level) => "내 타워들이 데스매치에서도 공격합니다.";
+        public override string Describe(int level) => "타워가 데스매치에서도 공격합니다.";
     }
 }

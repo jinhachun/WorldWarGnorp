@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BoneDustScaleEffect
   _categories: []
   _units: []
-  _description: "\uC6D0\uC2DC \uC878\uBCD1\uC774 \uB0A8\uAE30\uB294 \uBF1B\uAC00\uB8E8\uAC00
-    2\uBC30\uAC00 \uB429\uB2C8\uB2E4."
+  _description: "\uC6D0\uC2DC \uC878\uBCD1\uC758 \uBF1B\uAC00\uB8E8\uAC00 2\uBC30\uC785\uB2C8\uB2E4."
+  _trait: 
   _factor: 2

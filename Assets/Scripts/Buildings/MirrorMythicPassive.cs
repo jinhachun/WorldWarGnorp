@@ -6,6 +6,6 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Mirror Mythic")]
     public class MirrorMythicPassive : BuildingPassive
     {
-        public override string Describe(int level) => "전투 시작 시, 변신한 기물을 즉시 1회 발동합니다.";
+        public override string Describe(int level) => "변신한 기물이 바로 발동합니다.";
     }
 }

@@ -8,6 +8,6 @@ namespace GnorpWar
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Acquire As Mythic")]
     public class AcquireAsMythicPassive : BuildingPassive
     {
-        public override string Describe(int level) => "「판매 시,」 얻는 기물이 신화 등급으로 옵니다.";
+        public override string Describe(int level) => "「판매 시,」 얻는 기물이 신화 등급입니다.";
     }
 }

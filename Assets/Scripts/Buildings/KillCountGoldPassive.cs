@@ -53,7 +53,7 @@ namespace GnorpWar
         // 다음 골드까지 남은 처치 수(설명 창의 회색 줄 · 탑 칸 숫자)
         public int RemainingOf(Team team, int level) => BattleManager.Fighting ? Kills(level) - _count[(int)team] : Kills(level);
 
-        public override string Describe(int level) => $"적 유닛 {Kills(level)}기를 처치할 때마다, 골드 {_gold}을 얻습니다.";
+        public override string Describe(int level) => $"적 {Kills(level)}기를 처치할 때마다 골드 {_gold}을 얻습니다.";
         public override string Headline(int level) => $"{Kills(level)}기";
     }
 }

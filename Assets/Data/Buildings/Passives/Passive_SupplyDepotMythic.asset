@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf839adad5592a545afbe951289895e0, type: 3}
   m_Name: Passive_SupplyDepotMythic
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NotePassive
-  _text: "\uADF8\uB2E4\uC74C\uC73C\uB85C \uC704\uC5D0 \uC788\uB294 \uCFE8\uB2E4\uC6B4 \uAE30\uBB3C\uB3C4 \uAC19\uC740 \uD6A8\uACFC\uB97C \uBC1B\uC2B5\uB2C8\uB2E4."
+  _text: "\uADF8\uB2E4\uC74C \uC704 \uAE30\uBB3C\uB3C4 \uAC19\uC740 \uD6A8\uACFC\uB97C
+    \uBC1B\uC2B5\uB2C8\uB2E4."

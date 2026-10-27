@@ -15,7 +15,7 @@ MonoBehaviour:
   _categories: []
   _units:
   - {fileID: 11400000, guid: a8e6e39f004afe0498fbe788c4abca20, type: 2}
-  _description: "\uB0B4 \uBBF8\uB178\uD0C0\uC6B0\uB85C\uC2A4\uAC00 \uC801\uC744 \uCC98\uCE58\uD560
-    \uB54C\uB9C8\uB2E4, \uADF8 \uC790\uB9AC\uC5D0 \uC6D0\uC2DC \uC878\uBCD1 1\uAE30\uBD84\uC758
-    \uBF1B\uAC00\uB8E8\uB97C \uB0A8\uAE41\uB2C8\uB2E4."
+  _description: "\uBBF8\uB178\uD0C0\uC6B0\uB85C\uC2A4\uAC00 \uCC98\uCE58\uD55C \uC790\uB9AC\uC5D0
+    \uBF1B\uAC00\uB8E8\uAC00 \uC313\uC785\uB2C8\uB2E4."
+  _trait: 
   _dust: {fileID: 11400000, guid: 6f184265ff0cff8408c5d1ec99534db4, type: 2}

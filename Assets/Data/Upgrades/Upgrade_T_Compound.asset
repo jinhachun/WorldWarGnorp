@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_T_Compound
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "복리"
+  _displayName: "\uBCF5\uB9AC"
   _icon: {fileID: 21300000, guid: ee960e335cdd42d0a46ba8e7f8871b02, type: 3}
-  _description: "턴 시작 시, 가진 골드 {0}마다 골드 1을 얻습니다.\n한 턴에 얻는 골드는 최대 {1}입니다."
+  _description: "\uD134 \uC2DC\uC791 \uC2DC, \uACE8\uB4DC {0}\uB9C8\uB2E4 \uACE8\uB4DC
+    1\uC744 \uC5BB\uC2B5\uB2C8\uB2E4.\n\uD55C \uD134\uC5D0 \uCD5C\uB300 {1}\uACE8\uB4DC\uC785\uB2C8\uB2E4."
   _values:
   - 0
   - 20
@@ -31,6 +32,8 @@ MonoBehaviour:
   _units: []
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 0}
   _lineKind: 1

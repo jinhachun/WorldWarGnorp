@@ -19,7 +19,7 @@ namespace GnorpWar
             BuffLinks.ToTowers(board.Team, slot, BuffKind.Heal);
         }
 
-        public override string Describe(int level) => $"내 타워들이 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";
+        public override string Describe(int level) => $"타워가 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";
         public override string Headline(int level) => $"{Ratio(level) * 100f:0.#}%";
     }
 }

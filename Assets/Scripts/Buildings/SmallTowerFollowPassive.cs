@@ -30,8 +30,8 @@ namespace GnorpWar
         {
             StatModifier speed = Speed(level);
             return speed.Value > 0f
-                ? $"내 작은 타워가 {speed.Describe()}로 앞으로 걸어갑니다."
-                : "내 작은 타워가 앞으로 걸어갑니다.";
+                ? $"작은 타워가 {speed.Describe()}로 전진합니다."
+                : "작은 타워가 앞으로 걸어갑니다.";
         }
     }
 }

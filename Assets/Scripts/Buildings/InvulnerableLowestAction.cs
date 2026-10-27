@@ -40,7 +40,7 @@ namespace GnorpWar
             }
         }
 
-        public override string Describe(int level) => $"체력이 가장 낮은 아군 {TargetsAt(level)}기에게 {_seconds:0.#}초간 무적을 부여합니다.";
+        public override string Describe(int level) => $"체력 낮은 아군 {TargetsAt(level)}기에게 {_seconds:0.#}초간 무적을 줍니다.";
         public override string Headline(int level) => $"{TargetsAt(level)}기";
     }
 }

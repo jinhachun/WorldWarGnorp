@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.LifestealStrongestEffect
   _categories: []
   _units: []
-  _description: "\uACF5\uACA9\uB825\uC774 \uAC00\uC7A5 \uB192\uC740 \uB0B4 \uC720\uB2DB\uC774
-    \uACF5\uACA9\uD560 \uB54C\uB9C8\uB2E4, \uC900 \uD53C\uD574\uC758 {0}%\uB9CC\uD07C
-    \uCCB4\uB825\uC744 \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _description: "\uACF5\uACA9\uB825 1\uC704 \uC720\uB2DB\uC740 \uC900 \uD53C\uD574\uC758
+    {0}%\uB97C \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _trait: 
   _rank: 0
   _ratio: 0.5
   _ratioPerTier: 0.1

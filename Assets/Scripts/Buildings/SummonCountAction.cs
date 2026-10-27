@@ -15,6 +15,6 @@ namespace GnorpWar
 
         public override void Execute(BoardRunner board, int slot, int level) => board.Summon(_unit, _count + board.ExtraSummons + board.Slots[slot].ExtraSummons + board.Slots[slot].Building.ExtraSummons, slot);
 
-        public override string Describe(int level) => $"이 기물이 한 번에 소환하는 {_unit.DisplayName}가 {_count}기가 됩니다.";
+        public override string Describe(int level) => $"한 번에 {_unit.DisplayName} {_count}기를 소환합니다.";
     }
 }

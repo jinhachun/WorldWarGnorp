@@ -14,18 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uD480\uBB34\uC9C8"
   _icon: {fileID: 21300000, guid: 0456692b3a234aa6abaf1411ddc12c47, type: 3}
-  _description: "\uC804\uD22C \uC2DC\uC791 \uC2DC, \uB0B4 \uBAA8\uB4E0 \uAE30\uBB3C\uC744
+  _description: "\uC804\uD22C \uC2DC\uC791 \uC2DC, \uBAA8\uB4E0 \uAE30\uBB3C\uC744
     {0}\uCD08\uAC04 \uAC00\uC18D\uD569\uB2C8\uB2E4."
   _values:
   - 20
   _stack: 0
   _max: 0
   _inPool: 0
+  _nation: 0
+  _gainMax: 0
   _kind: 9
   _categories: []
+  _units: []
   _unitStat: 0
+  _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 0}
+  _lineKind: 1
+  _lineTarget: 0
   _unit: {fileID: 0}
   _smallTower: {fileID: 0}
   _special: 14

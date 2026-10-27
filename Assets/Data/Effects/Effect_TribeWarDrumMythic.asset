@@ -14,5 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NoPushOnDustEffect
   _categories: []
   _units: []
-  _description: "\uBF1B\uAC00\uB8E8 \uC5B8\uB355 \uC704\uC5D0 \uC788\uB294 \uB0B4
-    \uC720\uB2DB\uC740 \uBC00\uB824\uB098\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+  _description: "\uBF1B\uAC00\uB8E8 \uC5B8\uB355 \uC704 \uC720\uB2DB\uC740 \uBC00\uB824\uB098\uC9C0
+    \uC54A\uC2B5\uB2C8\uB2E4."
+  _trait: 

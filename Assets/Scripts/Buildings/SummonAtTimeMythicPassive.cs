@@ -8,6 +8,6 @@ namespace GnorpWar
     {
         [SerializeField] private SummonAtTimePassive _main;
 
-        public override string Describe(int level) => $"{_main.Seconds:0}초마다 {_main.SummonUnit.DisplayName} {_main.Count}기를 추가로 소환합니다.";
+        public override string Describe(int level) => $"{_main.Seconds:0}초마다 {_main.SummonUnit.DisplayName} {_main.Count}기를 더 소환합니다.";
     }
 }

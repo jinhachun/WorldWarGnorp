@@ -51,19 +51,19 @@ namespace GnorpWar
             return true;
         }
 
-        public override string Describe(int level) => $"전투 동안 {TargetName()} {_modifier.Scaled(_perTier, level).Describe()}";
+        public override string Describe(int level) => $"{TargetName()}{_modifier.Scaled(_perTier, level).Describe()}";
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
 
         private string TargetName()
         {
             if (_categories.Length == 0 && _units.Length == 0)
-                return "내 유닛들의";
+                return "";
             var names = new System.Collections.Generic.List<string>();
             foreach (UnitCategory c in _categories)
                 names.Add(c.DisplayName);
             foreach (UnitDefinition u in _units)
                 names.Add(u.DisplayName);
-            return $"내 {string.Join("·", names)}의";
+            return $"{string.Join("·", names)} ";
         }
     }
 }

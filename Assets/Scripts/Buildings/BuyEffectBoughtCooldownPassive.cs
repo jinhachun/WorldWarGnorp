@@ -22,6 +22,6 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(self);
         }
 
-        public override string Describe(int level) => $"「구매할 때마다,」 효과가 있는 기물을 구매하면, 이 기물의 쿨다운 영구히 ×{Factor(level):0.##}";
+        public override string Describe(int level) => $"「구매할 때마다,」 기물을 사면 쿨다운 영구히 ×{Factor(level):0.##}";
     }
 }

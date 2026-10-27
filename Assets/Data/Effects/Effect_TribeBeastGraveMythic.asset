@@ -15,9 +15,11 @@ MonoBehaviour:
   _categories:
   - {fileID: 11400000, guid: e9fd260e0fdfa214f96601ed00f1f26d, type: 2}
   _units: []
-  _description: "\uB0B4 \uC911\uAE30\uBCD1\uC774 \uC8FD\uC744 \uB54C\uB9C8\uB2E4,
-    \uC6D0\uC2DC\uC758 \uC804\uC0AC {1}\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _description: "\uC911\uAE30\uBCD1\uC774 \uC8FD\uC73C\uBA74 \uC6D0\uC2DC\uC758 \uC804\uC0AC
+    {1}\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _trait: 
   _summon: {fileID: 11400000, guid: eaa17cd8967f3e84ea90617459a79210, type: 2}
   _count: 5
   _chance: 100
   _chancePerTier: 0
+  _chanceFromUpgrade: 0

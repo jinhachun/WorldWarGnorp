@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HealOnKillEffect
   _categories: []
   _units: []
-  _description: "\uC801\uC744 \uCC98\uCE58\uD55C \uC544\uAD70\uC740 \uCD5C\uB300
-    \uCCB4\uB825\uC758 {0}%\uB97C \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _description: "\uCC98\uCE58\uD558\uBA74 \uCD5C\uB300 \uCCB4\uB825\uC758 {0}%\uB97C
+    \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+  _trait: 
   _ratio: 0.3
+  _ratioPerTier: 0.15

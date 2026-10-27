@@ -9,6 +9,6 @@ namespace GnorpWar
     {
         public override void OnBattleStart(BoardRunner board, int slot, int level) => board.SummonAtEverySmallTower();
 
-        public override string Describe(int level) => "내 유닛이 내 모든 작은 타워에서 동시에 소환됩니다.";
+        public override string Describe(int level) => "모든 작은 타워에서 동시에 소환됩니다.";
     }
 }

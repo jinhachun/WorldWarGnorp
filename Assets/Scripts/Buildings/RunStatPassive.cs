@@ -36,9 +36,9 @@ namespace GnorpWar
 
         public override string Describe(int level)
         {
-            string target = _units.Length == 0 ? "내 유닛들" : string.Join("·", System.Array.ConvertAll(_units, u => u.DisplayName));
-            string when = _trigger == Trigger.Buy ? "「구매할 때마다,」" : "내가 골드를 얻을 때마다,";
-            return $"{when} {target}의 {_modifier.Name} 영구히 {_modifier.Scaled(_perTier, level).ValueText}";
+            string target = _units.Length == 0 ? "" : string.Join("·", System.Array.ConvertAll(_units, u => u.DisplayName)) + " ";
+            string when = _trigger == Trigger.Buy ? "「구매할 때마다,」" : "골드를 얻을 때마다,";
+            return $"{when} {target}{_modifier.Name} 영구히 {_modifier.Scaled(_perTier, level).ValueText}";
         }
 
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;

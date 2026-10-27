@@ -16,9 +16,9 @@ MonoBehaviour:
   _displayName: "\uC61B \uC5F0\uBCD1\uC7A5"
   _icon: {fileID: 21300000, guid: 95dc028c10f24d4b80cee94784cf62c7, type: 3}
   _iconLarge: {fileID: 21300000, guid: 952d4ea916a44383a192a92220523a9b, type: 3}
-  _description: "\uB0B4 \uC720\uB2DB 1\uC885\uC744 \uACE0\uB985\uB2C8\uB2E4.\n\uADF8
-    \uC720\uB2DB\uC758 \uCCB4\uB825 \uC601\uAD6C\uD788 +{0}\n\uADF8 \uC720\uB2DB\uC758
-    \uACF5\uACA9\uB825 \uC601\uAD6C\uD788 +{1}"
+  _prop: {fileID: 0}
+  _description: "\uACE0\uB978 \uC720\uB2DB\uC758 \uCCB4\uB825 \uC601\uAD6C\uD788
+    +{0}\n\uADF8 \uC720\uB2DB\uC758 \uACF5\uACA9\uB825 \uC601\uAD6C\uD788 +{1}"
   _choices: 3
   _newRarity: 2
   _hp: 20
@@ -27,4 +27,6 @@ MonoBehaviour:
   _happinessDrop: 2
   _goldBase: 10
   _goldPerTurn: 2
+  _cooldownFactor: 0.75
+  _summons: 1
   _shrines: []

@@ -15,9 +15,10 @@ MonoBehaviour:
   _categories:
   - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
   _units: []
-  _description: "\uB0B4\uAC00 \uACBD\uBCF4\uBCD1\uC744 \uC18C\uD658\uD560 \uB54C\uB9C8\uB2E4,
-    {0}% \uD655\uB960\uB85C \uD230\uB4DC\uB77C \uC804\uC7C1\uC18C {1}\uAE30\uB97C
-    \uCD94\uAC00\uB85C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _description: "\uACBD\uBCF4\uBCD1 \uC18C\uD658 \uC2DC {0}% \uD655\uB960\uB85C \uD230\uB4DC\uB77C
+    \uC804\uC7C1\uC18C\uB3C4 \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _trait: 
   _summon: {fileID: 11400000, guid: 106ab9f832c4c674cb501dc68f48226c, type: 2}
   _count: 1
   _chance: 25
+  _chanceFromUpgrade: 0

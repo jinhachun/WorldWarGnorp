@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.MarkEffect
   _categories: []
   _units: []
-  _description: "\uB0B4\uAC00 \uC911\uBCF4\uBCD1\uC744 \uC18C\uD658\uD560 \uB54C\uB9C8\uB2E4,
-    \uB300\uC2E0 \uD1B1\uB2C8\uB85C\uCF13\uBCD1\uC744 5\uAE30 \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _description: "\uC911\uBCF4\uBCD1 \uB300\uC2E0 \uD1B1\uB2C8\uB85C\uCF13\uBCD1 5\uAE30\uB97C
+    \uC18C\uD658\uD569\uB2C8\uB2E4."
   _trait: 

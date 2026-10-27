@@ -9,6 +9,6 @@ namespace GnorpWar
     {
         public override void OnBattleStart(BoardRunner board, int slot, int level) => TowerBook.AddArrowsOnKill(board.Team, 1);
 
-        public override string Describe(int level) => "내 타워들의 화살이 적을 처치하면, 그 화살이 다시 발사됩니다.";
+        public override string Describe(int level) => "타워 화살이 처치하면 다시 발사됩니다.";
     }
 }

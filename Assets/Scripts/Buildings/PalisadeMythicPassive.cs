@@ -11,6 +11,6 @@ namespace GnorpWar
 
         public float Reflect => _reflect;
 
-        public override string Describe(int level) => $"목책이 받은 피해의 {_reflect * 100f:0}%를 공격한 적에게 돌려줍니다.";
+        public override string Describe(int level) => $"목책이 받은 피해의 {_reflect * 100f:0}%를 돌려줍니다.";
     }
 }

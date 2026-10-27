@@ -34,6 +34,6 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"내 {_unit.DisplayName}가 이미 있으면, 대신 전투 동안 모든 내 {_unit.DisplayName}의 {_modifier.Describe()}";
+            => $"{_unit.DisplayName}가 있으면 대신 모두 {_modifier.Describe()}";
     }
 }

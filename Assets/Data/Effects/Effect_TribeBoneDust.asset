@@ -15,10 +15,9 @@ MonoBehaviour:
   _categories: []
   _units:
   - {fileID: 11400000, guid: e8b64c0623e6336479441667f16688a2, type: 2}
-  _description: "\uC6D0\uC2DC \uC878\uBCD1\uC740 \uC0AC\uB9DD \uC2DC, \uBF1B\uAC00\uB8E8\uAC00
-    \uB418\uC5B4 \uBF1B\uAC00\uB8E8 \uC5B8\uB355\uC744 \uD615\uC131\uD569\uB2C8\uB2E4."
-  _trait: "\uC8FD\uC73C\uBA74 \uBF1B\uAC00\uB8E8\uAC00 \uB418\uC5B4 \uBF1B\uAC00\uB8E8
+  _description: "\uC6D0\uC2DC \uC878\uBCD1\uC740 \uC8FD\uC73C\uBA74 \uBF1B\uAC00\uB8E8
     \uC5B8\uB355\uC744 \uC313\uC2B5\uB2C8\uB2E4."
+  _trait: "\uC8FD\uC73C\uBA74 \uBF1B\uAC00\uB8E8 \uC5B8\uB355\uC744 \uC313\uC2B5\uB2C8\uB2E4."
   _area: 1
   _maxSlope: 0.5
   _pourSeconds: 0.5

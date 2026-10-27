@@ -20,6 +20,6 @@ namespace GnorpWar
                 BuffLinks.ToPoint(board.Team, slot, foeBoard.SpawnPoint, BuffKind.Debuff);
         }
 
-        public override string Describe(int level) => $"적 유닛의 {_modifier.Describe()}";
+        public override string Describe(int level) => $"적 {_modifier.Describe()}";
     }
 }

@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Upgrade_K_FaithArmor
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "신앙의 갑주"
+  _displayName: "\uC2E0\uC559\uC758 \uAC11\uC8FC"
   _icon: {fileID: 21300000, guid: 4a1ae0b156154185a6d2e238d07a5a3f, type: 3}
-  _description: "내 유닛의 무적이 끝날 때마다, 전투 동안 그 유닛의 최대 체력 +{0}%"
+  _description: "\uBB34\uC801\uC774 \uB05D\uB0A0 \uB54C\uB9C8\uB2E4 \uCD5C\uB300
+    \uCCB4\uB825 +{0}%"
   _values:
   - 0
   - 3
@@ -31,6 +32,8 @@ MonoBehaviour:
   _units: []
   _unitStat: 0
   _unitOp: 1
+  _terrain: {fileID: 0}
+  _healLabel: 0
   _towerStat: 0
   _effect: {fileID: 11400000, guid: 85315f0511ab4a408288d6351d27983b, type: 2}
   _lineKind: 1

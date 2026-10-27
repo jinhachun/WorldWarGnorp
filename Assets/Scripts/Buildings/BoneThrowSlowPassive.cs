@@ -15,6 +15,6 @@ namespace GnorpWar
         public float Factor => _factor;
         public float Seconds => _seconds;
 
-        public override string Describe(int level) => $"뼈에 맞은 적은 {_seconds:0.##}초 동안 이동속도 ×{_factor:0.##}";
+        public override string Describe(int level) => $"뼈에 맞은 적 {_seconds:0.##}초간 이동속도 ×{_factor:0.##}";
     }
 }

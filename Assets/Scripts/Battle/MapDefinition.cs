@@ -142,14 +142,14 @@ namespace GnorpWar
                 foreach (UnitRule rule in _unitRules)
                     lines.Add(rule.Describe());
                 if (_fireAllInterval > 0f)
-                    lines.Add($"{_fireAllInterval:0.#}초마다 쿨다운이 있는 모든 기물을 발동합니다.");
+                    lines.Add($"{_fireAllInterval:0.#}초마다 모든 기물이 발동합니다.");
                 // 게이지가 차는 속도 2배 = 쿨다운 ×0.5
                 if (_cooldownRate != 1f)
                     lines.Add($"모든 기물의 쿨다운 ×{1f / _cooldownRate:0.##}");
                 if (_passiveBuildingsOff)
                     lines.Add("쿨다운이 없는 기물은 작동하지 않습니다.");
                 if (FireRepeats > 1)
-                    lines.Add($"쿨다운이 있는 기물은 발동할 때마다 효과를 {FireRepeats}번 냅니다.");
+                    lines.Add($"기물이 발동하면 효과를 {FireRepeats}번 냅니다.");
                 return lines.Count > 0 ? string.Join("\n", lines) : _description;
             }
         }

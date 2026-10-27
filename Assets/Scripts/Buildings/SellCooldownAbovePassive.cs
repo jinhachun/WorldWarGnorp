@@ -54,7 +54,7 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(RunState.Field[floor]);
         }
 
-        public override string Describe(int level) => $"「판매 시,」 쿨다운이 있는 내 기물 중 가장 위 기물의 쿨다운 영구히 ×{Factor(level):0.##}";
+        public override string Describe(int level) => $"「판매 시,」 가장 위 기물의 쿨다운 영구히 ×{Factor(level):0.##}";
         public override string Headline(int level) => $"×{Factor(level):0.##}";
     }
 }

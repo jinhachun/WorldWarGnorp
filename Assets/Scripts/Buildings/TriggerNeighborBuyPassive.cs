@@ -32,7 +32,7 @@ namespace GnorpWar
         public override bool UsesAdjacency => true;
         // 1회면 기획서 문구 그대로("발동시킵니다")
         public override string Describe(int level)
-            => $"전투 시작 시, 바로 위·아래 기물들의 「구매할 때마다,」 효과를 {(Times(level) > 1 ? $"{Times(level)}회 " : "")}발동시킵니다.";
+            => $"전투 시작 시, 바로 위·아래의 「구매할 때마다,」를 {(Times(level) > 1 ? $"{Times(level)}회 " : "")}발동시킵니다.";
         public override string Headline(int level) => $"{Times(level)}회";
     }
 }

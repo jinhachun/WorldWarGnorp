@@ -461,6 +461,11 @@ namespace GnorpWar
 
         private float Stat(UnitStat stat)
         {
+            if (_rallyEnds > 0f && Time.fixedTime >= _rallyEnds)
+            {
+                _rallyEnds = NextRallyEnd();
+                _ownModifiersChanged = true;   // 행진가가 끝났다
+            }
             if (_statsVersion != StatBook.Version || _ownModifiersChanged)
                 RefreshStats();
             // 고도로 스탯이 바뀌는 유닛(미노타우로스)은 고도가 한 눈금 넘게 달라지면 다시 센다 — 지금 고도의 값이다
@@ -544,6 +549,8 @@ namespace GnorpWar
             foreach (StatModifier m in _ownModifiers)
                 if (m.Stat == stat)
                     sum.Add(m.Op, m.Value);
+            if (Time.fixedTime < _rallyUntil[(int)stat])
+                sum.Add(StatOp.Percent, _rallyPercent[(int)stat]);   // 행진가
             // 미노타우로스 — 고도 1당 +%(합연산), 지금 고도로
             if (_usesAltitude)
                 foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -660,6 +667,30 @@ namespace GnorpWar
             _slowFactor = Time.fixedTime < _slowUntil ? Mathf.Min(_slowFactor, factor) : factor;
             _slowUntil = Time.fixedTime + seconds;
             StatusDots.Watch(this);
+        }
+
+        // 잠깐 그 스탯 +percent(합연산, 0.5 = +50%) — 행진가. 걸린 동안 다시 걸리면 시간은 새로, 값은 큰 쪽. 끝나면 스탯을 다시 센다(Stat)
+        private readonly float[] _rallyUntil = new float[4];
+        private readonly float[] _rallyPercent = new float[4];
+        // 걸린 것 중 가장 먼저 끝나는 시각(없으면 0)
+        private float _rallyEnds;
+
+        public void Rally(UnitStat stat, float percent, float seconds)
+        {
+            int s = (int)stat;
+            _rallyPercent[s] = Time.fixedTime < _rallyUntil[s] ? Mathf.Max(_rallyPercent[s], percent) : percent;
+            _rallyUntil[s] = Time.fixedTime + seconds;
+            _rallyEnds = NextRallyEnd();
+            _ownModifiersChanged = true;
+        }
+
+        private float NextRallyEnd()
+        {
+            float next = 0f;
+            foreach (float until in _rallyUntil)
+                if (until > Time.fixedTime && (next == 0f || until < next))
+                    next = until;
+            return next;
         }
 
         // 지금 느려진 중 · 불타는 중 — 몸 상태 점(Fx/StatusDots)이 읽는다
@@ -884,6 +915,8 @@ namespace GnorpWar
             AllyInFront = null;
             Reviving = false;
             _slowUntil = 0f;
+            System.Array.Clear(_rallyUntil, 0, _rallyUntil.Length);
+            _rallyEnds = 0f;
             _stats[(int)UnitStat.MaxHp] = 0f;  // 지난 생애의 최대 체력으로 비율을 맞추지 않게
             _stats[(int)UnitStat.Attack] = 0f;  // 지난 생애의 공격력과 비교해 오라가 켜지지 않게
             _attackAuraTimer = 0f;
@@ -941,8 +974,10 @@ namespace GnorpWar
             // 죽을 때 바꾼 물리·그림을 되돌린다(Die)
             foreach (Collider2D col in GetComponents<Collider2D>())
                 col.enabled = true;
-            _rb.bodyType = RigidbodyType2D.Dynamic;
+            // 나는 유닛(용)은 중력 · 밀림 없이 속도로만 움직인다(Fly) — 땅(정적)과는 부딪히지 않는다
+            _rb.bodyType = _definition.Flies ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
             _rb.linearVelocity = Vector2.zero;
+            _flyFloor = float.NegativeInfinity;
             for (int i = 0; i < _bodyRenderers.Length; i++)
                 _bodyRenderers[i].color = _bodyColors[i];
             _weapon.localPosition = _weaponRestPosition;
@@ -1017,6 +1052,13 @@ namespace GnorpWar
             _supportScanTimer -= Time.fixedDeltaTime;
             _walkScanTimer -= Time.fixedDeltaTime;
             _turnBackScanTimer -= Time.fixedDeltaTime;
+
+            // 하늘을 나는 유닛(용) — 산 · 접촉 · 계단 규칙 밖에서 따로 난다. 산 높이 보고(ReportPile)에도 들어가지 않는다
+            if (_definition.Flies)
+            {
+                Fly();
+                return;
+            }
 
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
@@ -1625,7 +1667,7 @@ namespace GnorpWar
         // 같은 높이의 적을 만나거나 적 줄 끝에서 떨어지면 다시 싸운다. 원거리·보스·기지·탑은 그대로.
         // 단, 내 진영 산이 적 산보다 높을 때만 넘는다(사용자 10/8) — 그 전엔 발밑 적을 쳐서 그 자리에 서고, 뒤 유닛이 그 위로 쌓인다
         private bool IsUnderfoot(IDamageable damageable)
-            => _definition.AttackType == AttackType.Melee && damageable is Unit unit && unit.Top <= Feet + StandOnMargin
+            => _definition.AttackType == AttackType.Melee && !_definition.Flies && damageable is Unit unit && unit.Top <= Feet + StandOnMargin
                && PileNow[(int)_team] > PileNow[1 - (int)_team] + PileLeadToCross;
 
         // 진영별 전선 산 높이 — 선두(가장 앞 유닛)에서 PileFrontRange 안에 무언가를 딛고 선 유닛의 가장 높은 머리(땅 기준).
@@ -2023,6 +2065,76 @@ namespace GnorpWar
             }
             if (FxDirector.Instance != null)
                 FxDirector.Instance.Flame(mouth, Forward, length);
+        }
+
+        // 비행(용, UnitDefinition.FlyHeight) — 발을 발밑 더미 꼭대기 + 비행 높이에 두고(오르내림은 속도 상한 안에서 다가간다),
+        // 사거리 안에 적이 있으면 그 자리에 떠서 한 대상만 불로 친다(근접 타격 Strike — 고도 보너스 그대로). 없으면 앞으로 난다
+        private const float FlyClimbSpeed = 3f;      // 칸/초
+        private const float FlyEase = 0.3f;          // 목표 높이까지 이 시간에 다가가는 속도(상한 안에서)
+        private const float FlyScanHeight = 40f;     // 발밑 더미를 훑는 높이
+        private const int FlameEmbers = 14;
+        private float _flyFloor = float.NegativeInfinity;   // 마지막으로 잰 발밑 더미 꼭대기(TargetScanInterval마다)
+
+        private void Fly()
+        {
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                if (e.Effect.AppliesFor(_team, _definition))
+                    e.Effect.Tick(this, e.Stacks);
+            if (_walkScanTimer <= 0f || float.IsNegativeInfinity(_flyFloor))
+            {
+                _flyFloor = PileTopBelow();
+                _walkScanTimer = TargetScanInterval;
+            }
+            float vy = Mathf.Clamp((_flyFloor + _definition.FlyHeight - Feet) / FlyEase, -FlyClimbSpeed, FlyClimbSpeed);
+            float vx = Forward * MoveSpeed;
+            if (FindTargetCached(out IDamageable target, out Vector2 targetPoint))
+            {
+                vx = 0f;
+                if (_attackCooldown <= 0f)
+                {
+                    Vector2 toTarget = targetPoint - _rb.position;
+                    Vector2 hitDirection = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
+                    LookToward(toTarget.x);
+                    Vector2 mouth = WeaponPoint;   // 돌아본 뒤의 입
+                    _attackScale = FirstAttackScale();
+                    Strike(target, AttackDamage * DamageScale, hitDirection, _definition.PushPower);
+                    _attackScale = 1f;
+                    foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                        if (e.Effect.AppliesFor(_team, _definition))
+                            e.Effect.OnAttack(this, target, e.Stacks);
+                    FlameTo(mouth, targetPoint);
+                    _attackCooldown = NextCooldown(_attackCooldown, IntervalAfter(target));
+                }
+            }
+            else
+                LookToward(Forward);   // 싸울 상대가 없다 — 다시 앞을 본다
+            _rb.linearVelocity = new Vector2(vx, vy);
+        }
+
+        // 발밑 기둥(내 몸 폭)에서 가장 높은 것 — 걷는 유닛(어느 진영이든)의 머리, 없으면 땅(언덕 · 뼛가루 포함)
+        private float PileTopBelow()
+        {
+            if (Ground.Instance == null)
+                return Feet - _definition.FlyHeight;
+            float x = _rb.position.x, half = _body.bounds.extents.x;
+            float top = Mathf.Max(Ground.Instance.HeightAt(x - half), Mathf.Max(Ground.Instance.HeightAt(x), Ground.Instance.HeightAt(x + half)));
+            Physics2D.OverlapBox(new Vector2(x, top + FlyScanHeight * 0.5f), new Vector2(half * 2f, FlyScanHeight), 0f, SolidOnly, _overlaps);
+            foreach (Collider2D col in _overlaps)
+                if (ByCollider.TryGetValue(col, out Unit unit) && unit != this && unit.IsAlive && !unit._definition.Flies)
+                    top = Mathf.Max(top, unit.Top);
+            return top;
+        }
+
+        // 불 뿜기 — 입에서 대상까지 불씨를 흩뿌린다(Fx/FireTrails, 노랑 → 빨강으로 식는다). 연출뿐, 피해는 Strike가 준다
+        private static void FlameTo(Vector2 mouth, Vector2 target)
+        {
+            Vector2 along = target - mouth;
+            for (int i = 0; i < FlameEmbers; i++)
+            {
+                float t = (i + Random.value) / FlameEmbers;
+                Vector2 point = mouth + along * t + Random.insideUnitCircle * (0.15f + 0.25f * t);
+                FireTrails.Emit(point, along * 0.15f, t < 0.5f ? 2 : 3, 0.35f + 0.25f * Random.value, false);
+            }
         }
 
         // 휩쓸기 — 사거리 안, 몸 중심보다 앞쪽(가장 가까운 점 기준)에 있는 적 전부(탑·기지 포함)

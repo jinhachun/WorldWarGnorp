@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_Lookout
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uB9DD\uB8E8"
+  _icon: {fileID: 21300000, guid: 649443b7f88fb924e9e744c95fd57a36, type: 3}
+  _iconLarge: {fileID: 0}
+  _description: 
+  _rarity: 0
+  _nation: 0
+  _faction: 0
+  _cooldown: 6
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions:
+  - {fileID: 11400000, guid: 96f9d801e13e0994fb989e37d1b134c7, type: 2}
+  _effects: []
+  _passives: []
+  _mythicActions: []
+  _mythicEffects: []
+  _mythicPassives:
+  - {fileID: 11400000, guid: b27ec6e35526cb744a596dc3a66e94cc, type: 2}
+  _mentionedUnits: []

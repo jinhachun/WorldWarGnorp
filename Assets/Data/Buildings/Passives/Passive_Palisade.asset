@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 498b6d03d11718e4db6d363254a397f6, type: 3}
+  m_Name: Passive_Palisade
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.PalisadeAtStartPassive
+  _prefab: {fileID: 7112863939101261306, guid: 7cf15660c3bfcd84eaf4b891e3fb646d, type: 3}
+  _hp: 300
+  _hpPerTier: 150
+  _gap: 1
+  _spacing: 2
+  _mythicMark: {fileID: 11400000, guid: 40426439a4e5e43499e28f999f7ed730, type: 2}

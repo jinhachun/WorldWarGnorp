@@ -236,6 +236,7 @@ namespace GnorpWar
             ChargeFreeRerolls(Player);
             GainInterest();
             GainGold(Income);
+            ForEachFieldPassive((passive, owned) => passive.OnTurnStart(owned));   // 전쟁 금고 — AI 영주는 ShopAs에서
             if (ShopLocked)
                 RollOffers(onlyEmpty: true);
             else
@@ -612,6 +613,7 @@ namespace GnorpWar
                 ChargeFreeRerolls(tower);
                 GainInterest();
                 GainGold(gold);
+                ForEachFieldPassive((passive, owned) => passive.OnTurnStart(owned));   // 전쟁 금고 — 내 턴(BeginTurn)과 같은 자리
                 RollOffers(onlyEmpty: ShopLocked);
                 EnemyShopper.Shop(build);
             }
@@ -1187,7 +1189,7 @@ namespace GnorpWar
             CompactField();
             GainGold(value);
             foreach (BuildingPassive passive in sold.Passives)
-                passive.OnSell(sold);
+                passive.OnSell(sold, storage ? -1 : index);
         }
 
         // 이번 판에 등장하는 기물(상점 풀) — 내 상점도 AI 영주의 상점도 같은 풀이다(내 진열은 국가 비율을 건다 — HomeOffer)

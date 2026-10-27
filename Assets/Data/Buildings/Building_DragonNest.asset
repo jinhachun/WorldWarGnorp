@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16576cde986140742b870c3cdbd6d21e, type: 3}
+  m_Name: Building_DragonNest
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.BuildingDefinition
+  _displayName: "\uC6A9\uC758 \uB465\uC9C0"
+  _icon: {fileID: 21300000, guid: f3ab56fdc0344962e2adbb3ffd2f2802, type: 3}
+  _iconLarge: {fileID: 21300000, guid: 2649de21e01921a0ac50d95fb96b0ec1, type: 3}
+  _description: 
+  _rarity: 4
+  _nation: 0
+  _faction: 0
+  _cooldown: 0
+  _unit: {fileID: 0}
+  _unitCount: 1
+  _actions: []
+  _effects: []
+  _passives:
+  - {fileID: 11400000, guid: e39fe677ff713074e90fb3cc1b3f881f, type: 2}
+  _mythicActions: []
+  _mythicEffects: []
+  _mythicPassives:
+  - {fileID: 11400000, guid: e18297cc6cbd10b46b17e848cb076596, type: 2}
+  _mentionedUnits:
+  - {fileID: 11400000, guid: 678a38c7a75a1e5408457435a06492c1, type: 2}

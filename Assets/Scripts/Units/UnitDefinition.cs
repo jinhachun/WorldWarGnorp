@@ -126,6 +126,10 @@ namespace GnorpWar
         [BoxGroup("짓기 전용 — 건축가")]
         [SuffixLabel("칸", true)]
         [SerializeField] private float _buildGateClearance = 3f;
+        [Tooltip("0보다 크면 하늘을 난다(용) — 발밑 유닛 더미의 꼭대기(없으면 땅)보다 이만큼 위에 발을 두고 난다. 땅 유닛과 몸으로 부딪히지 않아, 사거리가 그 높이까지 닿는 공격(원거리 · 타워 · 그 높이에 올라선 근접)에만 맞는다. 0 = 걷는다")]
+        [BoxGroup("비행")]
+        [SuffixLabel("칸", true)]
+        [SerializeField] private float _flyHeight;
         [Tooltip("타고난 효과 — 유닛 카드의 특성 줄에 글(효과의 「특성 줄」)을 싣는다. 표시용이다: 효과를 켜는 것은 이 유닛을 내는 기물이다")]
         [BoxGroup("참조")]
         [HideIf(nameof(HideNonBalance))]
@@ -179,5 +183,7 @@ namespace GnorpWar
         public float BuildFlatness => _buildFlatness;
         public float BuildSpacing => _buildSpacing;
         public float BuildGateClearance => _buildGateClearance;
+        public float FlyHeight => _flyHeight;
+        public bool Flies => _flyHeight > 0f;
     }
 }

@@ -8,7 +8,7 @@ namespace GnorpWar
     {
         [SerializeField] private BuildingRarity _rarity = BuildingRarity.Legendary;
 
-        public override void OnSell(OwnedBuilding self)
+        public override void OnSell(OwnedBuilding self, int floor)
         {
             var candidates = new System.Collections.Generic.List<BuildingDefinition>();
             foreach (BuildingDefinition b in RunState.Pool)

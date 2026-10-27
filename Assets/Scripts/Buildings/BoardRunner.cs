@@ -16,8 +16,8 @@ namespace GnorpWar
             public float Timer;
             // 가속이 남은 시간 — 그동안 게이지가 2배로 찬다
             public float Haste;
-            // 쿨다운이 멈춘 남은 시간(제물의 의식) — 그동안 게이지가 안 차고 가속 시간도 흐르지 않는다
-            public float Frozen;
+            // 이 칸의 기물이 한 번에 더 소환하는 수(제물의 의식 — 바로 아래 기물이 전투 시작 때 준다). 징병제(BoardRunner.ExtraSummons)와 같은 곳에 더한다
+            public int ExtraSummons;
             // 층·칸 표시용(전장 탑 · UI 탑) — 남은 가속(초, 기물이 멈췄거나 쿨다운 없는 기물이면 0) · 지금 쿨다운 ÷ 원래 쿨다운(풍차 ×0.8 → 0.8, 받은 게 없으면 1).
             // 원래 쿨다운 = 그 등급의 쿨다운(CooldownAt) — 등급으로 준 몫은 받은 효과가 아니다
             public float HasteLeft => Cooldown > 0f && !BattleManager.BoardsStopped ? Mathf.Max(0f, Haste) : 0f;
@@ -102,6 +102,45 @@ namespace GnorpWar
             slot.BattleGainValue = op == StatOp.Multiply ? 1f : 0f;
         }
 
+        // 거울 공방(Buildings/MirrorPassive) — 위층부터 차례로 바로 위 기물의 사본으로 바꾼다(위의 거울 공방이 먼저 변신해야 그 아래가 같은 것을 본뜬다).
+        // 칸과 탑 그림(Field)만 이 전투의 사본으로 바꾸고 런의 필드(RunState.Field)는 건드리지 않는다 — 전투가 끝나면 거울 공방으로 돌아간다.
+        // 맵이 작동을 끈 거울 공방(늪지 — 쿨다운 없는 기물)은 변신하지 않는다. 신화 거울 공방이 바꾼 칸은 전투 시작 효과 뒤에 즉시 1회 발동한다(Begin)
+        private readonly System.Collections.Generic.List<int> _mirrorFires = new System.Collections.Generic.List<int>();
+
+        private void Reflect()
+        {
+            _mirrorFires.Clear();
+            bool copied = false;
+            for (int i = _slots.Length - 2; i >= 0; i--)
+            {
+                OwnedBuilding self = _slots[i].Building;
+                if (!IsActive(i) || !HasBuilding(i + 1))
+                    continue;
+                MirrorPassive mirror = null;
+                foreach (BuildingPassive passive in self.Passives)
+                    if (passive is MirrorPassive found)
+                        mirror = found;
+                if (mirror == null)
+                    continue;
+                OwnedBuilding copy = MirrorPassive.Reflect(self, _slots[i + 1].Building);
+                if (copy.Definition == self.Definition)
+                    continue;   // 위도 변신하지 못한 거울 공방
+                if (!copied)
+                {
+                    Field = (OwnedBuilding[])Field.Clone();
+                    copied = true;
+                }
+                Field[i] = copy;
+                _slots[i].Building = copy;
+                _slots[i].Cooldown = copy.Cooldown;
+                _slots[i].Timer = 0f;
+                InitBattleGain(_slots[i]);
+                if (mirror.FiresOnStart(self))
+                    _mirrorFires.Add(i);
+                OwnedBuilding.NotifyEffect(copy);
+            }
+        }
+
         // 칸이 전투 동안 쌓은 값에 더한다(+는 더하고 ×는 곱한다) — 칸의 계산 방식과 다르면 무시
         public void AddBattleGain(int index, StatOp op, float value)
         {
@@ -114,6 +153,7 @@ namespace GnorpWar
         // 전투 시작 — 효과를 켜고 게이지를 돌린다. TeamEffects는 호출하는 쪽이 먼저 비운다
         public void Begin()
         {
+            Reflect();
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (UnitEffect effect in _slots[i].Building.Effects)
@@ -122,11 +162,14 @@ namespace GnorpWar
             _summonAtSmallTower = false;
             _summonAtEverySmallTower = false;
             _doubleWhileHastedSlot = -1;
-            FireOnThawSlot = -1;
+            _timedCooldowns.Clear();
             for (int i = 0; i < _slots.Length; i++)
                 if (IsActive(i))
                     foreach (BuildingPassive passive in _slots[i].Building.Passives)
                         passive.OnBattleStart(this, i, _slots[i].Building.Level);
+            // 거울 공방 신화 — 변신한 기물을 즉시 1회
+            foreach (int i in _mirrorFires)
+                FireNow(i);
             _fireAllTimer = 0f;
             _deathmatchFired = false;
             _preDeathmatchFired = false;
@@ -173,6 +216,44 @@ namespace GnorpWar
 
         public void Stop() => _running = false;
 
+        // 모래시계 — 전투 시작 후 until초까지 내 모든 기물의 쿨다운 ×early, 그 뒤 ×late. 맵 배율처럼 게이지 속도(그 역수)에 곱한다 — 여럿이면 서로 곱한다.
+        // from = 켠 기물의 칸(버프 선의 출발) · switched = late로 넘어갔나(넘어가는 순간 한 번 선을 긋는다). 전투 시작마다 비운다(Begin)
+        private readonly System.Collections.Generic.List<(int from, float until, float early, float late, bool switched)> _timedCooldowns
+            = new System.Collections.Generic.List<(int, float, float, float, bool)>();
+
+        public void AddTimedCooldown(int from, float seconds, float early, float late)
+        {
+            _timedCooldowns.Add((from, seconds, early, late, false));
+            LinkCooling(from, early);
+        }
+
+        private float TimedCooldownFactor()
+        {
+            float factor = 1f;
+            for (int t = 0; t < _timedCooldowns.Count; t++)
+            {
+                var timed = _timedCooldowns[t];
+                bool late = BattleManager.Elapsed >= timed.until;
+                if (late && !timed.switched)
+                {
+                    timed.switched = true;
+                    _timedCooldowns[t] = timed;
+                    LinkCooling(timed.from, timed.late);
+                }
+                factor *= late ? timed.late : timed.early;
+            }
+            return factor;
+        }
+
+        // 쿨다운 있는 내 기물마다 from 칸에서 쿨다운 색 선(「×0.5」)
+        private void LinkCooling(int from, float factor)
+        {
+            OwnedBuilding.NotifyEffect(_slots[from].Building);
+            for (int i = 0; i < _slots.Length; i++)
+                if (i != from && HasBuilding(i) && _slots[i].Cooldown > 0f)
+                    BuffLinks.ToSlot(_team, from, i, BuffKind.Haste, BuffLabel.Cooldown(factor));
+        }
+
         // ── 지역 특수 업그레이드가 전투 시작 때 켜는 것(UpgradeDefinition.ApplySpecial) — 전투 씬마다 보드가 새로 뜨므로 끄는 곳은 없다
         // 징병제 — 쿨다운마다 유닛을 소환하는 기물이 한 번에 더 소환하는 수
         public int ExtraSummons;
@@ -203,13 +284,13 @@ namespace GnorpWar
             }
         }
 
-        // 쿨다운이 가장 긴 기물을 즉시 times번 발동(군국주의) — 같으면 그중 무작위(트라이브 명세 §2-1). 쿨다운 있는 기물이 없으면 아무 일도 없다. 멈춘 기물은 고르지 않는다(발동이 안 되므로)
+        // 쿨다운이 가장 긴 기물을 즉시 times번 발동(군국주의) — 같으면 그중 무작위(트라이브 명세 §2-1). 쿨다운 있는 기물이 없으면 아무 일도 없다
         public int FireLongest(int times = 1)
         {
             int longest = -1, ties = 0;
             for (int i = 0; i < _slots.Length; i++)
             {
-                if (!HasBuilding(i) || _slots[i].Cooldown <= 0f || _slots[i].Frozen > 0f)
+                if (!HasBuilding(i) || _slots[i].Cooldown <= 0f)
                     continue;
                 if (longest < 0 || _slots[i].Cooldown > _slots[longest].Cooldown)
                 {
@@ -223,16 +304,6 @@ namespace GnorpWar
                 FireNow(longest);
             return longest;
         }
-
-        // 제물의 의식 — 칸의 쿨다운을 seconds 동안 멈춘다(그동안 게이지가 안 차고 가속도 안 걸린다). 이미 멈춰 있으면 더 긴 쪽. 멈춘 동안은 즉시 발동(FireNow)도 안 된다(사용자 10/15)
-        public void Freeze(int index, float seconds)
-        {
-            if (HasBuilding(index))
-                _slots[index].Frozen = Mathf.Max(_slots[index].Frozen, seconds);
-        }
-
-        // 제물의 의식 신화 — 멈췄던 기물이 다시 움직이는 순간 즉시 1회 발동한다(전투 동안, 패시브가 전투 시작 때 켠다). 값 = 켠 기물의 칸(버프 선의 출발), -1 = 꺼짐
-        public int FireOnThawSlot = -1;
 
         public void NotifyUnitDied(Unit victim)
         {
@@ -280,19 +351,12 @@ namespace GnorpWar
             foreach (Slot slot in _slots)
                 slot.FiredThisFrame = false;
             // 맵의 쿨다운 진행 배율(얼음 ×0.5 · 정글 ×2)은 가속과 곱한다
-            float rate = Map != null ? Map.CooldownRate : 1f;
+            float rate = (Map != null ? Map.CooldownRate : 1f) / TimedCooldownFactor();
             for (int i = 0; i < _slots.Length; i++)
             {
                 Slot slot = _slots[i];
                 if (slot.Building == null)
                     continue;
-                if (slot.Frozen > 0f)
-                {
-                    slot.Frozen -= Time.deltaTime;
-                    if (slot.Frozen <= 0f && FireOnThawSlot >= 0 && FireNow(i) && FireOnThawSlot != i)
-                        BuffLinks.ToSlot(_team, FireOnThawSlot, i, BuffKind.Trigger);
-                    continue;
-                }
                 slot.Timer += Time.deltaTime * (slot.Haste > 0f ? HasteRate : 1f) * rate;
                 slot.Haste -= Time.deltaTime;
                 TryFire(i);
@@ -398,7 +462,7 @@ namespace GnorpWar
                 foreach (BuildingAction action in building.Actions)
                     summons &= !action.ReplacesSummon(this, index);
                 if (summons)
-                    Summon(definition.Unit, definition.SummonCount + ExtraSummons, index);
+                    Summon(definition.Unit, definition.SummonCount + ExtraSummons + _slots[index].ExtraSummons, index);
                 foreach (BuildingAction action in building.Actions)
                     action.Execute(this, index, level);
                 foreach (UnitEffect effect in building.Effects)
@@ -528,7 +592,7 @@ namespace GnorpWar
         // 즉시 1회 발동 — 게이지는 그대로(징집 포고문). 쿨다운 없는 기물은 발동하지 않는다(false)
         public bool FireNow(int index)
         {
-            if (!HasBuilding(index) || _slots[index].Cooldown <= 0f || _slots[index].Frozen > 0f)
+            if (!HasBuilding(index) || _slots[index].Cooldown <= 0f)
                 return false;
             Fire(index);
             return true;
@@ -551,6 +615,13 @@ namespace GnorpWar
         {
             if (HasBuilding(index))
                 _slots[index].Cooldown *= factor;
+        }
+
+        // 쿨다운에 초를 더한다(제물의 의식 +5초) — 쿨다운 없는 기물은 그대로(더하면 발동하기 시작한다)
+        public void AddCooldown(int index, float seconds)
+        {
+            if (HasBuilding(index) && _slots[index].Cooldown > 0f)
+                _slots[index].Cooldown += seconds;
         }
 
         // 쿨다운이 있는 기물 중 무작위 하나를 가속(수도원 — 사용자 결정: 쿨다운 없는 기물은 고르지 않는다). 고른 칸을 돌려준다(없으면 -1)

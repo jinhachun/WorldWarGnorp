@@ -330,6 +330,29 @@ namespace GnorpWar
             }
         }
 
+        // 전장에서 가장 가까운 적 유닛 하나에게 화살 arrows발(망루 — 사거리와 상관없이). 쏠 수 없거나(죽음 · 데스매치) 적 유닛이 없으면 false.
+        // 대상만 이 자리에서 정하고 쏘는 길은 Shoot 그대로 — 평소 사격의 쿨다운은 건드리지 않는다
+        public bool ShootNearestUnit(int arrows)
+        {
+            if (!IsAlive || !CanAttack || arrows <= 0)
+                return false;
+            Vector2 center = transform.position;
+            Unit nearest = null;
+            float best = float.MaxValue;
+            foreach (Unit unit in FindObjectsByType<Unit>())
+                if (unit.IsAlive && unit.Team != _team && (unit.Position - center).sqrMagnitude < best)
+                {
+                    nearest = unit;
+                    best = (unit.Position - center).sqrMagnitude;
+                }
+            if (nearest == null)
+                return false;
+            _targets.Clear();
+            _targets.Add((best, nearest.Position, true));
+            Shoot(arrows);
+            return true;
+        }
+
         // 여러 발의 2번째 발부터 — 짧은 시차로 연달아(Units/Volley)
         private readonly Volley _volley = new Volley();
 

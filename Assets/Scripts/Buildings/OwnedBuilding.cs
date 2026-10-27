@@ -104,6 +104,8 @@ namespace GnorpWar
                     return killCount.RemainingOf(team);
                 else if (passive is TowerKillBuyPassive towerKill)
                     return towerKill.RemainingOf(team);
+                else if (passive is KillCountGoldPassive killGold)
+                    return killGold.RemainingOf(team, Level);
                 else if (passive is MammothRitualPassive ritual)
                     return ritual.RemainingOf(this);   // 런 내내 센다(이 한 채의 스택) — 채우면 0
             foreach (UnitEffect effect in Effects)
@@ -111,6 +113,8 @@ namespace GnorpWar
                     return ascension.RemainingOf(team);
                 else if (effect is DeathCountSummonEffect deathCount)
                     return deathCount.RemainingOf(team);
+                else if (effect is SummonCountRallyEffect rally)
+                    return rally.RemainingOf(team);
             return 0;
         }
 

@@ -34,6 +34,10 @@ MonoBehaviour:
     Weight: 3
   - Building: {fileID: 11400000, guid: cf8ee0368b3e93b4ba2d3d69c609c9c0, type: 2}
     Weight: 4
+  - Building: {fileID: 11400000, guid: 67aefee4eb89a974aace39dc3eab3991, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: 10e356aec0db7204588a12d43676a7ac, type: 2}
+    Weight: 3
   _producerValue: 1
   _producerShare: 0.5
   _commonValue: 0.5

@@ -295,6 +295,9 @@ namespace GnorpWar
             }
             else if (attacker is Base tower)
                 tower.NotifyKill(this);
+            // 사격 통제소 신화 — 이 유닛의 처치를 내 본진의 처치로도 친다(타워들의 「처치할 때마다」 효과)
+            if (attacker is Unit shooter && TowerBook.KillCountsAsTower(shooter._team, shooter._definition) && Base.For(shooter._team) is Base home && home.IsAlive)
+                home.NotifyKill(this);
             List<TeamEffects.Entry> own = TeamEffects.For(_team);
             for (int i = 0, n = own.Count; i < n; i++)
                 if (own[i].Effect.AppliesFor(_team, _definition))
@@ -316,6 +319,32 @@ namespace GnorpWar
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                     e.Effect.OnRevived(this);
+        }
+
+        // 그 자리에서 다른 유닛으로 바뀐다(승급 — Promotion) — 소환이 아니다(추가 소환 · 변환 · 「소환할 때마다」를 지나지 않는다).
+        // 이어 가는 것: 남은 체력 비율 · 남은 무적(지속시간 보정을 다시 붙이지 않는다) · 연계 출생 표시(ChainBorn — 연계로 태어난 유닛이 바뀌어도 연계는 한 번만).
+        // 사라지는 것: 이 유닛이 이 전투 동안 따로 받은 강화(_ownModifiers · 행진가 · 크기). 진영 단위 강화는 새 유닛도 받는다. 전 유닛은 소모된다(죽음이 아니다)
+        public static Unit Replace(Unit old, UnitDefinition into)
+        {
+            float ratio = old._hp / old.MaxHp;
+            float invulnerable = old._invulnerableTimer;
+            bool chained = old.ChainBorn;
+            Vector2 at = old.Position;
+            Team team = old._team;
+            old.Consume();
+            Unit next = Spawn(into.PrefabFor(team), new Vector2(at.x, Ground.Instance.HeightAt(at.x)));
+            next.SetHpRatio(ratio);
+            next.ChainBorn = chained;
+            if (invulnerable > 0f)
+            {
+                next._invulnerableTimer = invulnerable;
+                next._ownModifiersChanged = true;
+                if (next._invulnerableRing == null)
+                    next._invulnerableRing = next.MakeHalo("InvulnerableRing", RingSprite(), InvulnerableRingColor, next._weaponSortingOrder + 1);
+            }
+            // 바뀐 순간 — 발밑 기둥(새 연출은 수수하게, 있는 부품으로)
+            PillarFx.Rise(new Vector2(next.Position.x, next.Feet), next.Top - next.Feet);
+            return next;
         }
 
         // 소모 — 죽음이 아니다(사망 효과 없음). 연기만 남기고 사라진다(조립 라인)
@@ -743,8 +772,8 @@ namespace GnorpWar
         public static float NextCooldown(float current, float interval) => interval + Mathf.Max(current, -Time.fixedDeltaTime);
         // 공격속도 +10% = 간격이 1.1로 나뉜다
         public float AttackInterval => _definition.AttackInterval / Stat(UnitStat.AttackSpeed);
-        // 타워 효과를 함께 받는 유닛이면 타워의 사거리 변경이 얹힌다(화살 강화기 신화)
-        private float AttackRange => TowerBook.SharedCompute(_team, _definition, TowerStat.Range, _definition.AttackRange);
+        // 타워 효과를 함께 받는 유닛이면 타워의 사거리 변경이 얹힌다(화살 강화기 신화) · 유닛 사거리 변경(감시 망원경)도 같은 합에 더한다
+        private float AttackRange => TowerBook.UnitRange(_team, _definition, _definition.AttackRange);
         // 전투 공격력 가속
         public float DamageScale => BattleManager.DamageMultiplier * _attackScale;
         // 지금 하는 공격 한 번에만 곱하는 배율(돌격 나팔의 첫 공격) — 공격이 끝나면 1
@@ -1456,10 +1485,13 @@ namespace GnorpWar
             _squashTime = 0f;
             _flashTimer = FlashDuration;
 
-            // 피격 효과(돌격 반사 등) — 하나라도 true면 이번 피격에 밀리지 않는다
+            // 피격 효과(돌격 반사 등) — 하나라도 true면 이번 피격에 밀리지 않는다. 앞 효과가 true여도 뒤 효과(결사대의 무적 등)는 돈다
+            bool held = false;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
-                if (e.Effect.AppliesFor(_team, _definition) && e.Effect.OnHit(this, attacker, hitDirection, push, e.Stacks))
-                    return;
+                if (e.Effect.AppliesFor(_team, _definition))
+                    held |= e.Effect.OnHit(this, attacker, hitDirection, push, e.Stacks);
+            if (held)
+                return;
 
             // 냥코식 큰 넉백 — 생명당 한 번, 맞은 방향과 상관없이 후방으로 튕겨 오른다
             if (!_bigKnockbackUsed && _hp <= MaxHp * _definition.BigKnockbackAt)
@@ -1890,16 +1922,22 @@ namespace GnorpWar
         {
             bool pierce = false;
             float pierceBonus = 0f;
+            float farBonus = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
                 if (e.Effect.AppliesFor(_team, _definition))
                 {
                     pierce |= e.Effect.ProjectilesPierce;
                     pierceBonus += e.Effect.PierceHitDamageBonus;
+                    farBonus += e.Effect.FarShotDamageBonus;
                 }
             // 타워 효과를 함께 받는 유닛이면 타워의 화살 수 변경이 얹힌다(화살 강화기 신화)
             int count = Mathf.Max(1, Mathf.RoundToInt(TowerBook.SharedCompute(_team, _definition, TowerStat.ArrowCount, 1f)));
             float highGround = HighGroundScale(target);
             float damage = AttackDamage * DamageScale * highGround;
+            // 사거리 끝 절반의 적(감시 망원경 신화) — 쏘는 자리에서 사거리 절반보다 먼 조준점
+            float halfRange = AttackRange * 0.5f;
+            if (farBonus > 0f && (targetPoint - _rb.position).sqrMagnitude > halfRange * halfRange)
+                damage *= 1f + farBonus;
             bool above = IsAbove(target);
             for (int i = 0; i < count; i++)
                 _volley.Fire(new Volley.Shot

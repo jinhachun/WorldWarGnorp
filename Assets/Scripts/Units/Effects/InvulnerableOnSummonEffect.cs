@@ -10,9 +10,13 @@ namespace GnorpWar
     {
         [SuffixLabel("초", true)]
         [SerializeField] private float _seconds = 10f;
+        [Tooltip("켜면 이 효과를 켠 기물이 소환한 유닛에게만(기사 견습소 신화 — 「이 기물이 소환한 기사」)")]
+        [SerializeField] private bool _onlyFromSource;
 
         public override void OnSummoned(Unit unit, int sourceSlot, int stacks)
         {
+            if (_onlyFromSource && unit.SummonedBy != Source(unit.Team))
+                return;
             unit.GrantInvulnerable(_seconds);
             BuffLinks.EffectToPoint(unit.Team, this, unit.Position, BuffKind.Invulnerable);
         }

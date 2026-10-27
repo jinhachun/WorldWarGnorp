@@ -57,6 +57,9 @@ namespace GnorpWar
         public virtual UnitDefinition ConvertSummon(UnitDefinition unit, int sourceSlot, int stacks) => unit;
         // 이 효과가 바꿔서 소환한 유닛이 나온 직후(한 마리마다, 소환 이벤트 앞)
         public virtual void OnConverted(Unit unit) { }
+        // 소환 처리 ②의 맨 끝 — 다른 변환이 다 끝난 뒤에 바꿀 유닛(총동원 개조령). 적용 분류와 상관없이 불린다(대상은 효과가 가린다).
+        // count를 늘릴 수 있다(신화 — 중보병 대신 5기) — 는 몫은 BoardRunner가 안전 상한에 다시 묻는다
+        public virtual UnitDefinition ReplaceSummonLast(Team team, UnitDefinition unit, int sourceSlot, ref int count) => unit;
 
         // 매 물리 스텝 — 경직 중이 아닐 때
         public virtual void Tick(Unit unit, int stacks) { }
@@ -89,6 +92,8 @@ namespace GnorpWar
         public virtual bool TowerArrowsPierce => false;
         // 관통한 화살이 적을 맞힐 때마다 그 화살의 피해에 더하는 몫(관통탄 특허국 신화 1 = +100%, 합연산 — 효과끼리도 더한다) — 유닛의 화살은 적용 분류로 거르고, 타워의 화살은 거르지 않고 읽는다
         public virtual float PierceHitDamageBonus => 0f;
+        // 사거리의 먼 절반(쏘는 자리에서 사거리 절반보다 먼 적)에 쏜 화살의 피해에 더하는 몫(감시 망원경 신화 0.5 = +50%, 합연산) — 유닛의 화살은 적용 분류로 거르고, 타워의 화살은 거르지 않고 읽는다
+        public virtual float FarShotDamageBonus => 0f;
         // 적용 대상 유닛이 공격 한 번에 더 쏘는 투사체 수(궁술수련관 신화) — 짧은 간격으로 잇달아 나가고 발마다 다른 적을 노린다(Unit.Burst). 아래는 그 발 사이 간격(초)
         public virtual int ExtraProjectiles => 0;
         public virtual float ExtraProjectileInterval => 0f;
@@ -130,6 +135,8 @@ namespace GnorpWar
         public virtual void OnEnabled(Team team) { }
         // 이 유닛의 무적이 저절로 끝난 직후(신앙의 갑주) — 이어서 또 걸려 길어졌으면 끝날 때 한 번
         public virtual void OnInvulnerableEnded(Unit unit) { }
+        // 적용 대상 유닛이 승급한 직후(Promotion.Promote — 대상은 바뀌기 전 유닛의 정의로 가린다) · promoted = 바뀐 뒤 유닛
+        public virtual void OnPromoted(Unit promoted, int stacks) { }
 
         // ── 아래는 적용 분류와 상관없이 그 진영에 켜진 효과 전부에 불린다(대상을 효과가 가린다)
         // 이 진영의 유닛 victim이 받는 피해에 곱하는 값(방패 대열 · 뼈 갑옷) — 1 = 그대로. 효과끼리 곱한다

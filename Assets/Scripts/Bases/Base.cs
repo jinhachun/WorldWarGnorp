@@ -305,20 +305,25 @@ namespace GnorpWar
             float highGround = 1f;
             bool pierce = false;
             float pierceBonus = 0f;
+            float farBonus = 0f;
             foreach (TeamEffects.Entry e in TeamEffects.For(_team))
             {
                 highGround += e.Effect.HighGroundDamageBonus(e.Level);
                 pierce |= e.Effect.TowerArrowsPierce;
                 pierceBonus += e.Effect.PierceHitDamageBonus;
+                farBonus += e.Effect.FarShotDamageBonus;
             }
+            // 사거리 끝 절반의 적(감시 망원경 신화) — 본진 중심에서 사거리 절반보다 먼 대상
+            float halfRange = Stat(TowerStat.Range) * 0.5f;
             for (int i = 0; i < arrows; i++)
             {
                 var target = _targets[i % _targets.Count];
+                bool far = farBonus > 0f && (target.point - (Vector2)transform.position).sqrMagnitude > halfRange * halfRange;
                 _volley.Fire(new Volley.Shot
                 {
                     Prefab = _definition.Projectile,
                     Target = target.point,
-                    Damage = damage * (target.isUnit ? highGround : 1f),
+                    Damage = damage * (target.isUnit ? highGround : 1f) * (far ? 1f + farBonus : 1f),
                     Push = _definition.PushPower,
                     Arc = _definition.ProjectileArcHeight,
                     Pierce = pierce,

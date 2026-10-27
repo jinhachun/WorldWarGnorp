@@ -27,7 +27,7 @@ namespace GnorpWar
         // 기획서 §6 표기 그대로 — "공격력 +5" · "공격력 +5%" · "공격력 ×1.1"
         public string Describe() => $"{Name} {ValueText}";
         public string Name => Names[(int)Stat];
-        public string ValueText => Op == StatOp.Flat ? $"+{Value:0.##}" : Op == StatOp.Percent ? $"+{Value * 100f:0.##}%" : $"×{Value:0.##}";
+        public string ValueText => Op == StatOp.Flat ? $"{Value:+0.##;-0.##}" : Op == StatOp.Percent ? $"{Value * 100f:+0.##;-0.##}%" : $"×{Value:0.##}";   // 줄어든 값은 「-50%」(반군 막사의 이동속도)
 
         // 등급 값 — Value에 등급마다 perTier를 더한 사본
         public StatModifier Scaled(float perTier, int level) => new StatModifier(Stat, Op, OwnedBuilding.Scaled(Value, perTier, level));
@@ -81,7 +81,7 @@ namespace GnorpWar
         private static void Add(List<TowerModifier> list, TowerModifier modifier)
         {
             Version++;
-            if (Shared[0] != null || Shared[1] != null)
+            if (Shared[0] != null || Shared[1] != null || ScaledShares[0].Count > 0 || ScaledShares[1].Count > 0)
                 StatBook.MarkChanged();   // 타워 효과를 함께 받는 유닛이 다시 계산하게
             for (int i = 0; i < list.Count; i++)
             {
@@ -106,24 +106,95 @@ namespace GnorpWar
             StatBook.MarkChanged();
         }
 
-        private static bool SharedWith(Team team, UnitDefinition unit) => Shared[(int)team] != null && Shared[(int)team].AppliesFor(team, unit);
+        // 타워 스탯 변경을 비율만큼 함께 받는 유닛들(사격 통제소: 내 궁병 60 · 80 · 100%) — 전투 동안. 기물 한 채마다 한 줄, 같은 유닛에 여러 줄(화살 강화기 신화의 100% 포함)이면 비율을 더한다
+        private static readonly List<(IUnitFilter units, float ratio)>[] ScaledShares = { new List<(IUnitFilter, float)>(), new List<(IUnitFilter, float)>() };
+
+        public static void ShareWithUnits(Team team, IUnitFilter units, float ratio)
+        {
+            ScaledShares[(int)team].Add((units, ratio));
+            StatBook.MarkChanged();
+        }
+
+        // unit이 타워 스탯 변경을 받는 비율(0 = 안 받는다)
+        private static float ShareOf(Team team, UnitDefinition unit)
+        {
+            float ratio = Shared[(int)team] != null && Shared[(int)team].AppliesFor(team, unit) ? 1f : 0f;
+            foreach ((IUnitFilter units, float r) in ScaledShares[(int)team])
+                if (units.AppliesFor(team, unit))
+                    ratio += r;
+            return ratio;
+        }
+
+        // 변경 하나를 ratio만큼 — 고정 · 합연산은 값 × 비율, 곱연산은 늘어난 몫(×1.1의 0.1) × 비율
+        private static void AddScaled(ref StatSum sum, TowerModifier m, float ratio)
+            => sum.Add(m.Op, m.Op == StatOp.Multiply ? 1f + (m.Value - 1f) * ratio : m.Value * ratio);
+
+        private static void AccumulateTower(Team team, TowerStat stat, float ratio, ref StatSum sum)
+        {
+            foreach (TowerModifier m in Battle[(int)team])
+                if (m.Stat == stat)
+                    AddScaled(ref sum, m, ratio);
+            foreach (TowerModifier m in Run[(int)team])
+                if (m.Stat == stat)
+                    AddScaled(ref sum, m, ratio);
+        }
 
         public static void AccumulateShared(Team team, UnitDefinition unit, UnitStat stat, ref StatSum sum)
         {
-            if (stat == UnitStat.MoveSpeed || !SharedWith(team, unit))
+            if (stat == UnitStat.MoveSpeed)
+                return;
+            float ratio = ShareOf(team, unit);
+            if (ratio <= 0f)
                 return;
             TowerStat tower = stat == UnitStat.Attack ? TowerStat.Attack : stat == UnitStat.MaxHp ? TowerStat.MaxHp : TowerStat.AttackSpeed;
-            foreach (TowerModifier m in Battle[(int)team])
-                if (m.Stat == tower)
-                    sum.Add(m.Op, m.Value);
-            foreach (TowerModifier m in Run[(int)team])
-                if (m.Stat == tower)
-                    sum.Add(m.Op, m.Value);
+            AccumulateTower(team, tower, ratio, ref sum);
         }
 
-        // 유닛 스탯이 아닌 것(사거리 · 한 번에 쏘는 수) — 함께 받는 유닛이면 타워와 같은 계산을 그 유닛의 값에, 아니면 그대로
+        // 유닛의 사거리를 바꾸는 것(감시 망원경: 내 궁병 +10%) — 전투 동안, 합연산. 타워 몫을 함께 받는 유닛이면 그 몫과 한 합에 더한다(UnitRange)
+        private static readonly List<(IUnitFilter units, float percent)>[] UnitRanges = { new List<(IUnitFilter, float)>(), new List<(IUnitFilter, float)>() };
+
+        public static void AddUnitRange(Team team, IUnitFilter units, float percent)
+        {
+            UnitRanges[(int)team].Add((units, percent));
+            Version++;
+        }
+
+        // 유닛의 지금 사거리 — 타워 사거리 몫(받는 비율만큼) + 유닛 사거리 변경
+        public static float UnitRange(Team team, UnitDefinition unit, float baseValue)
+        {
+            StatSum sum = StatSum.Identity;
+            float ratio = ShareOf(team, unit);
+            if (ratio > 0f)
+                AccumulateTower(team, TowerStat.Range, ratio, ref sum);
+            foreach ((IUnitFilter units, float percent) in UnitRanges[(int)team])
+                if (units.AppliesFor(team, unit))
+                    sum.Add(StatOp.Percent, percent);
+            return sum.Apply(baseValue);
+        }
+
+        // 유닛 스탯이 아닌 것(사거리 · 한 번에 쏘는 수) — 함께 받는 유닛이면 타워와 같은 계산(받는 비율만큼)을 그 유닛의 값에, 아니면 그대로
         public static float SharedCompute(Team team, UnitDefinition unit, TowerStat stat, float baseValue)
-            => SharedWith(team, unit) ? Compute(team, stat, baseValue) : baseValue;
+        {
+            float ratio = ShareOf(team, unit);
+            if (ratio <= 0f)
+                return baseValue;
+            StatSum sum = StatSum.Identity;
+            AccumulateTower(team, stat, ratio, ref sum);
+            return sum.Apply(baseValue);
+        }
+
+        // 내 유닛의 처치가 타워의 처치로도 치는 유닛들(사격 통제소 신화: 내 궁병) — 전투 동안. 처치 훅(Unit.Perish)이 본진의 처치 알림(Base.NotifyKill)을 한 번 더 부른다
+        private static readonly List<IUnitFilter>[] KillsAsTower = { new List<IUnitFilter>(), new List<IUnitFilter>() };
+
+        public static void CountKillsAsTower(Team team, IUnitFilter units) => KillsAsTower[(int)team].Add(units);
+
+        public static bool KillCountsAsTower(Team team, UnitDefinition unit)
+        {
+            foreach (IUnitFilter units in KillsAsTower[(int)team])
+                if (units.AppliesFor(team, unit))
+                    return true;
+            return false;
+        }
 
         // 데스매치에서도 타워가 공격하는 진영(오버드라이브) — 전투 동안
         private static readonly bool[] Deathmatch = new bool[2];
@@ -175,6 +246,12 @@ namespace GnorpWar
             ArrowsOnKill[0] = ArrowsOnKill[1] = 0;
             Reflect[0] = Reflect[1] = false;
             Shared[0] = Shared[1] = null;
+            ScaledShares[0].Clear();
+            ScaledShares[1].Clear();
+            UnitRanges[0].Clear();
+            UnitRanges[1].Clear();
+            KillsAsTower[0].Clear();
+            KillsAsTower[1].Clear();
             Follows[0] = Follows[1] = default;
             Version++;
         }

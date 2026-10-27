@@ -37,6 +37,8 @@ namespace GnorpWar
         public virtual void OnReroll(OwnedBuilding self) { }
         // 「판매 시,」 — 이 기물을 판 직후(칸은 이미 비었다). floor = 판 층(필드 — 위층이 이미 내려와 그 층에 바로 위 기물이 있다), 보관함에서 팔았으면 -1
         public virtual void OnSell(OwnedBuilding self, int floor) { }
+        // 판매가에 더하는 골드(동전 주조기 — 이 한 채에 쌓인 몫). RunState.SellValue가 더한다
+        public virtual int SellBonus(OwnedBuilding self) => 0;
         // 턴이 열릴 때(수입을 받는 때) — 내 턴(RunState.BeginTurn)도 AI 영주의 턴 상점(RunState.ShopAs)도. 필드의 기물만(전쟁 금고)
         public virtual void OnTurnStart(OwnedBuilding self) { }
         public virtual void OnGoldGained(OwnedBuilding self) { }

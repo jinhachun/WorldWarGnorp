@@ -190,7 +190,7 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private int _corpseMax = 128;
 
-        [Header("단두대 혁명 도끼 — 본진이 던지는 큰 도끼가 돌며 포물선으로 날아가 닿는 순간 즉사 판정(사용자 10/14)")]
+        [Header("처형인의 도끼(지역 특수) — 본진이 던지는 큰 도끼가 돌며 포물선으로 날아가 닿는 순간 즉사 판정(사용자 10/14)")]
         [Tooltip("도끼 그림(Sprites/Fx/FX_Axe.png — 같은 이름으로 덮어쓰면 바로 반영)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _axeSprite;

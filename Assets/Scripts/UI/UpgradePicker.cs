@@ -47,7 +47,7 @@ namespace GnorpWar
         private const float ClickGuard = 0.2f;
         // 카드 외곽선의 두께(px) — 이만큼 겹쳐 놓는다
         private const float Outline = 4f;
-        private const string RepublicHeader = "공화정 — 모두 얻었습니다";
+        private const string RepublicHeader = "원탁 회의 — 모두 얻었습니다";
         // 국가 위기(RunState.UpgradeOffer.Crisis, 사용자 10/23) — 머리말(도트) 아래 읽는 글 한 줄(깔끔 — 카드 효과 글의 복제). 머리말은 그 한 줄만큼 위로 올린다
         private const string CrisisHeader = "국가 위기";
         private const string CrisisBody = "백성들이 새로운 국가 구조를 요구합니다. 하나를 고르십시오.";

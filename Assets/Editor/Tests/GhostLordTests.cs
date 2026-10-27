@@ -54,7 +54,7 @@ namespace GnorpWar.Editor.Tests
                 TowerState tower = run.TowerOf(ghostLord);
                 Assert.AreSame(Pool(shown), tower.Field[0].Definition, $"내 턴 {turn} = 기록의 턴 {shown}");
                 Assert.AreEqual(shown, run.GhostOf(ghostLord).Turn);
-                Assert.AreEqual(6 - shown, run.GhostOf(ghostLord).Lives, "국가주의가 읽는 목숨 = 스냅샷 목숨");
+                Assert.AreEqual(6 - shown, run.GhostOf(ghostLord).Lives, "충성 서약이 읽는 목숨 = 스냅샷 목숨");
                 Assert.AreEqual(0, tower.Gold, "유령은 상점을 돌지 않는다(골드를 받지 않는다)");
                 Assert.AreEqual(Team.Enemy, tower.Team);
             }

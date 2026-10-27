@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Special_Communism
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "\uACF5\uC0B0\uC8FC\uC758"
+  _displayName: "\uACF5\uC815 \uC2DC\uC7A5"
   _icon: {fileID: 21300000, guid: 0c6a48e9812d47d086e4d6442b2c042c, type: 3}
   _description: "\uC0C1\uC810\uC758 \uBAA8\uB4E0 \uAE30\uBB3C\uACFC \uB9AC\uB864\uC774
     {0}\uACE8\uB4DC\uC785\uB2C8\uB2E4."

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c51fd0c2d21235c4e8cb45e2457f5d2e, type: 3}
   m_Name: Special_IndustrialRevolution
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
-  _displayName: "\uC0B0\uC5C5\uD601\uBA85"
+  _displayName: "\uD480\uBB34\uC9C8"
   _icon: {fileID: 21300000, guid: 0456692b3a234aa6abaf1411ddc12c47, type: 3}
   _description: "\uC804\uD22C \uC2DC\uC791 \uC2DC, \uB0B4 \uBAA8\uB4E0 \uAE30\uBB3C\uC744
     {0}\uCD08\uAC04 \uAC00\uC18D\uD569\uB2C8\uB2E4."

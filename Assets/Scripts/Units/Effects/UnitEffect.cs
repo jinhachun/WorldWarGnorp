@@ -33,6 +33,8 @@ namespace GnorpWar
         public virtual object[] UpgradeNumbers() => new object[0];
         // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null
         public virtual string Headline(int level) => null;
+        // 툴팁 대상 표시(BuildingTargets) — 이 효과를 켠 field의 slot층 기물이 other층 기물에 효과를 주나. 기물에 거는 효과(수도원의 가속)만 덮어쓴다
+        public virtual bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => false;
         // 이 효과를 켠 기물의 등급(같은 효과를 여러 기물이 켜면 가장 높은 것) — 훅 안에서 수치를 읽을 때
         protected int Level(Team team) => TeamEffects.LevelOf(team, this);
         // 이 효과를 켠 기물 — 이 효과가 유닛을 소환할 때 출처로 넘기고(BoardRunner.Summon), 「이 기물이 소환한 ~」을 가릴 때 Unit.SummonedBy와 견준다

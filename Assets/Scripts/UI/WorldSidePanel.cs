@@ -87,6 +87,8 @@ namespace GnorpWar
         }
 
         private SlotView[] _slots;
+        // 탑 기둥의 대상 표시 층(ShowTower가 매번 다시 채운다)
+        private readonly System.Collections.Generic.List<int> _targets = new System.Collections.Generic.List<int>();
         private Vector2 _origin;
         private RectTransform _portrait;
         private Lord _portrayed;
@@ -548,6 +550,16 @@ namespace GnorpWar
                 _slots[i].Bind(null, enemy ? BoardView.Source.EnemyField : BoardView.Source.AllyField, i);
                 _slots[i].Show(field[i], null, false, false);
             }
+            // 대상 표시(사용자 10/27) — 층에 마우스를 올려 툴팁이 떴으면 그 기물의 효과를 받는 층에 꺾쇠(BoardView와 같은 길)
+            int hovered = -1;
+            for (int i = 0; i < floors; i++)
+                if (_slots[i].TooltipShown)
+                    hovered = i;
+            _targets.Clear();
+            if (hovered >= 0)
+                BuildingTargets.Of(field, hovered, BuildingTargets.Federated(field[hovered]), _targets);
+            for (int i = 0; i < _slots.Length; i++)
+                _slots[i].ShowTarget(_targets.Contains(i));
             if (_roof.gameObject.activeSelf != floors > 0)
                 _roof.gameObject.SetActive(floors > 0);
             float slotHalf = ((RectTransform)_slotTemplate.transform).rect.height * 0.5f;

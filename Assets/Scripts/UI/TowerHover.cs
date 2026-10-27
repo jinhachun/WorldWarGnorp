@@ -24,7 +24,21 @@ namespace GnorpWar
             }
             Cover(floor.GetComponent<Collider2D>().bounds);
             BuildingTooltip.ShowOwned(this, running.Building, running, floor.Team == Team.Enemy);
+            // 대상 표시(사용자 10/27) — 이 층 기물의 효과를 받는 층에 꺾쇠(BuildingTargets · Fx/TargetMarkFx). 안 부른 프레임엔 사라진다
+            if (BuildingTooltip.IsOwner(this))
+            {
+                BoardRunner board = BoardRunner.For(floor.Team);
+                if (_field == null || _field.Length != board.Slots.Length)
+                    _field = new OwnedBuilding[board.Slots.Length];
+                for (int i = 0; i < _field.Length; i++)
+                    _field[i] = board.Slots[i].Building;
+                BuildingTargets.Of(_field, floor.Index, board.AllAdjacent, _targets);
+                TargetMarkFx.Show(floor.Team, _targets);
+            }
         }
+
+        private OwnedBuilding[] _field;
+        private readonly List<int> _targets = new List<int>();
 
         private bool Find(out TowerFloor floor, out BoardRunner.Slot running)
         {

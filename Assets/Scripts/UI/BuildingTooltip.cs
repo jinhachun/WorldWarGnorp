@@ -164,7 +164,7 @@ namespace GnorpWar
             if (!string.IsNullOrEmpty(building.Description))
                 lines.Add(every + building.Description);
             foreach (BuildingPassive passive in building.Passives)
-                lines.Add(passive.Describe(level));
+                lines.Add(passive.Describe(level, mythic));
             foreach (UnitEffect effect in building.Effects)
                 if (!string.IsNullOrEmpty(effect.Description))
                     lines.Add(effect.Describe(level));
@@ -173,7 +173,7 @@ namespace GnorpWar
             foreach (BuildingAction action in building.MythicActions)
                 lines.Add(every + action.Describe(level));
             foreach (BuildingPassive passive in building.MythicPassives)
-                lines.Add(passive.Describe(level));
+                lines.Add(passive.Describe(level, mythic));
             foreach (UnitEffect effect in building.MythicEffects)
                 if (!string.IsNullOrEmpty(effect.Description))
                     lines.Add(effect.Describe(level));
@@ -281,6 +281,8 @@ namespace GnorpWar
                 traits.Add("앞에 있는 적을 한꺼번에 칩니다.");
             if (unit.AttackType == AttackType.Build)
                 traits.Add("가까운 땅에 작은 타워를 설치합니다.");
+            if (unit.Flies)
+                traits.Add("하늘을 날아, 원거리 공격과 그 높이까지 올라선 적에게만 맞습니다.");
             if (unit.SlamInterval > 0f)
                 traits.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄웁니다."));
             // 타고난 특성(UnitDefinition.TraitLines) — 그 유닛이면 늘 가진 효과. 숫자는 에셋 값으로 채워져 온다
@@ -364,7 +366,8 @@ namespace GnorpWar
         {
             float cooldown = running != null ? running.Cooldown : building.Cooldown;
             // 징병제(지역 특수 업그레이드) — 쿨다운마다 유닛을 소환하는 기물의 소환 수에 더해 보인다(숫자는 지금 실제 값 하나)
-            int extra = building.Definition.Unit != null && building.Definition.Cooldown > 0f ? RunState.ExtraSummonsFor(building) : 0;
+            // 전투 중이면 제물의 의식이 이 칸에 준 몫(Slot.ExtraSummons)도 — 쿨다운처럼 전투 중에만 보인다
+            int extra = building.Definition.Unit != null && building.Definition.Cooldown > 0f ? RunState.ExtraSummonsFor(building) + (running?.ExtraSummons ?? 0) : 0;
             string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic, extra);
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             // 맘모스 소환의식 — 런 내내 센 죽음(스택)은 「작동까지 N기」로 상점·전투 모두(채우면 줄 없음). 이 기물엔 스택 줄을 따로 쓰지 않는다
@@ -376,8 +379,10 @@ namespace GnorpWar
                     if (mammoth.RemainingOf(building) > 0)
                         body += Note($"작동까지 {mammoth.RemainingOf(building)}기");
                 }
+            // 전쟁 금고 — 스택 = 지금까지 준 골드(판매 때 그만큼 더 받는다)
+            bool warChest = System.Array.Exists(building.Passives, passive => passive is WarChestPassive);
             if (!enemy && !BattleManager.Fighting && building.Stacks > 0 && !ritual)
-                body += Note($"스택 {building.Stacks}");
+                body += Note(warChest ? $"지금까지 준 골드 {building.Stacks}" : $"스택 {building.Stacks}");
             // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구) — 전투 중에만, 그 진영이 센 값으로 남은 수(사용자 10/14). 전투마다 0부터라 상점에서는 쓰지 않는다
             if (BattleManager.Fighting)
             {
@@ -387,9 +392,13 @@ namespace GnorpWar
                         body += Note($"다음 쿨다운 감소까지 {deathCount.RemainingOf(side)}기");
                     else if (passive is TowerKillBuyPassive towerKill)
                         body += Note($"다음 발동까지 {towerKill.RemainingOf(side)}기");
+                    else if (passive is KillCountGoldPassive killGold)
+                        body += Note($"다음 골드까지 {killGold.RemainingOf(side, building.Level)}기");
                 foreach (UnitEffect effect in building.Effects)
                     if (effect is AscensionEffect ascension)
                         body += Note($"다음 발동까지 {ascension.RemainingOf(side)}기");
+                    else if (effect is SummonCountRallyEffect rally)
+                        body += Note($"다음 발동까지 {rally.RemainingOf(side)}기");
                     else if (effect is DeathCountSummonEffect deathCount)
                         body += Note(deathCount.RemainingOf(side) > 0 ? $"발동까지 {deathCount.RemainingOf(side)}기" : "이번 전투 발동 끝");
             }
@@ -477,6 +486,8 @@ namespace GnorpWar
 
         // 설명 창이 떠 있나(탑 층 · 칸 · 맵 이름 …) — 유닛 호버 카드(UI/UnitHover)는 이게 떠 있으면 비켜난다
         public static bool IsOpen => _instance != null && _instance._owner != null;
+        // 이 owner가 띄운 설명 창이 떠 있나 — 대상 표시(BoardView · WorldSidePanel · TowerHover)가 읽는다
+        public static bool IsOwner(Component owner) => owner != null && _instance != null && _instance._owner == owner && _instance._panel.gameObject.activeSelf;
 
         public static void Hide(Component owner)
         {

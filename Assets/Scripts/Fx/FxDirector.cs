@@ -37,6 +37,7 @@ namespace GnorpWar
             gameObject.AddComponent<HitRingFx>().Init(pixel);
             // 전투 시각화 부품(Docs/전투시각화_계획.md) — 모두 같은 픽셀 재질 · 부품마다 메시 하나
             gameObject.AddComponent<ArrowTrails>().Init(pixel);
+            gameObject.AddComponent<FireTrails>().Init(pixel);
             gameObject.AddComponent<RingFx>().Init(pixel);
             gameObject.AddComponent<StatusDots>().Init(pixel);
             gameObject.AddComponent<PillarFx>().Init(pixel);
@@ -46,6 +47,7 @@ namespace GnorpWar
             gameObject.AddComponent<DustFx>().Init(pixel);
             gameObject.AddComponent<BaseCollapse>().Init();
             gameObject.AddComponent<HoverMark>().Init(pixel);
+            gameObject.AddComponent<TargetMarkFx>().Init(pixel);
             gameObject.AddComponent<BattleStartLines>();
             _corpses = gameObject.AddComponent<CorpseFx>();
             // BuffIcon 순서 — None · 공격력 · 체력 · 쿨다운 · 공격속도

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,6 +42,8 @@ namespace GnorpWar
             int capacity = _source == Source.Storage ? RunState.Storage.Length : Mathf.Max(RunState.MaxFloors, runner != null ? runner.Slots.Length : 0);
             _views = new SlotView[capacity];
             _haste = new float[capacity];
+            _raised = new bool[capacity];
+            _raisedFrom = new int[capacity];
             _origin = ((RectTransform)_template.transform).anchoredPosition;
             if (runner != null)
             {
@@ -79,7 +82,7 @@ namespace GnorpWar
                 _links = lines.AddComponent<UiBuffLinkLines>();
                 _links.raycastTarget = false;
 
-                // 맞음 표시 — 선이 닿은 칸의 섬광 · 링. 층들 위에 그린다(마지막 형제) · 좌표는 선과 같은 "1층 기준"
+                // 맞음 표시 — 선이 닿은 칸의 링. 층들 위에 그린다(마지막 형제) · 좌표는 선과 같은 "1층 기준"
                 var rings = new GameObject("HitRings", typeof(RectTransform));
                 var ringRect = (RectTransform)rings.transform;
                 ringRect.SetParent(slot.parent, false);
@@ -124,9 +127,8 @@ namespace GnorpWar
             Vector2 from = link.From < 0 && _marker != null && _marker.enabled ? edge + MarkerOffset(side) : edge + new Vector2(0f, (link.From >= 0 ? link.From : count + 0.5f) * _step);
             Vector2 to = edge + new Vector2(0f, link.To * _step);
             _links.Add(from, to, side, link.Kind, link.Weak, ((link.From + 1) * 4096 + link.To * 64 + (int)link.Kind) * 2 + (link.Weak ? 1 : 0));
-            // 닿는 순간 그 칸에 맞음 표시(섬광 → 선 색 링), 그 칸의 튐 · 받는 효과 표시는 닿고 2프레임에(사용자 10/26 A안)
-            if (_rings.Add(link.To, new Rect(slot.rect.position + new Vector2(0f, link.To * _step), slot.rect.size), BuffLinkFx.ColorOf(link.Kind), link.Weak))
-                _views[link.To].Hold(HitRingShape.EffectDelay);
+            // 닿는 순간 그 칸에 맞음 표시(선 색 링 — 사용자 10/26 · 10/27)
+            _rings.Add(new Rect(slot.rect.position + new Vector2(0f, link.To * _step), slot.rect.size), BuffLinkFx.ColorOf(link.Kind), link.Weak);
         }
 
         // ── 맵 효과의 출발점 그림(얼음 맵의 얼음 — 전장의 Fx/MapMarker와 같은 그림) — 전투 화면의 UI 탑 옆, 화면 안쪽에 살짝 떠 있다.
@@ -304,7 +306,7 @@ namespace GnorpWar
                     continue;
                 // 1층이 틀 칸 자리(바닥 고정) — 층이 늘면 위로 자란다. 아군·적 탑의 높이를 바닥부터 견줘 보게(사용자 10/8)
                 if (_stack)
-                    ((RectTransform)_views[i].transform).anchoredPosition = _origin + new Vector2(0f, i * _step + _views[i].JumpCells * UiHitRings.Pixel);   // 맞음 표시 때 위로 튐
+                    ((RectTransform)_views[i].transform).anchoredPosition = _origin + new Vector2(0f, i * _step);
 
                 BoardRunner.Slot running = _source != Source.Storage && BattleManager.Fighting ? Runner.Slots[i] : null;
                 // 가속받은 칸도 튄다 — 쿨다운 없는 칸은 가속이 아무 일도 안 하므로 빼고
@@ -316,6 +318,70 @@ namespace GnorpWar
             }
             if (_box != null && visible)
                 _box.Place(_views);
+            ShowTargets(count, visible);
+            RaiseBouncing();
+        }
+
+        // ── 대상 표시(사용자 10/27 「더 바자르처럼」) — 이 탑의 층에 마우스를 올려 툴팁이 떴으면 그 기물의 효과를 받는 층에 꺾쇠(BuildingTargets · UiTargetMark).
+        // 탑만 — 보관함 기물을 가리켰을 때는 표시하지 않는다. 툴팁이 닫히면(마우스를 떼면 · 끄는 중) 그 프레임에 사라진다
+        private readonly List<int> _targets = new List<int>();
+        private OwnedBuilding[] _targetField;
+
+        private void ShowTargets(int count, bool visible)
+        {
+            int hovered = -1;
+            for (int i = 0; _stack && visible && i < count; i++)
+                if (_views[i].gameObject.activeSelf && _views[i].TooltipShown)
+                    hovered = i;
+            _targets.Clear();
+            if (hovered >= 0)
+            {
+                if (_targetField == null || _targetField.Length != count)
+                    _targetField = new OwnedBuilding[count];
+                for (int i = 0; i < count; i++)
+                    _targetField[i] = BuildingAt(i);
+                // 전투 중엔 돌고 있는 보드의 연방제, 상점에선 그 기물에 걸린 업그레이드(툴팁의 업그레이드 줄과 같은 판정)
+                bool federated = BattleManager.Fighting ? Runner.AllAdjacent : BuildingTargets.Federated(_targetField[hovered]);
+                BuildingTargets.Of(_targetField, hovered, federated, _targets);
+            }
+            for (int i = 0; i < _views.Length; i++)
+                _views[i].ShowTarget(_targets.Contains(i));
+        }
+
+        // ── 튀는 칸을 맨 앞에(사용자 10/27) — 발동해 커졌다 작아지는(SlotView.Bounce) 동안 그 칸을 같은 부모의 맨 뒤 형제로 옮겨
+        // 이웃 칸 · 다른 층 · 지붕 · 버프 선 · 링 위에 그린다(툴팁 · 팝업은 다른 부모 쪽이라 그 위로는 안 간다). 튐이 끝나면 칸 번호 순서의 제자리로 돌아간다
+        private bool[] _raised;
+        private int[] _raisedFrom;
+
+        private void RaiseBouncing()
+        {
+            for (int i = 0; i < _views.Length; i++)
+            {
+                bool bouncing = _views[i].Bouncing && _views[i].gameObject.activeSelf;
+                if (bouncing == _raised[i])
+                    continue;
+                Transform t = _views[i].transform;
+                if (bouncing)
+                {
+                    _raisedFrom[i] = t.GetSiblingIndex();
+                    t.SetAsLastSibling();
+                }
+                else
+                    t.SetSiblingIndex(HomeIndex(i));
+                _raised[i] = bouncing;
+            }
+        }
+
+        // 제자리 = 튀지 않는 칸들 사이의 칸 번호 순서 — 다음 번호 칸 바로 앞, 없으면 앞 번호 칸 바로 뒤, 전부 튀는 중이면 옮기기 전 자리
+        private int HomeIndex(int index)
+        {
+            for (int j = index + 1; j < _views.Length; j++)
+                if (!_raised[j])
+                    return _views[j].transform.GetSiblingIndex();
+            for (int j = index - 1; j >= 0; j--)
+                if (!_raised[j])
+                    return _views[j].transform.GetSiblingIndex() + 1;
+            return _raisedFrom[index];
         }
     }
 }

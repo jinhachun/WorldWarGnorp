@@ -26,6 +26,9 @@ namespace GnorpWar
         }
 
         public override bool UsesAdjacency => true;
+        // 위에 있는 소환 기물 — 상대 자리 고르기(Reaches)는 §7 줄(군기)이 이미 같은 자리를 세므로 대상 표시만
+        public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated)
+            => BuildingTargets.Linked(slot, other, other > slot, federated) && field[other].Definition.Unit != null;
         public override string Describe(int level) => $"위에 있는 모든 기물이 유닛을 {_multiply}배로 소환합니다.";
     }
 }

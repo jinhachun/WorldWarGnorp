@@ -40,14 +40,10 @@ namespace GnorpWar
         private int _index;
         private bool _hovered;
         private float _bounce = BounceDuration;
-        // 버프 선이 닿아 맞음 표시가 효과를 보여 주는 때(실제 시간) — 그 전엔 받는 효과 표시를 그대로 두고, 그때 위로 튄다(Hold)
-        private float _holdUntil;
         // 데스매치 동안 오버드라이브 칸의 번개(Fx/OverdriveMark) — 가속 표시를 본떠 처음 뜰 때 만든다
         private GameObject _overdriveMark;
         // 맵이 작동을 끈 칸의 정지 표시(Fx/StoppedMark) — 같은 식으로 처음 뜰 때 만든다
         private GameObject _stoppedMark;
-        // 제물의 의식 등으로 잠깐 멈춘 칸(BoardRunner.Slot.Frozen) — 같은 정지 그림을 흰색으로, 남은 시간과 함께. 꺼진 칸(늪지)과 달리 기물은 회색이 되지 않는다
-        private GameObject _frozenMark;
 
         public Button Button => _button;
         public BoardView.Source Source => _source;
@@ -55,20 +51,10 @@ namespace GnorpWar
 
         private void Awake() => _frameColor = _frame.color;
 
-        // 버프 선이 닿기를 기다리는 동안 받은 튐(커짐)은 건너뛴다 — 닿는 순간의 위로 튐(JumpCells)이 대신한다
-        public void Bounce() => _bounce = Time.unscaledTime < _holdUntil ? BounceDuration : 0f;
+        public void Bounce() => _bounce = 0f;
 
-        // 탑 칸만 — 버프 선이 이 칸에 맞음 표시를 켰다(UI/UiHitRings). seconds 뒤(선이 닿고 2프레임)에 칸이 위로 튀고 받는 효과 표시가 바뀐다(효과는 이미 걸렸다).
-        // 이 프레임에 이미 시작한 튐(같은 발동이 선보다 먼저 알린다 — BoardRunner.FireOnce)도 그 튐으로 대신한다
-        public void Hold(float seconds)
-        {
-            _holdUntil = Time.unscaledTime + seconds;
-            if (_bounce == 0f)
-                _bounce = BounceDuration;
-        }
-
-        // 맞음 표시로 지금 위로 튄 칸 수(격자 칸) — 탑 칸 자리는 BoardView가 놓으므로 거기서 더한다
-        public int JumpCells => HitRingShape.JumpCells(Time.unscaledTime - _holdUntil);
+        // 커졌다 작아지는 중 — 그동안 BoardView가 이 칸을 같은 줄의 맨 앞에 그린다
+        public bool Bouncing => _bounce < BounceDuration;
 
         // 마우스를 올리지 않은 테두리는 한 단계 어둡게 — 올리면(끄는 중 놓을 자리 포함) 제 밝기로 강조된다
         private const float IdleDim = 0.65f;
@@ -121,15 +107,12 @@ namespace GnorpWar
             frame.a = dragged ? DraggedAlpha : _frameColor.a;
             _frame.color = frame;
 
-            // 버프 선이 닿기 전에는 받는 효과 표시를 바꾸지 않는다(지난 모습 그대로 — 맞는 순간 새 값)
-            if (_hasteMark != null && Time.unscaledTime >= _holdUntil)
+            if (_hasteMark != null)
             {
                 // 전장 탑 표시(TowerBadge.ShowSeconds)와 같은 숫자 — 0.1초 단위 반올림, 0이 되면 숨고, 10초부터는 내림 정수.
                 // 쿨다운 없는 칸은 값이 0 · 1로 온다(안 보인다)
                 int tenths = running != null ? Mathf.RoundToInt(running.HasteLeft * 10f) : 0;
-                // 멈춘 동안에는 가속 시간도 흐르지 않는다 — 그 자리에 멈춤 표시가 선다
-                float frozen = running != null ? running.Frozen : 0f;
-                _hasteMark.SetActive(tenths > 0 && frozen <= 0f);
+                _hasteMark.SetActive(tenths > 0);
                 if (tenths > 0)
                     _hasteText.text = Seconds(tenths);
                 float scale = running != null ? running.CooldownScale : 1f;
@@ -141,10 +124,6 @@ namespace GnorpWar
 
             ShowMark(ref _overdriveMark, "OverdriveMark", _overdriveIcon, OverdriveMark.Color, _hasteMark != null && OverdriveMark.On(building, _source == BoardView.Source.EnemyField ? Team.Enemy : Team.Ally));
             ShowMark(ref _stoppedMark, "StoppedMark", _stoppedIcon, StoppedMark.Color, _hasteMark != null && stopped);
-            int frozenTenths = running != null ? Mathf.CeilToInt(running.Frozen * 10f) : 0;
-            ShowMark(ref _frozenMark, "FrozenMark", _stoppedIcon, Color.white, _hasteMark != null && frozenTenths > 0, true);
-            if (frozenTenths > 0 && _frozenMark != null)
-                _frozenMark.GetComponentInChildren<Text>(true).text = Seconds(frozenTenths);
 
             if (!_hovered)
                 return;
@@ -157,8 +136,7 @@ namespace GnorpWar
         // 가속 표시 자리의 아이콘 하나(오버드라이브 번개 · 정지 표시) — 처음 뜰 때 가속 표시를 본떠 만든다
         private static string Seconds(int tenths) => tenths < 100 ? $"{tenths / 10}.{tenths % 10}초" : $"{tenths / 10}초";
 
-        // text = 숫자 글을 남긴다(멈춤의 남은 시간)
-        private void ShowMark(ref GameObject mark, string name, Sprite sprite, Color color, bool on, bool text = false)
+        private void ShowMark(ref GameObject mark, string name, Sprite sprite, Color color, bool on)
         {
             if (mark == null)
             {
@@ -170,11 +148,39 @@ namespace GnorpWar
                 Image icon = mark.GetComponentInChildren<Image>(true);
                 icon.sprite = sprite;
                 icon.color = color;
-                mark.GetComponentInChildren<Text>(true).gameObject.SetActive(text);
+                mark.GetComponentInChildren<Text>(true).gameObject.SetActive(false);
             }
             if (mark.activeSelf != on)
                 mark.SetActive(on);
         }
+
+        // 대상 표시(UI/UiTargetMark) — 툴팁을 띄운 다른 층 기물의 효과를 받는 층이면 켠다. 탑을 그리는 쪽(BoardView · WorldSidePanel)이 매 프레임 정한다
+        private UiTargetMark _targetMark;
+
+        public void ShowTarget(bool on)
+        {
+            if (_targetMark == null)
+            {
+                if (!on)
+                    return;
+                var mark = new GameObject("TargetMark", typeof(RectTransform));
+                var rect = (RectTransform)mark.transform;
+                rect.SetParent(transform, false);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.sizeDelta = Vector2.zero;
+                _targetMark = mark.AddComponent<UiTargetMark>();
+                _targetMark.raycastTarget = false;
+            }
+            // 칸 안 맨 위(아이콘 · 창틀 · 숫자 위)
+            if (on)
+                _targetMark.transform.SetAsLastSibling();
+            if (_targetMark.gameObject.activeSelf != on)
+                _targetMark.gameObject.SetActive(on);
+        }
+
+        // 지금 툴팁을 띄운 칸(마우스를 올린 칸) — 탑을 그리는 쪽이 대상 표시를 낼 때 읽는다
+        public bool TooltipShown => BuildingTooltip.IsOwner(this);
 
         public void OnPointerEnter(PointerEventData eventData) => _hovered = true;
 

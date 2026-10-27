@@ -22,6 +22,7 @@ namespace GnorpWar
                 }
         }
 
+        public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => HasBuyEffects(field[other].Definition);
         // 1회면 기획서 문구 그대로("발동시킵니다")
         public override string Describe(int level)
             => $"전투 시작 시, 내 모든 기물의 「구매할 때마다,」 효과를 {(_times > 1 ? $"{_times}회 " : "")}발동시킵니다.";

@@ -9,6 +9,8 @@ namespace GnorpWar
     {
         public override void OnBattleStart(BoardRunner board, int slot, int level) => board.DoubleFireWhileHasted(slot);
 
+        // 가속받을 수 있는 기물(쿨다운이 있는 기물) 전부 — 누가 가속하든
+        public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => BuildingTargets.Cooling(field, other);
         public override string Describe(int level) => "가속 중인 내 기물은 발동할 때 효과를 2번 냅니다.";
     }
 }

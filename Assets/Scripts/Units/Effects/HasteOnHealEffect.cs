@@ -23,6 +23,8 @@ namespace GnorpWar
                 BuffLinks.EffectToSlot(team, this, picked, BuffKind.Haste);
         }
 
+        // 무작위 — 후보(쿨다운이 있는 기물) 전부
+        public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => BuildingTargets.Cooling(field, other);
         public override string Describe(int level) => string.Format(Description, $"{Seconds(level):0.#}");
         public override string Headline(int level) => $"{Seconds(level):0.#}초";
     }

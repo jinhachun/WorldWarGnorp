@@ -16,6 +16,12 @@ namespace GnorpWar
         public virtual bool Reaches(int slot, int other, BuildingDefinition target) => false;
         // 자리 효과(바로 위 · 아래 · 위에 있는 · 아래에 있는 — BoardRunner.Linked)를 쓰는가 — 연방제가 걸리는 기물인지 가린다(UpgradeDefinition.Affects)
         public virtual bool UsesAdjacency => false;
+        // 툴팁 대상 표시(BuildingTargets) — field의 slot층 이 기물이 other층 기물에 효과를 주나. 기본은 자리 규칙(Reaches), 연방제면 자리를 안 본다(위 · 아래 어느 쪽이든 닿으면)
+        public virtual bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated)
+        {
+            BuildingDefinition target = field[other].Definition;
+            return Reaches(slot, other, target) || (federated && UsesAdjacency && (Reaches(slot, slot + 1, target) || Reaches(slot, slot - 1, target)));
+        }
         // 전투 동안 칸이 값을 쌓는가(허수아비 등) — 쌓으면 그 계산 방식. 쌓은 값은 Execute에서 board.AddBattleGain으로
         public virtual bool BattleGain(out StatOp op)
         {

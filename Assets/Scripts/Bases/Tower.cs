@@ -20,6 +20,7 @@ namespace GnorpWar
         private const float BounceScale = 1.2f;
         private const float BounceDuration = 0.2f;
         private const float FlashAlpha = 0.6f;
+        private const int BounceSortingOrder = 151;   // 버프 선(150) 위 · 회복(158) · 상태 점(160) · 숫자(200) 아래
         // 창 불빛 — 쿨다운 없는 기물·상점에서는 이 알파로 은은히
         private static readonly Color LightColor = new Color(1f, 0.7f, 0.2f);
         private const float DimLight = 0.4f;
@@ -73,15 +74,9 @@ namespace GnorpWar
             public TowerBadge Overdrive;
             // 맵이 작동을 끈 층의 빨간 정지 표시(Fx/StoppedMark) — 가속 표시와 같은 자리, 숫자 없이
             public TowerBadge Stopped;
-            // 잠깐 멈춘 층(제물의 의식 — BoardRunner.Slot.Frozen)의 흰 정지 표시 + 남은 초 — 같은 자리. 꺼진 층과 달리 회색이 되지 않는다(UI 탑 칸과 같은 방식)
-            public TowerBadge Frozen;
             // 수를 세어 발동하는 기물(라이칸스로프 · 승천의 전당 · 미궁의 입구)의 남은 수 — 뒤쪽 벽, 아이콘 없이 숫자만(사용자 10/15)
             public TowerBadge Count;
             public float Bounce = BounceDuration;
-            // 층 그림 전부(벽 · 창틀 · 창 · 아이콘 · 표시) — 맞음 표시 때 이것만 위로 튄다
-            public Transform Art;
-            // 버프 선이 닿아 맞음 표시(Fx/HitRingFx)가 효과를 보여 주는 때(실제 시간) — 그 전엔 받는 효과 표시를 그대로 두고, 그때 위로 튄다
-            public float HoldUntil;
         }
 
         private static readonly List<Tower> All = new List<Tower>();
@@ -181,22 +176,7 @@ namespace GnorpWar
         private void OnTriggered(int index)
         {
             if (index < _floors.Count)
-                _floors[index].Bounce = BounceStart(_floors[index]);
-        }
-
-        // 버프 선이 닿기를 기다리는 동안 받은 튐(커짐)은 건너뛴다 — 닿는 순간의 위로 튐(HitRingShape.JumpCells)이 대신한다
-        private static float BounceStart(FloorView view) => Time.unscaledTime < view.HoldUntil ? BounceDuration : 0f;
-
-        // 버프 선이 이 층에 맞음 표시를 켰다(Fx/HitRingFx) — seconds 뒤(선이 닿고 2프레임)에 층 그림이 위로 튀고 받는 효과 표시가 바뀐다. 효과(상태값)는 이미 걸렸다.
-        // 이 프레임에 이미 시작한 튐(같은 발동이 선보다 먼저 알린다 — BoardRunner.FireOnce)도 그 튐으로 대신한다
-        public void Hold(int index, float seconds)
-        {
-            if (index >= _floors.Count)
-                return;
-            FloorView view = _floors[index];
-            view.HoldUntil = Time.unscaledTime + seconds;
-            if (view.Bounce == 0f)
-                view.Bounce = BounceDuration;
+                _floors[index].Bounce = 0f;
         }
 
         // 쿨다운 밖의 효과(「구매할 때마다,」·전투 시작 시 등)를 내거나 받은 기물의 층도 튄다
@@ -207,7 +187,7 @@ namespace GnorpWar
                 return;
             for (int i = 0; i < field.Length && i < _floors.Count; i++)
                 if (field[i] == fired)
-                    _floors[i].Bounce = BounceStart(_floors[i]);
+                    _floors[i].Bounce = 0f;
         }
 
         private void LateUpdate()
@@ -268,20 +248,13 @@ namespace GnorpWar
             float t = Mathf.Clamp01(view.Bounce / BounceDuration);
             view.Icon.transform.localScale = Vector3.one * (IconSize(view.Icon.sprite) * Mathf.Lerp(BounceScale, 1f, t));
             view.Flash.color = new Color(1f, 1f, 1f, FlashAlpha * (1f - t));
-            // 맞음 표시 — 선이 닿고 2프레임에 그림 1px 격자로 위로 2칸, 계단식으로 1칸 · 0칸
-            float jump = HitRingShape.JumpCells(Time.unscaledTime - view.HoldUntil) * Pixel;
-            if (view.Art.localPosition.y != jump)
-                view.Art.localPosition = new Vector3(0f, jump, 0f);
+            // 커졌다 작아지는 동안 아이콘은 기물 그림들 가운데 맨 앞에(사용자 10/27) — 이웃 층 · 유닛 · 맞음 링 · 버프 선 위. 끝나면 성과 같은 순서로
+            int order = t < 1f ? BounceSortingOrder : _castle.sortingOrder;
+            if (view.Icon.sortingOrder != order)
+                view.Icon.sortingOrder = order;
 
-            // 멈춘 동안에는 가속 시간도 흐르지 않는다 — 그 자리에 멈춤 표시가 선다
-            // 버프 선이 닿기 전에는 받는 효과 표시를 바꾸지 않는다(지난 모습 그대로 — 맞는 순간 새 값)
-            float frozen = running != null ? running.Frozen : 0f;
-            if (Time.unscaledTime >= view.HoldUntil)
-            {
-                view.Frozen.ShowSeconds(frozen);
-                view.Haste.ShowSeconds(running != null && frozen <= 0f ? running.HasteLeft : 0f);
-                view.Cooldown.ShowScale(running != null ? running.CooldownScale : 1f);
-            }
+            view.Haste.ShowSeconds(running != null ? running.HasteLeft : 0f);
+            view.Cooldown.ShowScale(running != null ? running.CooldownScale : 1f);
             view.Overdrive.ShowIcon(OverdriveMark.On(building, _base.Team));
             view.Stopped.ShowIcon(stopped);
             view.Count.ShowCount(building != null ? building.CountdownOf(_base.Team) : 0);
@@ -310,9 +283,7 @@ namespace GnorpWar
             go.transform.position = new Vector3(transform.position.x, FloorBottom(index) + _floorHeight * 0.5f, transform.position.z - 0.05f);   // 성·깃발과 같은 정렬 순서 — 카메라 쪽으로 살짝 당겨 그 앞에 그린다
             go.transform.localScale = new Vector3(1f / transform.lossyScale.x, 1f / transform.lossyScale.y, 1f);
 
-            // 그림은 전부 이 아래 — 맞음 표시 때 그림만 위로 튄다(콜라이더 · 바닥 판은 그대로)
-            Transform art = Child(go.transform, "Art", Vector2.zero, 0f);
-            var wall = art.gameObject.AddComponent<SpriteRenderer>();
+            var wall = go.AddComponent<SpriteRenderer>();
             wall.sprite = _walls[(int)Look.Plain];
             wall.sortingLayerID = _castle.sortingLayerID;
             wall.sortingOrder = _castle.sortingOrder;   // 유닛(0)보다 뒤 — 층 바닥을 걷는 유닛이 검은 속에 가려지지 않게
@@ -337,33 +308,32 @@ namespace GnorpWar
             var floor = go.AddComponent<TowerFloor>();
             floor.Init(_base.Team, index);
 
-            var view = new FloorView { Floor = floor, Art = art, Wall = wall };
+            var view = new FloorView { Floor = floor, Wall = wall };
 
             // 창틀 — 층 판과 같은 크기 그림, 판 바로 앞(불빛·번쩍임은 창 안쪽이라 겹치지 않는다)
-            view.Frame = Child(art, "Frame", Vector2.zero, -0.005f).gameObject.AddComponent<SpriteRenderer>();
+            view.Frame = Child(go.transform, "Frame", Vector2.zero, -0.005f).gameObject.AddComponent<SpriteRenderer>();
             Sort(view.Frame);
 
             // 창 불빛 · 번쩍임 — 층 판과 같은 크기 그림이라 같은 자리에 겹친다
-            view.Light = Child(art, "Light", Vector2.zero, -0.01f).gameObject.AddComponent<SpriteRenderer>();
+            view.Light = Child(go.transform, "Light", Vector2.zero, -0.01f).gameObject.AddComponent<SpriteRenderer>();
             Sort(view.Light);
-            view.Flash = Child(art, "Flash", Vector2.zero, -0.02f).gameObject.AddComponent<SpriteRenderer>();
+            view.Flash = Child(go.transform, "Flash", Vector2.zero, -0.02f).gameObject.AddComponent<SpriteRenderer>();
             Sort(view.Flash);
             view.Flash.color = Color.clear;
 
             // 아이콘 — 창 한가운데
             float windowCenter = ((WindowBottom + WindowTop + 1) * 0.5f - SpriteHeight * 0.5f) * Pixel;
-            view.Icon = Child(art, "Icon", new Vector2(0f, windowCenter), -0.05f).gameObject.AddComponent<SpriteRenderer>();
+            view.Icon = Child(go.transform, "Icon", new Vector2(0f, windowCenter), -0.05f).gameObject.AddComponent<SpriteRenderer>();
             Sort(view.Icon);
 
             // 받는 효과 표시 — 색은 버프 선의 가속 색
             Color badgeColor = BuffLinkFx.ColorOf(BuffKind.Haste);
-            view.Haste = new TowerBadge(art, "Haste", Forward * _badgeOffset, _hasteIcon, _badgeFont, badgeColor, wall);
-            view.Cooldown = new TowerBadge(art, "Cooldown", -Forward * _badgeOffset, _cooldownIcon, _badgeFont, badgeColor, wall);
+            view.Haste = new TowerBadge(go.transform, "Haste", Forward * _badgeOffset, _hasteIcon, _badgeFont, badgeColor, wall);
+            view.Cooldown = new TowerBadge(go.transform, "Cooldown", -Forward * _badgeOffset, _cooldownIcon, _badgeFont, badgeColor, wall);
 
-            view.Overdrive = new TowerBadge(art, "Overdrive", Forward * _badgeOffset, _overdriveIcon, _badgeFont, OverdriveMark.Color, wall);
-            view.Stopped = new TowerBadge(art, "Stopped", Forward * _badgeOffset, _stoppedIcon, _badgeFont, StoppedMark.Color, wall);
-            view.Frozen = new TowerBadge(art, "Frozen", Forward * _badgeOffset, _stoppedIcon, _badgeFont, Color.white, wall);
-            view.Count = new TowerBadge(art, "Count", -Forward * _badgeOffset, null, _badgeFont, Color.white, wall);
+            view.Overdrive = new TowerBadge(go.transform, "Overdrive", Forward * _badgeOffset, _overdriveIcon, _badgeFont, OverdriveMark.Color, wall);
+            view.Stopped = new TowerBadge(go.transform, "Stopped", Forward * _badgeOffset, _stoppedIcon, _badgeFont, StoppedMark.Color, wall);
+            view.Count = new TowerBadge(go.transform, "Count", -Forward * _badgeOffset, null, _badgeFont, Color.white, wall);
 
             _floors.Add(view);
         }

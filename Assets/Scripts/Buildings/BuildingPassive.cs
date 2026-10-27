@@ -35,8 +35,10 @@ namespace GnorpWar
         // 상점 — 내가 기물을 산 직후(이동식 공장) · 리롤 · 골드를 얻을 때. 필드의 기물만(RunState)
         public virtual void OnAnyBought(OwnedBuilding self, OwnedBuilding bought) { }
         public virtual void OnReroll(OwnedBuilding self) { }
-        // 「판매 시,」 — 이 기물을 판 직후(칸은 이미 비었다)
-        public virtual void OnSell(OwnedBuilding self) { }
+        // 「판매 시,」 — 이 기물을 판 직후(칸은 이미 비었다). floor = 판 층(필드 — 위층이 이미 내려와 그 층에 바로 위 기물이 있다), 보관함에서 팔았으면 -1
+        public virtual void OnSell(OwnedBuilding self, int floor) { }
+        // 턴이 열릴 때(수입을 받는 때) — 내 턴(RunState.BeginTurn)도 AI 영주의 턴 상점(RunState.ShopAs)도. 필드의 기물만(전쟁 금고)
+        public virtual void OnTurnStart(OwnedBuilding self) { }
         public virtual void OnGoldGained(OwnedBuilding self) { }
         // 「전투에서 승리할 때마다,」 — 이 기물이 필드에 있는 탑이 실제 전투에서 이긴 직후(RunState.FinishBattle). 그동안 RunState의 상점 규칙은 이 탑에 걸려 있다
         public virtual void OnBattleWon(OwnedBuilding self) { }
@@ -45,9 +47,17 @@ namespace GnorpWar
         public virtual bool Reaches(int slot, int other, BuildingDefinition target) => false;
         // 자리 효과(바로 위 · 아래 · 위에 있는 · 아래에 있는 — BoardRunner.Linked)를 쓰는가 — 연방제가 걸리는 기물인지 가린다(UpgradeDefinition.Affects)
         public virtual bool UsesAdjacency => false;
+        // 툴팁 대상 표시(BuildingTargets) — field의 slot층 이 기물이 other층 기물에 효과를 주나. 기본은 자리 규칙(Reaches), 연방제면 자리를 안 본다(위 · 아래 어느 쪽이든 닿으면)
+        public virtual bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated)
+        {
+            BuildingDefinition target = field[other].Definition;
+            return Reaches(slot, other, target) || (federated && UsesAdjacency && (Reaches(slot, slot + 1, target) || Reaches(slot, slot - 1, target)));
+        }
 
         // 툴팁의 완결 문장 — 지금 등급 값으로 (CLAUDE.md §5-2)
         public abstract string Describe(int level);
+        // 신화 값이 전설과 다른 능력(제물의 의식 — 사용자 10/27)만 덮어쓴다. 툴팁(UI/BuildingTooltip.Lines)이 이쪽을 부른다
+        public virtual string Describe(int level, bool mythic) => Describe(level);
         // 칸 아래에 보이는 대표 숫자(지금 등급 값) — 없으면 null
         public virtual string Headline(int level) => null;
         // 전투 동안 칸이 값을 쌓는가(처치 발동 등) — 쌓으면 그 계산 방식. 쌓은 값은 board.AddBattleGain으로

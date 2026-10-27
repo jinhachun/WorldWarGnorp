@@ -12,6 +12,9 @@ namespace GnorpWar
         private const float SplashLiftBias = 1f;
         private static readonly ContactFilter2D SolidOnly = new ContactFilter2D { useTriggers = false };
 
+        [Tooltip("로켓 — 날아가는 동안 불꽃 꼬리, 범위 착탄이면 터지는 자리에 불씨가 사방으로 튀고 범위만큼 고리(톱니로켓병)")]
+        [SerializeField] private bool _explodes;
+
         private Rigidbody2D _rb;
         private Team _team;
         private float _damage;
@@ -141,6 +144,8 @@ namespace GnorpWar
             float riseSpeed = Mathf.Sqrt(2f * gravity * (apex - origin.y));
             _rb.linearVelocity = new Vector2((targetPoint.x - origin.x) / FlightTime(targetPoint, arcHeight), riseSpeed);
             _lifeTimer = Lifetime;
+            if (_explodes)
+                ArrowTrails.FollowFire(this);
         }
 
         // Launch 뒤에 — 이번 비행은 적을 관통한다(관통탄 특허국)
@@ -282,8 +287,25 @@ namespace GnorpWar
             gameObject.SetActive(false);
         }
 
+        // 로켓 폭발 연출 — 불씨(Fx/FireTrails)가 범위 끝까지 사방으로 튀고 범위만큼 주황 고리(Fx/RingFx). 판정은 아래 Splash 그대로
+        private const int ExplosionEmbers = 14;
+        private const float ExplosionEmberLife = 0.45f;
+
+        private void Explode(Vector2 center)
+        {
+            for (int i = 0; i < ExplosionEmbers; i++)
+            {
+                float angle = (i + Random.value * 0.5f) / ExplosionEmbers * Mathf.PI * 2f;
+                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Abs(Mathf.Sin(angle)) * 0.8f + 0.2f);
+                FireTrails.Emit(center, dir * (_splashRadius / ExplosionEmberLife * Random.Range(0.6f, 1f)), Random.Range(2, 4), ExplosionEmberLife, false);
+            }
+            RingFx.Pulse(center, _splashRadius, FxDirector.FireColor, null);
+        }
+
         private void Splash(Vector2 center)
         {
+            if (_explodes)
+                Explode(center);
             Physics2D.OverlapCircle(center, _splashRadius, SolidOnly, _splashHits);
             foreach (Collider2D col in _splashHits)
             {

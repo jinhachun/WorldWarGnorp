@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8ee95e2074a5ab4fb44d7a2e3deb726, type: 3}
+  m_Name: Passive_RecyclingPlantMythic
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.DeathChanceSlotSummonPassive
+  _victim: {fileID: 11400000, guid: da088ee39c4588646bd9b3ce8b58a3bd, type: 2}
+  _chance: 10
+  _summon: {fileID: 11400000, guid: 5a8c53d9b8886bf4092a544b6a574a98, type: 2}
+  _count: 1

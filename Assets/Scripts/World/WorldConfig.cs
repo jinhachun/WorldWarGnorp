@@ -44,7 +44,7 @@ namespace GnorpWar
         [Tooltip("유닛을 쿨다운마다 내지 않는 기물(강화 · 타워 · 패시브)은 쓴 골드(구매가 × 합쳐진 수) × 이 값을 전투력에 얹는다. 0 = 생산 기물만 센다")]
         [SerializeField] private float _powerPerGold = 1f;
 
-        [Header("최후의 연합 — 내 땅이 이 수 이상이 되면 남은 AI 영주들이 가장 센 탑의 영주 아래 하나로 뭉친다(턴의 정산 끝에)")]
+        [Header("연합 — 내 땅이 이 수 이상이 되면 남은 AI 영주들이 유령 영주마다 하나씩, 유령이 없으면 가장 센 탑의 영주 아래 하나로 뭉친다(턴의 정산 끝에)")]
         [SerializeField] private bool _coalition = true;
         [SuffixLabel("개", true)]
         [SerializeField] private int _coalitionLands = 15;
@@ -53,6 +53,8 @@ namespace GnorpWar
         [SerializeField] private int _coalitionWins = 3;
         [Tooltip("연합의 탑을 합칠 때 나머지 영주의 탑 · 보관함을 판 골드에 곱하는 값 — 1이면 판 골드를 전부 쓴다(남은 골드는 그대로 넘어간다)")]
         [SerializeField] private float _coalitionGoldScale = 0.3f;
+        [Tooltip("유령 연합(유령 영주마다 하나 — 남은 AI 영주는 가장 가까운 유령에게 흡수된다)을 다 먹으려면 이겨야 하는 횟수 = 1 + 뭉칠 때 땅 수가 이 값들 이상인 개수. {4, 8} = 1~3개 1번 · 4~7개 2번 · 8개 이상 3번. 유령이 없으면 위 「이겨야 하는 횟수」(사용자 10/27)")]
+        [SerializeField] private int[] _ghostCoalitionWinSteps = { 4, 8 };
 
         [Header("약자 보정 — AI 영주가 턴 수입에 더 받는 골드 = (가장 큰 영주의 땅 수 − 자기 땅 수) × 땅당 골드, 상한까지. 플레이어는 받지 않는다")]
         [SerializeField] private bool _underdog = true;
@@ -61,6 +63,20 @@ namespace GnorpWar
         [SerializeField] private int _underdogGoldPerLand = 1;
         [SuffixLabel("골드", true)]
         [SerializeField] private int _underdogGoldMax = 10;
+
+        [Header("거리 배율 — AI 영주의 턴마다 얻는 골드(기본 + 땅 + 곡창) × (기본 배율 + 거리 × 턴 × 증가), 상한까지. 거리 = 내 시작 땅에서 그 영주의 시작 땅까지 건너는 영주 땅 수(사용자 10/27)")]
+        [Tooltip("거리 0 · 1턴에 가까운 값 — 1보다 작으면 내 가까운 영주는 덜 번다")]
+        [SuffixLabel("배", true)]
+        [SerializeField] private float _distanceGoldBase = 0.8f;
+        [Tooltip("거리 1 · 턴 1마다 늘어나는 배율")]
+        [SuffixLabel("배", true)]
+        [SerializeField] private float _distanceGoldPerStep = 0.03f;
+        [SuffixLabel("배", true)]
+        [SerializeField] private float _distanceGoldMax = 2.5f;
+
+        [Header("유령 영주 — 다른 런 기록이 앉는 영주(아웃게임기획 §9)")]
+        [Tooltip("유령 수의 상한 = 런 시작 때 상대 영주 수 × 이 값(내림). 나머지는 AI — 반란으로 선 영주도 이 상한 안에서만 유령이 된다(사용자 10/27)")]
+        [SerializeField] private float _ghostShare = 0.5f;
 
         [Header("이벤트 땅 — 자리는 지도에 고정(산맥 · 강 띠 — 월드 지도 굽기), 종류만 런마다 섞는다(아웃게임기획 §3-1)")]
         [Tooltip("종류마다 하나 — 이름 · 아이콘 · 툴팁 글 · 수치(World/EventLandDefinition)")]
@@ -162,6 +178,9 @@ namespace GnorpWar
         public int NewLordShops => _newLordShops;
         public int SpecialSkipGold => _specialSkipGold;
         public float PowerPerGold => _powerPerGold;
+        public float GhostShare => _ghostShare;
+        // AI 영주의 턴마다 얻는 골드에 곱하는 값(WorldRun.IncomeOf)
+        public float DistanceGoldScale(int distance, int turn) => Mathf.Min(_distanceGoldMax, _distanceGoldBase + distance * turn * _distanceGoldPerStep);
 
         public WorldRules ToRules() => new WorldRules
         {
@@ -174,6 +193,7 @@ namespace GnorpWar
             Coalition = _coalition,
             CoalitionLands = _coalitionLands,
             CoalitionWins = _coalitionWins,
+            GhostCoalitionWinSteps = (int[])_ghostCoalitionWinSteps.Clone(),
             Underdog = _underdog,
             UnderdogGoldPerLand = _underdogGoldPerLand,
             UnderdogGoldMax = _underdogGoldMax,

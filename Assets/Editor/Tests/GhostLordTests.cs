@@ -67,7 +67,9 @@ namespace GnorpWar.Editor.Tests
             WorldRun run = NewRun();
             run.AddGhosts(new List<RunRecord.Loaded> { WriteRecord(2, BuildingNation.Kingdom), WriteRecord(5, BuildingNation.TickTock) });
             Assert.AreEqual(2, run.GhostCount);
-            run.ShopPhase();
+            // 첫 턴은 거리 배율(0.6대)로 수입이 적어 아무것도 안 사는 빌드가 있다 — 세 턴 돌린다
+            for (run.State.Turn = 1; run.State.Turn <= 3; run.State.Turn++)
+                run.ShopPhase();
             int ai = 0, aiBuilt = 0;
             foreach (Lord lord in run.State.Lords)
                 if (lord.Alive && !lord.IsPlayer && run.GhostOf(lord) == null)
@@ -78,6 +80,55 @@ namespace GnorpWar.Editor.Tests
                 }
             Assert.Greater(ai, 0);
             Assert.AreEqual(ai, aiBuilt, "AI 영주는 상점에서 탑을 짓는다");
+        }
+
+        // 기록이 많아도 유령은 런 시작 때 상대 영주 수 × GhostShare(내림)까지 — 나머지는 AI(사용자 10/27)
+        [Test]
+        public void GhostsCappedAtShareOfLords()
+        {
+            WorldRun run = NewRun();
+            int cap = Mathf.FloorToInt(run.State.AiLords * _config.World.GhostShare);
+            Assert.Greater(cap, 0);
+            var records = new List<RunRecord.Loaded>();
+            for (int i = 0; i < run.State.AiLords; i++)
+                records.Add(WriteRecord(1, BuildingNation.Kingdom));
+            run.AddGhosts(records);
+            Assert.AreEqual(cap, run.GhostCount, "기록이 상대 영주 수만큼 있어도 상한까지");
+            run.AddGhosts(new List<RunRecord.Loaded> { WriteRecord(1, BuildingNation.Kingdom) });
+            Assert.AreEqual(cap, run.GhostCount, "다시 붙여도 상한을 넘지 않는다");
+        }
+
+        // 유령 연합 — 유령 2명 = 연합 2개, 바탕은 유령 그대로(탑 = 스냅샷 · 골드 없음), 흡수된 영주의 탑은 사라진다
+        [Test]
+        public void GhostCoalitionsKeepGhostTowers()
+        {
+            WorldRun run = NewRun();
+            run.AddGhosts(new List<RunRecord.Loaded> { WriteRecord(2, BuildingNation.Kingdom), WriteRecord(3, BuildingNation.Tribe) });
+            run.State.Turn = 2;
+            run.ShopPhase();
+            WorldState state = run.State;
+            // 내 땅을 연합 조건(15)까지 — 나와 이어진 땅부터
+            for (int region = 0, mine = 1; region < state.Owner.Length && mine < state.Rules.CoalitionLands; region++)
+            {
+                Lord owner = state.OwnerOf(region);
+                if (owner == null || owner.IsPlayer || run.GhostOf(owner) != null)
+                    continue;
+                state.Owner[region] = state.Player.Id;
+                mine++;
+                if (state.LandsOf(owner) == 0)
+                    owner.Alive = false;
+            }
+            List<WorldState.Coalition> formed = run.FormCoalitions();
+            Assert.AreEqual(2, formed.Count, "유령 2명 = 연합 2개");
+            foreach (WorldState.Coalition coalition in formed)
+            {
+                Assert.IsTrue(coalition.Ghost);
+                Assert.NotNull(run.GhostOf(coalition.Lord), "바탕은 유령 그대로");
+                Assert.AreEqual(0, run.TowerOf(coalition.Lord).Gold, "흡수한 영주의 골드를 쓰지 않는다");
+                foreach (int member in coalition.Members)
+                    Assert.IsNull(run.TowerOf(state.Lords[member]), "흡수된 영주의 탑은 사라진다");
+            }
+            Assert.AreEqual(2, state.AiLords);
         }
 
         // 못 읽는 기록(깨진 줄 · 다른 버전)은 건너뛴다 — 경고 로그. 읽히는 것은 오래 버틴 것부터

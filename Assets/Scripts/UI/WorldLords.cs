@@ -70,8 +70,8 @@ namespace GnorpWar
         private Sprite _body, _flag;
         private Font _font;
         private int[] _owner;
-        private int _coalition = -1;
-        private int[] _members;
+        // 연합에 든 영주 → 그 연합(바탕 영주)의 번호
+        private readonly Dictionary<int, int> _memberOf = new Dictionary<int, int>();
         private readonly Dictionary<int, Walker> _walkers = new Dictionary<int, Walker>();
         private readonly List<int> _gone = new List<int>();
         // 연출용 난수 — 규칙의 난수(UnityEngine.Random · 런의 System.Random)와 섞지 않는다
@@ -174,21 +174,22 @@ namespace GnorpWar
             return region >= 0 && _owner[region] == lord;
         }
 
-        // 최후의 연합(사용자 10/11) — coalition = 연합(바탕 영주)의 번호(없으면 음수), members = 연합에 든 나머지 영주들.
+        // 연합(사용자 10/11 · 여럿 10/27) — 연합마다 바탕 영주와 든 영주들(Members).
         // 연합의 땅에는 바탕 영주와 든 영주들의 그림이 각자 제 색 깃발을 들고 다 같이 돌아다닌다
-        public void Group(int coalition, int[] members)
+        public void Group(List<WorldState.Coalition> coalitions)
         {
-            _coalition = coalition;
-            _members = members;
+            _memberOf.Clear();
+            foreach (WorldState.Coalition coalition in coalitions)
+                foreach (int member in coalition.Members)
+                    _memberOf[member] = coalition.Lord.Id;
         }
 
-        // 그 그림이 걷는 땅의 주인 — 제 땅이 있으면 자신, 없는데 연합에 든 영주면 연합, 둘 다 아니면 음수(그림을 치운다)
+        // 그 그림이 걷는 땅의 주인 — 제 땅이 있으면 자신, 없는데 연합에 든 영주면 그 연합, 둘 다 아니면 음수(그림을 치운다)
         private int HomeOf(int lord)
         {
             if (System.Array.IndexOf(_owner, lord) >= 0)
                 return lord;
-            bool member = _members != null && System.Array.IndexOf(_members, lord) >= 0;
-            return member && System.Array.IndexOf(_owner, _coalition) >= 0 ? _coalition : -1;
+            return _memberOf.TryGetValue(lord, out int coalition) && System.Array.IndexOf(_owner, coalition) >= 0 ? coalition : -1;
         }
 
         // lord의 땅 가운데 아무 곳(없으면 음수) — 여럿이 한꺼번에 나타나도 한자리에 겹치지 않게 고른다
@@ -241,11 +242,9 @@ namespace GnorpWar
             for (int region = 0; region < owner.Length; region++)
                 if (owner[region] >= 0 && !_walkers.ContainsKey(owner[region]))   // 이벤트 땅(주인 없음 -1)에는 영주 그림이 서지 않는다
                     _walkers[owner[region]] = NewWalker(owner[region], owner[region], region, colorOf(owner[region]));
-            if (_members == null || System.Array.IndexOf(owner, _coalition) < 0)
-                return;
-            foreach (int member in _members)
-                if (!_walkers.ContainsKey(member))
-                    _walkers[member] = NewWalker(member, _coalition, RandomRegion(_coalition), colorOf(member));
+            foreach (KeyValuePair<int, int> pair in _memberOf)
+                if (!_walkers.ContainsKey(pair.Key) && System.Array.IndexOf(owner, pair.Value) >= 0)
+                    _walkers[pair.Key] = NewWalker(pair.Key, pair.Value, RandomRegion(pair.Value), colorOf(pair.Key));
         }
 
         // lord = 그림의 영주(깃발 색), home = 걷는 땅의 주인, region = 처음 서는 땅

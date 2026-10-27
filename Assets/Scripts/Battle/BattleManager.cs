@@ -272,9 +272,9 @@ namespace GnorpWar
         private static string WinLine(Lord opponent)
         {
             WorldState state = RunState.World.State;
-            if (opponent != state.Coalition)
+            if (!(state.CoalitionOf(opponent) is WorldState.Coalition coalition))
                 return $"\"{RunState.NameOf(opponent)}\"의 세력은 멸망하였습니다!";
-            return opponent.Alive ? "최후의 연합이 물러났습니다! " + BuildingTooltip.Highlight($"앞으로 {state.CoalitionWinsLeft}번") : "최후의 연합은 멸망하였습니다!";
+            return opponent.Alive ? $"\"{RunState.NameOf(opponent)}\" 연합이 물러났습니다! " + BuildingTooltip.Highlight($"앞으로 {state.CoalitionWinsLeft(coalition)}번") : $"\"{RunState.NameOf(opponent)}\" 연합은 멸망하였습니다!";
         }
 
         // 지도 씬으로 — 결과 창의 「지도로」. 전투가 끝났으므로(Aftermath) 지도가 AI 턴을 돌린다

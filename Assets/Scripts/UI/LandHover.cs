@@ -6,7 +6,7 @@ namespace GnorpWar
 {
     // 지도의 땅에 마우스를 올리면 뜨는 땅 카드(사용자 10/26 — 지도에 늘 떠 있던 지형 아이콘 대신 · 10/27 시안 B 「아이콘 + 짧은 값」).
     // 같은 판(UI_LandCard = 검은 판 + NationFrame) · 마우스 오른쪽 아래(모자라면 반대쪽) · 폭 440, 높이는 글에 맞춘다. 위에서부터:
-    //   [영주 그림] 이름(도트 36 — 나는 「내 영지」, 연합은 「연합」) / [국가 아이콘] 국가 [왕관] 땅 수(나는 없음) · 오른쪽 위 [하트] -1(침략할 수 있는 땅)
+    //   [영주 그림] 이름(도트 36 — 나는 「내 영지」, 연합은 「닉네임 연합」) / [국가 아이콘] 국가 [왕관] 땅 수(나는 없음) · 오른쪽 위 [하트] -1(침략할 수 있는 땅)
     //   [지형 아이콘] 지형 이름 / 그 아래 짧은 효과 줄(깔끔 22 · 줄 안 스탯 아이콘) — 이벤트 땅에는 쓰지 않는다(싸우지 않는다)
     //   [지역 특수 아이콘] 이름 / 그 아래 효과 한 줄
     // 이벤트 땅: 미지의 땅(UI/UnknownLand)은 [?] 이름 + 회색 한 줄, 드러난 땅은 이름 + 효과 글, 닫힌 땅은 흐리게 + 「이미 방문했습니다.」. 자세한 것(업그레이드 줄 · 탑)은 누르면 뜨는 왼쪽 패널.
@@ -158,13 +158,13 @@ namespace GnorpWar
             }
             else
             {
-                bool mine = lord == state.Player, coalition = lord == state.Coalition;
+                bool mine = lord == state.Player, coalition = state.CoalitionOf(lord) != null;
                 var figure = (RectTransform)new GameObject("Lord", typeof(RectTransform)).transform;
                 figure.SetParent(_icon, false);
                 // 그림의 자리 = 몸 한가운데 — 깃발까지 든 그림(몸 아래 4px ~ 위 11px, UI/WorldSidePanel 초상화와 같은 범위)이 칸 가운데에 오게 내린다
                 figure.anchoredPosition = new Vector2(0f, -3.5f * FigureScale);
                 WorldLords.Figure(figure, _lordSprite, _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), FigureScale);
-                _name.text = $"<size={NameSize}>{(mine ? "내 영지" : coalition ? "연합" : RunState.NameOf(lord))}</size>";
+                _name.text = $"<size={NameSize}>{(mine ? "내 영지" : coalition ? RunState.NameOf(lord) + " 연합" : RunState.NameOf(lord))}</size>";
                 // 내 국가 · 땅 수는 위 줄과 왼쪽 패널에서 이미 읽힌다
                 owned = !mine;
                 if (owned)

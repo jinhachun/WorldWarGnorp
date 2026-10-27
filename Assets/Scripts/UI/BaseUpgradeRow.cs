@@ -43,12 +43,12 @@ namespace GnorpWar
                 return;
             _content = NewRect("Content", (RectTransform)transform);
 
-            // 이름 · 국가 — 패널과 같은 글(나는 「내 영지」, 연합은 「연합」, AI 영주는 닉네임)
+            // 이름 · 국가 — 패널과 같은 글(나는 「내 영지」, 연합은 「닉네임 연합」, AI 영주는 닉네임)
             bool mine = lord == RunState.World.State.Player;
             Text name = Instantiate(_labelTemplate, _content);
             name.name = "LordName";
             name.enabled = true;
-            name.text = mine ? "내 영지" : lord == RunState.World.State.Coalition ? "연합" : RunState.NameOf(lord);
+            name.text = mine ? "내 영지" : RunState.World.State.CoalitionOf(lord) != null ? RunState.NameOf(lord) + " 연합" : RunState.NameOf(lord);
             Text nation = Instantiate(_nationText, _content);
             nation.name = "Nation";
             nation.text = (mine ? RunState.Nation : RunState.World.NationOf(lord)).DisplayName();

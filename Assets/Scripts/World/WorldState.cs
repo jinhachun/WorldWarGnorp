@@ -19,13 +19,25 @@ namespace GnorpWar
         // [번호] = 영주 — 죽은 영주도 남는다(Alive = false)
         public readonly List<Lord> Lords = new List<Lord>();
         public readonly Lord Player;
-        // 최후의 연합이 뭉쳤으면 그 영주(바탕이 된 영주 — 남은 AI 영주는 이 하나뿐이다), 아니면 null
-        public Lord Coalition;
-        // 연합이 뭉칠 때의 땅 수 · 내가 연합을 이긴 횟수
-        public int CoalitionStartLands;
-        public int CoalitionWins;
-        // 연합에 든 나머지 영주들의 번호(바탕 영주 제외, 뭉치기 전에는 null) — 지도의 그림(UI/WorldLords)이 쓰는 표시용 정보다. 규칙은 읽지 않는다
-        public int[] CoalitionMembers;
+        // 연합 하나(기획 §6-1 · 사용자 10/27) — 바탕 영주(유령이면 그 유령) 아래 남은 AI 영주들이 뭉친 것
+        public class Coalition
+        {
+            public Lord Lord;
+            // 바탕이 유령인가(유령 연합 — 탑은 그 유령의 스냅샷 그대로)
+            public bool Ghost;
+            // 뭉칠 때의 땅 수 · 다 먹으려면 이겨야 하는 횟수 · 내가 이긴 횟수
+            public int StartLands;
+            public int WinsNeeded;
+            public int Wins;
+            // 흡수된 영주들의 번호(바탕 제외) — 지도의 그림(UI/WorldLords) · 연합 결성 팝업이 쓴다
+            public int[] Members;
+        }
+
+        // 뭉친 연합들(런에 한 번 뭉친다 — 멸망한 연합도 남는다: Lord.Alive = false). 뭉친 뒤 남은 AI 영주는 이 바탕 영주들뿐이다
+        public readonly List<Coalition> Coalitions = new List<Coalition>();
+
+        // lord가 바탕인 연합(아니면 null)
+        public Coalition CoalitionOf(Lord lord) => lord == null ? null : Coalitions.Find(c => c.Lord == lord);
         // 1부터
         public int Turn = 1;
         // 플레이어의 목숨(AI 영주는 Lord.Happiness) — 0이면 국가 위기: 그 뒤 한 번이라도 지면 게임 오버
@@ -131,16 +143,16 @@ namespace GnorpWar
             }
         }
 
-        // 연합전을 한 번 이길 때 넘어오는 몫 = 뭉칠 때 땅 수 ÷ 필요한 승리 수(올림) — 땅 14개 · 세 번이면 5 · 5 · 나머지 4
-        private int CoalitionShare => Math.Max(1, (CoalitionStartLands + Rules.CoalitionWins - 1) / Math.Max(1, Rules.CoalitionWins));
+        // 연합전을 한 번 이길 때 넘어오는 몫 = 뭉칠 때 땅 수 ÷ 그 연합의 이기는 횟수(올림) — 땅 14개 · 세 번이면 5 · 5 · 나머지 4
+        private static int CoalitionShare(Coalition c) => Math.Max(1, (c.StartLands + c.WinsNeeded - 1) / Math.Max(1, c.WinsNeeded));
 
-        // 지금 연합을 이기면 넘어오는 땅 수 — 마지막 승리면 남은 땅 전부, 남은 땅이 몫보다 적어도 전부
-        public int CoalitionTake
-            => CoalitionWins + 1 >= Rules.CoalitionWins ? LandsOf(Coalition) : Math.Min(LandsOf(Coalition), CoalitionShare);
+        // 지금 그 연합을 이기면 넘어오는 땅 수 — 마지막 승리면 남은 땅 전부, 남은 땅이 몫보다 적어도 전부
+        public int CoalitionTake(Coalition c)
+            => c.Wins + 1 >= c.WinsNeeded ? LandsOf(c.Lord) : Math.Min(LandsOf(c.Lord), CoalitionShare(c));
 
-        // 연합을 다 먹기까지 남은 승리 수
-        public int CoalitionWinsLeft
-            => Math.Max(1, Math.Min(Rules.CoalitionWins - CoalitionWins, (LandsOf(Coalition) + CoalitionShare - 1) / CoalitionShare));
+        // 그 연합을 다 먹기까지 남은 승리 수
+        public int CoalitionWinsLeft(Coalition c)
+            => Math.Max(1, Math.Min(c.WinsNeeded - c.Wins, (LandsOf(c.Lord) + CoalitionShare(c) - 1) / CoalitionShare(c)));
 
         public bool Unified => LandsOf(Player) == Graph.LordRegionCount;
         public bool GameOver => !Player.Alive;

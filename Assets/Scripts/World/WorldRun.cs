@@ -32,9 +32,14 @@ namespace GnorpWar
                     lordRegions.Add(region);
             int playerRegion = lordRegions[random.Next(lordRegions.Count)];
             State = new WorldState(graph, rules, playerRegion, random);
+            _regionDistance = Distances(graph, playerRegion);
             foreach (Lord lord in State.Lords)
                 if (!lord.IsPlayer)
+                {
                     _towers[lord.Id] = NewTower();
+                    MeasureDistance(lord);
+                }
+            _ghostCap = Mathf.FloorToInt(State.AiLords * world.GhostShare);
 
             // 지역 특수 업그레이드 — 전체에서 무작위로 뽑아 지역마다 하나씩(겹침 없음), 내 시작 땅과 그 이웃 땅은 뺀다(사용자 10/15). 남은 것은 이번 런에 나오지 않는다(시작 때 고르기는 없앴다 — 사용자 10/15)
             RegionSpecial = new UpgradeDefinition[State.Owner.Length];
@@ -92,7 +97,10 @@ namespace GnorpWar
         // 영주의 국가 — 유령이면 그 기록의 국가, AI면 빌드 방향의 국가(나는 RunState.Nation)
         public BuildingNation NationOf(Lord lord) => GhostOf(lord) is Ghost ghost ? ghost.Nation : _world.Map.BuildOf(lord.Build).Nation;
 
-        // 런을 시작할 때 — records(오래 버틴 것부터)를 살아 있는 AI 영주에게 무작위 자리로 하나씩 붙인다. 남은 기록은 반란 영주 몫
+        // 동시에 앉을 수 있는 유령 수 = 런 시작 때 상대 영주 수 × WorldConfig.GhostShare(내림) — 절반의 진영은 AI(사용자 10/27)
+        private readonly int _ghostCap;
+
+        // 런을 시작할 때 — records(오래 버틴 것부터)를 살아 있는 AI 영주에게 무작위 자리로 하나씩, 상한까지 붙인다. 남은 기록은 반란 영주 몫
         public void AddGhosts(List<RunRecord.Loaded> records)
         {
             _ghostPool.AddRange(records);
@@ -100,7 +108,7 @@ namespace GnorpWar
             foreach (Lord lord in State.Lords)
                 if (lord.Alive && !lord.IsPlayer && !_ghosts.ContainsKey(lord.Id))
                     lords.Add(lord);
-            while (lords.Count > 0 && _ghostPool.Count > 0)
+            while (lords.Count > 0 && _ghostPool.Count > 0 && _ghosts.Count < _ghostCap)
             {
                 int pick = _random.Next(lords.Count);
                 Haunt(lords[pick]);
@@ -108,10 +116,10 @@ namespace GnorpWar
             }
         }
 
-        // lord에 남은 기록 중 맨 앞(가장 오래 버틴 것)을 붙인다
+        // lord에 남은 기록 중 맨 앞(가장 오래 버틴 것)을 붙인다 — 유령이 상한에 차 있으면 붙이지 않는다(AI)
         private void Haunt(Lord lord)
         {
-            if (_ghostPool.Count == 0)
+            if (_ghostPool.Count == 0 || _ghosts.Count >= _ghostCap)
                 return;
             _ghosts[lord.Id] = new Ghost { Record = _ghostPool[0], Nation = _ghostPool[0].Nation };
             _ghostPool.RemoveAt(0);
@@ -146,9 +154,48 @@ namespace GnorpWar
 
         public float PowerOf(Lord lord) => TowerPower.Of(_towers[lord.Id].Field, _battle, _world);
 
-        // 턴 수입 = 턴마다 얻는 골드(RunState.TurnGold — 기본 + 땅 + 곡창, 중상주의면 ×N) + 약자 보정(가장 큰 영주보다 땅이 적은 만큼), 직전 침략을 이겼으면 승리 보너스
+        // 턴 수입 = 턴마다 얻는 골드(RunState.TurnGold — 기본 + 땅 + 곡창, 중상주의면 ×N) × 거리 배율(반올림) + 약자 보정(가장 큰 영주보다 땅이 적은 만큼), 직전 침략을 이겼으면 승리 보너스.
+        // 거리 배율(사용자 10/27) = WorldConfig.DistanceGoldScale(시작 땅의 거리, 턴) — 내 가까운 영주는 덜, 먼 영주는 턴이 갈수록 더 번다. 약자 보정 · 승리 보너스는 고정값이라 안 곱한다
         public int IncomeOf(Lord lord)
-            => RunState.TurnGold(_towers[lord.Id], State.LandsOf(lord)) + WorldTurn.UnderdogGold(State, lord) + (lord.WonLastInvasion ? _battle.WinBonus : 0);
+            => Mathf.RoundToInt(RunState.TurnGold(_towers[lord.Id], State.LandsOf(lord)) * _world.DistanceGoldScale(DistanceOf(lord), State.Turn))
+               + WorldTurn.UnderdogGold(State, lord) + (lord.WonLastInvasion ? _battle.WinBonus : 0);
+
+        // [지역] = 내 시작 땅에서 건너는 영주 땅 수(규칙 그래프의 최단 거리 — 이벤트 땅은 길이 아니다). 런 시작 때 한 번
+        private readonly int[] _regionDistance;
+        // [영주 번호] = 그 영주가 선 땅(런 시작 · 반란)의 거리 — 땅을 먹거나 잃어도 그대로
+        private readonly Dictionary<int, int> _lordDistance = new Dictionary<int, int>();
+
+        public int DistanceOf(Lord lord) => _lordDistance.TryGetValue(lord.Id, out int distance) ? distance : 0;
+
+        // 영주가 막 섰을 때(땅 하나) 그 땅의 거리를 적는다
+        private void MeasureDistance(Lord lord) => _lordDistance[lord.Id] = _regionDistance[System.Array.IndexOf(State.Owner, lord.Id)];
+
+        // from에서 영주 땅끼리의 길로 건너는 수 — 닿지 않는 땅(지도가 끊긴 경우)은 닿는 땅 중 가장 먼 거리로 친다
+        private static int[] Distances(WorldGraph graph, int from)
+        {
+            var distance = new int[graph.RegionCount];
+            for (int i = 0; i < distance.Length; i++)
+                distance[i] = -1;
+            distance[from] = 0;
+            var queue = new Queue<int>();
+            queue.Enqueue(from);
+            int farthest = 0;
+            while (queue.Count > 0)
+            {
+                int region = queue.Dequeue();
+                farthest = distance[region];
+                foreach (int next in graph.Links[region])
+                    if (distance[next] < 0)
+                    {
+                        distance[next] = distance[region] + 1;
+                        queue.Enqueue(next);
+                    }
+            }
+            for (int i = 0; i < distance.Length; i++)
+                if (distance[i] < 0)
+                    distance[i] = farthest;
+            return distance;
+        }
 
         // ① 살아 있는 AI 영주 전원이 상점을 한 번씩 — 유령 영주는 상점 대신 이번 턴의 스냅샷으로
         public void ShopPhase()
@@ -195,7 +242,8 @@ namespace GnorpWar
             foreach (Lord lord in created)
             {
                 _towers[lord.Id] = NewTower();
-                Haunt(lord);   // 남은 기록이 있으면 유령, 없으면 AI
+                MeasureDistance(lord);
+                Haunt(lord);   // 남은 기록이 있고 유령이 상한 아래면 유령, 아니면 AI
                 if (Possess(lord))
                     Debug.Log($"[Ghost] 반란으로 선 영주 {lord.Id}번 = 기록 {GhostOf(lord).Record.RunId}(턴 {GhostOf(lord).Turn})");
                 else
@@ -207,17 +255,30 @@ namespace GnorpWar
         // 플레이어가 고른 국가(RunState.ChooseNation) — 상점 진열의 국가 비율이 읽는다. AI 영주의 국가는 빌드 방향의 것
         public BuildingNation PlayerNation;
 
-        // 최후의 연합(기획 §6-1) — ④ 정산 뒤에 부른다. 뭉쳤으면 바탕 영주(탑 전투력이 가장 높은 영주)를 돌려주고 merged에 합쳐진 영주들을 담는다(아니면 null).
-        // 연합의 탑 = 바탕 영주의 탑 + 나머지 영주들의 남은 골드와 탑 · 보관함을 판 값(지금 판매 규칙 — RunState.SellValue) × CoalitionGoldScale로 본 상점.
+        // 연합(기획 §6-1 · 사용자 10/27) — ④ 정산 뒤에 부른다. 뭉친 연합들을 돌려준다(안 뭉쳤으면 빈 목록 — WorldTurn.FormCoalitions).
+        // 유령 연합: 탑 = 그 유령의 그 턴 스냅샷 그대로(턴마다 갈아 끼운다). 흡수한 영주의 탑 · 골드는 버린다.
+        // 유령이 없을 때의 연합(하나): 탑 = 바탕 영주의 탑 + 나머지 영주들의 남은 골드와 탑 · 보관함을 판 값(지금 판매 규칙 — RunState.SellValue) × CoalitionGoldScale로 본 상점.
         // 상점은 합쳐진 영주 수만큼 돈다. 이 탑이 연합전 내내 그대로다 — 땅을 잃어도 줄지 않고, 턴마다 남은 땅의 수입으로 상점을 돈다(ShopPhase)
-        public Lord FormCoalition(List<Lord> merged)
+        public List<WorldState.Coalition> FormCoalitions()
         {
-            Lord leader = WorldTurn.FormCoalition(State, PowerOf, merged);
-            if (leader == null)
-                return null;
-            // 연합의 바탕이 유령이면 그 탑 그대로 AI가 된다 — 연합의 탑은 모은 골드로 상점을 돌며 연합전 내내 이어져야 한다(유령은 턴마다 갈아 끼운다)
-            if (_ghosts.Remove(leader.Id))
-                Debug.Log($"[Ghost] 최후의 연합의 바탕 영주 {leader.Id}번 — 유령에서 AI로");
+            List<WorldState.Coalition> formed = WorldTurn.FormCoalitions(State, PowerOf, lord => _ghosts.ContainsKey(lord.Id));
+            foreach (WorldState.Coalition coalition in formed)
+            {
+                var merged = new List<Lord>(System.Array.ConvertAll(coalition.Members, id => State.Lords[id]));
+                if (coalition.Ghost)
+                    foreach (Lord lord in merged)
+                    {
+                        _towers.Remove(lord.Id);
+                        _ghosts.Remove(lord.Id);
+                    }
+                else
+                    Merge(coalition.Lord, merged);
+            }
+            return formed;
+        }
+
+        private void Merge(Lord leader, List<Lord> merged)
+        {
             int gold = 0, sold = 0;
             foreach (Lord lord in merged)
             {
@@ -234,7 +295,6 @@ namespace GnorpWar
             // 모은 골드는 상점마다 고르게 나눠 받는다(나머지는 첫 상점에) — 못 쓴 골드는 탑에 남아 다음 상점으로 넘어간다
             for (int i = 0; i < merged.Count; i++)
                 Shop(leader, gold / merged.Count + (i == 0 ? gold % merged.Count : 0));
-            return leader;
         }
 
         private TowerState NewTower()

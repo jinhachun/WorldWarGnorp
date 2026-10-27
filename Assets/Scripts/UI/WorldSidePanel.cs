@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace GnorpWar
 {
     // 지도 씬의 왼쪽 패널 — 고른 땅의 영주가 주인공인 초상화 배치(사용자가 준 그림 10/12), 글 기둥 안에서 전부 가운데 정렬. 위에서부터:
-    //   [영주 그림 — 지도와 같은 깃발 든 유닛, 크게] / 닉네임(나는 「내 영지」, 최후의 연합은 「연합」 + 「땅 N개 · 앞으로 k번」) / 국가 / 그 영주가 가진 업그레이드 아이콘 줄(「×N」)
+    //   [영주 그림 — 지도와 같은 깃발 든 유닛, 크게] / 닉네임(나는 「내 영지」, 연합은 「닉네임 연합」 + 「땅 N개 · 앞으로 k번」) / 국가 / 그 영주가 가진 업그레이드 아이콘 줄(「×N」)
     //   ─ 가로 구분선 ─
     //   지형 : [아이콘] 이름 / (지역 특수 업그레이드가 놓인 땅이면) [아이콘] 이름 + 효과 글 / 패배시 · [하트] -N
     // 고른 땅이 없으면 같은 배치로 나(구분선 아래는 안내 글만), 내 땅을 고르면 나 + 그 땅의 지형.
@@ -191,7 +191,8 @@ namespace GnorpWar
             }
             Lord lord = any ? state.OwnerOf(selected) : state.Player;
             bool mine = lord == state.Player;
-            bool coalition = lord == state.Coalition;
+            WorldState.Coalition coalitionOf = state.CoalitionOf(lord);
+            bool coalition = coalitionOf != null;
             bool invadable = any && !mine && RunState.InvadableRegions().Contains(selected);
 
             // 초상화 — 몸(발)이 기둥 한가운데(이름 글의 중심)에 온다. 깃발은 옆으로 삐져나온다(사용자 10/12)
@@ -206,13 +207,13 @@ namespace GnorpWar
             _portrait.anchoredPosition = new Vector2(center, y - FigureUp * PortraitScale);
             y -= (FigureUp - FigureDown) * PortraitScale + BlockGap;
 
-            _title.text = mine ? "내 영지" : coalition ? "연합" : RunState.NameOf(lord);
+            _title.text = mine ? "내 영지" : coalition ? RunState.NameOf(lord) + " 연합" : RunState.NameOf(lord);
             y = Place(_title.rectTransform, center, y) - LineGap;
             // 연합은 여러 번 이겨야 다 먹는다 — 남은 땅과 승리 수
             _share.gameObject.SetActive(coalition);
             if (coalition)
             {
-                _share.text = $"땅 {state.LandsOf(lord)}개 · 앞으로 {state.CoalitionWinsLeft}번";
+                _share.text = $"땅 {state.LandsOf(lord)}개 · 앞으로 {state.CoalitionWinsLeft(coalitionOf)}번";
                 y = Place(_share.rectTransform, center, y) - LineGap;
             }
             _nation.text = (mine ? RunState.Nation : RunState.World.NationOf(lord)).DisplayName();

@@ -569,27 +569,28 @@ namespace GnorpWar
             for (int i = invasions; i < events.Count; i++)
                 events[i].NewLords = System.Array.ConvertAll(events[i].Regions, region => state.Owner[region]);
             int rebels = events.Count - invasions, risen = state.Lords.Count - before, largest = 0;
-            // 최후의 연합 — 정산이 끝난 판도에서 조건이 찼으면 남은 영주들이 하나로 뭉친다(런에 한 번)
-            var merged = new System.Collections.Generic.List<Lord>();
-            Lord coalition = World.FormCoalition(merged);
-            if (coalition != null)
+            // 연합 — 정산이 끝난 판도에서 조건이 찼으면 남은 영주들이 유령마다(없으면 하나로) 뭉친다(런에 한 번)
+            System.Collections.Generic.List<WorldState.Coalition> formed = World.FormCoalitions();
+            int merged = 0;
+            foreach (WorldState.Coalition c in formed)
             {
-                state.CoalitionMembers = merged.ConvertAll(lord => lord.Id).ToArray();
-                events.Add(new WorldEvent { Coalition = true, Lord = coalition.Id, Members = state.CoalitionMembers });
+                events.Add(new WorldEvent { Coalition = true, Lord = c.Lord.Id, Members = c.Members });
+                merged += c.Members.Length + 1;
             }
+            bool coalition = formed.Count > 0;
             foreach (Lord lord in state.Lords)
                 if (lord.Alive && !lord.IsPlayer)
                     largest = Mathf.Max(largest, state.LandsOf(lord));
             Round++;
             state.Turn = Round + 1;
-            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 넘어간 땅 {moved}개 · 사라진 영주 {vanished}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition != null ? $"(최후의 연합 — {merged.Count + 1}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 목숨 {Lives}{(InCrisis ? "(국가 위기)" : "")}");
+            Debug.Log($"[World] 턴 {Round} 끝 — 영주들의 침략 {invasions}번 · 넘어간 땅 {moved}개 · 사라진 영주 {vanished}명 · 반란 {rebels}건(새 영주 {risen}명) · 남은 영주 {state.AiLords}명{(coalition ? $"(연합 {formed.Count}개 — {merged}명이 뭉침)" : "")} · 가장 큰 영주의 땅 {largest}개 · 내 땅 {Lands}개 · 내 목숨 {Lives}{(InCrisis ? "(국가 위기)" : "")}");
             // 연합이 이미 뭉친 뒤의 턴에는 AI끼리 벌어지는 일이 없다
-            TurnSummary = coalition == null && state.Coalition != null ? $"최후의 연합의 땅은 {largest}개입니다."
+            TurnSummary = !coalition && state.Coalitions.Count > 0 ? $"남은 연합은 {state.AiLords}개이고, 가장 큰 연합의 땅은 {largest}개입니다."
                 : $"영주들의 침략으로 땅 {moved}개의 주인이 바뀌었습니다.\n"
                 + (vanished > 0 ? $"땅을 모두 잃은 영주 {vanished}명이 사라졌습니다.\n" : "")
                 + (rebels > 0 ? $"반란이 {rebels}번 일어나 새 영주 {risen}명이 들어섰습니다.\n" : "")
-                + (coalition != null
-                    ? $"남은 영주 {merged.Count + 1}명이 최후의 연합으로 뭉쳤습니다.\n최후의 연합의 땅은 {largest}개입니다."
+                + (coalition
+                    ? $"남은 영주 {merged}명이 연합 {formed.Count}개로 뭉쳤습니다.\n가장 큰 연합의 땅은 {largest}개입니다."
                     : $"남은 영주는 {state.AiLords}명이고, 가장 큰 영주의 땅은 {largest}개입니다.");
             return events;
         }

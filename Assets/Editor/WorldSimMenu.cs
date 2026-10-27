@@ -16,9 +16,19 @@ namespace GnorpWar.Editor
 
         // 땅 수 묶음 — 「땅이 늘면 힘이 얼마나 느나」를 보는 칸
         private static readonly int[] LandBuckets = { 1, 2, 3, 4, 6, 10 };
+        // 거리 묶음 수 — 마지막 칸은 「이 거리 이상」
+        private const int DistanceBuckets = 6;
 
         [MenuItem("GnorpWar/월드 시뮬레이션/20판 돌리기")]
         private static void RunDefault() => Debug.Log(Simulate(20, 60, 0.8, 1));
+
+        // 내 런 기록(RunRecord.Folder — 읽기만 한다)을 유령 영주로 붙여서
+        [MenuItem("GnorpWar/월드 시뮬레이션/20판 돌리기(유령 — 내 런 기록)")]
+        private static void RunWithGhosts()
+        {
+            var battle = AssetDatabase.LoadAssetAtPath<BattleConfig>(BattleConfigPath);
+            Debug.Log(Simulate(20, 60, 0.8, 1, false, RunRecord.ReadAll(RunRecord.Folder, battle.AssetIds, battle)));
+        }
 
         [MenuItem("GnorpWar/월드 시뮬레이션/탑 전투력 표")]
         private static void LogPowerTable() => Debug.Log(PowerTable(20, 8, 1));
@@ -74,7 +84,8 @@ namespace GnorpWar.Editor
         }
 
         // runs판 — 플레이어는 매 턴 이어진 영주 중 땅이 가장 적은(biggestFirst면 가장 많은) 영주를 치고 playerWin 확률로 이긴다
-        public static string Simulate(int runs, int maxTurns, double playerWin, int seed, bool biggestFirst = false)
+        // ghosts = 판마다 유령 영주로 붙일 런 기록(없으면 AI만 — WorldRun.AddGhosts가 상한까지 무작위 자리에)
+        public static string Simulate(int runs, int maxTurns, double playerWin, int seed, bool biggestFirst = false, List<RunRecord.Loaded> ghosts = null)
         {
             var world = AssetDatabase.LoadAssetAtPath<WorldConfig>(WorldConfigPath);
             var battle = AssetDatabase.LoadAssetAtPath<BattleConfig>(BattleConfigPath);
@@ -84,8 +95,11 @@ namespace GnorpWar.Editor
 
             var clearTurns = new List<int>();
             int over = 0, unfinished = 0, coalitions = 0, battles = 0, coalitionBattles = 0, coalitionOver = 0;
-            float coalitionTurn = 0f, coalitionMembers = 0f, coalitionLands = 0f, coalitionFloors = 0f, coalitionRatio = 0f;
-            var merged = new List<Lord>();
+            float coalitionTurn = 0f, coalitionMembers = 0f, coalitionLands = 0f, coalitionFloors = 0f, coalitionRatio = 0f, coalitionWinsNeeded = 0f;
+            // 연합 하나하나의 수 · [뭉친 연합 수(마지막 칸은 그 이상)] = 판 수
+            int coalitionTotal = 0;
+            var coalitionCounts = new int[6];
+            int ghostLords = 0;
             var lordsAfter = new float[Shown];
             var lordsSamples = new int[Shown];
             var powerSum = new float[Shown];
@@ -101,6 +115,10 @@ namespace GnorpWar.Editor
             int perLandCount = 0;
             int[] buildStart = new int[builds], buildAlive3 = new int[builds], buildAlive5 = new int[builds], buildAttacks = new int[builds], buildWins = new int[builds], buildDefends = new int[builds], buildHeld = new int[builds];
             int[] temperStart = new int[Tempers], temperAlive3 = new int[Tempers], temperAlive5 = new int[Tempers], temperAttacks = new int[Tempers], temperWins = new int[Tempers];
+            // [5턴 · 10턴, 거리 1 … DistanceBuckets 이상] — 그 턴까지 간 판의 시작 영주 수 · 살아 있는 수 · 땅 수 합
+            var distanceStart = new int[2, DistanceBuckets];
+            var distanceAlive = new int[2, DistanceBuckets];
+            var distanceLands = new int[2, DistanceBuckets];
             for (int i = 0; i < Shown; i++)
                 powerMin[i] = float.MaxValue;
 
@@ -115,6 +133,11 @@ namespace GnorpWar.Editor
                     Random.InitState(seed + r);
                     var random = new System.Random(seed + r);
                     var run = new WorldRun(world, battle, random);
+                    if (ghosts != null)
+                    {
+                        run.AddGhosts(new List<RunRecord.Loaded>(ghosts));
+                        ghostLords += run.GhostCount;
+                    }
                     WorldState state = run.State;
                     foreach (Lord lord in state.Lords)
                         if (!lord.IsPlayer)
@@ -179,7 +202,7 @@ namespace GnorpWar.Editor
                                     target = other;
                             // 침략하는 땅 = 그 영주의 땅 중 내 땅과 국경을 맞댄 첫 땅
                             int region = RegionOf(state, target);
-                            bool coalitionBattle = target == state.Coalition;
+                            bool coalitionBattle = state.CoalitionOf(target) != null;
                             bool won = random.NextDouble() < playerWin;
                             WorldTurn.Invade(state, state.Player, region, won);
                             battles++;
@@ -222,17 +245,22 @@ namespace GnorpWar.Editor
                         foreach (Lord lord in state.Lords)
                             if (lord.Alive && !lord.IsPlayer)
                                 strongest = Mathf.Max(strongest, run.PowerOf(lord));
-                        merged.Clear();
-                        Lord coalition = run.FormCoalition(merged);
-                        if (coalition != null)
+                        List<WorldState.Coalition> formed = run.FormCoalitions();
+                        if (formed.Count > 0)
                         {
                             coalitions++;
                             coalitionTurn += state.Turn;
-                            coalitionMembers += merged.Count + 1;
-                            coalitionLands += state.LandsOf(coalition);
-                            coalitionFloors += run.TowerOf(coalition).Field.Length;
-                            if (strongest > 0f)
-                                coalitionRatio += run.PowerOf(coalition) / strongest;
+                            coalitionCounts[Mathf.Min(formed.Count, coalitionCounts.Length - 1)]++;
+                            foreach (WorldState.Coalition coalition in formed)
+                            {
+                                coalitionTotal++;
+                                coalitionMembers += coalition.Members.Length + 1;
+                                coalitionLands += state.LandsOf(coalition.Lord);
+                                coalitionWinsNeeded += coalition.WinsNeeded;
+                                coalitionFloors += run.TowerOf(coalition.Lord).Field.Length;
+                                if (strongest > 0f)
+                                    coalitionRatio += run.PowerOf(coalition.Lord) / strongest;
+                            }
                         }
 
                         if (t < Shown)
@@ -240,6 +268,19 @@ namespace GnorpWar.Editor
                             lordsAfter[t] += state.AiLords;
                             lordsSamples[t]++;
                         }
+                        // 거리별(시작 영주만) — 5 · 10턴 끝의 생존과 땅 수(죽은 영주는 0개로 센다)
+                        if (state.Turn == 5 || state.Turn == 10)
+                            for (int id = 0; id < state.Graph.LordRegionCount; id++)
+                            {
+                                Lord lord = state.Lords[id];
+                                if (lord.IsPlayer)
+                                    continue;
+                                int d = Mathf.Min(run.DistanceOf(lord), DistanceBuckets) - 1, at = state.Turn == 5 ? 0 : 1;
+                                distanceStart[at, d]++;
+                                if (lord.Alive)
+                                    distanceAlive[at, d]++;
+                                distanceLands[at, d] += state.LandsOf(lord);
+                            }
                         if (state.Turn == 3 || state.Turn == 5)
                             for (int id = 0; id < state.Graph.LordRegionCount; id++)
                             {
@@ -277,9 +318,11 @@ namespace GnorpWar.Editor
                 ? "통일 0판\n"
                 : $"통일 {clearTurns.Count}판 — 턴 평균 {average / clearTurns.Count:0.0} · 최소 {clearTurns[0]} · 10% {clearTurns[(int)(clearTurns.Count * 0.1f)]} · 90% {clearTurns[Mathf.Min(clearTurns.Count - 1, (int)(clearTurns.Count * 0.9f))]} · 최대 {clearTurns[clearTurns.Count - 1]}\n");
             text.Append($"게임 오버 {over}판({over * 100f / runs:0.#}%, 그중 연합전 {coalitionOver}판) · 미종료 {unfinished}판 · 내 전투 판당 {battles / (float)runs:0.0}번(연합전 {coalitionBattles / (float)runs:0.0}번)\n");
+            if (ghosts != null)
+                text.Append($"유령 — 기록 {ghosts.Count}개 · 판당 유령 영주 {ghostLords / (float)runs:0.0}명\n");
             text.Append(coalitions == 0
-                ? "최후의 연합 0판\n"
-                : $"최후의 연합 {coalitions}판({coalitions * 100f / runs:0.#}%) — 뭉친 턴 평균 {coalitionTurn / coalitions:0.0} · 영주 {coalitionMembers / coalitions:0.0}명 · 땅 {coalitionLands / coalitions:0.0}개 · 탑 {coalitionFloors / coalitions:0.0}층 · 전투력 = 뭉치기 직전 가장 센 영주의 ×{coalitionRatio / coalitions:0.00}\n");
+                ? "연합 0판\n"
+                : $"연합 {coalitions}판({coalitions * 100f / runs:0.#}%) — 뭉친 턴 평균 {coalitionTurn / coalitions:0.0} · 판당 연합 {coalitionTotal / (float)coalitions:0.0}개(1개 {coalitionCounts[1]} · 2개 {coalitionCounts[2]} · 3개 {coalitionCounts[3]} · 4개 {coalitionCounts[4]} · 5개+ {coalitionCounts[5]}판) | 연합 하나당: 영주 {coalitionMembers / coalitionTotal:0.0}명 · 땅 {coalitionLands / coalitionTotal:0.0}개 · 이길 횟수 {coalitionWinsNeeded / coalitionTotal:0.0}번 · 탑 {coalitionFloors / coalitionTotal:0.0}층 · 전투력 = 뭉치기 직전 가장 센 영주의 ×{coalitionRatio / coalitionTotal:0.00}\n");
             text.Append("턴별 AI 영주 수(턴 끝):");
             for (int i = 0; i < Shown; i++)
                 text.Append(lordsSamples[i] > 0 ? $" {lordsAfter[i] / lordsSamples[i]:0.0}" : " -");
@@ -302,6 +345,14 @@ namespace GnorpWar.Editor
             string[] temperNames = { "약탈자", "야심가", "무모한 자", "안전주의자" };
             for (int i = 0; i < Tempers; i++)
                 text.Append($"{temperNames[i]} | {temperStart[i]} · {Percent(temperAlive3[i], temperStart[i])} · {Percent(temperAlive5[i], temperStart[i])} · {Percent(temperWins[i], temperAttacks[i])}({temperWins[i]}/{temperAttacks[i]})\n");
+            text.Append("내 시작 땅에서의 거리 | 5턴: 시작 영주 수 · 생존 · 평균 땅 수 | 10턴: 같은 셋\n");
+            for (int d = 0; d < DistanceBuckets; d++)
+            {
+                text.Append($"거리 {d + 1}{(d == DistanceBuckets - 1 ? "+" : "")}");
+                for (int at = 0; at < 2; at++)
+                    text.Append($" | {distanceStart[at, d]} · {Percent(distanceAlive[at, d], distanceStart[at, d])} · {(distanceStart[at, d] > 0 ? distanceLands[at, d] / (float)distanceStart[at, d] : 0f):0.00}");
+                text.Append('\n');
+            }
             return text.ToString();
         }
 

@@ -309,6 +309,9 @@ namespace GnorpWar
 
         public bool Flashing => _flash != None && Time.unscaledTime < _flashUntil;
 
+        // 내 땅 왕관 그림 — 연합 결성 팝업의 「땅 N」 앞에도 쓴다(UI/EventVisitPopup)
+        public Sprite Crown => _crown;
+
         // 이벤트 땅마다 상태를 읽어 칸 · 아이콘을 맞춘다 — 상태가 바뀐 땅이 있으면 true(다시 칠한다). commanding = 명령을 받는 중(방문할 수 있는 땅을 띄운다)
         private bool ShowEvents(bool commanding)
         {

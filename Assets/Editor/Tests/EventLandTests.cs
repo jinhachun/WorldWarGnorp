@@ -141,9 +141,9 @@ namespace GnorpWar.Editor.Tests
                 if (!lord.IsPlayer && state.LandsOf(lord) == 0)
                     lord.Alive = false;
             Assert.AreEqual(15, state.LandsOf(state.Player));
-            var merged = new List<Lord>();
-            Lord coalition = WorldTurn.FormCoalition(state, lord => 1f + lord.Id, merged);
-            Assert.NotNull(coalition, "내 땅 15개 = 연합 조건(이벤트 땅 없이)");
+            List<WorldState.Coalition> formed = WorldTurn.FormCoalitions(state, lord => 1f + lord.Id, lord => false);
+            Assert.AreEqual(1, formed.Count, "내 땅 15개 = 연합 조건(이벤트 땅 없이)");
+            Lord coalition = formed[0].Lord;
             Assert.AreEqual(15, state.LandsOf(coalition), "연합의 땅 = 남은 영주 땅 — 이벤트 땅은 안 들어간다");
             for (int r = 0; r < state.Owner.Length; r++)
                 if (state.Graph.IsEvent[r])

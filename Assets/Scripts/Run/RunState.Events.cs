@@ -289,11 +289,11 @@ namespace GnorpWar
                 choices.Add(new EventChoice { Upgrade = special, New = true, To = BuildingRarity.Mythic });
         }
 
-        // 선동가 — 내 땅과 국경을 맞댄 AI 영주(최후의 연합 제외 — 연합은 반란이 없다) 무작위 N명
+        // 선동가 — 내 땅과 국경을 맞댄 AI 영주(연합 제외 — 연합은 반란이 없다) 무작위 N명
         private static void AgitatorChoices(List<EventChoice> choices, EventLandDefinition definition)
         {
             WorldState state = World.State;
-            List<Lord> lords = state.Neighbors(state.Player).FindAll(lord => lord.Alive && !lord.IsPlayer && lord != state.Coalition);
+            List<Lord> lords = state.Neighbors(state.Player).FindAll(lord => lord.Alive && !lord.IsPlayer && state.CoalitionOf(lord) == null);
             foreach (Lord lord in Pick(lords, definition.Choices))
                 choices.Add(new EventChoice { Lord = lord, Happiness = lord.Happiness, Drop = definition.HappinessDrop });
         }

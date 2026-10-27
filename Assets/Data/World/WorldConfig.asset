@@ -33,10 +33,14 @@ MonoBehaviour:
   _coalitionLands: 15
   _coalitionWins: 3
   _coalitionGoldScale: 0.5
+  _ghostCoalitionWinSteps: 0400000008000000
   _underdog: 1
   _underdogGoldPerLand: 1
   _underdogGoldMax: 10
-  _eventLands: 10
+  _distanceGoldBase: 0.8
+  _distanceGoldPerStep: 0.03
+  _distanceGoldMax: 2.5
+  _ghostShare: 0.5
   _events:
   - {fileID: 11400000, guid: 8b304020e2d872e41a38a784e0efc9e1, type: 2}
   - {fileID: 11400000, guid: 1d04dbc5c46dcf64ca3e6d78cc361e4d, type: 2}

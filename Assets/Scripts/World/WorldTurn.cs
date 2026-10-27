@@ -16,10 +16,11 @@ namespace GnorpWar
             return a + b > 0.0 ? a / (a + b) : 0.5;
         }
 
-        // 성향대로 고른 침략 대상 — 후보는 이어진 다른 AI 영주뿐(플레이어의 땅은 공격당하지 않는다). 쉬면 null. 동점은 무작위
+        // 성향대로 고른 침략 대상 — 후보는 이어진 다른 AI 영주뿐(플레이어의 땅은 공격당하지 않는다). 쉬면 null. 동점은 무작위.
+        // 연합은 침략하지 않는다 — 연합이 여럿이어도 서로 싸우지 않고 나만 기다린다(그래서 연합은 행복도가 깎여 쪼개질 일도 없다)
         public static Lord PickTarget(WorldState state, Lord lord, Func<Lord, float> power, Random random)
         {
-            if (lord.Temper == LordTemper.Cautious)
+            if (lord.Temper == LordTemper.Cautious || state.CoalitionOf(lord) != null)
                 return null;
             List<Lord> candidates = state.Neighbors(lord);
             candidates.RemoveAll(other => other.IsPlayer);
@@ -81,10 +82,10 @@ namespace GnorpWar
             }
             if (!attacker.IsPlayer)
                 taken.Add(region);
-            else if (target == state.Coalition)
+            else if (state.CoalitionOf(target) is WorldState.Coalition coalition)
             {
-                taken = Nearest(state, region, state.CoalitionTake);
-                state.CoalitionWins++;
+                taken = Nearest(state, region, state.CoalitionTake(coalition));
+                coalition.Wins++;
             }
             else
                 taken = Nearest(state, region, state.LandsOf(target));
@@ -195,42 +196,117 @@ namespace GnorpWar
             return created;
         }
 
-        // 최후의 연합(기획 §6-1) — ④ 정산 끝에 부른다. 내 땅이 CoalitionLands 이상이고 AI 영주가 둘 이상 남았으면, 힘이 가장 센 영주(동점은 번호가 앞선 쪽)를
-        // 바탕으로 남은 AI 영주가 전부 하나로 뭉친다: 나머지의 땅이 바탕 영주의 것이 되고 나머지는 사라진다. 바탕 영주를 돌려주고 merged에 합쳐진 영주들을 담는다.
-        // 뭉치지 않았으면 null — 런에 한 번뿐이다. 연합은 남은 AI가 하나라 침략할 대상이 없고, 그래서 행복도가 깎여 쪼개질 일도 없다.
-        // 뭉칠 때의 땅 수를 적어 둔다 — 연합은 여러 번 이겨야 다 먹는다(WorldState.CoalitionTake)
-        public static Lord FormCoalition(WorldState state, Func<Lord, float> power, List<Lord> merged)
+        // 연합(기획 §6-1 · 사용자 10/27) — ④ 정산 끝에 부른다. 내 땅이 CoalitionLands 이상이고 AI 영주가 둘 이상 남았으면 뭉친다(런에 한 번):
+        //   유령 영주가 있으면 — 살아 있는 유령마다 연합 하나. 남은 AI 영주는 전부 지도 거리(영주 땅 그래프 최단 거리)가 가장 가까운 유령에게 흡수된다
+        //     (같으면 땅이 많은 유령, 그것도 같으면 번호가 앞선 유령). 이기는 횟수는 뭉칠 때 땅 수로(WorldRules.GhostCoalitionWins).
+        //   유령이 없으면 — 힘이 가장 센 영주(동점은 번호가 앞선 쪽) 아래 하나로, 이기는 횟수 CoalitionWins.
+        // 흡수된 영주는 사라지고 땅이 바탕 영주의 것이 된다. 뭉친 연합들을 돌려준다(안 뭉쳤으면 빈 목록 — state.Coalitions에도 든다)
+        public static List<WorldState.Coalition> FormCoalitions(WorldState state, Func<Lord, float> power, Func<Lord, bool> isGhost)
         {
             WorldRules rules = state.Rules;
-            if (!rules.Coalition || state.Coalition != null || !state.Player.Alive || state.LandsOf(state.Player) < rules.CoalitionLands || state.AiLords < 2)
-                return null;
-            Lord leader = null;
-            float best = 0f;
+            var formed = new List<WorldState.Coalition>();
+            if (!rules.Coalition || state.Coalitions.Count > 0 || !state.Player.Alive || state.LandsOf(state.Player) < rules.CoalitionLands || state.AiLords < 2)
+                return formed;
+            var leaders = new List<Lord>();
             foreach (Lord lord in state.Lords)
+                if (lord.Alive && !lord.IsPlayer && isGhost(lord))
+                    leaders.Add(lord);
+            bool ghost = leaders.Count > 0;
+            if (!ghost)
             {
-                if (!lord.Alive || lord.IsPlayer)
-                    continue;
-                float value = power(lord);
-                if (leader == null || value > best)
+                Lord strongest = null;
+                float best = 0f;
+                foreach (Lord lord in state.Lords)
                 {
-                    leader = lord;
-                    best = value;
+                    if (!lord.Alive || lord.IsPlayer)
+                        continue;
+                    float value = power(lord);
+                    if (strongest == null || value > best)
+                    {
+                        strongest = lord;
+                        best = value;
+                    }
                 }
+                leaders.Add(strongest);
             }
+            // [바탕 영주 차례][지역] = 그 바탕 영주의 땅에서 건너는 수
+            var distance = new int[leaders.Count][];
+            for (int i = 0; i < leaders.Count; i++)
+                distance[i] = DistancesFrom(state, leaders[i]);
+            var members = new List<int>[leaders.Count];
+            for (int i = 0; i < leaders.Count; i++)
+                members[i] = new List<int>();
+            // 판도를 바꾸기 전에 다 정한다(흡수가 다른 영주의 거리 · 땅 수를 바꾸지 않게)
+            var joins = new List<(Lord Lord, int Leader)>();
             foreach (Lord lord in state.Lords)
             {
-                if (!lord.Alive || lord.IsPlayer || lord == leader)
+                if (!lord.Alive || lord.IsPlayer || leaders.Contains(lord))
                     continue;
+                int pick = 0, pickDistance = int.MaxValue, pickLands = 0;
+                for (int i = 0; i < leaders.Count; i++)
+                {
+                    int d = int.MaxValue;
+                    for (int region = 0; region < state.Owner.Length; region++)
+                        if (state.Owner[region] == lord.Id && distance[i][region] >= 0)
+                            d = Math.Min(d, distance[i][region]);
+                    int lands = state.LandsOf(leaders[i]);
+                    // 차례가 번호 순이라 같으면 앞선 번호가 남는다
+                    if (d < pickDistance || (d == pickDistance && lands > pickLands))
+                    {
+                        pick = i;
+                        pickDistance = d;
+                        pickLands = lands;
+                    }
+                }
+                joins.Add((lord, pick));
+            }
+            foreach ((Lord lord, int leader) in joins)
+            {
                 for (int region = 0; region < state.Owner.Length; region++)
                     if (state.Owner[region] == lord.Id)
-                        state.Owner[region] = leader.Id;
+                        state.Owner[region] = leaders[leader].Id;
                 lord.Alive = false;
-                merged.Add(lord);
+                members[leader].Add(lord.Id);
             }
-            state.Coalition = leader;
-            state.CoalitionStartLands = state.LandsOf(leader);
-            state.CoalitionWins = 0;
-            return leader;
+            for (int i = 0; i < leaders.Count; i++)
+            {
+                int lands = state.LandsOf(leaders[i]);
+                var coalition = new WorldState.Coalition
+                {
+                    Lord = leaders[i],
+                    Ghost = ghost,
+                    StartLands = lands,
+                    WinsNeeded = ghost ? rules.GhostCoalitionWins(lands) : rules.CoalitionWins,
+                    Members = members[i].ToArray(),
+                };
+                state.Coalitions.Add(coalition);
+                formed.Add(coalition);
+            }
+            return formed;
+        }
+
+        // lord의 땅들에서 영주 땅끼리의 길로 건너는 수(닿지 않는 땅은 −1)
+        private static int[] DistancesFrom(WorldState state, Lord lord)
+        {
+            var distance = new int[state.Owner.Length];
+            var queue = new Queue<int>();
+            for (int region = 0; region < distance.Length; region++)
+            {
+                distance[region] = state.Owner[region] == lord.Id ? 0 : -1;
+                if (distance[region] == 0)
+                    queue.Enqueue(region);
+            }
+            while (queue.Count > 0)
+            {
+                int region = queue.Dequeue();
+                foreach (int next in state.Graph.Links[region])
+                    if (distance[next] < 0)
+                    {
+                        distance[next] = distance[region] + 1;
+                        queue.Enqueue(next);
+                    }
+            }
+            return distance;
         }
 
         // 약자 보정(기획 §6-1) — AI 영주가 이번 턴 수입에 더 받는 골드: 가장 큰 영주(플레이어 포함)보다 땅이 적은 만큼 × PerLand, Max까지. 플레이어는 받지 않는다

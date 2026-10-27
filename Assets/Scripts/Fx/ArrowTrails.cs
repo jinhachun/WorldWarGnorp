@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 투사체 꼬리(전투 시각화 F1) — 화살 뒤로 지난 자리 점 몇 개가 따라온다. 관통 = 흰 · 처치해서 더 쏜 화살 = 노랑.
+    // 투사체 꼬리(전투 시각화 F1) — 화살 뒤로 지난 자리 점 몇 개가 따라온다. 관통 = 불꽃(사용자 10/27 — 점이 노랑에서 빨강으로 · 불씨를 떨군다, Fx/FireTrails) · 처치해서 더 쏜 화살 = 노랑.
     // 관통 신화(관통 타격마다 피해 ×)는 뚫을 때마다 점이 하나씩 는다(Grow). 화살마다 TrailRenderer · GameObject를 붙이지 않는다 —
     // 꼬리 전부를 메시 하나로(PixelMesh). 화살이 닿아 사라지면 남은 점이 짧게 따라 줄어든다. FxDirector가 만든다
     public class ArrowTrails : MonoBehaviour
@@ -17,6 +17,11 @@ namespace GnorpWar
         private const int MaxDots = 8;
         private const int SortingOrder = 120;   // 유닛 위 · 버프 선(150) 아래
         private const int MaxQuads = Capacity * MaxDots;
+        // 관통탄 불씨(Fx/FireTrails) — 찍은 자리마다 이 확률로 하나, 2px에서 줄며 이만큼(초) 산다
+        private const float FireEmberChance = 0.5f;
+        private const float FireEmberLifeMin = 0.25f;
+        private const float FireEmberLifeMax = 0.4f;
+        private const float FireEmberDrift = 0.3f;   // 칸/초
 
         private class Trail
         {
@@ -27,6 +32,7 @@ namespace GnorpWar
             public int Count;
             public int Dots;
             public Color32 Color;
+            public bool Fire;
             public float SampleTimer;
             public bool Landed;
         }
@@ -65,9 +71,19 @@ namespace GnorpWar
                 trail.Dots = BaseDots;
                 trail.SampleTimer = 0f;
                 trail.Landed = false;
+                trail.Fire = false;
                 _instance._active.Add(trail);
             }
             trail.Color = color;
+        }
+
+        // 이번 비행에 불꽃 꼬리를 단다(관통탄) — 뒤에 Follow로 색을 바꿔도 불꽃이 남는다
+        public static void FollowFire(Projectile shot)
+        {
+            Follow(shot, Color.white);
+            Trail trail = _instance != null ? _instance.Find(shot) : null;
+            if (trail != null)
+                trail.Fire = true;
         }
 
         // 꼬리를 점 하나 늘린다(관통 신화 — 뚫을 때마다)
@@ -109,7 +125,12 @@ namespace GnorpWar
                 {
                     Vector2 now = trail.Shot.Body.position;
                     if (trail.Count == 0 || (now - trail.Points[0]).sqrMagnitude >= Spacing * Spacing)
+                    {
                         Push(trail, now);
+                        // 불꽃 — 찍은 자리 둘에 하나꼴로 불씨를 떨군다(화살이 많아도 수수하게)
+                        if (trail.Fire && Random.value < FireEmberChance)
+                            FireTrails.Emit(now, Random.insideUnitCircle * FireEmberDrift, 2, Random.Range(FireEmberLifeMin, FireEmberLifeMax), true);
+                    }
                 }
                 if (trail.Count <= 0)
                 {
@@ -137,7 +158,8 @@ namespace GnorpWar
             for (int k = 0; k < trail.Count; k++)
             {
                 float t = (k + 1f) / (trail.Dots + 1f);
-                _mesh.Square(trail.Points[k], k == 0 ? 2 : 1, PixelMesh.Faded(trail.Color, 1f - t * 0.7f));
+                Color color = trail.Fire ? FireTrails.Heat(t) : (Color)trail.Color;
+                _mesh.Square(trail.Points[k], k == 0 ? 2 : 1, PixelMesh.Faded(color, 1f - t * 0.7f));
             }
         }
     }

@@ -9,6 +9,17 @@ namespace GnorpWar
     {
         private const int SortingOrder = 160;   // 유닛 · 버프 선(150) 위, 데미지 숫자(200) 아래
         private const float HitShake = 0.3f;
+        // 불꽃 꼬리(Fx/FireTrails, 사용자 10/27) — 지나간 거리 FireStep마다 FirePerStep개, 도끼 가운데에서 FireRadius 칸 안 아무 데나
+        private const float FireStep = 2f * PixelMesh.Pixel;
+        private const int FirePerStep = 2;
+        private const float FireRadius = 0.8f;
+        private const float FireLifeMin = 0.45f;
+        private const float FireLifeMax = 0.75f;
+        private const float FireDrift = 0.4f;     // 칸/초
+        // 닿는 순간 사방으로 튀는 불씨
+        private const int BurstCount = 24;
+        private const float BurstSpeedMin = 3f;   // 칸/초
+        private const float BurstSpeedMax = 6f;
 
         private Vector2 _from;
         private Vector2 _last;
@@ -19,6 +30,7 @@ namespace GnorpWar
         private float _arc;
         private float _spin;
         private float _age;
+        private Vector2 _fireAt;   // 마지막으로 불씨를 떨군 자리
 
         public static void Throw(Base thrower, Unit victim)
         {
@@ -44,6 +56,7 @@ namespace GnorpWar
             // 날아가는 쪽으로 앞으로 구르게 — 오른쪽으로 가면 시계 방향
             axe._spin = config.AxeSpin * (victim.Position.x >= axe._from.x ? -1f : 1f);
             go.transform.position = axe._from;
+            axe._fireAt = axe._from;
         }
 
         private bool VictimHere => _victim != null && _victim.IsAlive && _victim.Life == _victimLife;
@@ -59,6 +72,7 @@ namespace GnorpWar
             Vector2 at = Vector2.Lerp(_from, _last, t) + Vector2.up * (4f * t * (1f - t) * lift);
             transform.position = at;
             transform.rotation = Quaternion.Euler(0f, 0f, _spin * _age);
+            DropFire(at);
             if (t < 1f)
                 return;
 
@@ -70,7 +84,25 @@ namespace GnorpWar
                 FxDirector.Instance.HitSpark(_last, direction, Color.white);
                 FxDirector.Instance.Shake(HitShake);
             }
+            for (int i = 0; i < BurstCount; i++)
+                FireTrails.Emit(_last, Random.insideUnitCircle.normalized * Random.Range(BurstSpeedMin, BurstSpeedMax), 3, Random.Range(FireLifeMin, FireLifeMax), false);
             Destroy(gameObject);
+        }
+
+        // 지난 자리부터 지금 자리까지 FireStep마다 불씨를 떨군다 — 프레임이 길어도 꼬리가 끊기지 않게
+        private void DropFire(Vector2 at)
+        {
+            Vector2 path = at - _fireAt;
+            int steps = Mathf.FloorToInt(path.magnitude / FireStep);
+            if (steps <= 0)
+                return;
+            Vector2 step = path / path.magnitude * FireStep;
+            for (int s = 0; s < steps; s++)
+            {
+                _fireAt += step;
+                for (int k = 0; k < FirePerStep; k++)
+                    FireTrails.Emit(_fireAt + Random.insideUnitCircle * FireRadius, Random.insideUnitCircle * FireDrift, Random.Range(2, 5), Random.Range(FireLifeMin, FireLifeMax), false);
+            }
         }
 
         private static Vector2 Direction(Vector2 from, Vector2 to)

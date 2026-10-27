@@ -149,7 +149,7 @@ namespace GnorpWar
             _pierce = true;
             _pierceHitBonus = hitBonus;
             _pierceBaseDamage = _damage;
-            ArrowTrails.Follow(this, Color.white);   // 관통 = 흰 꼬리(사용자 10/20 Q5)
+            ArrowTrails.FollowFire(this);   // 관통 = 불꽃 꼬리(사용자 10/27 — 10/20 Q5의 흰 꼬리를 바꿈)
         }
 
         // Launch 뒤에 — 높은 고도에서 쏜 화살이다(쏘는 순간 기준 · 타워는 적 유닛에게 늘)

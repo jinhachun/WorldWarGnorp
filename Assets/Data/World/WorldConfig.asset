@@ -34,6 +34,7 @@ MonoBehaviour:
   _coalitionWins: 3
   _coalitionGoldScale: 0.5
   _ghostCoalitionWinSteps: 0400000008000000
+  _maxCoalitions: 3
   _underdog: 1
   _underdogGoldPerLand: 1
   _underdogGoldMax: 10
@@ -50,6 +51,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ba0b5d763533d35419436031a8185c35, type: 2}
   - {fileID: 11400000, guid: 75617cd23701ff64e8404c57101429bb, type: 2}
   - {fileID: 11400000, guid: 976dd71e95dbc3b40bee9ec981045914, type: 2}
+  - {fileID: 11400000, guid: 60570dff93665384caef5696da3cb105, type: 2}
+  - {fileID: 11400000, guid: 522a317d9a934d64faf4289c37a02d75, type: 2}
   _lordColors:
   - {r: 0.5916666, g: 0.3, b: 1, a: 1}
   - {r: 0.83095247, g: 0.6, b: 1, a: 1}

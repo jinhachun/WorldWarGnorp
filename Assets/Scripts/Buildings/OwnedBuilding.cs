@@ -21,13 +21,14 @@ namespace GnorpWar
         }
 
         // 저장해 둔 한 채를 다시 세운다(Run/TowerSnapshot) — 위 필드 전부를 그대로
-        public OwnedBuilding(BuildingDefinition definition, int upgrades, int stacks, int spentGold, float cooldownScale)
+        public OwnedBuilding(BuildingDefinition definition, int upgrades, int stacks, int spentGold, float cooldownScale, int extraSummons = 0)
         {
             _definition = definition;
             _upgrades = upgrades;
             _stacks = stacks;
             _spentGold = spentGold;
             _cooldownScale = cooldownScale;
+            _extraSummons = extraSummons;
         }
 
         public BuildingDefinition Definition => _definition;
@@ -52,6 +53,10 @@ namespace GnorpWar
         [SerializeField] private float _cooldownScale = 1f;
         public float CooldownScale => _cooldownScale;
         public void ScaleCooldown(float factor) => _cooldownScale *= factor;
+        // 이 한 채에 영구히 붙은 소환 수(피난민 골짜기 — 이벤트 땅) — 쿨다운마다 소환할 때 더한다(BoardRunner). 팔면 사라지고, 합쳐지면 더해진다. 등급 수치가 아니라 신화에서도 멈추지 않는다
+        [SerializeField] private int _extraSummons;
+        public int ExtraSummons => _extraSummons;
+        public void AddSummons(int count) => _extraSummons += count;
         // 이 한 채에 합쳐진 시작 등급 기물 수
         public int Copies => 1 << _upgrades;
         public bool CanUpgrade => Rarity < BuildingRarity.Mythic;
@@ -115,6 +120,8 @@ namespace GnorpWar
                     return deathCount.RemainingOf(team);
                 else if (effect is SummonCountRallyEffect rally)
                     return rally.RemainingOf(team);
+                else if (effect is SummonCountSummonEffect summonCount)
+                    return summonCount.RemainingOf(team);
             return 0;
         }
 

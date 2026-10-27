@@ -29,6 +29,9 @@ namespace GnorpWar
         public MapDefinition Terrain;
         // 보물 창고 — 받을 골드
         public int Gold;
+        // 물레방아 — 고른 기물(Building · Index)의 쿨다운에 영구히 곱하는 값 / 피난민 — 고른 기물이 영구히 더 소환하는 수
+        public float Factor = 1f;
+        public int Summons;
         // false면 골라도 받지 못한다(용병 상인 — 탑 · 보관함에 자리가 없다). 그래도 고를 수 있고, 고르면 땅이 닫힌다
         public bool Receivable = true;
     }
@@ -75,6 +78,8 @@ namespace GnorpWar
                     UpgradeDefinition shrine = definition.ShrineOf(terrain);
                     return definition.Describe(terrain.DisplayName, shrine != null ? shrine.ValueAt(BuildingRarity.Common).ToString("0.##") : "0");
                 case EventLandKind.Treasury: return definition.Describe(definition.GoldAt(World.State.Turn));
+                case EventLandKind.Watermill: return definition.Describe(definition.CooldownFactor.ToString("0.##"));
+                case EventLandKind.Refugee: return definition.Describe(definition.Summons);
                 default: return definition.Describe();
             }
         }
@@ -106,6 +111,8 @@ namespace GnorpWar
                         Debug.LogWarning($"[World] 지형 성소 — 「{terrain.DisplayName}」 지형의 업그레이드가 없다(이벤트 에셋의 지형 성소 칸)");
                     break;
                 case EventLandKind.Treasury: choices.Add(new EventChoice { Gold = definition.GoldAt(World.State.Turn) }); break;
+                case EventLandKind.Watermill:
+                case EventLandKind.Refugee: BoonChoices(choices, kind, definition); break;
             }
             _visit = new EventOffer
             {
@@ -174,6 +181,16 @@ namespace GnorpWar
                     GainGold(choice.Gold);
                     what = $"골드 +{choice.Gold}";
                     break;
+                case EventLandKind.Watermill:
+                    choice.Building.ScaleCooldown(choice.Factor);
+                    OwnedBuilding.NotifyEffect(choice.Building);
+                    what = $"{choice.Building.Definition.name} 쿨다운 ×{choice.Factor:0.##}";
+                    break;
+                case EventLandKind.Refugee:
+                    choice.Building.AddSummons(choice.Summons);
+                    OwnedBuilding.NotifyEffect(choice.Building);
+                    what = $"{choice.Building.Definition.name} 소환 +{choice.Summons}";
+                    break;
             }
             FinishVisit(what);
             return true;
@@ -221,6 +238,22 @@ namespace GnorpWar
                 for (int i = 0; i < row.Length; i++)
                     if (!OwnedBuilding.IsEmpty(row[i]) && row[i].CanUpgrade)
                         choices.Add(new EventChoice { Building = row[i], Storage = storage, Index = i, From = row[i].Rarity, To = row[i].Rarity + 1 });
+            }
+        }
+
+        // 물레방아 — 내 탑(필드)의 쿨다운 있는 기물 전부 / 피난민 — 내 탑의 쿨다운마다 유닛을 소환하는 기물 전부(징병제와 같은 대상). 탑 아래층부터, 보관함은 고르지 않는다
+        private static void BoonChoices(List<EventChoice> choices, EventLandKind kind, EventLandDefinition definition)
+        {
+            OwnedBuilding[] row = Player.Field;
+            for (int i = 0; i < row.Length; i++)
+            {
+                if (OwnedBuilding.IsEmpty(row[i]) || row[i].Definition.Cooldown <= 0f)
+                    continue;
+                if (kind == EventLandKind.Refugee && row[i].Definition.Unit == null)
+                    continue;
+                choices.Add(kind == EventLandKind.Watermill
+                    ? new EventChoice { Building = row[i], Index = i, From = row[i].Rarity, To = row[i].Rarity, Factor = definition.CooldownFactor }
+                    : new EventChoice { Building = row[i], Index = i, From = row[i].Rarity, To = row[i].Rarity, Summons = definition.Summons });
             }
         }
 

@@ -864,6 +864,7 @@ namespace GnorpWar
                 pair.AddStacks(target.Stacks);
                 pair.AddSpent(target.SpentGold);
                 pair.ScaleCooldown(target.CooldownScale);
+                pair.AddSummons(target.ExtraSummons);
                 target = pair;
                 steps?.Add(new MergeStep(target, field, storage));
                 pair = FindMergeTarget(target.Definition, target.Upgrades, target);
@@ -1176,7 +1177,10 @@ namespace GnorpWar
         // 사서 모은 기물은 쓴 골드가 등급가 × 합친 개수라 전과 같은 숫자다. 공짜로 받은 기물(Acquire)만 0골드다 — 바닥을 두지 않는다
         public static int SellValue(OwnedBuilding building)
         {
-            return Mathf.FloorToInt(building.SpentGold * _config.SellRatio);
+            int bonus = 0;   // 판매가를 올리는 기물(동전 주조기)이 이 한 채에 쌓은 몫
+            foreach (BuildingPassive passive in building.Passives)
+                bonus += passive.SellBonus(building);
+            return Mathf.FloorToInt(building.SpentGold * _config.SellRatio) + bonus;
         }
 
         public static void Sell(bool storage, int index)

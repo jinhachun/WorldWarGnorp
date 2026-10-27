@@ -51,6 +51,8 @@ namespace GnorpWar
             public int Stacks;
             public int SpentGold;
             public float CooldownScale;
+            // 영구히 더 소환하는 수(피난민 골짜기) — 이 칸이 없는 옛 기록은 0
+            public int ExtraSummons;
         }
 
         [System.Serializable]
@@ -141,7 +143,7 @@ namespace GnorpWar
         private static Building Write(OwnedBuilding owned, AssetIds ids)
             => OwnedBuilding.IsEmpty(owned)
                 ? new Building { Id = "" }
-                : new Building { Id = ids.IdOf(owned.Definition), Upgrades = owned.Upgrades, Stacks = owned.Stacks, SpentGold = owned.SpentGold, CooldownScale = owned.CooldownScale };
+                : new Building { Id = ids.IdOf(owned.Definition), Upgrades = owned.Upgrades, Stacks = owned.Stacks, SpentGold = owned.SpentGold, CooldownScale = owned.CooldownScale, ExtraSummons = owned.ExtraSummons };
 
         private static OwnedBuilding Read(Building building, AssetIds ids)
         {
@@ -150,7 +152,7 @@ namespace GnorpWar
             BuildingDefinition definition = ids.Find<BuildingDefinition>(building.Id);
             if (building.Upgrades < 0 || (int)definition.Rarity + building.Upgrades > (int)BuildingRarity.Mythic)
                 throw new InvalidException($"「{definition.name}」의 오른 횟수 {building.Upgrades}가 신화를 넘음");
-            return new OwnedBuilding(definition, building.Upgrades, building.Stacks, building.SpentGold, building.CooldownScale);
+            return new OwnedBuilding(definition, building.Upgrades, building.Stacks, building.SpentGold, building.CooldownScale, building.ExtraSummons);
         }
 
         private static void CheckRarity(BuildingRarity rarity)

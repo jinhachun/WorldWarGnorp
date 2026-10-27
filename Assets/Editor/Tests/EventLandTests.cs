@@ -62,14 +62,16 @@ namespace GnorpWar.Editor.Tests
         }
 
 
-        // 종류 — 10칸이면 8종이 다 한 번 이상
+        // 종류 — 10칸 · 10종(10/28)이면 한 판에 종류마다 꼭 한 곳
         [Test]
-        public void KindsDealAllEight()
+        public void KindsDealEachOnce()
         {
+            int count = System.Enum.GetValues(typeof(EventLandKind)).Length;
+            Assert.AreEqual(10, count);
             for (int seed = 0; seed < 50; seed++)
             {
                 var kinds = new HashSet<EventLandKind>(EventLands.Deal(10, new System.Random(seed)));
-                Assert.AreEqual(8, kinds.Count);
+                Assert.AreEqual(count, kinds.Count);
             }
         }
 

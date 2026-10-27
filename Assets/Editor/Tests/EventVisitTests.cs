@@ -34,11 +34,11 @@ namespace GnorpWar.Editor.Tests
             _player = (TowerState)typeof(RunState).GetField("Player", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
         }
 
-        // 이벤트 땅 하나를 그 종류로 바꾸고, 그 국경의 땅 하나를 내 것으로 — 방문할 수 있게
+        // 안 닫힌 이벤트 땅 하나를 그 종류로 바꾸고, 그 국경의 땅 하나를 내 것으로 — 방문할 수 있게
         private int Prepare(EventLandKind kind)
         {
             WorldState state = RunState.World.State;
-            int region = RunState.EventRegions()[0];
+            int region = RunState.EventRegions().Find(e => !state.EventClosed[e]);
             state.EventKind[region] = kind;
             Own(state, region);
             Assert.Contains(region, RunState.VisitableEvents());
@@ -311,6 +311,91 @@ namespace GnorpWar.Editor.Tests
             var sum = StatSum.Identity;
             StatBook.AccumulateBook(snapshot.Tower.Book, Team.Enemy, building.Unit, UnitStat.MaxHp, ref sum);
             Assert.AreEqual(120f, sum.Apply(100f), "훈련장 — 영구 강화(출처 = 그 유닛 에셋)");
+            Assert.AreEqual(json, TowerSnapshot.ToJson(snapshot.Tower, snapshot.Nation, snapshot.LordColor, snapshot.Lives, snapshot.Turn, _ids));
+        }
+
+        // 물레방아 — 쿨다운 있는 탑 기물만 후보 · 고르면 그 한 채의 쿨다운 영구히 ×0.75 / 피난민 — 유닛을 소환하는 탑 기물만 · 소환 수 영구히 +1(전투 보드가 더한다)
+        [Test]
+        public void WatermillAndRefugee()
+        {
+            BuildingDefinition building = CommonWithUnit();
+            _player.Field[0] = new OwnedBuilding(building);
+            _player.Storage[0] = new OwnedBuilding(building);
+            float cooldown = _player.Field[0].Cooldown;
+
+            EventOffer offer = RunState.BeginVisit(Prepare(EventLandKind.Watermill));
+            Assert.AreEqual(1, offer.Choices.Length, "보관함은 후보가 아니다");
+            Assert.AreSame(_player.Field[0], offer.Choices[0].Building);
+            StringAssert.Contains("0.75", RunState.EventText(offer.Region));
+            RunState.ChooseVisit(0);
+            Assert.AreEqual(cooldown * 0.75f, _player.Field[0].Cooldown, 0.0001f);
+            Assert.AreEqual(cooldown, _player.Storage[0].Cooldown, 0.0001f, "고른 한 채만");
+            RunState.EndTurn();
+
+            offer = RunState.BeginVisit(Prepare(EventLandKind.Refugee));
+            Assert.AreEqual(1, offer.Choices.Length);
+            RunState.ChooseVisit(0);
+            Assert.AreEqual(1, _player.Field[0].ExtraSummons);
+            Assert.AreEqual(0, _player.Storage[0].ExtraSummons);
+        }
+
+        // 고를 기물이 없으면(빈 탑 · 소환 안 하는 기물만) 방문은 되고 「닫기」 — 대장간과 같다
+        [Test]
+        public void BoonWithNothingToPick()
+        {
+            BuildingDefinition noUnit = System.Array.Find(_config.ShopPool, b => b.Unit == null && b.Cooldown > 0f);
+            Assert.NotNull(noUnit);
+            _player.Field[0] = new OwnedBuilding(noUnit);
+            EventOffer offer = RunState.BeginVisit(Prepare(EventLandKind.Refugee));
+            Assert.AreEqual(0, offer.Choices.Length, "유닛을 소환하지 않는 기물은 피난민 후보가 아니다");
+            Assert.IsTrue(offer.CanDecline);
+            Assert.IsTrue(RunState.DeclineVisit());
+            Assert.AreEqual(RunState.RunPhase.Aftermath, RunState.Phase);
+        }
+
+        // 영구히 — 팔면 사라지고(그 한 채에 붙어 있다), 합치면 이어진다(쿨다운 배율은 곱, 소환 수는 더한다)
+        [Test]
+        public void BoonFollowsBuilding()
+        {
+            BuildingDefinition building = CommonWithUnit();
+            // 한 등급 위 두 채 — 아래 채(1층)는 물레방아 · 피난민을 받았고, 위 채(2층)는 아무것도 안 받았다
+            var lower = new OwnedBuilding(building, 1, 0, 0, 1f);
+            lower.ScaleCooldown(0.75f);
+            lower.AddSummons(1);
+            var upper = new OwnedBuilding(building, 0, 0, 0, 1f);
+            upper.AddSummons(1);
+            _player.Field[0] = lower;
+            _player.Field[1] = upper;
+            // 시작 등급 하나를 사면 2층(upper)과 합쳐 한 등급 오르고, 이어서 1층(lower)과 또 합쳐진다 — 남는 한 채(lower)가 둘의 몫을 다 가진다
+            RunState.GainGold(100);
+            RunState.Offers[0] = building;
+            RunState.OfferUpgrades[0] = 0;
+            RunState.Buy(0);
+            Assert.AreEqual(2, lower.Upgrades, "연쇄 합치기");
+            Assert.IsTrue(OwnedBuilding.IsEmpty(_player.Field[1]), "2층은 합쳐져 사라짐");
+            Assert.AreEqual(2, lower.ExtraSummons, "소환 수는 더한다");
+            Assert.AreEqual(0.75f, lower.CooldownScale, 0.0001f, "쿨다운 배율은 곱한다");
+
+            // 팔면 사라진다 — 새로 들인 같은 기물은 0에서
+            RunState.Sell(false, 0);
+            RunState.Acquire(building);
+            OwnedBuilding fresh = _player.Field[0];
+            Assert.AreEqual(0, fresh.ExtraSummons);
+            Assert.AreEqual(1f, fresh.CooldownScale);
+        }
+
+        // 스냅샷 — 영구 쿨다운 · 영구 소환 수가 탑 스냅샷(유령 탑) 왕복에 남는다
+        [Test]
+        public void BoonSurvivesSnapshot()
+        {
+            BuildingDefinition building = CommonWithUnit();
+            _player.Field[0] = new OwnedBuilding(building);
+            Visit(EventLandKind.Watermill, 0);
+            Visit(EventLandKind.Refugee, 0);
+            string json = TowerSnapshot.ToJson(_player, RunState.Nation, Color.white, RunState.Lives, 3, _ids);
+            TowerSnapshot snapshot = TowerSnapshot.FromJson(json, Team.Enemy, _ids, _config);
+            Assert.AreEqual(0.75f, snapshot.Tower.Field[0].CooldownScale, 0.0001f);
+            Assert.AreEqual(1, snapshot.Tower.Field[0].ExtraSummons);
             Assert.AreEqual(json, TowerSnapshot.ToJson(snapshot.Tower, snapshot.Nation, snapshot.LordColor, snapshot.Lives, snapshot.Turn, _ids));
         }
 

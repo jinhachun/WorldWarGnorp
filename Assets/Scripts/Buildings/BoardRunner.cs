@@ -462,7 +462,7 @@ namespace GnorpWar
                 foreach (BuildingAction action in building.Actions)
                     summons &= !action.ReplacesSummon(this, index);
                 if (summons)
-                    Summon(definition.Unit, definition.SummonCount + ExtraSummons + _slots[index].ExtraSummons, index);
+                    Summon(definition.Unit, definition.SummonCount + ExtraSummons + _slots[index].ExtraSummons + building.ExtraSummons, index);
                 foreach (BuildingAction action in building.Actions)
                     action.Execute(this, index, level);
                 foreach (UnitEffect effect in building.Effects)
@@ -521,6 +521,21 @@ namespace GnorpWar
                         BuffLinks.EffectToSlot(_team, e.Effect, sourceSlot, BuffKind.Summon);
                     unit = converted;
                 }
+            // 마지막 변환(총동원 개조령) — 노동의 기계화 · 교황청 같은 변환이 끝난 뒤에 바꾼다. 늘어난 수는 그 몫만 안전 상한에 다시 묻는다
+            System.Collections.Generic.List<TeamEffects.Entry> effects = TeamEffects.For(_team);
+            for (int k = 0, n = effects.Count; k < n; k++)
+            {
+                int before = count;
+                UnitDefinition last = effects[k].Effect.ReplaceSummonLast(_team, unit, sourceSlot, ref count);
+                if (count > before)
+                    count = before + ChainGuard.Allow(_team, count - before, last, source);
+                if (last == unit)
+                    continue;
+                converter = effects[k].Effect;
+                if (sourceSlot >= 0)
+                    BuffLinks.EffectToSlot(_team, effects[k].Effect, sourceSlot, BuffKind.Summon);
+                unit = last;
+            }
 
             // 파견 사무소 — 자리를 정하지 않은 소환은 가장 앞에 있는 내 작은 타워의 발치에서(없으면 아래 그대로 성에서)
             Base outpost = at == null && _summonAtSmallTower ? Base.FrontSmallTower(_team) : null;

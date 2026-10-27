@@ -55,6 +55,9 @@ namespace GnorpWar
         [SerializeField] private float _coalitionGoldScale = 0.3f;
         [Tooltip("유령 연합(유령 영주마다 하나 — 남은 AI 영주는 가장 가까운 유령에게 흡수된다)을 다 먹으려면 이겨야 하는 횟수 = 1 + 뭉칠 때 땅 수가 이 값들 이상인 개수. {4, 8} = 1~3개 1번 · 4~7개 2번 · 8개 이상 3번. 유령이 없으면 위 「이겨야 하는 횟수」(사용자 10/27)")]
         [SerializeField] private int[] _ghostCoalitionWinSteps = { 4, 8 };
+        [Tooltip("연합 수의 상한 — 뭉칠 때 유령이 더 많으면 땅이 많은 유령(같으면 탑 전투력 · 번호 순)이 바탕이 되고, 나머지 유령은 AI 영주처럼 가장 가까운 바탕에 흡수된다(사용자 10/28)")]
+        [SuffixLabel("개", true)]
+        [SerializeField] private int _maxCoalitions = 3;
 
         [Header("약자 보정 — AI 영주가 턴 수입에 더 받는 골드 = (가장 큰 영주의 땅 수 − 자기 땅 수) × 땅당 골드, 상한까지. 플레이어는 받지 않는다")]
         [SerializeField] private bool _underdog = true;
@@ -194,6 +197,7 @@ namespace GnorpWar
             CoalitionLands = _coalitionLands,
             CoalitionWins = _coalitionWins,
             GhostCoalitionWinSteps = (int[])_ghostCoalitionWinSteps.Clone(),
+            MaxCoalitions = _maxCoalitions,
             Underdog = _underdog,
             UnderdogGoldPerLand = _underdogGoldPerLand,
             UnderdogGoldMax = _underdogGoldMax,

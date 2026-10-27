@@ -397,6 +397,9 @@ namespace GnorpWar
             fillRenderer.sortingOrder = FillSortingOrder;
         }
 
+        // 먼 산 실루엣의 밝기(HSV V) = Base + 겹 밝기 × Scale — 시안(Captures/BattleBg)에서 고른 값
+        private const float BackdropValueBase = 0.08f, BackdropValueScale = 1.2f;
+
         // 맵 뒷배경 — 겹마다 실루엣을 맵 폭만큼 늘어놓는다. 밑변은 평평한 땅 기준이라 언덕 뒤로는 가려진다
         private void PlaceBackdrop(MapDefinition map)
         {
@@ -410,7 +413,9 @@ namespace GnorpWar
                 var root = new GameObject("Backdrop" + l).AddComponent<BackdropParallax>();
                 root.transform.SetParent(transform, false);
                 root.Factor = layer.Parallax;
-                var color = new Color(layer.Brightness, layer.Brightness, layer.Brightness, 1f);
+                // 실루엣 = 그 지형의 지도 색(MapColor)의 색상 · 채도 + 겹 밝기로 정한 어두운 톤(사용자 10/27 3안 — 하늘은 검게 두고 먼 산만 지형색)
+                Color.RGBToHSV(map.MapColor, out float hue, out float saturation, out _);
+                var color = Color.HSVToRGB(hue, saturation, BackdropValueBase + layer.Brightness * BackdropValueScale);
                 // 간격이 0이면 끝나지 않는다 — 반 칸 아래로는 안 내려간다
                 for (float x = _minX; x <= _maxX; x += Mathf.Max(0.5f, Random.Range(layer.Spacing.x, layer.Spacing.y)))
                 {

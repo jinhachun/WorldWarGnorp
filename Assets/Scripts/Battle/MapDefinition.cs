@@ -63,7 +63,7 @@ namespace GnorpWar
         {
             [Tooltip("이 중에서 하나씩 무작위로(좌우도 무작위로 뒤집는다). 그림은 흰색으로 — 밝기는 아래 값이 정한다")]
             public Sprite[] Sprites = new Sprite[0];
-            [Tooltip("밝기 — 흰색의 몇 배인가. 유닛·땅(흰색)이 묻히지 않게 0.25 아래로")]
+            [Tooltip("밝기 — 색은 이 지형의 지도 색(MapColor), 밝기(HSV V)는 0.08 + 이 값 × 1.2(Battle/Ground). 유닛·땅(흰색)이 묻히지 않게 0.25 아래로")]
             [Range(0f, 1f)] public float Brightness = 0.18f;
             [Tooltip("그림 중심 사이 간격(칸) 범위")]
             public Vector2 Spacing = new Vector2(6f, 10f);

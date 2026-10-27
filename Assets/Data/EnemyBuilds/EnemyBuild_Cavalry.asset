@@ -30,6 +30,20 @@ MonoBehaviour:
     Weight: 2
   - Building: {fileID: 11400000, guid: 52fc272d2724b22478a294be08ac9ea2, type: 2}
     Weight: 3
+  - Building: {fileID: 11400000, guid: 56aabdd25271bd444a8f6554aff6aaa0, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: f9b023709c099414a8f873dd836a332a, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: fadc69940b7d44244befe62684a5c59b, type: 2}
+    Weight: 3
+  - Building: {fileID: 11400000, guid: cda94386b9104ba4dace02bed8f0ded8, type: 2}
+    Weight: 4
+  - Building: {fileID: 11400000, guid: 3b4ce57edec5b274b876cf633ee56ebd, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 6ad48cd6cdb15d948922bac2b7d41c60, type: 2}
+    Weight: 2
+  - Building: {fileID: 11400000, guid: 34b38f40e0cbb3d418ad3c659db89633, type: 2}
+    Weight: 2
   _producerValue: 1
   _producerShare: 0.5
   _commonValue: 0.5

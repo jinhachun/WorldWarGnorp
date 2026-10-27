@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace GnorpWar.Editor.Tests
 {
-    // 연계는 한 번만(사용자 10/26) — 연계로 태어난 유닛(Unit.ChainBorn)의 죽음 · 처치는 「죽으면 · 처치하면 소환」을 다시 부르지 않는다(예외: 왕족친위대 · 까마귀의사는 적을 전부 센다).
+    // 연계는 한 번만(사용자 10/26) — 연계로 태어난 유닛(Unit.ChainBorn)의 죽음 · 처치는 「죽으면 · 처치하면 소환」을 다시 부르지 않는다(예외: 까마귀의사는 적을 전부 센다 · 하마 교련장 신화는 자기가 낸 연계 병사의 처치를 센다).
     // 화면 없는 EditMode라 땅(Ground)도 보드(BoardRunner)도 없다 — 그래서 효과가 소환 단계까지 가면 거기서 예외로 멈춘다.
     // 「예외 없음」 = 소환 전에 건너뛰었다 · 「예외」 = 건너뛰지 않고 소환하러 갔다. 실제 전투에서의 동작은 폭주 시험(Editor/RunawayBattleTest)이 본다
     public class ChainBornTests
@@ -73,12 +73,12 @@ namespace GnorpWar.Editor.Tests
         }
 
         [Test]
-        public void KillSummon_RoyalGuardStillChains()   // 왕족친위대: 경기병이 처치하면 친위기사 — 예외, 친위기사의 처치도 부른다(사용자 10/26)
+        public void KillSummon_SkipsChainBorn()   // 왕족친위대: 기사가 처치하면 친위기사 — 예외 없음(사용자 10/28: 친위기사는 기사가 아니라 발동 못 한다)
         {
             var effect = Effect<KillSummonEffect>("Effect_RoyalGuard");
-            Unit killer = Prefab("Unit_RoyalKnight");
+            Unit killer = Prefab("Unit_Knight");
             Unit victim = Prefab("Unit_Melee");
-            With(killer, true, () => Assert.Catch(() => effect.OnKill(killer, victim, 0)));
+            With(killer, true, () => Assert.DoesNotThrow(() => effect.OnKill(killer, victim, 0)));
             With(killer, false, () => Assert.Catch(() => effect.OnKill(killer, victim, 0)));
         }
     }

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e413d027ec71b634d8862a3a24dc159f, type: 3}
+  m_Name: Effect_ForlornHope
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.HitChanceInvulnerableEffect
+  _categories:
+  - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _units: []
+  _description: "\uB0B4 \uACBD\uBCF4\uBCD1\uC774 \uD53C\uD574\uB97C \uC785\uC73C\uBA74
+    {0}% \uD655\uB960\uB85C {1}\uCD08\uAC04 \uBB34\uC801\uC774 \uB429\uB2C8\uB2E4."
+  _trait: 
+  _chance: 20
+  _chancePerTier: 5
+  _seconds: 1

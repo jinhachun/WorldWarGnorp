@@ -16,4 +16,5 @@ MonoBehaviour:
   _units: []
   _description: "\uC774 \uAE30\uBB3C\uC774 \uBB34\uC801\uC744 \uBD80\uC5EC\uD558\uB294
     \uC544\uAD70\uC774 {0}\uAE30\uAC00 \uB429\uB2C8\uB2E4."
-  _targets: 3
+  _trait: 
+  _targets: 6

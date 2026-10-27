@@ -3,9 +3,8 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 적용 대상 유닛이 적을 처치할 때마다 본진에서 유닛을 소환한다 (왕족친위대: 경기병 → 친위기사).
-    // 「연계는 한 번만」(사용자 10/26)의 예외 — 친위기사도 경기병이라 그 처치가 또 친위기사를 부른다(기물기획서 「친위기사도 연쇄 발동」, 사용자 결정 10/26).
-    // 끝없지는 않다 — 처치 한 번에 한 번이고 유닛 수 상한(Battle/ChainGuard) 아래다. 낸 유닛은 연계로 태어남(죽음 연계는 안 부른다)
+    // 적용 대상 유닛이 적을 처치할 때마다 본진에서 유닛을 소환한다 (왕족친위대: 기사 → 친위기사 — 사용자 10/28, 친위기사는 기사가 아니라 발동하지 않는다).
+    // 「연계는 한 번만」(사용자 10/26) — 연계로 태어난 유닛(Unit.ChainBorn)의 처치는 다시 부르지 않는다. 낸 유닛은 연계로 태어남
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Kill Summon")]
     public class KillSummonEffect : UnitEffect
     {
@@ -19,6 +18,12 @@ namespace GnorpWar
         private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
 
         public override void OnKill(Unit killer, Unit victim, int stacks)
+        {
+            if (!killer.ChainBorn)
+                SummonFor(killer);
+        }
+
+        protected void SummonFor(Unit killer)
         {
             BoardRunner board = BoardRunner.For(killer.Team);
             board.Summon(_summon, Count(Level(killer.Team)), -1, source: Source(killer.Team), chained: true);

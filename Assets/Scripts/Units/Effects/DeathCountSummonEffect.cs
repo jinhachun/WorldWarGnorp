@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 전투당 한 번, 적용 대상 유닛이 N기 죽으면 유닛을 소환한다 — N번째로 죽은 자리에서
+    // 전투당 한 번, 적용 대상 유닛이 N기 죽으면 유닛을 소환한다 — 이 효과를 켠 기물에서(그 칸의 소환 — 다른 생산 기물처럼 성문으로, 사용자 10/28 「죽은 위치가 아니라 해당 건물에서」)
     // (미궁의 입구: 내 경보병이 40기 죽으면 미노타우로스 1기 — 사용자 10/15. 필요한 수가 등급마다 -5(고급 40 · 희귀 35 · 영웅 30 · 전설 25), 소환 수는 늘 그대로).
     // 경보병으로도 취급되는 유닛(군제 개혁)도 센다(적용 판정이 UnitAliases를 본다). 죽은 수는 이 효과의 스택으로 센다 — 기물이 쿨다운이 없어 스택이 따로 오르지 않는다, 전투마다 0부터
     [CreateAssetMenu(menuName = "GnorpWar/Effects/Death Count Summon")]
@@ -42,17 +42,26 @@ namespace GnorpWar
             TeamEffects.AddStack(unit.Team, this);
             if (stacks + 1 != Deaths(Level(unit.Team)))
                 return;   // 정확히 N번째에만 — 그 뒤로는 이번 전투에서 다시 나오지 않는다
-            Vector2 ground = new Vector2(at.x, Ground.Instance.HeightAt(at.x));
             BoardRunner board = BoardRunner.For(unit.Team);
-            board.Summon(_summon, _count, -1, ground, Source(unit.Team));
+            BuildingDefinition source = Source(unit.Team);
+            int slot = SlotOf(board, source);
+            board.Summon(_summon, _count, slot, null, source);
             if (_mythicMark != null && _mythicExtra != null)
                 foreach (TeamEffects.Entry e in TeamEffects.For(unit.Team))
                     if (e.Effect == _mythicMark)
                     {
-                        board.Summon(_mythicExtra, _mythicExtraCount, -1, ground, Source(unit.Team));
+                        board.Summon(_mythicExtra, _mythicExtraCount, slot, null, source);
                         break;
                     }
-            BuffLinks.EffectToPoint(unit.Team, this, ground, BuffKind.Summon);
+        }
+
+        // 이 효과를 켠 기물이 놓인 칸(못 찾으면 -1 — 그래도 성문에서 나온다)
+        private static int SlotOf(BoardRunner board, BuildingDefinition source)
+        {
+            for (int i = 0; i < board.Slots.Length; i++)
+                if (board.Slots[i].Building != null && board.Slots[i].Building.Definition == source)
+                    return i;
+            return -1;
         }
 
         // 설명의 {0} = 지금 등급의 필요한 수 · {1} = 소환 수

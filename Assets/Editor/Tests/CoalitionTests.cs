@@ -51,6 +51,27 @@ namespace GnorpWar.Editor.Tests
             Assert.AreEqual(0, left.Wins, "다른 연합의 승리 수는 그대로");
         }
 
+        // 연합은 최대 3개(사용자 10/28) — 유령 5명이면 땅이 많은 유령(같으면 전투력 · 번호 순) 3명이 바탕, 남은 유령 2명은 가까운 연합에 흡수
+        [Test]
+        public void AtMostThreeCoalitions()
+        {
+            WorldState state = LineState();
+            // 유령 = 2 · 3 · 4 · 6 · 7. 4번은 땅 5도 가진다(땅 2개)
+            state.Owner[5] = 4;
+            state.Lords[5].Alive = false;
+            var ghosts = new HashSet<int> { 2, 3, 4, 6, 7 };
+            List<WorldState.Coalition> formed = WorldTurn.FormCoalitions(state, lord => lord.Id == 3 ? 2f : 1f, lord => ghosts.Contains(lord.Id));
+            Assert.AreEqual(3, formed.Count, "유령 5명이어도 연합 3개");
+            // 바탕: 땅 2개인 4번 → 땅 1개 중 전투력이 센 3번 → 번호가 앞선 2번
+            CollectionAssert.AreEquivalent(new[] { 2, 3, 4 }, formed.ConvertAll(c => c.Lord.Id));
+            CollectionAssert.AreEquivalent(new[] { 1 }, state.CoalitionOf(state.Lords[2]).Members);
+            CollectionAssert.IsEmpty(state.CoalitionOf(state.Lords[3]).Members);
+            CollectionAssert.AreEquivalent(new[] { 6, 7 }, state.CoalitionOf(state.Lords[4]).Members, "남은 유령 6 · 7은 가까운 4번 연합에");
+            Assert.IsFalse(state.Lords[6].Alive);
+            Assert.IsFalse(state.Lords[7].Alive);
+            Assert.AreEqual(4, state.LandsOf(state.Lords[4]));
+        }
+
         [Test]
         public void GhostCoalitionWinsByLands()
         {

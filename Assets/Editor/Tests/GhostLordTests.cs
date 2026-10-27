@@ -98,6 +98,27 @@ namespace GnorpWar.Editor.Tests
             Assert.AreEqual(cap, run.GhostCount, "다시 붙여도 상한을 넘지 않는다");
         }
 
+        // 같은 사람(기록의 닉네임)은 한 판에 유령 한 번 — 닉네임이 빈 기록은 사람을 몰라 각각 쓴다(사용자 10/28)
+        [Test]
+        public void SamePersonHauntsOnce()
+        {
+            WorldRun run = NewRun();
+            run.AddGhosts(new List<RunRecord.Loaded>
+            {
+                WriteRecord(3, BuildingNation.Kingdom, null, "가"),
+                WriteRecord(2, BuildingNation.Kingdom, null, "가"),
+                WriteRecord(2, BuildingNation.Tribe, null, "나"),
+                WriteRecord(1, BuildingNation.Tribe),
+                WriteRecord(1, BuildingNation.Tribe),
+            });
+            Assert.AreEqual(4, run.GhostCount, "「가」 둘 중 하나만 · 「나」 · 이름 없는 둘");
+            var names = new List<string>();
+            foreach (Lord lord in run.State.Lords)
+                if (run.GhostOf(lord) is WorldRun.Ghost ghost && ghost.Record.Nickname != "")
+                    names.Add(ghost.Record.Nickname);
+            CollectionAssert.AreEquivalent(new[] { "가", "나" }, names);
+        }
+
         // 유령 연합 — 유령 2명 = 연합 2개, 바탕은 유령 그대로(탑 = 스냅샷 · 골드 없음), 흡수된 영주의 탑은 사라진다
         [Test]
         public void GhostCoalitionsKeepGhostTowers()
@@ -191,11 +212,11 @@ namespace GnorpWar.Editor.Tests
         }
 
         // 턴 1..turns — 턴 t의 탑 1층 = Pool(t)
-        private RunRecord.Loaded WriteRecord(int turns, BuildingNation nation, System.Func<int, int> lives = null)
+        private RunRecord.Loaded WriteRecord(int turns, BuildingNation nation, System.Func<int, int> lives = null, string nickname = "")
         {
             var writer = new RunRecord(_folder, _ids);
             for (int turn = 1; turn <= turns; turn++)
-                writer.Add(NewTower(Pool(turn)), nation, Color.white, lives != null ? lives(turn) : 6, turn);
+                writer.Add(NewTower(Pool(turn)), nation, Color.white, lives != null ? lives(turn) : 6, turn, nickname);
             // 런 id는 초 단위 시각이라 같은 초에 둘을 쓰면 겹친다 — 파일 이름을 턴 수로 갈라 둔다
             string path = Path.Combine(_folder, $"{turns}-{System.Guid.NewGuid():N}.json");
             File.Move(writer.FilePath, path);

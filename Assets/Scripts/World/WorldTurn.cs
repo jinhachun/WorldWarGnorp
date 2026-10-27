@@ -211,6 +211,20 @@ namespace GnorpWar
             foreach (Lord lord in state.Lords)
                 if (lord.Alive && !lord.IsPlayer && isGhost(lord))
                     leaders.Add(lord);
+            // 연합은 MaxCoalitions개까지(사용자 10/28) — 땅이 많은 유령, 같으면 탑 전투력이 센 유령, 그것도 같으면 번호가 앞선 유령이 바탕. 나머지 유령은 AI처럼 흡수된다
+            if (leaders.Count > rules.MaxCoalitions)
+            {
+                leaders.Sort((a, b) =>
+                {
+                    int byLands = state.LandsOf(b).CompareTo(state.LandsOf(a));
+                    if (byLands != 0)
+                        return byLands;
+                    int byPower = power(b).CompareTo(power(a));
+                    return byPower != 0 ? byPower : a.Id.CompareTo(b.Id);
+                });
+                leaders.RemoveRange(rules.MaxCoalitions, leaders.Count - rules.MaxCoalitions);
+                leaders.Sort((a, b) => a.Id.CompareTo(b.Id));
+            }
             bool ghost = leaders.Count > 0;
             if (!ghost)
             {

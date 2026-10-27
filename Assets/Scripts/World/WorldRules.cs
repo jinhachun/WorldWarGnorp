@@ -21,6 +21,8 @@ namespace GnorpWar
         public int CoalitionWins = 3;
         // 유령 연합의 이기는 횟수 = 1 + (뭉칠 때 땅 수가 이 값들 이상인 개수) — {4, 8} = 1~3개 1번 · 4~7개 2번 · 8개 이상 3번(사용자 10/27)
         public int[] GhostCoalitionWinSteps = { 4, 8 };
+        // 연합 수의 상한 — 유령이 더 많으면 땅이 많은 유령부터 바탕, 나머지 유령은 흡수된다(사용자 10/28)
+        public int MaxCoalitions = 3;
 
         public int GhostCoalitionWins(int lands)
         {

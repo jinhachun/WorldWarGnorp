@@ -116,13 +116,22 @@ namespace GnorpWar
             }
         }
 
-        // lord에 남은 기록 중 맨 앞(가장 오래 버틴 것)을 붙인다 — 유령이 상한에 차 있으면 붙이지 않는다(AI)
+        // 이번 런에 유령으로 쓴 사람(기록의 닉네임) — 같은 사람은 한 판에 한 번만(사용자 10/28). 닉네임이 빈 기록은 누구인지 몰라 따로 센다
+        private readonly HashSet<string> _hauntedNames = new HashSet<string>();
+
+        // lord에 남은 기록 중 맨 앞(가장 오래 버틴 것)을 붙인다 — 이번 런에 이미 쓴 사람의 기록은 건너뛴다. 유령이 상한에 차 있거나 쓸 기록이 없으면 붙이지 않는다(AI)
         private void Haunt(Lord lord)
         {
-            if (_ghostPool.Count == 0 || _ghosts.Count >= _ghostCap)
+            if (_ghosts.Count >= _ghostCap)
                 return;
-            _ghosts[lord.Id] = new Ghost { Record = _ghostPool[0], Nation = _ghostPool[0].Nation };
-            _ghostPool.RemoveAt(0);
+            int pick = _ghostPool.FindIndex(record => string.IsNullOrEmpty(record.Nickname) || !_hauntedNames.Contains(record.Nickname));
+            if (pick < 0)
+                return;
+            RunRecord.Loaded chosen = _ghostPool[pick];
+            _ghosts[lord.Id] = new Ghost { Record = chosen, Nation = chosen.Nation };
+            _ghostPool.RemoveAt(pick);
+            if (!string.IsNullOrEmpty(chosen.Nickname))
+                _hauntedNames.Add(chosen.Nickname);
         }
 
         // 유령의 탑을 이번 턴(State.Turn)의 스냅샷으로 — 유령이면 true. 세우지 못하면 경고 로그를 남기고 그 영주는 지금 탑 그대로 AI가 된다(false)

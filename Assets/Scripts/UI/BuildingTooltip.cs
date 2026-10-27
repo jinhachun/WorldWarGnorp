@@ -157,10 +157,26 @@ namespace GnorpWar
         {
             var lines = new List<string>();
             string every = $"{cooldown:0.#}초마다 ";
-            if (building.Unit != null)
-                lines.Add(every + $"{building.Unit.DisplayName} {building.SummonCount + extraSummons}기를 소환합니다.");
+            // 여러 종류를 내는 생산 기물(왕국 징병소) — 함께 소환하는 유닛도 같은 수면 한 줄로 「방패수 · 병사 · 궁수를 1기씩」
+            int count = building.SummonCount + extraSummons;
+            var also = new List<string>();
+            bool merged = building.Unit != null && building.Actions.Length > 0;
             foreach (BuildingAction action in building.Actions)
-                lines.Add(every + action.Describe(level));
+                merged &= action is SummonAlsoAction a && a.Count == count;
+            if (merged)
+                foreach (BuildingAction action in building.Actions)
+                    also.Add(((SummonAlsoAction)action).Unit.DisplayName);
+            if (building.Unit != null && merged)
+            {
+                string last = also[also.Count - 1];
+                bool batchim = (last[last.Length - 1] - 0xAC00) % 28 != 0;
+                lines.Add(every + $"{building.Unit.DisplayName} · {string.Join(" · ", also)}{(batchim ? "을" : "를")} {count}기씩 소환합니다.");
+            }
+            else if (building.Unit != null)
+                lines.Add(every + $"{building.Unit.DisplayName} {count}기를 소환합니다.");
+            if (!merged)
+                foreach (BuildingAction action in building.Actions)
+                    lines.Add(every + action.Describe(level));
             if (!string.IsNullOrEmpty(building.Description))
                 lines.Add(every + building.Description);
             foreach (BuildingPassive passive in building.Passives)
@@ -201,6 +217,20 @@ namespace GnorpWar
             return any ? text : text + Note("효과는 그대로입니다.");
         }
 
+        // 이벤트 땅(물레방아 · 피난민)이 이 한 채에 영구히 줄 몫을 받은 뒤의 효과 줄 중 달라지는 줄만 — 바뀐 숫자는 BonusColor(RANK UP 미리보기와 같은 표시)
+        public static string BoonPreview(OwnedBuilding building, float cooldownFactor, int addSummons)
+        {
+            bool mythic = building.Rarity == BuildingRarity.Mythic;
+            int extra = RunState.ExtraSummonsFor(building) + building.ExtraSummons;
+            List<string> now = Lines(building.Definition, building.Level, building.Cooldown, mythic, extra);
+            List<string> after = Lines(building.Definition, building.Level, building.Cooldown * cooldownFactor, mythic, extra + addSummons);
+            var changed = new List<string>();
+            for (int i = 0; i < after.Count; i++)
+                if (i >= now.Count || now[i] != after[i])
+                    changed.Add(MarkChanges(i < now.Count ? now[i] : "", after[i]));
+            return string.Join("\n", changed);
+        }
+
         // after 줄을 효과 글처럼 꾸미되, before와 값이 다른 숫자만 BonusColor로(숫자 개수가 다르면 전부)
         private static string MarkChanges(string before, string after)
         {
@@ -213,6 +243,20 @@ namespace GnorpWar
                 n++;
                 return $"<color={(same ? NumberColor : BonusColor)}>{m.Value}</color>";
             });
+        }
+
+        // 가진 기물이 쿨다운마다 한 번에 더 소환하는 수 — 툴팁 효과 줄(ShowOwned)과 칸 아래 숫자(Headline)가 같이 쓴다.
+        // 징병제(지역 특수 업그레이드) — 쿨다운마다 유닛을 소환하는 기물의 소환 수에 더해 보인다(숫자는 지금 실제 값 하나)
+        // 전투 중이면 제물의 의식이 이 칸에 준 몫(Slot.ExtraSummons)도 — 쿨다운처럼 전투 중에만 보인다
+        // 피난민 골짜기가 이 한 채에 영구히 준 몫(OwnedBuilding.ExtraSummons)은 늘 — 영구 쿨다운이 쿨다운 숫자에 들어가 보이는 것과 같다
+        public static int ExtraSummons(OwnedBuilding building, BoardRunner.Slot running)
+            => building.Definition.Unit != null && building.Definition.Cooldown > 0f ? RunState.ExtraSummonsFor(building) + (running?.ExtraSummons ?? 0) + building.ExtraSummons : 0;
+
+        // 가진 기물의 칸 아래 숫자 — 소환 수가 늘었으면 합친 수를 BonusColor로(§5-2-9 달라지는 값 = 초록, 사용자 10/28)
+        public static string Headline(OwnedBuilding building, BoardRunner.Slot running)
+        {
+            int extra = ExtraSummons(building, running);
+            return extra > 0 ? $"<color={BonusColor}>{building.Definition.SummonCount + extra}기</color>" : Headline(building.Definition, building.Level);
         }
 
         // 칸 아래 대표 숫자 — 툴팁 첫 숫자와 같은 순서(생산 수 · 액션 · 패시브 · 효과)로 처음 나오는 것. 없으면 ""
@@ -365,9 +409,7 @@ namespace GnorpWar
         public static void ShowOwned(Component owner, OwnedBuilding building, BoardRunner.Slot running, bool enemy)
         {
             float cooldown = running != null ? running.Cooldown : building.Cooldown;
-            // 징병제(지역 특수 업그레이드) — 쿨다운마다 유닛을 소환하는 기물의 소환 수에 더해 보인다(숫자는 지금 실제 값 하나)
-            // 전투 중이면 제물의 의식이 이 칸에 준 몫(Slot.ExtraSummons)도 — 쿨다운처럼 전투 중에만 보인다
-            int extra = building.Definition.Unit != null && building.Definition.Cooldown > 0f ? RunState.ExtraSummonsFor(building) + (running?.ExtraSummons ?? 0) : 0;
+            int extra = ExtraSummons(building, running);
             string body = Describe(building.Definition, building.Level, cooldown, building.Rarity == BuildingRarity.Mythic, extra);
             // 효과가 아닌 줄은 스택뿐 — 다음 등급 · 판매가는 쓰지 않는다(사용자 10/10: 글 최소화. 판매가는 판매 버튼에 나온다)
             // 맘모스 소환의식 — 런 내내 센 죽음(스택)은 「작동까지 N기」로 상점·전투 모두(채우면 줄 없음). 이 기물엔 스택 줄을 따로 쓰지 않는다
@@ -381,7 +423,11 @@ namespace GnorpWar
                 }
             // 전쟁 금고 — 스택 = 지금까지 준 골드(판매 때 그만큼 더 받는다)
             bool warChest = System.Array.Exists(building.Passives, passive => passive is WarChestPassive);
-            if (!enemy && !BattleManager.Fighting && building.Stacks > 0 && !ritual)
+            // 동전 주조기 — 스택 = 오른 판매가(전투 중에 오르므로 전투 중에도 보인다)
+            bool mint = System.Array.Exists(building.Passives, passive => passive is CoinMintPassive);
+            if (!enemy && mint && building.Stacks > 0)
+                body += Note($"오른 판매가 {building.Stacks}골드");
+            else if (!enemy && !BattleManager.Fighting && building.Stacks > 0 && !ritual)
                 body += Note(warChest ? $"지금까지 준 골드 {building.Stacks}" : $"스택 {building.Stacks}");
             // 수를 세어 발동하는 효과(라이칸스로프 · 승천의 전당 · 미궁의 입구) — 전투 중에만, 그 진영이 센 값으로 남은 수(사용자 10/14). 전투마다 0부터라 상점에서는 쓰지 않는다
             if (BattleManager.Fighting)
@@ -399,6 +445,8 @@ namespace GnorpWar
                         body += Note($"다음 발동까지 {ascension.RemainingOf(side)}기");
                     else if (effect is SummonCountRallyEffect rally)
                         body += Note($"다음 발동까지 {rally.RemainingOf(side)}기");
+                    else if (effect is SummonCountSummonEffect summonCount)
+                        body += Note($"다음 발동까지 {summonCount.RemainingOf(side)}기");
                     else if (effect is DeathCountSummonEffect deathCount)
                         body += Note(deathCount.RemainingOf(side) > 0 ? $"발동까지 {deathCount.RemainingOf(side)}기" : "이번 전투 발동 끝");
             }

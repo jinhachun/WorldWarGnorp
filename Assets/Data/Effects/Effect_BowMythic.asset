@@ -16,8 +16,7 @@ MonoBehaviour:
   _units:
   - {fileID: 11400000, guid: 4fbdc0f6f767397448cc30259fad91ca, type: 2}
   _description: "\uB0B4 \uAD81\uC218\uAC00 \uD654\uC0B4\uC744 {0}\uBC1C \uC787\uB2EC\uC544
-    \uC3D8\uACE0, \uBC1C\uB9C8\uB2E4 \uB2E4\uB978 \uC801\uC744 \uB178\uB9BD\uB2C8\uB2E4.
-    (\uB178\uB9B4 \uC801\uC774 \uBAA8\uC790\uB77C\uBA74 \uAC19\uC740 \uC801\uC5D0\uAC8C
-    \uC3E9\uB2C8\uB2E4)"
+    \uC3D8\uACE0, \uBC1C\uB9C8\uB2E4 \uB2E4\uB978 \uC801\uC744 \uB178\uB9BD\uB2C8\uB2E4."
+  _trait: 
   _extra: 2
   _interval: 0.15

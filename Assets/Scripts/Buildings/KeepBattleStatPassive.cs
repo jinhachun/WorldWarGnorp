@@ -33,6 +33,6 @@ namespace GnorpWar
             return self.Stacks > 0 && modifier.Stat == stat;
         }
 
-        public override string Describe(int level) => "이 기물이 올린 공격력이 전투가 끝나도 사라지지 않습니다. (이 기물을 팔면 사라집니다)";
+        public override string Describe(int level) => "이 기물이 올린 공격력은 이 기물을 팔기 전까지 전투가 끝나도 사라지지 않습니다.";
     }
 }

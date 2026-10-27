@@ -95,7 +95,7 @@ namespace GnorpWar
             // 등급은 테두리 색이 보여 주므로 글자는 대표 숫자(지금 등급 값). 전투 중 값을 쌓는 칸(허수아비 등)은 지금까지 쌓인 값
             // 수를 세어 발동하는 기물(라이칸스로프 · 승천의 전당 · 미궁의 입구)은 전투 중 이 자리에 남은 수만(사용자 10/15). 0이면 원래 글
             int countdown = empty ? 0 : building.CountdownOf(_source == BoardView.Source.EnemyField ? Team.Enemy : Team.Ally);
-            _level.text = empty ? "" : countdown > 0 ? countdown.ToString() : running?.BattleGainText ?? BuildingTooltip.Headline(building.Definition, building.Level);
+            _level.text = empty ? "" : countdown > 0 ? countdown.ToString() : running?.BattleGainText ?? BuildingTooltip.Headline(building, running);
             // 탑 층은 빈 층도 꺼진 창틀을 보인다(칸 틀 색) — 보통 칸은 빈 칸이면 테두리를 숨긴다
             _rarityFrame.enabled = !empty || _floor != null;
             _rarityFrame.color = Highlight(empty ? _frameColor : building.Rarity.FrameColor(), _hovered) * (stopped ? StoppedMark.Gray : Color.white);

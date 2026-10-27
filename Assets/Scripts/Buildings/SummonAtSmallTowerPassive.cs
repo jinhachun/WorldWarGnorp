@@ -8,6 +8,6 @@ namespace GnorpWar
     {
         public override void OnBattleStart(BoardRunner board, int slot, int level) => board.SummonAtSmallTower();
 
-        public override string Describe(int level) => "내 유닛이 내 성 대신, 가장 앞에 있는 내 작은 타워에서 소환됩니다. (작은 타워가 없으면 성에서 소환)";
+        public override string Describe(int level) => "내 유닛이 내 성 대신, 가장 앞에 있는 내 작은 타워에서 소환됩니다.";
     }
 }

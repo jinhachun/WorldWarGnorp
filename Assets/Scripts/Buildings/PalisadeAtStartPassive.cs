@@ -37,6 +37,6 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"전투 시작 시, 내 성 앞에 목책(체력 {Hp(level):0})을 세웁니다.\n목책은 적 유닛만 막습니다.";
+            => $"전투 시작 시, 내 성 앞에 체력 {Hp(level):0}의 목책을 세웁니다.\n목책은 적 유닛만 막습니다.";
     }
 }

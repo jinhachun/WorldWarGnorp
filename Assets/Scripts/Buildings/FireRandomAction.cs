@@ -43,6 +43,6 @@ namespace GnorpWar
         // 무작위 — 고를 수 있는 후보 전부(Execute와 같은 조건)
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated)
             => BuildingTargets.Cooling(field, other) && !FiresOthers(field[other].Definition);
-        public override string Describe(int level) => "무작위 내 기물 1개를 즉시 1회 발동시킵니다.";
+        public override string Describe(int level) => "쿨다운이 있는 다른 내 기물 1개를 무작위로 즉시 1회 발동시킵니다.";
     }
 }

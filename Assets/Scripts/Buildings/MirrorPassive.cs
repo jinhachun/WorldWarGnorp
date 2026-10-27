@@ -25,6 +25,6 @@ namespace GnorpWar
         // 바로 위 기물에 닿는다 — 상대 탑의 자리 고르기(Run/EnemyShopper)가 읽는다
         public override bool Reaches(int slot, int other, BuildingDefinition target) => other == slot + 1;
 
-        public override string Describe(int level) => "전투 시작 시, 바로 위 기물과 같은 기물로 변신합니다(이 기물의 등급으로).";
+        public override string Describe(int level) => "전투 시작 시, 이 기물의 등급 그대로 바로 위 기물과 같은 기물로 변신합니다.";
     }
 }

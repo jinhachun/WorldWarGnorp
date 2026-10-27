@@ -93,7 +93,7 @@ namespace GnorpWar
             // 전투 시작에 거는 건 늘 켜진 것처럼 읽히므로 "전투 동안"을 붙이지 않는다(성채 "내 타워의 체력 +50%")
             string battle = !_permanent && _trigger != Trigger.BattleStart ? "전투 동안 " : "";
             string permanent = _permanent ? " 영구히" : "";
-            string cap = Capped ? $" (최대 ×{_maxMultiplier:0.##})" : "";
+            string cap = Capped ? $", 최대 ×{_maxMultiplier:0.##}" : "";
             return $"{when}{battle}내 타워들의 {_modifier.Name}{permanent} {_modifier.Scaled(_perTier, level).ValueText}{cap}";
         }
     }

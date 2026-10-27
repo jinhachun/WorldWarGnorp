@@ -75,7 +75,7 @@ namespace GnorpWar
         // 판이 닫히고 지도 깜박임까지 끝났다 — 턴 흐름을 잇는다(WorldManager → AI 턴 재생)
         public event System.Action Finished;
 
-        private enum Step { Closed, Choosing, Result, Flash }
+        private enum Step { Closed, Choosing, Result, Flash, Coalition }
 
         // 고를 수 있는 것 하나 — 누르면 Choice번째 후보(Heart = 피의 제단의 하트)
         private class Thing
@@ -105,10 +105,13 @@ namespace GnorpWar
             public bool Walk;
             // 닿을 자리를 매 프레임 다시 읽는다(위 줄의 새 업그레이드 칸은 다음 프레임에 생긴다) — 없으면 To 그대로
             public System.Func<Vector2> Follow;
+            // 걸음의 그림 1px(0이면 K) · 닿았을 때 한 번(연합 결성 — 깃발 색이 바뀐다)
+            public int Scale;
+            public System.Action Landed;
         }
 
         private RectTransform _root, _sheet, _things, _backdrop, _dock;
-        private Image _dim;
+        private Image _dim, _ground;
         private Text _title, _line;
         private InlineIcons _lineIcons;
         private Button _action;
@@ -176,7 +179,7 @@ namespace GnorpWar
             frame.anchorMin = Vector2.zero;
             frame.anchorMax = Vector2.one;
             frame.offsetMin = frame.offsetMax = Vector2.zero;
-            Image ground = NewImage(_sheet, "Ground", null, Color.white);
+            Image ground = _ground = NewImage(_sheet, "Ground", null, Color.white);
             ground.rectTransform.sizeDelta = new Vector2(PanelWidth - 32f, 4f);
             At(ground.rectTransform, Left + 16f, Ground, new Vector2(0f, 1f));
             _title = NewText(_sheet, "Title", _dotFont, 36, PanelWidth - 80f);
@@ -237,7 +240,7 @@ namespace GnorpWar
             // 켠 뒤에 채운다(안내 줄의 아이콘 자리는 켜진 글에서 잰다)
             _dim.gameObject.SetActive(true);
             Show(true);
-            Backdrop(RunState.World.Map.TerrainOf(region));
+            Backdrop(RunState.World.Map.TerrainOf(region), region);
             Build();
             return true;
         }
@@ -245,6 +248,174 @@ namespace GnorpWar
         private void Show(bool on)
         {
             _sheet.gameObject.SetActive(on);
+        }
+
+        // ── 연합 결성(사용자 10/27) — 같은 판 · 같은 무대 문법. 연합마다 한 칸(4개를 넘으면 두 줄): 가운데에 바탕 영주, 흡수된 영주들이 양옆에서 걸어 들어와
+        // 닿으면 깃발이 바탕 영주의 색이 된다. 칸 위 한 줄 = 「[이름] 연합 · [왕관] 땅 N · [칼] K」(K = 이겨야 하는 횟수). 아무 데나 누르면 닫힌다 → CoalitionsClosed
+        public event System.Action CoalitionsClosed;
+
+        private const int CoalitionColumns = 4;
+        // 흡수된 영주가 걸어 들어오는 시간 · 다음 영주가 출발하는 간격(초)
+        private const float JoinSeconds = 0.8f, JoinStagger = 0.12f;
+
+        public void OpenCoalitions(List<WorldState.Coalition> coalitions)
+        {
+            _offer = null;
+            _step = Step.Coalition;
+            _clock = 0f;
+            _hover = null;
+            Clear();
+            _dim.gameObject.SetActive(true);
+            Show(true);
+            _ground.gameObject.SetActive(false);
+            _action.gameObject.SetActive(false);
+            _lineIcons.SetText("");
+            _title.text = "연합 결성";
+            WorldState state = RunState.World.State;
+            int first = System.Array.IndexOf(state.Owner, coalitions[0].Lord.Id);
+            if (first >= 0)
+                Backdrop(RunState.World.Map.TerrainOf(first), first);
+
+            int n = coalitions.Count, columns = Mathf.Min(n, CoalitionColumns), rows = (n + CoalitionColumns - 1) / CoalitionColumns;
+            int k = rows > 1 ? 4 : columns > 2 ? 5 : K;
+            // 한 줄이면 땅 선 = 이벤트 장면과 같은 자리(뒷배경 겹 아래 끝), 두 줄이면 그 위를 나눈다
+            float cellWidth = (PanelWidth - 32f) / columns, areaTop = Top + 90f, rowHeight = (Ground - areaTop) / rows;
+            float bodyWidth = _lordSprite.rect.width * k;
+            for (int i = 0; i < n; i++)
+            {
+                WorldState.Coalition coalition = coalitions[i];
+                int row = i / CoalitionColumns, column = i % CoalitionColumns;
+                int inRow = Mathf.Min(CoalitionColumns, n - row * CoalitionColumns);
+                // 줄의 칸들을 가운데로 모은다(두 번째 줄이 덜 찼을 때)
+                float x = Mathf.Round(Left + 16f + (PanelWidth - 32f - inRow * cellWidth) * 0.5f + (column + 0.5f) * cellWidth);
+                float ground = Mathf.Round(areaTop + (row + 1) * rowHeight);
+                Image line = NewImage(_things, "Ground", null, Color.white);
+                line.rectTransform.sizeDelta = new Vector2(cellWidth - 24f, 4f);
+                At(line.rectTransform, x, ground, new Vector2(0.5f, 0f));
+                // 발이 땅 선 위 — 그림의 자리 = 몸 한가운데
+                float feet = ground - _lordSprite.rect.height * k * 0.5f;
+                Color color = RunState.ColorOf(coalition.Lord);
+                LordFigure(coalition.Lord.Id, color, x, feet, k, false);
+                int m = coalition.Members.Length;
+                // 깃발이 몸 옆으로 몸 너비만큼 삐져나온다 — 칸 밖으로 안 나가게 그만큼 안쪽에서
+                float reach = cellWidth * 0.5f - bodyWidth * 1.5f - 8f;
+                // 한쪽 줄에 몸 너비의 3/4 간격으로 설 수 있는 수 — 넘치면 뒷줄(4px 위, 뒤에 그린다)
+                int perRank = Mathf.Max(1, Mathf.FloorToInt(reach / (bodyWidth * 0.75f)));
+                int perSide = (m + 1) / 2, ranks = (perSide + perRank - 1) / perRank;
+                float spacing = Mathf.Min(bodyWidth + 2f * k, reach / Mathf.Max(1, Mathf.Min(perSide, perRank)));
+                for (int j = 0; j < m; j++)
+                {
+                    int side = j % 2 == 0 ? -1 : 1, slot = j / 2, rank = slot / perRank, member = coalition.Members[j];
+                    float to = Mathf.Round(x + side * (slot % perRank + 1) * spacing), from = Mathf.Round(x + side * (reach + bodyWidth * 0.5f));
+                    float y = feet - rank * 4f * k;
+                    // 왼쪽에서 오는 영주는 오른쪽을, 오른쪽에서 오는 영주는 왼쪽을 본다
+                    RectTransform holder = LordFigure(member, RunState.ColorOf(state.Lords[member]), from, y, k, side > 0);
+                    if (rank > 0)
+                        holder.SetAsFirstSibling();
+                    _flights.Add(new Flight
+                    {
+                        Rect = holder, From = Anchored(new Vector2(from, y)), To = Anchored(new Vector2(to, y)),
+                        Start = OpenSeconds + j * JoinStagger, Seconds = JoinSeconds, Walk = true, Scale = k,
+                        Landed = () => DrawLord(holder, member, color, k),
+                    });
+                }
+                // 깃발 끝(몸 한가운데에서 약 11px 위) 위에 — 뒷줄이 있으면 그만큼 더 위
+                CoalitionLine(coalition, x, feet - (11f + Mathf.Max(0, ranks - 1) * 4f) * k - 24f, cellWidth - 8f);
+            }
+            _skip.gameObject.SetActive(true);
+        }
+
+        private void CloseCoalitions()
+        {
+            _step = Step.Closed;
+            _skip.gameObject.SetActive(false);
+            Clear();
+            Show(false);
+            _dim.gameObject.SetActive(false);
+            _ground.gameObject.SetActive(true);
+            CoalitionsClosed?.Invoke();
+        }
+
+        // 지도와 같은 영주 그림(깃발 · 영주 색 · 사진) — 몸 한가운데를 (x, y)에. left = 왼쪽을 본다
+        private RectTransform LordFigure(int lord, Color color, float x, float y, int k, bool left)
+        {
+            RectTransform holder = NewRect(_things, "Lord" + lord);
+            At(holder, x, y, new Vector2(0.5f, 0.5f));
+            if (left)
+                holder.localScale = new Vector3(-1f, 1f, 1f);
+            DrawLord(holder, lord, color, k);
+            return holder;
+        }
+
+        private void DrawLord(RectTransform holder, int lord, Color color, int k)
+        {
+            if (holder == null)
+                return;
+            foreach (Transform part in holder)
+                Destroy(part.gameObject);
+            WorldLords.Figure(holder, _lordSprite, _lordFlag, WorldLords.PhotoOf(lord), color, k);
+        }
+
+        // 「[이름] 연합 · [왕관] 땅 N · [칼] K」 — 맨 아래 줄의 가운데를 (x, y)에(도트 24). 칸 폭에 안 들어가면 「[이름] 연합」 / 「[왕관] 땅 N · [칼] K」 두 줄,
+        // 그래도 넘치면 도트 12로
+        private void CoalitionLine(WorldState.Coalition coalition, float x, float y, float width)
+        {
+            string name = $"{RunState.NameOf(coalition.Lord)} 연합";
+            string lands = BuildingTooltip.ColorNumbers(RunState.World.State.LandsOf(coalition.Lord).ToString());
+            string wins = BuildingTooltip.ColorNumbers(coalition.WinsNeeded.ToString());
+            object[] stats = { _map.Crown, $" 땅 {lands} · ", RunState.Config.World.InvadeMark, $" {wins}" };
+            var one = new List<object> { name + " · " };
+            one.AddRange(stats);
+            if (IconRow(one.ToArray(), x, y, 24, width))
+                return;
+            if (IconRow(stats, x, y, 24, width) && IconRow(new object[] { name }, x, y - 36f, 24, width))
+                return;
+            IconRow(stats, x, y, 12, float.MaxValue);
+            IconRow(new object[] { name }, x, y - 20f, 12, float.MaxValue);
+        }
+
+        // 글(도트 size) · 아이콘(원본 크기)을 한 줄로 이어 가운데를 (x, y)에 — 폭이 width를 넘으면 지우고 false
+        private bool IconRow(object[] pieces, float x, float y, int size, float width)
+        {
+            RectTransform row = NewRect(_things, "CoalitionLine");
+            At(row, x, y, new Vector2(0.5f, 0.5f));
+            var parts = new List<RectTransform>();
+            float total = 0f;
+            foreach (object piece in pieces)
+            {
+                RectTransform part;
+                if (piece is string text)
+                {
+                    Text label = NewText(row, "Text", _dotFont, size, 0f);
+                    label.text = text;
+                    label.rectTransform.sizeDelta = new Vector2(label.preferredWidth, size + 8f);
+                    part = label.rectTransform;
+                }
+                else
+                {
+                    var sprite = piece as Sprite;
+                    Image icon = NewImage(row, "Icon", sprite, Color.white);
+                    if (sprite != null)
+                        icon.SetNativeSize();
+                    part = icon.rectTransform;
+                }
+                parts.Add(part);
+                total += part.sizeDelta.x;
+            }
+            if (total > width)
+            {
+                Destroy(row.gameObject);
+                return false;
+            }
+            float at = -total * 0.5f;
+            foreach (RectTransform part in parts)
+            {
+                part.anchorMin = part.anchorMax = new Vector2(0.5f, 0.5f);
+                part.pivot = new Vector2(0f, 0.5f);
+                part.anchoredPosition = new Vector2(at, 0f);
+                at += part.sizeDelta.x;
+            }
+            return true;
         }
 
         // ── 장면마다
@@ -680,6 +851,11 @@ namespace GnorpWar
 
         private void Skip()
         {
+            if (_step == Step.Coalition)
+            {
+                CloseCoalitions();
+                return;
+            }
             if (_step == Step.Result)
                 BeginFlash();
             if (_step == Step.Flash)
@@ -704,7 +880,7 @@ namespace GnorpWar
                 return;
             // 한 프레임이 길어도 움직임이 건너뛰지 않게 묶는다
             _clock += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
-            if (_step == Step.Choosing)
+            if (_step == Step.Choosing || _step == Step.Coalition)
             {
                 // 판 열림 — 위에서 16px 떨어지며(계단 3)
                 int steps = Mathf.Min(3, Mathf.FloorToInt(_clock / (OpenSeconds / 3f)));
@@ -716,11 +892,16 @@ namespace GnorpWar
                     flight.To = flight.Follow();
                 float p = Mathf.Clamp01((_clock - flight.Start) / flight.Seconds);
                 if (flight.Walk)
-                    flight.Rect.anchoredPosition = flight.From + UnitFigure.Step((flight.To.x - flight.From.x) * p, K, p > 0f && p < 1f);
+                    flight.Rect.anchoredPosition = flight.From + UnitFigure.Step((flight.To.x - flight.From.x) * p, flight.Scale > 0 ? flight.Scale : K, p > 0f && p < 1f);
                 else
                 {
                     float eased = 1f - (1f - p) * (1f - p) * (1f - p);
                     flight.Rect.anchoredPosition = Vector2.Lerp(flight.From, flight.To, eased);
+                }
+                if (p >= 1f && flight.Landed != null)
+                {
+                    flight.Landed();
+                    flight.Landed = null;
                 }
             }
             foreach (var (rect, start) in _floats)
@@ -812,9 +993,9 @@ namespace GnorpWar
         }
 
         // 그 땅 지형의 뒷배경 겹(전투 맵 · 상점 무대와 같은 그림, 그림 1px = 화면 1px) — 판 안을 어둡게 채운다
-        private void Backdrop(MapDefinition terrain)
+        private void Backdrop(MapDefinition terrain, int seed)
         {
-            var random = new System.Random(_offer.Region);
+            var random = new System.Random(seed);
             float width = PanelWidth - 8f;
             foreach (MapDefinition.BackdropLayer layer in terrain.Backdrop)
             {

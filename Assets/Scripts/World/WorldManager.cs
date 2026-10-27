@@ -31,7 +31,8 @@ namespace GnorpWar
 
         // Choose = 런의 첫 화면 — 내 국가를 고르는 중(고르면 첫 턴이 열린다). March = 「침략」을 눌러 내 영주가 그 땅으로 걸어가는 중(도착하면 전투 씬)
         // Visit = 이벤트 땅 방문 장면(UI/EventVisitPopup)이 떠 있다 — 끝나면 쉬기와 같은 길(AI 턴 재생)
-        private enum Stage { Choose, Command, March, Visit, Replay, Summary }
+        // Coalition = 연합 결성 팝업 — 떠 있거나 고르기 창이 닫히길 기다린다(닫으면 요약)
+        private enum Stage { Choose, Command, March, Visit, Replay, Coalition, Summary }
 
         private static WorldManager _instance;
 
@@ -110,7 +111,11 @@ namespace GnorpWar
             _nationCard.gameObject.SetActive(false);
             // 방문을 마쳤다(RunState.ChooseVisit · DeclineVisit가 효과 · 닫힘 · Phase = Aftermath까지) — 쉬기와 같은 길
             if (_visit != null)
+            {
                 _visit.Finished += PlayAiTurn;
+                // 연합 결성 팝업을 닫았다 — 지도가 뭉친 판도를 그리고 요약
+                _visit.CoalitionsClosed += ShowSummary;
+            }
             _shopPopup.MapRequested += () => SetShop(false);
             _shopRect = (RectTransform)_shopPopup.transform;
             _shopHome = _shopRect.anchoredPosition;
@@ -222,8 +227,8 @@ namespace GnorpWar
             if (RunState.LastOutcome != RunState.Outcome.Win || beaten == null || beaten.Alive || gains.Count == 0)
                 return;
             var fallen = new List<Lord> { beaten };
-            if (beaten == state.Coalition && state.CoalitionMembers != null)
-                foreach (int member in state.CoalitionMembers)
+            if (state.CoalitionOf(beaten) is WorldState.Coalition coalition)
+                foreach (int member in coalition.Members)
                     fallen.Add(state.Lords[member]);
             for (int i = 0; i < fallen.Count; i++)
                 _map.Lords.Fell(gains[i % gains.Count], state.Player.Id, fallen[i].Id, RunState.ColorOf(fallen[i]));
@@ -359,14 +364,42 @@ namespace GnorpWar
         public float ReplayLength => _replayEnd;
 
         // 재생을 끝낸다(건너뛰기 포함) — 실제 판도를 그리고 요약을 띄운다
+        // 이번 턴에 연합이 뭉쳤으면 요약 전에 연합 결성 팝업(UI/EventVisitPopup.OpenCoalitions) — 그동안 지도는 뭉치기 전 판도
         private void FinishReplay()
         {
             _map.Lords.Snap();
+            _skip.gameObject.SetActive(false);
+            var formed = new List<WorldState.Coalition>();
+            for (int i = 0; i < _events.Count; i++)
+            {
+                WorldEvent e = _events[i];
+                if (e.Coalition)
+                    formed.Add(RunState.World.State.CoalitionOf(RunState.World.State.Lords[e.Lord]));
+                else if (!_eventApplied[i])
+                {
+                    _eventApplied[i] = true;
+                    e.Apply(_shown);
+                }
+            }
+            if (formed.Count > 0 && _visit != null)
+            {
+                _formed = formed;
+                _stage = Stage.Coalition;
+                _notice.SetActive(false);
+                return;
+            }
+            ShowSummary();
+        }
+
+        private void ShowSummary()
+        {
             _shown = null;
             _stage = Stage.Summary;
-            _skip.gameObject.SetActive(false);
             ShowNotice("영주들의 차례", RunState.TurnSummary, "다음 턴");
         }
+
+        // 연합 결성 팝업을 띄울 연합들 — 고르기 창(UI/UpgradePicker — 멸망 보상 · 국가 위기)이 먼저 닫힌 뒤에 뜬다(Update)
+        private List<WorldState.Coalition> _formed;
 
         private void ShowEnd()
         {
@@ -420,14 +453,21 @@ namespace GnorpWar
                         if (!e.Rebellion && !e.Coalition)
                             _map.Lords.March(e.Lord, e.Region, e.Won);
                     }
+                    // 연합은 재생에서 땅을 칠하지 않는다 — 연합 결성 팝업을 닫을 때 바뀐다(CloseCoalitions)
                     if (!_eventApplied[i] && _replayClock >= _eventApply[i])
                     {
                         _eventApplied[i] = true;
-                        e.Apply(_shown);
+                        if (!e.Coalition)
+                            e.Apply(_shown);
                     }
                 }
                 if (_replayClock >= _replayEnd)
                     FinishReplay();
+            }
+            if (_stage == Stage.Coalition && _formed != null && RunState.PendingUpgrades.Count == 0 && !_visit.Busy)
+            {
+                _visit.OpenCoalitions(_formed);
+                _formed = null;
             }
 
             bool command = _stage == Stage.Command;
@@ -445,7 +485,7 @@ namespace GnorpWar
             }
             // 상점 팝업이 지도를 다 덮은 동안에는 영주들이 걷지 않는다(보이지 않는 일을 하지 않는다)
             _map.Lords.enabled = !(_shopOpen && _shopSlide == 1f);
-            _map.Lords.Group(state.Coalition != null ? state.Coalition.Id : -1, state.CoalitionMembers);
+            _map.Lords.Group(state.Coalitions);
             _map.Show(_shown ?? state.Owner, lord => lord == WorldState.NoOwner ? EventLandColor : RunState.ColorOf(state.Lords[lord]), state.Player.Id, open, _selected);
             // 명령을 받는 동안에만 고른 땅 · 명령 버튼이 보인다 — 그 밖에는 그 자리에 알림(AI 턴 · 요약 · 끝)
             // 상점의 내 탑은 팝업이 보이는 동안(미끄러지는 동안 포함) 제자리에 서 있고, 팝업을 못 누르는 동안에는 같이 못 누른다

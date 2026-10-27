@@ -9,9 +9,9 @@ namespace GnorpWar
         Summon,         // 유닛이 더 나오거나 다른 유닛으로 바뀐다 — 추가 · 조건 소환 · 소환 수 늘림 · 변환 · 부활
         Stat,           // 내 유닛 · 타워의 능력치가 오른다 — 공격력 · 공격속도 · 체력 · 크기 · 이동속도 · 사거리 · 화살 수
         Invulnerable,   // 무적
-        Haste,          // 기물의 쿨다운이 빨리 돈다 — 가속 · 쿨다운 감소(유닛 공격속도는 Stat)
+        Haste,          // 기물의 쿨다운이 바뀐다 — 가속 · 쿨다운 감소 · 늘림(제물의 의식, 소환하지 않는 기물에. 소환하면 Summon)(유닛 공격속도는 Stat)
         Debuff,         // 적을 약하게 한다 — 적 능력치 감소 · 감속 · 체력을 잃게 함 · 불태움
-        Trigger,        // 다른 기물을 즉시 발동시키거나 그 효과를 한 번 더 · 기물을 멈춤(제물의 의식)
+        Trigger,        // 다른 기물을 즉시 발동시키거나 그 효과를 한 번 더
         Heal,           // 체력이 찬다(스탯이 아니다 — 사용자 10/23) — 선 대신 초록 회복 오브가 날아간다(Fx/HealFx). 대상(Target)을 꼭 넣는다(HealTo · EffectHeal · ToTowers)
     }
 
@@ -37,6 +37,8 @@ namespace GnorpWar
 
         // 쿨다운에 곱한 값 — 「×0.8」
         public static BuffLabel Cooldown(float factor) => New(BuffIcon.Cooldown, new StatModifier(UnitStat.Attack, StatOp.Multiply, factor).ValueText);
+        // 쿨다운에 더한 초 — 「+5초」(제물의 의식)
+        public static BuffLabel CooldownSeconds(float seconds) => New(BuffIcon.Cooldown, $"{seconds:+0.#;-0.#}초");
 
         private static BuffLabel New(BuffIcon icon, string text) => new BuffLabel { Icon = icon, Text = text };
     }

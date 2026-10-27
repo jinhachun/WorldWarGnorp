@@ -47,11 +47,11 @@ namespace GnorpWar.Editor
                 AllyBuildings = new[] { "TribeBeastGrave", "TribeOutpost", "TribeWarriorHut", "TribeBoneGrave", "TribeWarDrum", "TribeTundraMarch", "TribeMinotaurChief", "TribeWeapon" },
                 AllyExtraUpgrades = new[] { "Special/Special_ReformHeavyInfantry" },
             },
-            // 발동 사슬 — 제물의 의식(바로 위·아래 즉시 발동) 둘을 붙이고 판도라의 상자를 끼운다
+            // 소환 수 쌓기 — 제물의 의식(신화: 바로 위 기물 소환 +2 · 쿨다운 +1초, 10/27 리메이크) 셋을 생산 기물 아래마다 붙이고 판도라의 상자를 끼운다
             new Case
             {
-                Name = "제물의 의식 둘 + 판도라", Normal = false, Ally = BuildingNation.Tribe, Enemy = BuildingNation.TickTock,
-                AllyBuildings = new[] { "TribeBoneGrave", "TribeSacrifice", "TribeSacrifice", "Pandora", "TribeSacrifice", "TribeWarDrum", "TribeWarriorHut", "TribeOutpost" },
+                Name = "제물의 의식 셋 + 판도라", Normal = false, Ally = BuildingNation.Tribe, Enemy = BuildingNation.TickTock,
+                AllyBuildings = new[] { "TribeSacrifice", "TribeBoneGrave", "TribeSacrifice", "TribeWarriorHut", "TribeSacrifice", "TribeOutpost", "Pandora", "TribeWarDrum" },
             },
         };
 
@@ -252,7 +252,7 @@ namespace GnorpWar.Editor
             return field;
         }
 
-        // 그 국가(+ 공용) 상점 기물 중 소환 · 발동 계열 위주로 floors개 — 점수(유닛을 낸다 · 이름에 Summon · Fire · Sacrifice가 든 능력) 높은 것부터, 같으면 국가 것 · 높은 등급
+        // 그 국가(+ 공용) 상점 기물 중 소환 · 발동 계열 위주로 floors개 — 점수(유닛을 낸다 · 이름에 Summon · Fire가 든 능력) 높은 것부터, 같으면 국가 것 · 높은 등급
         private static OwnedBuilding[] Picked(BattleConfig config, BuildingNation nation, int floors)
         {
             var pool = new List<BuildingDefinition>();
@@ -286,7 +286,7 @@ namespace GnorpWar.Editor
             foreach (Object part in parts)
             {
                 string type = part != null ? part.GetType().Name : "";
-                if (type.Contains("Summon") || type.Contains("Fire") || type.Contains("Sacrifice"))
+                if (type.Contains("Summon") || type.Contains("Fire"))
                     score++;
             }
             return score;

@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 전장 탑의 맞음 표시(사용자 10/26 A안) — 버프 선(BuffLinkFx)이 층에 닿는 순간 칸 안쪽 섬광 → 창틀 바깥 효과 색 링이 퍼진다(모양·시간은 HitRingShape).
-    // 보통 표시면 그 층의 튐 · 받는 효과 표시를 2프레임 뒤로 맞춘다(Tower.Hold). 전부를 메시 하나로(PixelMesh) · 동시 상한 · 같은 칸은 RepeatGap 안이면 링만. FxDirector가 만든다
+    // 전장 탑의 맞음 표시(사용자 10/26 A안 · 10/27 링만) — 버프 선(BuffLinkFx)이 층에 닿는 순간 창틀 바깥으로 효과 색 링이 퍼진다(모양·시간은 HitRingShape).
+    // 전부를 메시 하나로(PixelMesh) · 동시 상한. FxDirector가 만든다
     public class HitRingFx : MonoBehaviour
     {
         private const int Capacity = 48;
@@ -13,10 +13,9 @@ namespace GnorpWar
 
         private class Hit
         {
-            public int Key;
             public int X, Y, W, H;
             public Color Color;
-            public HitRingMode Mode;
+            public bool Weak;
             public float Age;
         }
 
@@ -44,24 +43,16 @@ namespace GnorpWar
             Tower tower = Tower.For(team);
             if (_instance == null || tower == null || slot < 0 || slot >= tower.FloorCount || _instance._active.Count >= Capacity)
                 return;
-            int key = (int)team * 64 + slot;
-            HitRingMode mode = weak ? HitRingMode.Weak : HitRingMode.Full;
-            foreach (Hit h in _instance._active)
-                if (h.Key == key && h.Age < HitRingShape.RepeatGap && mode == HitRingMode.Full)
-                    mode = HitRingMode.RingOnly;
             Rect box = tower.FloorRect(slot);
             Hit hit = _instance._free.Count > 0 ? _instance._free.Pop() : new Hit();
-            hit.Key = key;
             hit.X = PixelMesh.ToGrid(box.xMin);
             hit.Y = PixelMesh.ToGrid(box.yMin);
             hit.W = Mathf.RoundToInt(box.width / PixelMesh.Pixel);
             hit.H = Mathf.RoundToInt(box.height / PixelMesh.Pixel);
             hit.Color = color;
-            hit.Mode = mode;
+            hit.Weak = weak;
             hit.Age = 0f;
             _instance._active.Add(hit);
-            if (mode == HitRingMode.Full)
-                tower.Hold(slot, HitRingShape.EffectDelay);
         }
 
         private void LateUpdate()
@@ -79,9 +70,9 @@ namespace GnorpWar
                     _active.RemoveAt(i);
                     continue;
                 }
-                HitRingShape.Rects(_rects, hit.X, hit.Y, hit.W, hit.H, hit.Age, hit.Mode);
+                HitRingShape.Rects(_rects, hit.X, hit.Y, hit.W, hit.H, hit.Age, hit.Weak);
                 foreach (HitRect r in _rects)
-                    _mesh.Rect(r.X, r.Y, r.W, r.H, PixelMesh.Faded(r.White ? Color.white : hit.Color, r.Alpha));
+                    _mesh.Rect(r.X, r.Y, r.W, r.H, PixelMesh.Faded(hit.Color, r.Alpha));
             }
             _mesh.End();
         }

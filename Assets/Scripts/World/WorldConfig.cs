@@ -98,6 +98,9 @@ namespace GnorpWar
         [Tooltip("플레이어(나)의 깃발 사진 — 임시(사용자 10/23). 정사각이 아니어도 된다(칸 안에 비율을 지켜 맞춘다)")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _playerProfilePhoto;
+        [Tooltip("지도에서 침략할 수 있는 땅의 표시 자리에 뜨는 칼(UI/WorldMapView) — 「침략」 버튼과 같은 그림, 원본 크기")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _invadeMark;
 
         [Header("영주 닉네임 — 지도의 영주 그림 위 · 왼쪽 패널 · 승리 글(임시 이름, 사용자 10/12)")]
         [Tooltip("이름 목록(값은 에셋에 — 흔한 외국 이름의 한글 표기, 사용자 10/12) — 한 런에서 영주마다 하나씩 겹치지 않게 돌려 쓰고, 다 쓰면 뒤에 숫자를 붙인다(제임스2)")]
@@ -149,6 +152,7 @@ namespace GnorpWar
         public Sprite Castle(BuildingNation nation) => (int)nation < _castles.Length ? _castles[(int)nation] : null;
         public Sprite TempProfilePhoto => _tempProfilePhoto;
         public Sprite PlayerProfilePhoto => _playerProfilePhoto;
+        public Sprite InvadeMark => _invadeMark;
         public string NationDescription(BuildingNation nation) => (int)nation < _nationDescriptions.Length ? _nationDescriptions[(int)nation] : "";
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;

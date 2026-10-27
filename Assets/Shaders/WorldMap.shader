@@ -217,12 +217,12 @@ Shader "GnorpWar/WorldMap"
                 // 이벤트 땅(주인 없음)인데 상태가 없을 때 — 검은 바탕에 옅은 빗금
                 if (owner == 0)
                     pixel = hatchCell ? Lut(color, hovered ? ROW_EVENT_HATCH_HOVER : ROW_EVENT_HATCH) : 0;
-                // 이벤트 땅 — 기복도 톤 × 상태 밝기, 방문 가능 · 깜박임은 흰 굵은 테두리. 장식은 없다
+                // 이벤트 땅 — 기복도 톤 × 상태 밝기, 깜박임만 흰 굵은 테두리(방문 가능은 밝아짐 + 화살표만 — 흰 테두리가 내 영토 경계선처럼 보였다, 사용자 10/27). 장식은 없다
                 if (state != 0)
                 {
                     float light = state == EVENT_CLOSED ? ROW_EVENT_CLOSED : state == EVENT_LIT ? ROW_EVENT_LIT
                         : state == EVENT_VISITABLE ? (hovered ? ROW_EVENT_VISITABLE_HOVER : ROW_EVENT_VISITABLE) : hovered ? ROW_EVENT_HOVER : ROW_ONE;
-                    pixel = state != EVENT_CLOSED && state != EVENT_OPEN && nearEdge ? 255 : Lut(RockTone(tone), light);
+                    pixel = state == EVENT_LIT && nearEdge ? 255 : Lut(RockTone(tone), light);
                     if (region == _Selected && nearEdge)
                         pixel = SelectedColor;
                     return pixel;

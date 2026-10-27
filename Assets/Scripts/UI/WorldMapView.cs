@@ -166,6 +166,8 @@ namespace GnorpWar
             _anchors = new Vector2Int[regions];
             _specialFrames = new Image[regions];
             _crowns = new Image[regions];
+            _invadeMarks = new Image[regions];
+            _invadeHome = new float[regions];
             _specialIcons = new UpgradeIcon[regions];
             _specials = new UpgradeDefinition[regions];
             _eventCells = new Image[regions];
@@ -227,6 +229,18 @@ namespace GnorpWar
                 crownOutline.effectColor = Color.black;
                 crownOutline.effectDistance = new Vector2(2f, 2f);
                 crown.gameObject.SetActive(false);
+
+                // 침략할 수 있는 땅 표시 — 이벤트 칸과 같은 부품(흰 테두리 칸) 안에 칼(「침략」 버튼과 같은 그림), 톡톡 튄다(Update). 지역 특수 칸이 있으면 그 위(왕관 자리 — 남의 땅이라 왕관과 안 겹친다). Show가 켜고 끈다
+                Image invade = _invadeMarks[region] = Instantiate(_upgradeCell, mark);
+                invade.name = "Invade";
+                invade.rectTransform.anchorMin = invade.rectTransform.anchorMax = invade.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                invade.transform.Find("Count").gameObject.SetActive(false);
+                var sword = invade.transform.Find("Icon").GetComponent<UpgradeIcon>();
+                sword.Set(RunState.Config != null ? RunState.Config.World.InvadeMark : null, "", "");
+                sword.enabled = false;   // 툴팁 없음 — 땅 카드(UI/LandHover)가 보여 준다
+                sword.GetComponent<Image>().raycastTarget = false;
+                invade.raycastTarget = false;
+                invade.gameObject.SetActive(false);
 
                 // 표시 자리 — 칸 하나 + 왕관(칸이 하나뿐이라 옆 · 위아래로 쌓을 일이 없다). 이 자리(칸)는 장식 · 영주 그림이 비켜 간다
                 float top = IconY + IconBack * 0.5f + CrownGap + crown.rectTransform.sizeDelta.y;
@@ -374,6 +388,11 @@ namespace GnorpWar
                 bool crowned = owner[region] == mine;
                 if (_crowns[region].gameObject.activeSelf != crowned)
                     _crowns[region].gameObject.SetActive(crowned);
+                if (_invadeMarks[region].gameObject.activeSelf != open)
+                    _invadeMarks[region].gameObject.SetActive(open);
+                _invadeHome[region] = _specials[region] != null
+                    ? IconY + (IconBack + _invadeMarks[region].rectTransform.sizeDelta.y) * 0.5f + CrownGap
+                    : IconY;
                 _colors[region] = color;
                 _invadable[region] = open;
             }
@@ -522,7 +541,7 @@ namespace GnorpWar
 
         // 빠르기 갈래 speed(0~4)의 물결이 time초에 흘러간 칸 — 셰이더에는 이 값을 넘긴다(옛 칠하기와 같은 내림)
         private static int WaveShift(float time, int speed) => Mathf.FloorToInt(time * WaveSpeed * (0.6f + speed * 0.2f));
-        // 땅 가장자리 띠 두께(칸) — 이벤트 땅 흰 테두리 · 고른 땅 노란 테두리
+        // 땅 가장자리 띠 두께(칸) — 이벤트 땅 깜박임 흰 테두리 · 고른 땅 노란 테두리
         private const int EdgeBand = 2;
 
         // 안 바뀌는 그림을 텍스처로 굽고 머티리얼을 만든다(Build에서 한 번). 텍스처는 모두 아래 줄부터(텍스처 순서) · Point
@@ -651,9 +670,29 @@ namespace GnorpWar
             return texture;
         }
 
+        // 지금 갈 수 있는 땅의 표시(칼 · 방문할 수 있는 이벤트 칸)가 톡톡 튀는 높이(px) — 칸마다 BobStep초. 픽셀이 뭉개지지 않게 크기 대신 자리를 계단으로(사용자 10/27, Slay the Spire 지도 참고)
+        private static readonly float[] Bob = { 0f, 3f, 6f, 6f, 3f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
+        private const float BobStep = 0.07f;
+        private Image[] _invadeMarks;
+        private float[] _invadeHome;
+        private int _bobTick = -1;
+
         // 바다 물결 — 셰이더가 칸마다 그리고, 여기서는 0.1초마다 갈래별로 흘러간 칸 다섯 개만 넘긴다
         private void Update()
         {
+            int bob = Mathf.FloorToInt(Time.unscaledTime / BobStep);
+            if (_invadeMarks != null && bob != _bobTick)
+            {
+                _bobTick = bob;
+                float lift = Bob[bob % Bob.Length];
+                for (int region = 0; region < _invadeMarks.Length; region++)
+                {
+                    if (_invadeMarks[region].gameObject.activeSelf)
+                        _invadeMarks[region].rectTransform.anchoredPosition = new Vector2(0f, _invadeHome[region] + lift);
+                    if (_eventCells[region].gameObject.activeSelf)
+                        _eventCells[region].rectTransform.anchoredPosition = new Vector2(0f, IconY + (_events[region] == EventVisitable ? lift : 0f));
+                }
+            }
             int tick = Mathf.FloorToInt(Time.unscaledTime / WaveTick);
             if (_material == null || tick == _waveTick)
                 return;
@@ -690,7 +729,7 @@ namespace GnorpWar
 
         // 이벤트 땅 = 산맥 띠 — 음영 기복도(사용자 10/26 참고 그림: 아이콘 없이 등성이 한쪽은 빛 · 반대쪽은 그림자, 비탈에 깃털 같은 잔 골짜기, 따뜻한 갈색~주황).
         // 높이 = 띠 가장자리에서 떨어진 거리(가운데가 등성이) − 골짜기 노이즈. 빛은 왼쪽 위에서 — 기울기로 잰 밝기를 톤 셋으로 나눠 굽는다(색은 셰이더 RockTone).
-        // 상태(셰이더): 열림 = 그대로 · 방문 가능 = 밝아짐 + 흰 굵은 테두리(화살표는 Show가) · 반짝임 = 더 밝게 · 닫힘 = 어둡게(아이콘 반투명은 칸이)
+        // 상태(셰이더): 열림 = 그대로 · 방문 가능 = 밝아짐(화살표는 Show가) · 반짝임 = 더 밝게 + 흰 굵은 테두리 · 닫힘 = 어둡게(아이콘 반투명은 칸이)
         // 톤 경계(빛 세기) — 평지(기울기 없음, 0.73)가 가운데 톤. 톤 셋 · 큰 골짜기만(사용자 10/26 「너무 구체적 — 밀도를 낮춰」)
         private static readonly float[] ToneSteps = { 0.6f, 0.85f };
         // 등성이 높이(가장자리에서 1칸당) · 골짜기 깊이 · 골짜기 노이즈 한 덩이 크기(칸)

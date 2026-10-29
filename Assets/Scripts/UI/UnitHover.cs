@@ -98,7 +98,7 @@ namespace GnorpWar
         private Unit Nearest(Camera cam, Vector2 mouse)
         {
             Vector2 world = cam.ScreenToWorldPoint(mouse);
-            float radius = Mathf.Max(PickMinWorld, PickPixels * cam.orthographicSize * 2f / Screen.height);
+            float radius = Mathf.Max(PickMinWorld, PickPixels * cam.orthographicSize * 2f / cam.pixelHeight);
             int count = Physics2D.OverlapCircle(world, radius, _filter, _hits);
             Unit best = null;
             float bestDistance = float.MaxValue;
@@ -258,14 +258,15 @@ namespace GnorpWar
             float scale = _card.lossyScale.x;
             float w = _card.sizeDelta.x * scale, h = _card.sizeDelta.y * scale;
             float offset = Offset * scale, margin = Margin * scale;
+            Rect screen = Letterbox.Rect;
             float x = mouse.x + offset;
-            if (x + w > Screen.width - margin)
+            if (x + w > screen.xMax - margin)
                 x = mouse.x - offset - w;
-            x = Mathf.Max(margin, x);
+            x = Mathf.Max(screen.xMin + margin, x);
             float top = mouse.y - offset;
-            if (top - h < margin)
-                top = h + margin;
-            top = Mathf.Min(top, Screen.height - margin);
+            if (top - h < screen.yMin + margin)
+                top = screen.yMin + h + margin;
+            top = Mathf.Min(top, screen.yMax - margin);
             _card.position = new Vector3(x, top, 0f);
         }
     }

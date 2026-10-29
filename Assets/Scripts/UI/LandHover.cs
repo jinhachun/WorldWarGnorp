@@ -53,7 +53,6 @@ namespace GnorpWar
         [SerializeField] private Image _loseIcon;
         [SerializeField] private Text _loseText;
         [Header("그림")]
-        [SerializeField] private Sprite _lordSprite;
         [SerializeField] private Sprite _lordFlag;
         [SerializeField] private Sprite _unknownIconLarge;
 
@@ -161,9 +160,11 @@ namespace GnorpWar
                 bool mine = lord == state.Player, coalition = state.CoalitionOf(lord) != null;
                 var figure = (RectTransform)new GameObject("Lord", typeof(RectTransform)).transform;
                 figure.SetParent(_icon, false);
-                // 그림의 자리 = 몸 한가운데 — 깃발까지 든 그림(몸 아래 4px ~ 위 11px, UI/WorldSidePanel 초상화와 같은 범위)이 칸 가운데에 오게 내린다
-                figure.anchoredPosition = new Vector2(0f, -3.5f * FigureScale);
-                WorldLords.Figure(figure, _lordSprite, _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), FigureScale);
+                // 그림의 자리 = 몸 한가운데 — 깃발까지 든 그림(몸 아래 ~ 깃발 위, 국가마다 몸 크기가 다르다)이 칸 가운데에 오게 내린다
+                Sprite lordBody = WorldLords.BodyOf(lord.Id);
+                (float down, float up) = WorldLords.Reach(lordBody, _lordFlag);
+                figure.anchoredPosition = new Vector2(0f, -(up - down) * 0.5f * FigureScale);
+                WorldLords.Figure(figure, lordBody, _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), FigureScale);
                 _name.text = $"<size={NameSize}>{(mine ? "내 영지" : coalition ? RunState.NameOf(lord) + " 연합" : RunState.NameOf(lord))}</size>";
                 // 내 국가 · 땅 수는 위 줄과 왼쪽 패널에서 이미 읽힌다
                 owned = !mine;
@@ -313,14 +314,15 @@ namespace GnorpWar
             float scale = _card.lossyScale.x;
             float w = _card.sizeDelta.x * scale, h = _card.sizeDelta.y * scale;
             float offset = Offset * scale, margin = Margin * scale;
+            Rect screen = Letterbox.Rect;
             float x = mouse.x + offset;
-            if (x + w > Screen.width - margin)
+            if (x + w > screen.xMax - margin)
                 x = mouse.x - offset - w;
-            x = Mathf.Max(margin, x);
+            x = Mathf.Max(screen.xMin + margin, x);
             float top = mouse.y - offset;
-            if (top - h < margin)
-                top = h + margin;
-            top = Mathf.Min(top, Screen.height - margin);
+            if (top - h < screen.yMin + margin)
+                top = screen.yMin + h + margin;
+            top = Mathf.Min(top, screen.yMax - margin);
             _card.position = new Vector3(x, top, 0f);
         }
     }

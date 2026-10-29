@@ -59,6 +59,8 @@ namespace GnorpWar
         public static RectTransform Framed { get; set; }
         private readonly Vector3[] _corners = new Vector3[4];
         private readonly Vector3[] _framedCorners = new Vector3[4];
+        // 놓은 판들의 세로 열(Place) — x = 그 열에 놓을 유닛 판의 왼쪽 · y = 열 오른쪽 끝 · z = 열 맨 아래(기물 판 왼쪽 위 기준 로컬)
+        private readonly List<Vector3> _columns = new List<Vector3>();
         // 판 · 유닛 판의 원래 폭(씬 값) — 상점 자리에 설 때만 그 자리 폭으로 바꾼다
         private float _panelWidth, _cardWidth;
         // 유닛 판끼리 · 기물 판과 유닛 판 사이(px) · 능력치 아이콘 칸의 폭(글이 이 뒤에서 시작한다)
@@ -326,7 +328,7 @@ namespace GnorpWar
             if (unit.AttackType == AttackType.Build)
                 traits.Add("작은 타워를 짓습니다.");
             if (unit.Flies)
-                traits.Add("하늘을 날아 원거리 공격에만 맞습니다.");
+                traits.Add("하늘을 날아 원거리 공격과 그 높이에 오른 적에게만 맞습니다.");
             if (unit.SlamInterval > 0f)
                 traits.Add(ColorNumbers($"{unit.SlamInterval:0.#}초마다 뛰어올라 주변 적을 띄웁니다."));
             // 타고난 특성(UnitDefinition.TraitLines) — 그 유닛이면 늘 가진 효과. 숫자는 에셋 값으로 채워져 온다
@@ -624,7 +626,7 @@ namespace GnorpWar
             else
             {
                 float rightLeft = ClearOfBars(_corners[2].x + gap, 1, boardScale);
-                bool right = rightLeft + width * scale <= (boardScale > 0f ? area.xMax : Screen.width);
+                bool right = rightLeft + width * scale <= (boardScale > 0f ? area.xMax : Letterbox.Rect.xMax);
                 direction = right ? 1 : -1;
                 left = right ? rightLeft : ClearOfBars(_corners[0].x - gap, -1, boardScale) - width * scale;
                 wantTop = _corners[1].y;
@@ -634,12 +636,17 @@ namespace GnorpWar
             float lowest = -height;
             float prevX = 0f, prevY = 0f, prevWidth = width, prevHeight = height;
             bool afterPanel = true;
+            // 아래로 쌓다 화면 높이(room)를 넘는 판은 아래에 자리가 남은 열로, 없으면 옆에 새 열로 감는다(사용자 10/30 — 판이 화면 밖으로 튀어나감)
+            float room = area.height / scale;
+            bool wrapped = false;
+            _columns.Clear();
+            _columns.Add(new Vector3(!column && direction < 0 ? width - cardWidth : 0f, width, -height));
             for (int i = 0; i < units.Length; i++)
             {
                 RectTransform rect = _cards[i].Panel;
                 float h = rect.sizeDelta.y;
                 float x = prevX, y = prevY - prevHeight - CardGap;
-                if (!column)
+                if (!column && !wrapped)   // 한 번 감은 뒤로는 옆으로 펼치지 않는다(이미 놓인 열과 겹친다)
                 {
                     float side = direction > 0 ? prevX + prevWidth + CardGap : prevX - CardGap - cardWidth;
                     float screenLeft = left + side * scale;
@@ -651,6 +658,13 @@ namespace GnorpWar
                     else if (afterPanel && direction < 0)
                         x = width - cardWidth;   // 왼쪽으로 펼치던 판은 아래로 내릴 때 오른쪽 끝을 맞춘다
                 }
+                if (y - h < -room)
+                    wrapped |= Wrap(h, room, left, cardWidth, scale, area, direction, ref x, ref y);
+                int at = _columns.FindIndex(c => Mathf.Approximately(c.x, x));
+                if (at < 0)
+                    _columns.Add(new Vector3(x, x + cardWidth, y - h));
+                else
+                    _columns[at] = new Vector3(x, Mathf.Max(_columns[at].y, x + cardWidth), Mathf.Min(_columns[at].z, y - h));
                 rect.anchoredPosition = new Vector2(x, y);
                 lowest = Mathf.Min(lowest, y - h);
                 prevX = x;
@@ -666,12 +680,43 @@ namespace GnorpWar
             _panel.position = new Vector3(left, top, 0f);
         }
 
-        // 떠 있는 판이 들어갈 곳(화면 px) — 지도 씬은 바깥 막대 안쪽 Pad 안, 전투 씬은 화면 가장자리에서 gap 안. boardScale = 화면 판 1px의 화면 px(지도 씬만, 아니면 0)
+        // 화면 높이를 넘는 유닛 판(높이 h)의 새 자리 — 아래에 자리가 남은 열의 맨 아래, 없으면 펼치는 쪽(안 되면 반대쪽) 옆에 새 열의 맨 위. 둘 다 없으면 그대로
+        private bool Wrap(float h, float room, float left, float cardWidth, float scale, Rect area, int direction, ref float x, ref float y)
+        {
+            foreach (Vector3 c in _columns)
+                if (c.z - CardGap - h >= -room)
+                {
+                    x = c.x;
+                    y = c.z - CardGap;
+                    return true;
+                }
+            float minLeft = 0f, maxRight = 0f;
+            foreach (Vector3 c in _columns)
+            {
+                minLeft = Mathf.Min(minLeft, c.x);
+                maxRight = Mathf.Max(maxRight, c.y);
+            }
+            foreach (int d in new[] { direction, -direction })
+            {
+                float nx = d > 0 ? maxRight + CardGap : minLeft - CardGap - cardWidth;
+                float screenLeft = left + nx * scale;
+                if (screenLeft >= area.xMin && screenLeft + cardWidth * scale <= area.xMax)
+                {
+                    x = nx;
+                    y = 0f;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 떠 있는 판이 들어갈 곳(화면 px) — 지도 씬은 바깥 막대 안쪽 Pad 안, 전투 씬은 16:9 영역 가장자리에서 gap 안. boardScale = 화면 판 1px의 화면 px(지도 씬만, 아니면 0)
         private Rect Area(float gap, out float boardScale)
         {
             boardScale = 0f;
+            Rect screen = Letterbox.Rect;
             if (Framed == null || !Framed.gameObject.activeInHierarchy)
-                return Rect.MinMaxRect(gap, gap, Screen.width - gap, Screen.height - gap);
+                return Rect.MinMaxRect(screen.xMin + gap, screen.yMin + gap, screen.xMax - gap, screen.yMax - gap);
             Framed.GetWorldCorners(_framedCorners);
             boardScale = (_framedCorners[2].x - _framedCorners[0].x) / Framed.rect.width;
             float inset = (FrameBars.InfoLeft + FrameBars.Pad) * boardScale;
@@ -703,7 +748,8 @@ namespace GnorpWar
             var corners = new Vector3[4];
             Dock.GetWorldCorners(corners);
             dock = Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
-            return dock.xMin >= -1f && dock.yMin >= -1f && dock.xMax <= Screen.width + 1f && dock.yMax <= Screen.height + 1f;
+            Rect screen = Letterbox.Rect;
+            return dock.xMin >= screen.xMin - 1f && dock.yMin >= screen.yMin - 1f && dock.xMax <= screen.xMax + 1f && dock.yMax <= screen.yMax + 1f;
         }
 
         private static void SetWidth(RectTransform rect, float width) => rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);

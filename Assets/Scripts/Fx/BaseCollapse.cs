@@ -123,8 +123,8 @@ namespace GnorpWar
             float reach = (_right - _left) * (0.5f + SpreadOfWidth) + _dustSize + SideMargin;
             float need = Mathf.Max((_top + TopMargin - bottom) * 0.5f, reach / _camera.aspect);
             // 그림 1px = 화면 n px(정수) — 화면 높이 = 2 × 크기 × 8 × n
-            int n = Mathf.FloorToInt(Screen.height / (16f * need));
-            float size = n >= 1 ? Screen.height / (16f * n) : need;
+            int n = Mathf.FloorToInt(_camera.pixelHeight / (16f * need));
+            float size = n >= 1 ? _camera.pixelHeight / (16f * n) : need;
             _sizeTo = Mathf.Min(size, _sizeFrom);   // 이미 더 가까우면 그대로
             float half = _sizeTo * _camera.aspect;
             float x = (_left + _right) * 0.5f;

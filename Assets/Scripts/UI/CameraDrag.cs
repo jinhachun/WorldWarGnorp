@@ -63,7 +63,7 @@ namespace GnorpWar
             if (_dragging && pointer != null && pointer.press.isPressed)
             {
                 float at = pointer.position.ReadValue().x;
-                float worldPerPixel = _camera.orthographicSize * 2f / Screen.height;
+                float worldPerPixel = _camera.orthographicSize * 2f / _camera.pixelHeight;
                 float delta = -(at - _lastPointer) * worldPerPixel;
                 _lastPointer = at;
                 if (dt > 0f)
@@ -91,7 +91,7 @@ namespace GnorpWar
             if (size == _camera.orthographicSize)
                 return;
             // 화면 가운데에서 그 자리까지(화면 높이의 절반 = 1)
-            float offset = (screenX / Screen.width - 0.5f) * 2f * _camera.aspect;
+            float offset = ((screenX - _camera.pixelRect.x) / _camera.pixelWidth - 0.5f) * 2f * _camera.aspect;
             float worldX = transform.position.x + offset * _camera.orthographicSize;
             _camera.orthographicSize = size;
             _velocity = 0f;

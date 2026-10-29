@@ -8,7 +8,7 @@ using UnityEngine.TestTools;
 
 namespace GnorpWar.Editor.Tests
 {
-    // 유령 영주(World/WorldRun — 영주 = 다른 런 기록) — 턴마다 탑 갈아 끼우기 · 일찍 끝난 기록 멈춤 · 못 읽는 기록 건너뜀 · 같은 신화 한 번 · 기록이 모자라면 AI
+    // 유령 영주(World/WorldRun — 영주 = 다른 런 기록) — 턴마다 탑 갈아 끼우기 · 끝난 기록은 AI가 이어 둠 · 못 읽는 기록 건너뜀 · 같은 신화 한 번 · 기록이 모자라면 AI
     public class GhostLordTests
     {
         private BattleConfig _config;
@@ -37,7 +37,7 @@ namespace GnorpWar.Editor.Tests
         }
 
         [Test]
-        public void TowerFollowsRecordTurnAndStopsAtEnd()
+        public void TowerFollowsRecordTurn()
         {
             RunRecord.Loaded record = WriteRecord(3, BuildingNation.Tribe, lives => 6 - lives);
             WorldRun run = NewRun();
@@ -47,7 +47,7 @@ namespace GnorpWar.Editor.Tests
             Assert.AreEqual(1, run.GhostCount);
             Assert.AreEqual(BuildingNation.Tribe, run.NationOf(ghostLord), "유령의 국가 = 기록의 국가");
 
-            foreach ((int turn, int shown) in new[] { (1, 1), (2, 2), (3, 3), (4, 3), (12, 3) })
+            foreach ((int turn, int shown) in new[] { (1, 1), (2, 2), (3, 3) })
             {
                 run.State.Turn = turn;
                 run.ShopPhase();
@@ -58,6 +58,48 @@ namespace GnorpWar.Editor.Tests
                 Assert.AreEqual(0, tower.Gold, "유령은 상점을 돌지 않는다(골드를 받지 않는다)");
                 Assert.AreEqual(Team.Enemy, tower.Team);
             }
+        }
+
+        // 기록이 턴 N에서 끝나면 N+1부터 AI가 이어 둔다 — 마지막 탑 그대로 상점을 돌고(갈아 끼우지 않음), 닉네임 · 국가는 그대로, 빌드 방향은 기록의 국가(사용자 10/30)
+        [Test]
+        public void RecordEndHandsOverToAi()
+        {
+            RunRecord.Loaded record = WriteRecord(3, BuildingNation.Tribe, null, "끝난 유령");
+            WorldRun run = NewRun();
+            run.AddGhosts(new List<RunRecord.Loaded> { record });
+            Lord lord = GhostLord(run);
+            for (run.State.Turn = 1; run.State.Turn <= 3; run.State.Turn++)
+                run.ShopPhase();
+            TowerState last = run.TowerOf(lord);
+            Assert.AreSame(Pool(3), last.Field[0].Definition);
+            int before = Built(last);
+
+            LogAssert.Expect(LogType.Log, new Regex(@"\[Ghost\] 턴 4 — 영주 \d+번의 기록 .*턴 3에서 끝남 — AI가 이어 둔다"));
+            for (run.State.Turn = 4; run.State.Turn <= 6; run.State.Turn++)
+            {
+                run.ShopPhase();
+                Assert.AreSame(last, run.TowerOf(lord), $"턴 {run.State.Turn} — 기록의 마지막 탑을 이어받는다(갈아 끼우지 않음)");
+                run.AiPhase();   // 침략은 AI와 같은 규칙 — 유령이었다고 막히지 않는다
+                if (!lord.Alive)
+                    break;
+            }
+            Assert.IsTrue(Built(last) > before || last.Gold > 0, "AI가 수입을 받아 상점을 돈다");
+            WorldRun.Ghost ghost = run.GhostOf(lord);
+            Assert.NotNull(ghost, "유령 표시(닉네임)는 남는다");
+            Assert.IsTrue(ghost.Retired);
+            Assert.AreEqual("끝난 유령", ghost.Record.Nickname);
+            Assert.AreEqual(BuildingNation.Tribe, run.NationOf(lord));
+            Assert.AreEqual(BuildingNation.Tribe, run.Map.BuildOf(lord.Build).Nation, "AI 빌드 방향 = 기록의 국가");
+        }
+
+        private static int Built(TowerState tower)
+        {
+            int count = 0;
+            foreach (OwnedBuilding[] row in new[] { tower.Field, tower.Storage })
+                foreach (OwnedBuilding building in row)
+                    if (!OwnedBuilding.IsEmpty(building))
+                        count++;
+            return count;
         }
 
         // 기록이 영주보다 적으면 나머지는 AI — AI 영주는 상점을 돈다

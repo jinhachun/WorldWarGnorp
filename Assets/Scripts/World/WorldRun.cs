@@ -75,8 +75,9 @@ namespace GnorpWar
                     tower.LandSpecials.Add(RegionSpecial[region]);   // 이미 얻은 신화(유령 영주가 자기 런에서 고른 것)와 같으면 한 번만 친다
         }
 
-        // ── 유령 영주(아웃게임기획 §9-0 · ROADMAP 2-4 3번) — 영주 한 명 = 다른 런 기록 하나(Run/RunRecord). 내 턴 N에 그 영주의 탑 = 그 기록의 턴 N 스냅샷(일찍 끝났으면 마지막).
+        // ── 유령 영주(아웃게임기획 §9-0 · ROADMAP 2-4 3번) — 영주 한 명 = 다른 런 기록 하나(Run/RunRecord). 내 턴 N에 그 영주의 탑 = 그 기록의 턴 N 스냅샷.
         // 유령은 상점을 돌지 않는다(골드를 안 씀 · 업그레이드는 기록에 든 그대로) — 턴이 열릴 때(ShopPhase) 탑을 갈아 끼운다. 땅 신화는 AI처럼 쥔 동안(SyncSpecials).
+        // 기록이 끝나면(마지막 스냅샷 다음 턴부터) AI가 이어 둔다 — 마지막 탑 그대로 상점을 돈다. 빌드 방향은 기록의 국가 중 지금 탑과 가장 맞는 것(Retire). 닉네임 · 국가 · 연합의 유령 규칙은 그대로(사용자 10/30)
         // 영주끼리의 전쟁 · 행복도 · 반란 · 연합은 AI와 같다. 기록 하나는 한 런에서 한 영주에만 — 모자라면 나머지는 AI
         public class Ghost
         {
@@ -85,6 +86,8 @@ namespace GnorpWar
             public int Turn;
             public int Lives;
             public BuildingNation Nation;
+            // 기록이 끝나 AI가 두는 중(Retire) — 탑은 더 갈아 끼우지 않는다
+            public bool Retired;
         }
 
         private readonly Dictionary<int, Ghost> _ghosts = new Dictionary<int, Ghost>();
@@ -134,11 +137,17 @@ namespace GnorpWar
                 _hauntedNames.Add(chosen.Nickname);
         }
 
-        // 유령의 탑을 이번 턴(State.Turn)의 스냅샷으로 — 유령이면 true. 세우지 못하면 경고 로그를 남기고 그 영주는 지금 탑 그대로 AI가 된다(false)
+        // 유령의 탑을 이번 턴(State.Turn)의 스냅샷으로 — 갈아 끼웠으면 true. 세우지 못하면 경고 로그를 남기고 그 영주는 지금 탑 그대로 AI가 된다(false).
+        // 기록의 마지막 스냅샷을 이미 세웠고 이번 턴이 그 뒤면 AI로 넘긴다(false — Retire). 처음 세울 때는(반란으로 늦게 선 영주) 마지막 스냅샷이라도 한 번 세운다
         private bool Possess(Lord lord)
         {
-            if (!(GhostOf(lord) is Ghost ghost))
+            if (!(GhostOf(lord) is Ghost ghost) || ghost.Retired)
                 return false;
+            if (ghost.Turn == ghost.Record.LastTurn && State.Turn > ghost.Turn)
+            {
+                Retire(lord, ghost);
+                return false;
+            }
             try
             {
                 TowerSnapshot snapshot = TowerSnapshot.FromJson(ghost.Record.SnapshotAt(State.Turn), Team.Enemy, _battle.AssetIds, _battle);
@@ -154,6 +163,38 @@ namespace GnorpWar
                 _ghosts.Remove(lord.Id);
                 return false;
             }
+        }
+
+        // 기록이 끝난 유령을 AI로 — 빌드 방향 = 기록의 국가의 방향 중 지금 탑(필드 · 보관함)의 기물 값 합이 가장 큰 것(같으면 지금 방향, 그다음 번호가 앞선 것).
+        // 그 국가의 방향이 지도에 없으면 지금 방향 그대로
+        private void Retire(Lord lord, Ghost ghost)
+        {
+            ghost.Retired = true;
+            TowerState tower = _towers[lord.Id];
+            int best = lord.Build;
+            float bestScore = _world.Map.BuildOf(lord.Build).Nation == ghost.Nation ? Score(_world.Map.BuildOf(lord.Build), tower) : float.NegativeInfinity;
+            for (int build = 0; build < _world.Map.BuildCount; build++)
+            {
+                EnemyBuildProfile profile = _world.Map.BuildOf(build);
+                float score = profile.Nation == ghost.Nation ? Score(profile, tower) : float.NegativeInfinity;
+                if (score > bestScore)
+                {
+                    best = build;
+                    bestScore = score;
+                }
+            }
+            lord.Build = best;
+            Debug.Log($"[Ghost] 턴 {State.Turn} — 영주 {lord.Id}번의 기록 {ghost.Record.RunId}이 턴 {ghost.Turn}에서 끝남 — AI가 이어 둔다(빌드 방향 「{_world.Map.BuildOf(best).DisplayName}」)");
+        }
+
+        private static float Score(EnemyBuildProfile profile, TowerState tower)
+        {
+            float score = 0f;
+            foreach (OwnedBuilding[] row in new[] { tower.Field, tower.Storage })
+                foreach (OwnedBuilding building in row)
+                    if (!OwnedBuilding.IsEmpty(building))
+                        score += profile.WeightOf(building.Definition);
+            return score;
         }
 
         public WorldMapDefinition Map => _world.Map;

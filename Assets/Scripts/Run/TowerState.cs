@@ -22,6 +22,8 @@ namespace GnorpWar
         public readonly System.Collections.Generic.HashSet<UpgradeDefinition> GrantedOnce = new System.Collections.Generic.HashSet<UpgradeDefinition>();
         // 진열 칸마다 그 기물이 시작 등급에서 오른 횟수(중립외교 — 보통 0)
         public int[] OfferUpgrades;
+        // 조약 국가 목록(아웃게임기획 §3-2 외교) — 목록이 있는 탑(내 탑)의 진열은 「공용 + 그 탑의 국가 + 조약 국가」만, 없는 탑(null — AI 영주)은 국가 비율(BattleConfig.HomeNationShare)대로
+        public System.Collections.Generic.List<BuildingNation> Treaties;
 
         public TowerState(Team team) => Team = team;
 

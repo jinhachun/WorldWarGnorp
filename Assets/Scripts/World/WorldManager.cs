@@ -32,7 +32,7 @@ namespace GnorpWar
         // Choose = 런의 첫 화면 — 내 국가를 고르는 중(고르면 첫 턴이 열린다). March = 「침략」을 눌러 내 영주가 그 땅으로 걸어가는 중(도착하면 전투 씬)
         // Visit = 이벤트 땅 방문 장면(UI/EventVisitPopup)이 떠 있다 — 끝나면 쉬기와 같은 길(AI 턴 재생)
         // Coalition = 연합 결성 팝업 — 떠 있거나 고르기 창이 닫히길 기다린다(닫으면 요약)
-        private enum Stage { Choose, Command, March, Visit, Replay, Coalition, Summary }
+        private enum Stage { Choose, Command, March, Visit, News, Replay, Coalition, Summary }
 
         private static WorldManager _instance;
 
@@ -115,6 +115,8 @@ namespace GnorpWar
                 _visit.Finished += PlayAiTurn;
                 // 연합 결성 팝업을 닫았다 — 지도가 뭉친 판도를 그리고 요약
                 _visit.CoalitionsClosed += ShowSummary;
+                // 나라 소식 · 외교를 다 골랐다 — 명령(상점이 저절로 내려온다)
+                _visit.NewsClosed += StartCommand;
             }
             _shopPopup.MapRequested += () => SetShop(false);
             _shopRect = (RectTransform)_shopPopup.transform;
@@ -182,9 +184,20 @@ namespace GnorpWar
         {
             RunState.BeginTurn();
             _turn = RunState.Round + 1;
-            _stage = Stage.Command;
             _shown = null;
             _notice.SetActive(false);
+            // 나라 소식 · 외교(아웃게임기획 §3-2)가 있으면 상점보다 먼저 — 다 닫히면(NewsClosed) 명령으로
+            if (_visit != null && _visit.OpenNews())
+            {
+                _stage = Stage.News;
+                return;
+            }
+            StartCommand();
+        }
+
+        private void StartCommand()
+        {
+            _stage = Stage.Command;
             // 턴이 열리면 상점이 저절로 내려온다 — 턴마다 한 번(씬만 다시 불러온 것이면 안 내려온다)
             if (RunState.TakeShopCue())
                 SetShop(true);
@@ -493,7 +506,7 @@ namespace GnorpWar
             if (_shopTower.gameObject.activeSelf != shopShown)
                 _shopTower.gameObject.SetActive(shopShown);
             _shopTowerGroup.blocksRaycasts = _shopGroup.blocksRaycasts;
-            _panel.Show(_selected, command || _stage == Stage.March || _stage == Stage.Visit, shopShown);
+            _panel.Show(_selected, command || _stage == Stage.March || _stage == Stage.Visit || _stage == Stage.News, shopShown);
             if (!command && _shopOpen)
                 SetShop(false);
             // 상점이 열린 동안에는 명령 버튼 셋을 다 숨긴다 — 닫는 길은 팝업 안의 큰 「지도로」 하나(사용자 10/11), 닫아야 지도에서 고른다

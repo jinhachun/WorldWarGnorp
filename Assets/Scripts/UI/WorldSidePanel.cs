@@ -44,8 +44,7 @@ namespace GnorpWar
         [Tooltip("안내 글 — 고른 땅이 없을 때의 안내, 고른 땅이 있으면 「맞닿지 않았다」는 회색 글")]
         [SerializeField] private Text _landBody;
         [TextArea] [SerializeField] private string _noLandHint = "화살표가 가리키는 땅을 눌러 침략할 곳을 고릅니다.";
-        [Tooltip("영주 그림 — 유닛 몸 그림(파란 자리를 그 영주의 색으로 칠한다)과 드는 깃발(흰 그림). 지도의 영주 그림과 같은 것")]
-        [SerializeField] private Sprite _lordSprite;
+        [Tooltip("영주가 드는 깃발(흰 그림 — 영주 색을 입힌다). 몸 그림은 국가마다 WorldConfig 「영주 몸 그림」(UI/WorldLords.BodyOf)")]
         [SerializeField] private Sprite _lordFlag;
         [Tooltip("목숨 아이콘(하트) — 위 줄과 「패배시」 줄")]
         [SerializeField] private Sprite _heartIcon;
@@ -101,6 +100,7 @@ namespace GnorpWar
         private HeartRow _hearts;
         private Text _statusTurn, _statusGold, _statusLands;
         private Image _turnImage, _goldImage, _landImage;
+        private UpgradeIcon _goldTip;
         private UpgradeRow _mine;
         private RectTransform _mineView;
         // 이벤트 땅을 골랐을 때의 초상화(그 이벤트의 큰 아이콘)
@@ -135,6 +135,11 @@ namespace GnorpWar
                 _goldImage = StatusIcon(bar, _goldIcon, ColorUtility.TryParseHtmlString(BuildingTooltip.NumberColor, out Color gold) ? gold : Color.white);
                 _landImage = StatusIcon(bar, _landIcon, Color.white);
                 _hearts = new HeartRow(bar.rectTransform, _heart);
+                // 골드 칸을 덮는 투명한 판 — 가리키면 턴 수입 설명
+                _goldTip = new GameObject("GoldTip", typeof(RectTransform), typeof(Image), typeof(UpgradeIcon)).GetComponent<UpgradeIcon>();
+                _goldTip.transform.SetParent(bar.transform, false);
+                Anchor((RectTransform)_goldTip.transform, new Vector2(0f, 0.5f));
+                _goldTip.GetComponent<Image>().color = Color.clear;
 
                 var view = new GameObject("Upgrades", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
                 _mineView = (RectTransform)view.transform;
@@ -152,7 +157,12 @@ namespace GnorpWar
             }
             bar.text = "";
             float x = StatusCell(_turnImage, _statusTurn, 0f, turn.ToString());
-            x = StatusCell(_goldImage, _statusGold, x + StatusGap, $"<color={BuildingTooltip.NumberColor}>{RunState.Gold}</color>");
+            float goldX = x + StatusGap;
+            x = StatusCell(_goldImage, _statusGold, goldX, $"<color={BuildingTooltip.NumberColor}>{RunState.Gold}<size={_statusGold.fontSize - 12}>(+{RunState.TurnGoldNow})</size></color>");   // 수입은 한 단계 작게(도트 폰트 12의 배수 — 사용자 10/29 「20(+19)」)
+            // 골드 칸(아이콘 + 숫자)을 가리키면 턴 수입 — 승리 보너스는 이길지 모르니 숫자 옆이 아니라 여기에만
+            _goldTip.Set(null, "턴 수입", BuildingTooltip.Highlight($"턴마다 {RunState.TurnGoldNow}골드를 얻습니다.\n침략에 이기면 {RunState.Config.WinBonus}골드를 더 얻습니다."));
+            ((RectTransform)_goldTip.transform).anchoredPosition = new Vector2(goldX, 0f);
+            ((RectTransform)_goldTip.transform).sizeDelta = new Vector2(x - goldX, _goldImage.rectTransform.sizeDelta.y);
             x = _hearts.Show(x + StatusGap);
             x = StatusCell(_landImage, _statusLands, x + StatusGap, $"{RunState.Lands}/{RunState.RegionCount}");
             x += StatusGap;
@@ -201,11 +211,13 @@ namespace GnorpWar
                 _portrayed = lord;
                 foreach (Transform part in _portrait)
                     Destroy(part.gameObject);
-                WorldLords.Figure(_portrait, _lordSprite, _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), PortraitScale);
+                WorldLords.Figure(_portrait, WorldLords.BodyOf(lord.Id), _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), PortraitScale);
             }
+            // 그림의 위아래 범위는 그 영주 국가의 몸 크기에서 읽는다(국가마다 다를 수 있다)
+            (float down, float up) = WorldLords.Reach(WorldLords.BodyOf(lord.Id), _lordFlag);
             float y = -PortraitTop;
-            _portrait.anchoredPosition = new Vector2(center, y - FigureUp * PortraitScale);
-            y -= (FigureUp - FigureDown) * PortraitScale + BlockGap;
+            _portrait.anchoredPosition = new Vector2(center, y - up * PortraitScale);
+            y -= (up + down) * PortraitScale + BlockGap;
 
             _title.text = mine ? "내 영지" : coalition ? RunState.NameOf(lord) + " 연합" : RunState.NameOf(lord);
             y = Place(_title.rectTransform, center, y) - LineGap;

@@ -60,7 +60,6 @@ namespace GnorpWar
         [Header("그 밖의 그림")]
         [SerializeField] private Sprite _coin;
         [SerializeField] private Sprite _glow;
-        [SerializeField] private Sprite _lordSprite;
         [SerializeField] private Sprite _lordFlag;
         [Header("인물 — 대장장이 · 사제 · 선동가")]
         [SerializeField] private UnitDefinition _smith;
@@ -75,7 +74,7 @@ namespace GnorpWar
         // 판이 닫히고 지도 깜박임까지 끝났다 — 턴 흐름을 잇는다(WorldManager → AI 턴 재생)
         public event System.Action Finished;
 
-        private enum Step { Closed, Choosing, Result, Flash, Coalition }
+        private enum Step { Closed, Choosing, Result, Flash, Coalition, News }
 
         // 고를 수 있는 것 하나 — 누르면 Choice번째 후보(Heart = 피의 제단의 하트)
         private class Thing
@@ -289,7 +288,15 @@ namespace GnorpWar
             // 바탕 영주 · 흡수된 영주의 그림 1px = 화면 몇 px
             int big = rows > 1 ? 5 : columns > 2 ? 6 : 8, small = columns > 2 || rows > 1 ? 3 : 4;
             // 그림의 범위(그림 px, 몸 한가운데 기준) — 깃발이 몸 왼쪽으로 삐져나온다(오른쪽을 볼 때)
-            float bodyW = _lordSprite.rect.width, bodyH = _lordSprite.rect.height;
+            // 몸 크기는 국가마다 다를 수 있다 — 나오는 영주들 중 가장 큰 것으로 칸을 잡는다
+            float bodyW = 0f, bodyH = 0f;
+            foreach (WorldState.Coalition c in coalitions)
+                foreach (int id in System.Linq.Enumerable.Prepend(c.Members, c.Lord.Id))
+                {
+                    Sprite body = WorldLords.BodyOf(id);
+                    bodyW = Mathf.Max(bodyW, body.rect.width);
+                    bodyH = Mathf.Max(bodyH, body.rect.height);
+                }
             float outer = bodyW * 0.5f + 8f, inner = Mathf.Max(bodyW * 0.5f, _lordFlag.rect.width - 8f - bodyW * 0.5f);
             float figureH = Mathf.Max(bodyH, 3f + _lordFlag.rect.height);
             float cellWidth = (PanelWidth - 32f) / columns, rowHeight = RowFigures + figureH * big + RowBelow;
@@ -315,10 +322,10 @@ namespace GnorpWar
                 line.rectTransform.sizeDelta = new Vector2(cellWidth - 24f, 4f);
                 At(line.rectTransform, x, ground, new Vector2(0.5f, 0f));
                 Color color = RunState.ColorOf(coalition.Lord);
-                LordFigure(coalition.Lord.Id, color, x, ground - bodyH * big * 0.5f, big, false);
+                LordFigure(coalition.Lord.Id, color, x, ground - BodyHeight(coalition.Lord.Id) * big * 0.5f, big, false);
 
                 // 흡수된 영주들 — 바탕 영주에서 가까운 자리부터 왼쪽 · 오른쪽 번갈아, 칸 안에 겹치지 않고 서는 만큼만
-                float gap = 2f * small, step = (outer + inner) * small + gap, y = ground - bodyH * small * 0.5f;
+                float gap = 2f * small, step = (outer + inner) * small + gap;
                 var slots = new List<(float To, float From, bool Left)>();
                 float leftAt = x - outer * big - gap - inner * small, rightAt = x + inner * big + gap + inner * small;
                 float leftEnd = cellLeft + 6f + outer * small, rightEnd = cellLeft + cellWidth - 6f - outer * small;
@@ -339,6 +346,7 @@ namespace GnorpWar
                 {
                     int member = coalition.Members[j];
                     (float to, float from, bool faceLeft) = slots[j];
+                    float y = ground - BodyHeight(member) * small * 0.5f;
                     // 오른쪽에서 오는 영주는 왼쪽을 본다(깃발이 바깥쪽)
                     RectTransform holder = LordFigure(member, RunState.ColorOf(state.Lords[member]), Mathf.Round(from), y, small, faceLeft);
                     _flights.Add(new Flight
@@ -398,8 +406,11 @@ namespace GnorpWar
                 return;
             foreach (Transform part in holder)
                 Destroy(part.gameObject);
-            WorldLords.Figure(holder, _lordSprite, _lordFlag, WorldLords.PhotoOf(lord), color, k);
+            WorldLords.Figure(holder, WorldLords.BodyOf(lord), _lordFlag, WorldLords.PhotoOf(lord), color, k);
         }
+
+        // 그 영주 몸 그림의 높이(원본 px) — 국가마다 다를 수 있다
+        private static float BodyHeight(int lord) => WorldLords.BodyOf(lord).rect.height;
 
         // 「[이름] 연합 · [왕관] 땅 N · [칼] K」 — 맨 아래 줄의 가운데를 (x, y)에(도트 24). 칸 폭에 안 들어가면 「[이름] 연합」 / 「[왕관] 땅 N · [칼] K」 두 줄,
         // 그래도 넘치면 도트 12로
@@ -461,6 +472,345 @@ namespace GnorpWar
                 at += part.sizeDelta.x;
             }
             return true;
+        }
+
+        // ── 나라 소식 · 외교(아웃게임기획 §3-2) — 같은 판 · 같은 무대. 제목 · 회색 사연 한 줄 · 무대 위에 고르기 칸 둘(누르면 고른다 · 고를 수 없으면 흐리게).
+        // 기물을 고르는 고르기는 누르면 왼쪽 탑의 층을 누르는 단계로(「뒤로」로 돌아간다). 소식을 고르면 같은 턴의 외교 제안이 이어서 뜬다 → 다 닫히면 NewsClosed
+        public event System.Action NewsClosed;
+
+        private const float BoxWidth = 380f, BoxGap = 40f, BoxTop = 140f, BoxPad = 20f;
+
+        private class NewsBox
+        {
+            public RectTransform Rect;
+            public int Choice;
+            public bool Enabled;
+        }
+
+        private readonly List<NewsBox> _boxes = new List<NewsBox>();
+        private NewsBox _boxHover;
+        // 외교 판인가 · 기물을 고르는 중인 고르기(-1 = 칸을 고르는 중) · 결과 줄을 보여 주는 중(연금술) · 올린 탑 층
+        private bool _diplomacyShown;
+        private int _pickChoice = -1;
+        private bool _newsResult;
+        private int _floorHover = -1;
+        private readonly List<(int Floor, EventVisitTarget Target)> _floorTargets = new List<(int, EventVisitTarget)>();
+
+        // 이번 턴의 소식(없으면 외교)을 연다 — 둘 다 없으면 false
+        public bool OpenNews()
+        {
+            if (RunState.CurrentNews == null && RunState.CurrentDiplomacy == null)
+                return false;
+            _offer = null;
+            _previousDock = BuildingTooltip.Dock;
+            BuildingTooltip.Dock = _dock;
+            _dim.gameObject.SetActive(true);
+            Show(true);
+            if (RunState.CurrentNews != null)
+                BuildNews();
+            else
+                BuildDiplomacy();
+            return true;
+        }
+
+        private void BeginNewsSheet()
+        {
+            _step = Step.News;
+            _clock = 0f;
+            Clear();
+            _boxes.Clear();
+            _boxHover = null;
+            _pickChoice = -1;
+            _newsResult = false;
+            _caretImage.gameObject.SetActive(false);
+            PlaceSheet(Top, PanelHeight, Ground);
+            _ground.gameObject.SetActive(true);
+            _action.gameObject.SetActive(false);
+        }
+
+        private void SetLine(string text)
+        {
+            _lineIcons.SetText(text);
+            _line.rectTransform.sizeDelta = new Vector2(PanelWidth - 80f, _line.preferredHeight);
+            _lineIcons.Place();
+        }
+
+        private void SetAction(string label)
+        {
+            _action.gameObject.SetActive(label != null);
+            if (label != null)
+                _actionLabel.text = label;
+        }
+
+        private void BuildNews()
+        {
+            BeginNewsSheet();
+            _diplomacyShown = false;
+            NewsOffer news = RunState.CurrentNews;
+            WorldState state = RunState.World.State;
+            int home = System.Array.IndexOf(state.Owner, state.Player.Id);
+            if (home >= 0)
+                Backdrop(RunState.World.Map.TerrainOf(home), RunState.Round);
+            _title.text = news.Definition.DisplayName;
+            SetLine($"<color={BuildingTooltip.NoteColor}>{news.Definition.Story}</color>");
+            LordFigure(state.Player.Id, RunState.ColorOf(state.Player), Center, Ground - BodyHeight(state.Player.Id) * K * 0.5f, K, false);
+            for (int i = 0; i < 2; i++)
+                AddBox(i, null, BuildingTooltip.ColorNumbers(news.Definition.Choice(i).Describe()), RunState.CanChooseNews(i));
+            LayoutBoxes();
+            SetAction(RunState.CanSkipNews ? "닫기" : null);
+        }
+
+        private void BuildDiplomacy()
+        {
+            BeginNewsSheet();
+            _diplomacyShown = true;
+            DiplomacyOffer offer = RunState.CurrentDiplomacy;
+            WorldConfig world = RunState.Config.World;
+            WorldState state = RunState.World.State;
+            int land = System.Array.IndexOf(state.Owner, offer.Lord.Id);
+            if (land >= 0)
+                Backdrop(RunState.World.Map.TerrainOf(land), land);
+            string nation = offer.Nation.DisplayName();
+            _title.text = world.DiplomacyTitle;
+            SetLine($"<color={BuildingTooltip.NoteColor}>{string.Format(world.DiplomacyLine, nation, RunState.NameOf(offer.Lord))}</color>");
+            LordFigure(offer.Lord.Id, RunState.ColorOf(offer.Lord), Center - 120f, Ground - BodyHeight(offer.Lord.Id) * K * 0.5f, K, false);
+            LordFigure(state.Player.Id, RunState.ColorOf(state.Player), Center + 120f, Ground - BodyHeight(state.Player.Id) * K * 0.5f, K, true);
+            // 침략 줄은 그 영주가 이웃일 때만 — 이웃이 아니면 이번 턴에 침략할 길이 없어 효과가 없다
+            string body = (offer.Neighbor ? world.DiplomacyTruce + "\n" : "") + string.Format(world.DiplomacyTrade, nation);
+            AddBox(0, world.DiplomacyAccept, body, true);
+            AddBox(1, world.DiplomacyDecline, null, true);
+            LayoutBoxes();
+        }
+
+        // 고르기 칸 하나 — 검은 판 · 판 선 · 도트 머리(있으면) · 깔끔 본문(줄 안 아이콘). 자리는 LayoutBoxes가
+        private void AddBox(int choice, string head, string body, bool enabled)
+        {
+            Image back = NewImage(_things, "Choice" + choice, null, Color.black);
+            back.raycastTarget = true;
+            RectTransform frame = Instantiate(_framePart, back.rectTransform);
+            frame.anchorMin = Vector2.zero;
+            frame.anchorMax = Vector2.one;
+            frame.offsetMin = frame.offsetMax = Vector2.zero;
+            float y = BoxPad;
+            if (head != null)
+            {
+                Text title = NewText(back.rectTransform, "Head", _dotFont, 24, BoxWidth - 2f * BoxPad);
+                title.text = head;
+                Pin(title.rectTransform, y);
+                y += 40f;
+            }
+            if (!string.IsNullOrEmpty(body))
+            {
+                Text text = NewText(back.rectTransform, "Body", _notoFont, 22, BoxWidth - 2f * BoxPad);
+                text.horizontalOverflow = HorizontalWrapMode.Wrap;
+                InlineIcons icons = text.gameObject.AddComponent<InlineIcons>();
+                icons.SetText(body);
+                text.rectTransform.sizeDelta = new Vector2(BoxWidth - 2f * BoxPad, text.preferredHeight);
+                Pin(text.rectTransform, y);
+                icons.Place();
+                y += text.preferredHeight;
+            }
+            back.rectTransform.sizeDelta = new Vector2(BoxWidth, y + BoxPad);
+            back.gameObject.AddComponent<CanvasGroup>().alpha = enabled ? 1f : WaitingAlpha;
+            var box = new NewsBox { Rect = back.rectTransform, Choice = choice, Enabled = enabled };
+            EventVisitTarget target = back.gameObject.AddComponent<EventVisitTarget>();
+            target.Entered += _ => _boxHover = box;
+            target.Exited += _ => { if (_boxHover == box) _boxHover = null; };
+            target.Clicked += _ => ClickBox(box);
+            _boxes.Add(box);
+        }
+
+        // 칸 안 글 — 칸 위 가운데에서 top px 아래
+        private static void Pin(RectTransform rect, float top)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -top);
+        }
+
+        // 칸들을 나란히 · 높이를 맞춰서(글은 위에서부터)
+        private void LayoutBoxes()
+        {
+            float height = 0f;
+            foreach (NewsBox box in _boxes)
+                height = Mathf.Max(height, box.Rect.sizeDelta.y);
+            for (int i = 0; i < _boxes.Count; i++)
+            {
+                _boxes[i].Rect.sizeDelta = new Vector2(BoxWidth, height);
+                At(_boxes[i].Rect, Mathf.Round(Center + (i - (_boxes.Count - 1) * 0.5f) * (BoxWidth + BoxGap)), Top + BoxTop, new Vector2(0.5f, 1f));
+            }
+        }
+
+        private void ClickBox(NewsBox box)
+        {
+            if (_step != Step.News || !box.Enabled || _pickChoice >= 0 || _newsResult)
+                return;
+            if (_diplomacyShown)
+            {
+                RunState.AnswerDiplomacy(box.Choice == 0);
+                NextNews();
+                return;
+            }
+            if (RunState.CurrentNews.NeedsBuilding(box.Choice))
+            {
+                BeginPick(box.Choice);
+                return;
+            }
+            NewsAction action = RunState.CurrentNews.Definition.Choice(box.Choice).Action;
+            if (RunState.ChooseNews(box.Choice))
+                AfterNews(action, -1);
+        }
+
+        // 기물 고르기 — 칸을 숨기고 왼쪽 탑의 고를 수 있는 층에 누름 받이를 붙인다
+        private void BeginPick(int choice)
+        {
+            _pickChoice = choice;
+            _boxHover = null;
+            foreach (NewsBox box in _boxes)
+                box.Rect.gameObject.SetActive(false);
+            SetLine(RunState.CurrentNews.Definition.Choice(choice).Action == NewsAction.Alchemy
+                ? "왼쪽 탑의 기물을 하나 누르면, 그 기물에 연금술을 겁니다."
+                : "왼쪽 탑의 기물을 하나 누르면, 그 기물의 등급이 한 단계 오릅니다.");
+            foreach (int floor in RunState.NewsTargets(choice))
+            {
+                SlotView slot = _panel.FloorAt(floor);
+                if (slot == null)
+                    continue;
+                EventVisitTarget target = slot.gameObject.AddComponent<EventVisitTarget>();
+                _slotTargets.Add(target);
+                _floorTargets.Add((floor, target));
+                int at = floor;
+                target.Entered += _ => _floorHover = at;
+                target.Exited += t => { if (_floorHover == at) { _floorHover = -1; BuildingTooltip.Hide(t); } };
+                target.Clicked += _ => PickFloor(at);
+            }
+            SetAction("뒤로");
+        }
+
+        private void EndPick()
+        {
+            foreach ((int _, EventVisitTarget target) in _floorTargets)
+                if (target != null)
+                {
+                    BuildingTooltip.Hide(target);
+                    _slotTargets.Remove(target);
+                    Destroy(target);
+                }
+            _floorTargets.Clear();
+            _floorHover = -1;
+            _pickChoice = -1;
+        }
+
+        private void PickFloor(int floor)
+        {
+            if (_step != Step.News || _pickChoice < 0)
+                return;
+            int choice = _pickChoice;
+            NewsAction action = RunState.CurrentNews.Definition.Choice(choice).Action;
+            if (!RunState.ChooseNews(choice, floor))
+                return;
+            EndPick();
+            AfterNews(action, floor);
+        }
+
+        // 고른 뒤 — 연금술은 결과 한 줄을 보여 주고 「닫기」, 나머지는 바로 다음(외교 · 닫힘)
+        private void AfterNews(NewsAction action, int floor)
+        {
+            if (action != NewsAction.Alchemy)
+            {
+                NextNews();
+                return;
+            }
+            _newsResult = true;
+            foreach (NewsBox box in _boxes)
+                box.Rect.gameObject.SetActive(false);
+            _caretImage.gameObject.SetActive(false);
+            OwnedBuilding owned = floor >= 0 ? RunState.Field[floor] : null;
+            string name = owned != null ? owned.Definition.DisplayName : "기물";
+            SetLine(RunState.LastAlchemySucceeded ? $"연금술에 성공해, {name} 기물이 신화가 되었습니다." : $"<color={BuildingTooltip.NoteColor}>연금술에 실패했습니다.</color>");
+            SetAction("닫기");
+        }
+
+        private void NextNews()
+        {
+            EndPick();
+            if (RunState.CurrentNews == null && RunState.CurrentDiplomacy != null)
+            {
+                BuildDiplomacy();
+                return;
+            }
+            if (RunState.CurrentNews != null)
+                return;
+            _step = Step.Closed;
+            _caretImage.gameObject.SetActive(false);
+            Clear();
+            _boxes.Clear();
+            Show(false);
+            _dim.gameObject.SetActive(false);
+            if (BuildingTooltip.Dock == _dock)
+                BuildingTooltip.Dock = _previousDock;
+            NewsClosed?.Invoke();
+        }
+
+        // 판 오른쪽 아래 버튼 — 「닫기」(고를 수 없음 · 연금술 결과) · 「뒤로」(기물 고르기)
+        private void NewsAct()
+        {
+            if (_newsResult)
+            {
+                NextNews();
+                return;
+            }
+            if (_pickChoice >= 0)
+            {
+                EndPick();
+                BuildNews();
+                return;
+            }
+            if (RunState.CanSkipNews)
+            {
+                RunState.SkipNews();
+                NextNews();
+            }
+        }
+
+        // 고르기 칸 · 탑 층의 올림 — 꺾쇠 · 층 창틀 · 기물 설명(탑 기둥은 매 프레임 패널이 다시 그린다)
+        private void NewsLate()
+        {
+            Sprite sprite = null;
+            Vector2 at = Vector2.zero;
+            Vector2 pivot = new Vector2(0.5f, 0f);
+            if (_pickChoice >= 0)
+            {
+                foreach ((int floor, EventVisitTarget target) in _floorTargets)
+                {
+                    SlotView slot = _panel.FloorAt(floor);
+                    if (slot == null || RunState.Field[floor] == null)
+                        continue;
+                    var frame = slot.transform.Find("RarityFrame").GetComponent<Image>();
+                    frame.color = floor == _floorHover ? Color.white : SlotView.Highlight(RunState.Field[floor].Rarity.FrameColor(), true);
+                    if (floor != _floorHover)
+                        continue;
+                    OwnedBuilding owned = RunState.Field[floor];
+                    BuildingRarity to = RunState.CurrentNews.Definition.Choice(_pickChoice).Action == NewsAction.Alchemy ? BuildingRarity.Mythic : owned.Rarity + 1;
+                    BuildingTooltip.Show(target, BuildingTooltip.Title(owned.Definition, false, to), BuildingTooltip.RankUpPreview(owned.Definition, owned.Level, to), new UnitDefinition[0], RunState.Field);
+                    Vector2 middle = Middle(slot.transform);
+                    sprite = _caretLeft;
+                    at = new Vector2(middle.x + ((RectTransform)slot.transform).rect.width * 0.5f + 8f, middle.y);
+                    pivot = new Vector2(0f, 0.5f);
+                }
+            }
+            else if (_boxHover != null && _boxHover.Enabled && !_newsResult)
+            {
+                sprite = _caret;
+                at = new Vector2(Middle(_boxHover.Rect).x, Top + BoxTop - 8f);
+            }
+            _caretImage.gameObject.SetActive(sprite != null);
+            if (sprite == null)
+                return;
+            if (_caretImage.sprite != sprite)
+                _caretImage.sprite = sprite;
+            _caretImage.rectTransform.sizeDelta = sprite.rect.size * K;
+            At(_caretImage.rectTransform, at.x, at.y, pivot);
         }
 
         // ── 장면마다
@@ -699,16 +1049,17 @@ namespace GnorpWar
                 EventChoice choice = _offer.Choices[i];
                 float x = Mathf.Round(Center - 20f + i * step);
                 RectTransform holder = NewRect(_things, "Lord");
-                At(holder, x, Ground - _lordSprite.rect.height * K * 0.5f - K, new Vector2(0.5f, 0.5f));
+                Sprite lordBody = WorldLords.BodyOf(choice.Lord.Id);
+                At(holder, x, Ground - lordBody.rect.height * K * 0.5f - K, new Vector2(0.5f, 0.5f));
                 holder.localScale = new Vector3(-1f, 1f, 1f);
-                WorldLords.Figure(holder, _lordSprite, _lordFlag, WorldLords.PhotoOf(choice.Lord.Id), RunState.ColorOf(choice.Lord), K);
+                WorldLords.Figure(holder, lordBody, _lordFlag, WorldLords.PhotoOf(choice.Lord.Id), RunState.ColorOf(choice.Lord), K);
                 RectTransform hitRect = NewRect(_things, "LordHit");
-                hitRect.sizeDelta = _lordSprite.rect.size * K;
+                hitRect.sizeDelta = lordBody.rect.size * K;
                 At(hitRect, x, Ground - K, new Vector2(0.5f, 0f));
                 string body = $"행복도 {Number(choice.Happiness)}{Enemy("-" + choice.Drop)}";
                 if (choice.Happiness - choice.Drop <= 0)
                     body += $"\n<color={BuildingTooltip.NoteColor}>0이 되면 반란이 일어납니다.</color>";
-                Add(new Thing { Target = Hit(hitRect), Choice = i, Caret = new Vector2(x, Ground - (_lordSprite.rect.height + _lordFlag.rect.height) * K - 10f), Title = RunState.NameOf(choice.Lord), Body = body, Visual = holder });
+                Add(new Thing { Target = Hit(hitRect), Choice = i, Caret = new Vector2(x, Ground - (lordBody.rect.height + _lordFlag.rect.height) * K - 10f), Title = RunState.NameOf(choice.Lord), Body = body, Visual = holder });
             }
             return $"이웃 영주를 하나 누르면, 그 영주의 행복도가 {_offer.Definition.HappinessDrop} 떨어집니다.";
         }
@@ -813,6 +1164,11 @@ namespace GnorpWar
         // 판 오른쪽 아래 버튼 — 「받기」(지형 성소) · 「바치지 않기」 · 「닫기」
         private void Act()
         {
+            if (_step == Step.News)
+            {
+                NewsAct();
+                return;
+            }
             if (_step != Step.Choosing)
                 return;
             if (_offer.Kind == EventLandKind.Shrine && _offer.Choices.Length > 0)
@@ -974,7 +1330,7 @@ namespace GnorpWar
                 return;
             // 한 프레임이 길어도 움직임이 건너뛰지 않게 묶는다
             _clock += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
-            if (_step == Step.Choosing || _step == Step.Coalition)
+            if (_step == Step.Choosing || _step == Step.Coalition || _step == Step.News)
             {
                 // 판 열림 — 위에서 16px 떨어지며(계단 3)
                 int steps = Mathf.Min(3, Mathf.FloorToInt(_clock / (OpenSeconds / 3f)));
@@ -1024,6 +1380,11 @@ namespace GnorpWar
                 SlotView slot = _panel.FloorAt(_emptyFloor);
                 if (slot != null)
                     slot.Show(null, null, false, false);
+            }
+            if (_step == Step.News)
+            {
+                NewsLate();
+                return;
             }
             if (_step != Step.Choosing)
                 return;

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37cc3dc5382953a4a9a9e9eff92e9927, type: 3}
+  m_Name: News_Harvest
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NationNewsDefinition
+  _displayName: "\uD48D\uB144!"
+  _story: "\uC62C\uD574\uB294 \uACE1\uC2DD\uC774 \uB118\uCE58\uB3C4\uB85D \uC5EC\uBB3C\uC5C8\uC2B5\uB2C8\uB2E4."
+  _first:
+    _text: "\uACE8\uB4DC {0:+0;-0}"
+    _gold: 15
+    _income: 0
+    _nextIncome: 0
+    _nextIncomeScale: 1
+    _freeRerolls: 0
+    _offerSlots: 0
+    _tierAdvance: 0
+    _action: 0
+    _chance: 0
+  _second:
+    _text: "\uD134 \uC218\uC785 \uC601\uAD6C\uD788 {1:+0;-0}"
+    _gold: 0
+    _income: 2
+    _nextIncome: 0
+    _nextIncomeScale: 1
+    _freeRerolls: 0
+    _offerSlots: 0
+    _tierAdvance: 0
+    _action: 0
+    _chance: 0

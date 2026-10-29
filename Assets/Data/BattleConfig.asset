@@ -18,7 +18,7 @@ MonoBehaviour:
   _storageSlots: 6
   _world: {fileID: 11400000, guid: fd5a5e7053c0d8940be6ba739a4c9675, type: 2}
   _assetIds: {fileID: 11400000, guid: 5a08ecf5bd073744183d5a96c77de592, type: 2}
-  _baseHpPerRound: 75
+  _baseHpPerRound: 125
   _roundGoldStart: 18
   _winBonus: 3
   _rerollCost: 2

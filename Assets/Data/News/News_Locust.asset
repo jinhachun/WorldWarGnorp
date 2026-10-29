@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37cc3dc5382953a4a9a9e9eff92e9927, type: 3}
+  m_Name: News_Locust
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NationNewsDefinition
+  _displayName: "\uD669\uCDA9 \uBC1C\uC0DD"
+  _story: "\uBA54\uB69C\uAE30 \uB5BC\uAC00 \uB4E4\uD310\uC744 \uB4A4\uB36E\uC5C8\uC2B5\uB2C8\uB2E4."
+  _first:
+    _text: "\uACE8\uB4DC {0:+0;-0}"
+    _gold: -10
+    _income: 0
+    _nextIncome: 0
+    _nextIncomeScale: 1
+    _freeRerolls: 0
+    _offerSlots: 0
+    _tierAdvance: 0
+    _action: 0
+    _chance: 0
+  _second:
+    _text: "\uB2E4\uC74C \uD134 \uC218\uC785 \uC808\uBC18\n\uACF5\uC6A9 \uC0DD\uC0B0
+      \uAE30\uBB3C 1\uAC1C\uB97C \uC5BB\uC2B5\uB2C8\uB2E4."
+    _gold: 0
+    _income: 0
+    _nextIncome: 0
+    _nextIncomeScale: 0.5
+    _freeRerolls: 0
+    _offerSlots: 0
+    _tierAdvance: 0
+    _action: 6
+    _chance: 0

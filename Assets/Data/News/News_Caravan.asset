@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37cc3dc5382953a4a9a9e9eff92e9927, type: 3}
+  m_Name: News_Caravan
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.NationNewsDefinition
+  _displayName: "\uB300\uC0C1\uB2E8 \uB3C4\uCC29"
+  _story: "\uBA3C \uB098\uB77C\uC758 \uB300\uC0C1\uB2E8\uC774 \uC131\uBB38 \uC55E\uC5D0
+    \uC9D0\uC744 \uD480\uC5C8\uC2B5\uB2C8\uB2E4."
+  _first:
+    _text: "\uC774\uBC88 \uC0C1\uC810\uC740 \uC804\uBD80 \uC601\uC6C5 \uC774\uC0C1
+      \uB4F1\uAE09"
+    _gold: 0
+    _income: 0
+    _nextIncome: 0
+    _nextIncomeScale: 1
+    _freeRerolls: 0
+    _offerSlots: 0
+    _tierAdvance: 0
+    _action: 1
+    _chance: 0
+  _second:
+    _text: "\uBB34\uB8CC \uB9AC\uB864 {3:+0;-0}"
+    _gold: 0
+    _income: 0
+    _nextIncome: 0
+    _nextIncomeScale: 1
+    _freeRerolls: 3
+    _offerSlots: 0
+    _tierAdvance: 0
+    _action: 0
+    _chance: 0

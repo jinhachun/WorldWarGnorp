@@ -90,8 +90,10 @@ namespace GnorpWar
             Lord lord = Opponent ?? (PreviewRegion >= 0 ? World.State.OwnerOf(PreviewRegion) : null);
             if (lord == null)
                 return BuildingNation.Common;
-            return lord.IsPlayer ? Nation : World.NationOf(lord);
+            return NationOf(lord);
         }
+        // 영주의 국가 — 나는 고른 국가, 그 밖은 WorldRun.NationOf(유령 기록 · 빌드 방향)
+        public static BuildingNation NationOf(Lord lord) => lord.IsPlayer ? Nation : World.NationOf(lord);
         // 상점 효과(골드 훅 등)를 받는 진영 — 지금 상점을 도는 쪽
         public static Team ActingTeam => _side.Team;
 
@@ -179,9 +181,11 @@ namespace GnorpWar
                 side.Reset(config);
                 RunBook.Use(side.Team, side.Book);
             }
+            Player.Treaties = new System.Collections.Generic.List<BuildingNation>();
             _shopEnteredRound = _shopCueRound = -1;
             Pending.Clear();
             _visit = null;
+            ResetNews();
             StatBook.ClearRun();
             TowerBook.ClearRun();
             // 닉네임이 시작하는 자리 — 규칙의 난수와 섞이지 않게 따로 뽑는다
@@ -207,7 +211,11 @@ namespace GnorpWar
         private static MapDefinition ShopMap => _config.Maps[0];
 
         // 이번 턴 내 수입 = 턴마다 얻는 골드(TurnGold), 직전 침략을 이겼으면 승리 보너스(AI 영주도 같은 식 + 약자 보정 — WorldRun.IncomeOf)
-        public static int Income => TurnGold(Player, Lands) + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+        public static int Income => TurnGoldNow + (LastOutcome == Outcome.Win ? _config.WinBonus : 0);
+
+        // 지금 땅 · 업그레이드 그대로면 다음 턴에 받을 내 수입(승리 보너스 빼고) — 지도 위 줄의 골드 옆 「+N」(UI/WorldSidePanel.ShowStatus)
+        // 나라 소식의 수입(영구 +N · 다음 턴 한 번 ×N · +N — Run/RunState.News)도 여기에 든다
+        public static int TurnGoldNow => Mathf.Max(0, Mathf.RoundToInt((TurnGold(Player, Lands) + _newsIncome) * _nextIncomeScale) + _nextIncomeDelta);
 
         // 턴마다 얻는 골드 = 1라운드 상점 골드 + 땅 수 × 땅당 골드 + 업그레이드(곡창). 중상주의면 통째로 ×N(승리 보너스 · 약자 보정은 여기 밖이라 안 곱한다)
         public static int TurnGold(TowerState tower, int lands)
@@ -236,11 +244,13 @@ namespace GnorpWar
             ChargeFreeRerolls(Player);
             GainInterest();
             GainGold(Income);
+            ClearNextIncome();
             ForEachFieldPassive((passive, owned) => passive.OnTurnStart(owned));   // 전쟁 금고 — AI 영주는 ShopAs에서
             if (ShopLocked)
                 RollOffers(onlyEmpty: true);
             else
                 RollOffers();
+            RollTurnNews();   // 나라 소식 · 외교(Run/RunState.News) — 지도가 상점보다 먼저 띄운다
         }
 
         // 이번 턴에 상점 팝업을 저절로 내릴 차례인가 — 턴마다 처음 한 번만 true(지도 씬이 턴을 열 때 묻는다)
@@ -252,7 +262,7 @@ namespace GnorpWar
             return true;
         }
 
-        // 내 땅과 길로 이어진 남의 땅들 — 침략할 수 있는 곳
+        // 내 땅과 길로 이어진 남의 땅들 — 침략할 수 있는 곳(통상을 받아들인 그 턴의 그 영주 땅은 빼고 — Run/RunState.News)
         public static System.Collections.Generic.List<int> InvadableRegions()
         {
             WorldState state = World.State;
@@ -260,7 +270,7 @@ namespace GnorpWar
             for (int region = 0; region < state.Owner.Length; region++)
                 if (state.OwnerOf(region) == state.Player)
                     foreach (int next in state.Graph.Links[region])
-                        if (state.OwnerOf(next) != state.Player && !regions.Contains(next))
+                        if (state.OwnerOf(next) != state.Player && !regions.Contains(next) && !InTruce(state.OwnerOf(next)))
                             regions.Add(next);
             return regions;
         }
@@ -753,31 +763,49 @@ namespace GnorpWar
         // 내 상점도 AI 영주의 상점도 그 등급 안에서 국가 비율을 건다(HomeOffer)
         private static void RollOffers(bool onlyEmpty = false)
         {
-            BuildingDefinition[] pool = Pool;
+            BuildingDefinition[] pool = OfferPool;
             for (int i = 0; i < Offers.Length; i++)
             {
                 if (onlyEmpty && Offers[i] != null)
                     continue;
-                Offers[i] = HomeOffer(pool);
-                // 중립외교 — 일정 확률로 한 등급 오른 채 나온다. 전설은 오르지 않는다(신화는 상점에 나오지 않는다 — 사용자 결정 10/12)
-                OfferUpgrades[i] = _side.Special(SpecialKind.NeutralDiplomacy) is UpgradeDefinition diplomacy && Offers[i].Rarity < BuildingRarity.Legendary
-                                   && Random.value * 100f < diplomacy.ValueAt(BuildingRarity.Mythic) ? 1 : 0;
+                RollSlot(i, pool);
             }
         }
 
+        // 진열 한 칸을 새로 — pool = OfferPool
+        private static void RollSlot(int i, BuildingDefinition[] pool)
+        {
+            Offers[i] = HomeOffer(pool);
+            // 중립외교 — 일정 확률로 한 등급 오른 채 나온다. 전설은 오르지 않는다(신화는 상점에 나오지 않는다 — 사용자 결정 10/12)
+            OfferUpgrades[i] = _side.Special(SpecialKind.NeutralDiplomacy) is UpgradeDefinition diplomacy && Offers[i].Rarity < BuildingRarity.Legendary
+                               && Random.value * 100f < diplomacy.ValueAt(BuildingRarity.Mythic) ? 1 : 0;
+        }
+
         // 진열 한 칸 — 등급을 먼저 뽑고(등급 확률 표가 우선), 그 등급 안에서 HomeNationShare 확률로 「공용 + 그 탑의 국가」 기물,
-        // 나머지 확률로 다른 국가들의 기물. 그 등급에 한쪽 기물이 없으면 다른 쪽에서 뽑는다(등급을 건너뛰지 않는다)
+        // 나머지 확률로 다른 국가들의 기물. 그 등급에 한쪽 기물이 없으면 다른 쪽에서 뽑는다(등급을 건너뛰지 않는다).
+        // 조약 목록이 있는 탑(내 탑)은 pool이 이미 「공용 + 내 국가 + 조약 국가」(OfferPool)라 그 안에서 고르게.
+        // 대상단(나라 소식)이 걸린 턴의 내 진열은 영웅 이상만 — 그 단계에 영웅 이상 가중치가 없으면 영웅 이상 중 풀에 있는 가장 낮은 등급
         private static BuildingDefinition HomeOffer(BuildingDefinition[] pool)
         {
+            BuildingRarity floor = HeroShopNow && System.Array.Exists(pool, b => b.Rarity >= BuildingRarity.Epic) ? BuildingRarity.Epic : BuildingRarity.Common;
             float total = 0f;
             foreach (BuildingRarity rarity in System.Enum.GetValues(typeof(BuildingRarity)))
-                if (CountOf(pool, rarity) > 0)
+                if (rarity >= floor && CountOf(pool, rarity) > 0)
                     total += _config.RarityWeight(rarity, ShopTier);
             float pick = Random.Range(0f, total);
             BuildingRarity rolled = pool[pool.Length - 1].Rarity;
+            if (total <= 0f)
+            {
+                rolled = BuildingRarity.Mythic;
+                foreach (BuildingDefinition b in pool)
+                    if (b.Rarity >= floor && b.Rarity < rolled)
+                        rolled = b.Rarity;
+            }
             foreach (BuildingRarity rarity in System.Enum.GetValues(typeof(BuildingRarity)))
             {
-                if (CountOf(pool, rarity) == 0)
+                if (total <= 0f)
+                    break;
+                if (rarity < floor || CountOf(pool, rarity) == 0)
                     continue;
                 pick -= _config.RarityWeight(rarity, ShopTier);
                 if (pick < 0f)
@@ -786,8 +814,8 @@ namespace GnorpWar
                     break;
                 }
             }
-            bool home = Random.value < _config.HomeNationShare;
-            BuildingDefinition[] group = System.Array.FindAll(pool, b => b.Rarity == rolled && IsHome(b) == home);
+            bool home = _side.Treaties != null || Random.value < _config.HomeNationShare;
+            BuildingDefinition[] group = System.Array.FindAll(pool, b => b.Rarity == rolled && InHomeGroup(b) == home);
             if (group.Length == 0)
                 group = System.Array.FindAll(pool, b => b.Rarity == rolled);
             return group[Random.Range(0, group.Length)];
@@ -797,21 +825,28 @@ namespace GnorpWar
         private static bool IsHome(BuildingDefinition building)
             => building.Nation == BuildingNation.Common || building.Nation == SideNation;
 
+        // 「공용 + 그 탑의 국가」에 그 탑의 조약 국가(외교)까지
+        private static bool InHomeGroup(BuildingDefinition building)
+            => IsHome(building) || _side.Treaties != null && _side.Treaties.Contains(building.Nation);
+
+        // 지금 차례인 탑의 진열에 나올 수 있는 기물 — 조약 목록이 있는 탑(내 탑)은 「공용 + 내 국가 + 조약 국가」만(사용자 10/29), 없는 탑(AI 영주)은 풀 전부(국가 비율은 HomeOffer)
+        private static BuildingDefinition[] OfferPool => _side.Treaties != null ? System.Array.FindAll(Pool, InHomeGroup) : Pool;
+
         // 지금 상점을 도는 탑의 국가 — 내 차례면 내 국가, 영주의 차례(ShopAs)면 그 영주의 빌드 방향의 국가. 진열 비율 · 국가 전용 업그레이드가 읽는다
         private static BuildingNation SideNation => _side == Player ? Nation : _shopNation;
 
         // 진열 한 칸에서 b가 뽑힐 가중치(국가 비율을 걸기 전 — 등급 비율만) — 화면의 등급 확률(OfferChance)이 쓴다
         private static float OfferWeight(BuildingDefinition[] pool, BuildingDefinition b)
-            => _config.RarityWeight(b.Rarity, ShopTier) / CountOf(pool, b.Rarity);
+            => HeroShopNow && b.Rarity < BuildingRarity.Epic ? 0f : _config.RarityWeight(b.Rarity, ShopTier) / CountOf(pool, b.Rarity);
 
         // 상점 등급 단계 — 내 상점은 그 턴의 단계(WorldConfig.ShopTier — 턴 수만으로 오른다). 다른 탑의 차례(ShopAs)에는 넘겨받은 단계 그대로(상한까지)
         private static int ShopTier
-            => Mathf.Min(_side == Player ? _config.World.ShopTier(Round) : Round, _config.World.ShopTierMax);
+            => Mathf.Min(_side == Player ? _config.World.ShopTier(Round + _tierAdvance) : Round, _config.World.ShopTierMax);
 
         // 지금 라운드에 진열 한 칸이 rarity 등급일 확률(0~1) — 풀에 없는 등급은 0
         public static float OfferChance(BuildingRarity rarity)
         {
-            BuildingDefinition[] pool = Pool;
+            BuildingDefinition[] pool = OfferPool;
             float total = 0f, mine = 0f;
             foreach (BuildingDefinition b in pool)
             {

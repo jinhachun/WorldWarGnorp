@@ -73,13 +73,19 @@ namespace GnorpWar.Editor.Tests
         }
 
         [Test]
-        public void KillSummon_SkipsChainBorn()   // 왕족친위대: 기사가 처치하면 친위기사 — 예외 없음(사용자 10/28: 친위기사는 기사가 아니라 발동 못 한다)
+        public void KillSummon_RoyalGuardChainsAgain()   // 왕족친위대: 기사 ↔ 친위기사가 확률로 서로 부른다 — 연계로 태어난 유닛도 부른다(사용자 10/30). 확률이라 여러 번 굴려 한 번은 소환까지 간다(씬 밖이라 소환에서 예외)
         {
             var effect = Effect<KillSummonEffect>("Effect_RoyalGuard");
             Unit killer = Prefab("Unit_Knight");
             Unit victim = Prefab("Unit_Melee");
-            With(killer, true, () => Assert.DoesNotThrow(() => effect.OnKill(killer, victim, 0)));
-            With(killer, false, () => Assert.Catch(() => effect.OnKill(killer, victim, 0)));
+            bool summoned = false;
+            for (int i = 0; i < 40 && !summoned; i++)
+                With(killer, true, () =>
+                {
+                    try { effect.OnKill(killer, victim, 0); }
+                    catch (Exception) { summoned = true; }
+                });
+            Assert.IsTrue(summoned, "연계로 태어난 기사의 처치도 소환을 굴린다");
         }
     }
 }

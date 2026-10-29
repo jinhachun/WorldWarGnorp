@@ -83,11 +83,12 @@ namespace GnorpWar.Editor.Tests
         }
 
         [Test]
-        public void RoyalGuard_OnlyKnightTriggers()   // 사용자 10/28: 내 기사만 — 친위기사는 발동 못 한다
+        public void RoyalGuard_KnightAndRoyalKnightTrigger()   // 사용자 10/30: 기사 → 친위기사 · 친위기사 → 기사, 확률은 등급마다 오른다
         {
             var effect = Effect<KillSummonEffect>("Effect_RoyalGuard");
             Assert.IsTrue(effect.AppliesFor(Team.Ally, Unit("Unit_Knight")));
-            Assert.IsFalse(effect.AppliesFor(Team.Ally, Unit("Unit_RoyalKnight")));
+            Assert.IsTrue(effect.AppliesFor(Team.Ally, Unit("Unit_RoyalKnight")));
+            Assert.AreNotEqual(effect.Describe(1), effect.Describe(2), "등급마다 확률이 오른다");
             UnitAliases.AddCategory(Team.Ally, Unit("Unit_TribeMammoth").Category, Unit("Unit_Knight").Category);   // 군제 개혁 · 경장기병
             Assert.IsFalse(effect.AppliesFor(Team.Ally, Unit("Unit_TribeMammoth")), "경기병으로 취급돼도 기사는 아니다");
         }

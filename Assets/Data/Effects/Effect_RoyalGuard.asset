@@ -15,10 +15,16 @@ MonoBehaviour:
   _categories: []
   _units:
   - {fileID: 11400000, guid: df36a7226be228e439c2dd7daf651e98, type: 2}
-  _description: "\uAE30\uC0AC\uAC00 \uCC98\uCE58\uD558\uBA74 \uCE5C\uC704\uAE30\uC0AC
-    {0}\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4.\n\uCE5C\uC704\uAE30\uC0AC\uB294
-    \uC774\uB3D9\uC18D\uB3C4\uAC00 2\uBC30\uC785\uB2C8\uB2E4."
+  - {fileID: 11400000, guid: 7026a059b4596ab40ad3ce34b920293f, type: 2}
+  _description: "\uAE30\uC0AC\uAC00 \uCC98\uCE58\uD558\uBA74 {1}% \uD655\uB960\uB85C
+    \uCE5C\uC704\uAE30\uC0AC {0}\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4.\n\uCE5C\uC704\uAE30\uC0AC\uAC00
+    \uCC98\uCE58\uD558\uBA74 {1}% \uD655\uB960\uB85C \uAE30\uC0AC {0}\uAE30\uB97C
+    \uC18C\uD658\uD569\uB2C8\uB2E4."
   _trait: 
   _summon: {fileID: 11400000, guid: 7026a059b4596ab40ad3ce34b920293f, type: 2}
   _count: 1
-  _countPerTier: 1
+  _countPerTier: 0
+  _chance: 50
+  _chancePerTier: 15
+  _back: {fileID: 11400000, guid: df36a7226be228e439c2dd7daf651e98, type: 2}
+  _chainAgain: 1

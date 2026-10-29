@@ -50,7 +50,7 @@ namespace GnorpWar
             Value = value;
         }
 
-        private static readonly string[] Names = { "공격력", "공격속도", "사거리", "화살 수", "체력" };
+        private static readonly string[] Names = { "공격력", "공격속도", "사거리", "한 번에 쏘는 화살 수", "체력" };
 
         public string Name => Names[(int)Stat];
         public string ValueText => new StatModifier(UnitStat.Attack, Op, Value).ValueText;

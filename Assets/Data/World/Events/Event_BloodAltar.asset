@@ -17,8 +17,9 @@ MonoBehaviour:
   _icon: {fileID: 21300000, guid: 521589d4719f415b81a731f0b4b25279, type: 3}
   _iconLarge: {fileID: 21300000, guid: 1682ae08f48e44358fd9901ebd3a76c3, type: 3}
   _prop: {fileID: 0}
-  _description: "\uBAA9\uC228 {0}\uC744 \uBC14\uCE69\uB2C8\uB2E4.\n\uC9C0\uC5ED \uD2B9\uC218
-    \uC5C5\uADF8\uB808\uC774\uB4DC {1}\uAC1C \uC911 1\uAC1C\uB97C \uC5BB\uC2B5\uB2C8\uB2E4."
+  _description: "\uBAA9\uC228 {0}\uC744 \uBC14\uCE69\uB2C8\uB2E4.\n\uC9C0\uB3C4\uC5D0
+    \uC5C6\uB294 \uC9C0\uC5ED \uD2B9\uC218 \uC5C5\uADF8\uB808\uC774\uB4DC {1}\uAC1C
+    \uC911 1\uAC1C\uB97C \uACE8\uB77C \uC5BB\uC2B5\uB2C8\uB2E4."
   _choices: 3
   _newRarity: 2
   _hp: 20

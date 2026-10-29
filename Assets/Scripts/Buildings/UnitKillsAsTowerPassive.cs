@@ -19,7 +19,7 @@ namespace GnorpWar
             var names = new System.Collections.Generic.List<string>();
             foreach (UnitCategory category in _categories)
                 names.Add(category.DisplayName);
-            return $"{string.Join("·", names)}의 처치도 타워 처치로 셉니다.";
+            return $"타워의 처치 효과가 {string.Join("·", names)}의 처치에도 발동합니다.";
         }
     }
 }

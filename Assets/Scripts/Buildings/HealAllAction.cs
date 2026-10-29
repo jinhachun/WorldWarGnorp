@@ -24,7 +24,7 @@ namespace GnorpWar
                 }
         }
 
-        public override string Describe(int level) => $"아군이 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";
+        public override string Describe(int level) => $"모든 아군이 최대 체력의 {Ratio(level) * 100f:0.#}%를 회복합니다.";
         public override string Headline(int level) => $"{Ratio(level) * 100f:0.#}%";
     }
 }

@@ -60,5 +60,20 @@ namespace GnorpWar.Editor.Tests
             Assert.Greater(count, 0);
             Assert.IsEmpty(bad, string.Join("\n", bad));
         }
+
+        // 나라 소식(제목 · 사연 · 고르기 둘) · 외교 글
+        [Test]
+        public void News_NoParentheses()
+        {
+            var bad = new List<string>();
+            WorldConfig world = Config.World;
+            var all = new List<NationNewsDefinition>(world.News) { world.Festival };
+            foreach (NationNewsDefinition news in all)
+                foreach (string text in new[] { news.DisplayName, news.Story, news.Choice(0).Describe(), news.Choice(1).Describe() })
+                    Check(bad, news.name, text);
+            foreach (string text in new[] { world.DiplomacyTitle, string.Format(world.DiplomacyLine, "티크톡", "제임스_AI"), world.DiplomacyAccept, world.DiplomacyTruce, string.Format(world.DiplomacyTrade, "티크톡"), world.DiplomacyDecline })
+                Check(bad, "외교", text);
+            Assert.IsEmpty(bad, string.Join("\n", bad));
+        }
     }
 }

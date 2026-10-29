@@ -27,7 +27,7 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"타워 스탯이 오르면 {Names()}도 그 {RatioAt(level) * 100f:0.##}%만큼 오릅니다.";
+            => $"타워 스탯이 오르면 전투 동안\n{Names()}의 같은 스탯도 그 {RatioAt(level) * 100f:0.##}%만큼 오릅니다.";
 
         public override string Headline(int level) => $"{RatioAt(level) * 100f:0.##}%";
 

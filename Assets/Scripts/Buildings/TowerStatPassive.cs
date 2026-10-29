@@ -90,10 +90,11 @@ namespace GnorpWar
             string when = _trigger == Trigger.Buy ? "「구매할 때마다,」 "
                 : _trigger == Trigger.TowerKill ? "타워가 처치하면 "
                 : _permanent ? "전투 시작 시, " : "";
-            // "전투 동안"은 쓰지 않는다 — 영구히가 아니면 전투 동안이 기본(사용자 10/28 「글이 길다」)
+            // 전투 시작에 거는 건 늘 켜진 것처럼 읽히므로 "전투 동안"을 붙이지 않는다(성채 「타워 체력 +50%」)
+            string battle = !_permanent && _trigger != Trigger.BattleStart ? "전투 동안 " : "";
             string permanent = _permanent ? " 영구히" : "";
             string cap = Capped ? $", 최대 ×{_maxMultiplier:0.##}" : "";
-            return $"{when}타워 {_modifier.Name}{permanent} {_modifier.Scaled(_perTier, level).ValueText}{cap}";
+            return $"{when}{battle}타워 {_modifier.Name}{permanent} {_modifier.Scaled(_perTier, level).ValueText}{cap}";
         }
     }
 }

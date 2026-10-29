@@ -17,8 +17,8 @@ MonoBehaviour:
   _icon: {fileID: 21300000, guid: f608bf6d906a4ee690fa6e53fdc8f31a, type: 3}
   _iconLarge: {fileID: 21300000, guid: efbd2da915e24f649411345a3e22b460, type: 3}
   _prop: {fileID: 0}
-  _description: "\uAD6D\uACBD\uC744 \uB9DE\uB304 \uC601\uC8FC 1\uBA85\uC758 \uD589\uBCF5\uB3C4
-    \u2212{0}"
+  _description: "\uAD6D\uACBD\uC744 \uB9DE\uB304 AI \uC601\uC8FC 1\uBA85\uC744 \uACE8\uB77C
+    \uD589\uBCF5\uB3C4 \u2212{0}"
   _choices: 3
   _newRarity: 2
   _hp: 20

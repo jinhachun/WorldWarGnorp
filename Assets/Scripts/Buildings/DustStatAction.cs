@@ -59,7 +59,7 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"뼛가루 언덕 위 {(_enemies ? "적" : "유닛")} {_modifier.Scaled(_perTier, level).Describe()}";
+            => $"전투 동안 뼛가루 언덕 위 {(_enemies ? "적" : "유닛")} {_modifier.Scaled(_perTier, level).Describe()}";
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
     }
 }

@@ -33,6 +33,6 @@ namespace GnorpWar
             return self.Stacks > 0 && modifier.Stat == stat;
         }
 
-        public override string Describe(int level) => "올린 공격력이 전투 뒤에도 남습니다.";
+        public override string Describe(int level) => "올린 공격력은 이 기물을 팔기 전까지 전투 뒤에도 남습니다.";
     }
 }

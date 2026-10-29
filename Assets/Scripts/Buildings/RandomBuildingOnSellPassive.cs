@@ -24,6 +24,6 @@ namespace GnorpWar
             RunState.Acquire(pick, mythic ? BuildingRarity.Mythic - pick.Rarity : 0);
         }
 
-        public override string Describe(int level) => $"「판매 시,」 무작위 {_rarity.DisplayName()} 기물 1개를 얻습니다.";
+        public override string Describe(int level) => $"「판매 시,」 이번 판의 다른 {_rarity.DisplayName()} 기물 1개를 무작위로 얻습니다.";
     }
 }

@@ -35,7 +35,7 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"턴마다 골드 +{Gold(level)}\n「판매 시,」 준 골드만큼 더 받습니다.";
+            => $"턴마다 골드 +{Gold(level)}\n「판매 시,」 지금까지 준 골드만큼 더 받습니다.";
         public override string Headline(int level) => $"{Gold(level)}골드";
     }
 }

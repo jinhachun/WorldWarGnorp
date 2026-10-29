@@ -9,7 +9,7 @@ namespace GnorpWar.Editor.Tests
     // 줄 수 · 줄 길이(색 태그를 뺀 글자 수, 띄어쓰기 포함)의 상한을 본다. 목표는 한 줄 20자 안팎 · 3줄 이하이고, 상한은 넘으면 툴팁에서 한 줄이 두 줄로 감기는 길이다
     public class TextLengthTests
     {
-        private const int MaxLines = 4;    // 반군 막사 신화 = 생산 1 + 스탯 2 + 신화 1
+        private const int MaxLines = 4;    // 반군 막사 · 반군의 깃발 · 콜로서스 신화 등 — 효과를 바꾸는 조건은 빼지 않고 줄을 나눈다(사용자 10/29)
         private const int MaxChars = 40;   // 영악한 투자가 「전투 시작 시, 바로 위·아래의 「구매할 때마다,」를 5회 발동시킵니다.」
 
         private static readonly Regex Tag = new Regex("<[^>]+>");
@@ -67,6 +67,21 @@ namespace GnorpWar.Editor.Tests
                     Check(bad, kind.ToString(), definition.Describe("1", "1", "1", "1"));
                 }
             Assert.Greater(count, 0);
+            Assert.IsEmpty(bad, string.Join("\n", bad));
+        }
+
+        // 나라 소식 고르기 글 · 사연 · 외교 글
+        [Test]
+        public void News_Short()
+        {
+            var bad = new List<string>();
+            WorldConfig world = Config.World;
+            var all = new List<NationNewsDefinition>(world.News) { world.Festival };
+            foreach (NationNewsDefinition news in all)
+                foreach (string text in new[] { news.Story, news.Choice(0).Describe(), news.Choice(1).Describe() })
+                    Check(bad, news.name, text);
+            foreach (string text in new[] { string.Format(world.DiplomacyLine, "트라이브", "제임스2_AI"), world.DiplomacyTruce, string.Format(world.DiplomacyTrade, "트라이브") })
+                Check(bad, "외교", text);
             Assert.IsEmpty(bad, string.Join("\n", bad));
         }
     }

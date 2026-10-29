@@ -51,7 +51,7 @@ namespace GnorpWar
             return true;
         }
 
-        public override string Describe(int level) => $"{TargetName()}{_modifier.Scaled(_perTier, level).Describe()}";
+        public override string Describe(int level) => $"전투 동안 {TargetName()}{_modifier.Scaled(_perTier, level).Describe()}";
         public override string Headline(int level) => _modifier.Scaled(_perTier, level).ValueText;
 
         private string TargetName()

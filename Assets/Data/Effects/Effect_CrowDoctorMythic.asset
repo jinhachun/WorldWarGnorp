@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.EnemyDeathSummonEffect
   _categories: []
   _units: []
-  _description: "\uC801\uC774 \uC8FD\uC73C\uBA74 \uBCD1\uC0AC {0}\uAE30\uB97C \uC18C\uD658\uD569\uB2C8\uB2E4."
+  _description: "\uC801\uC774 \uC8FD\uC740 \uC790\uB9AC\uC5D0 \uBCD1\uC0AC {0}\uAE30\uB97C
+    \uC18C\uD658\uD569\uB2C8\uB2E4."
   _trait: 
   _victims: []
   _summon: {fileID: 11400000, guid: fe3a908e4882e4549bcd0274d35653cf, type: 2}

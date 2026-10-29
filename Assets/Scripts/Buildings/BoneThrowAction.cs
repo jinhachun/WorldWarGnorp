@@ -68,7 +68,7 @@ namespace GnorpWar
         }
 
         public override string Describe(int level)
-            => $"뼛가루 언덕이 적 {Targets(level)}기에게 피해 {Damage(level):0.#}를 줍니다.";
+            => $"뼛가루 언덕이 가장 가까운 적 {Targets(level)}기에게 피해 {Damage(level):0.#}를 줍니다.";
         public override string Headline(int level) => $"{Damage(level):0.#}";
     }
 }

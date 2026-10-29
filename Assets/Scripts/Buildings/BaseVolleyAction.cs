@@ -29,7 +29,7 @@ namespace GnorpWar
                     small.ShootNearestUnit(Arrows(level));
         }
 
-        public override string Describe(int level) => $"본진이 가까운 적에게 화살 {Arrows(level)}발을 쏩니다.";
+        public override string Describe(int level) => $"본진이 가장 가까운 적에게 화살 {Arrows(level)}발을 쏩니다.";
         public override string Headline(int level) => $"{Arrows(level)}발";
     }
 }

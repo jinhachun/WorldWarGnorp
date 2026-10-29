@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.UpgradeDefinition
   _displayName: "\uC99D\uAE30 \uC555\uB825"
   _icon: {fileID: 21300000, guid: 905ac032764d4e79a4936386320e41fa, type: 3}
-  _description: "\uD0C0\uC6CC\uAC00 \uCC98\uCE58\uD558\uBA74 \uBB34\uC791\uC704 \uAE30\uBB3C\uC744
-    {0}\uCD08\uAC04 \uAC00\uC18D\uD569\uB2C8\uB2E4."
+  _description: "\uD0C0\uC6CC\uAC00 \uCC98\uCE58\uD558\uBA74 \uBB34\uC791\uC704 \uAE30\uBB3C
+    1\uAC1C\uB97C {0}\uCD08\uAC04 \uAC00\uC18D\uD569\uB2C8\uB2E4."
   _values:
   - 0
   - 0.5

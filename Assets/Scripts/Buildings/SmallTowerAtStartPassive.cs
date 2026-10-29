@@ -63,7 +63,7 @@ namespace GnorpWar
         public override string Describe(int level)
         {
             TowerModifier range = Range(level);
-            return range.Value > 0f ? $"전투 시작 시, 가운데에 작은 타워를 세웁니다.\n그 작은 타워의 {range.Name} {range.ValueText}" : "전투 시작 시, 가운데에 작은 타워를 세웁니다.";
+            return range.Value > 0f ? $"전투 시작 시, 전장 가운데에 작은 타워를 세웁니다.\n그 작은 타워의 {range.Name} {range.ValueText}" : "전투 시작 시, 전장 가운데에 작은 타워를 세웁니다.";
         }
     }
 }

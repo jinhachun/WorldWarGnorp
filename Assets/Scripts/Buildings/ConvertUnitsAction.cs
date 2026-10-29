@@ -45,7 +45,7 @@ namespace GnorpWar
             }
         }
 
-        public override string Describe(int level) => $"{_from.DisplayName} {CountAt(level)}기를 {_into.DisplayName}으로 바꿉니다.";
+        public override string Describe(int level) => $"전장의 {_from.DisplayName} {CountAt(level)}기를 {_into.DisplayName}으로 바꿉니다.";
         public override string Headline(int level) => $"{CountAt(level)}기";
     }
 }

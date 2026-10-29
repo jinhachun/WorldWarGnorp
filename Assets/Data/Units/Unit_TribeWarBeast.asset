@@ -17,8 +17,8 @@ MonoBehaviour:
   _allyPrefab: {fileID: 638779955689807151, guid: 791effe3e335a724d831710aa1969925, type: 3}
   _enemyPrefab: {fileID: 6082175181310963690, guid: 965b4d314bb921841a82c56fb57b5d68, type: 3}
   _moveSpeed: 4
-  _maxHp: 380
-  _attackDamage: 12
+  _maxHp: 300
+  _attackDamage: 6
   _attackInterval: 0.8
   _attackRange: 0.8
   _hitKnockback: 1.5
@@ -46,6 +46,7 @@ MonoBehaviour:
   _buildFlatness: 0.25
   _buildSpacing: 2.5
   _buildGateClearance: 3
+  _flyHeight: 0
   _traitEffects: []
   _innateEffects:
   - {fileID: 11400000, guid: 7569922b610daef40a56b38de99da685, type: 2}

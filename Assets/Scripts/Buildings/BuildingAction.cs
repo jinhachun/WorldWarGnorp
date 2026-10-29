@@ -22,6 +22,8 @@ namespace GnorpWar
             BuildingDefinition target = field[other].Definition;
             return Reaches(slot, other, target) || (federated && UsesAdjacency && (Reaches(slot, slot + 1, target) || Reaches(slot, slot - 1, target)));
         }
+        // TargetsFloor가 이 기물의 자리와 상관없이 대상을 정하나(가장 위 · 무작위 · 모든) — 탑에 아직 없는 기물(상점 진열 · 보관함)의 대상 표시는 이것만 한다(BuildingTargets.OfUnplaced)
+        public virtual bool SlotFree => false;
         // 전투 동안 칸이 값을 쌓는가(허수아비 등) — 쌓으면 그 계산 방식. 쌓은 값은 Execute에서 board.AddBattleGain으로
         public virtual bool BattleGain(out StatOp op)
         {

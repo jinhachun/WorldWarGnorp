@@ -55,6 +55,8 @@ namespace GnorpWar
             BuildingDefinition target = field[other].Definition;
             return Reaches(slot, other, target) || (federated && UsesAdjacency && (Reaches(slot, slot + 1, target) || Reaches(slot, slot - 1, target)));
         }
+        // TargetsFloor가 이 기물의 자리와 상관없이 대상을 정하나(가장 위 · 무작위 · 모든) — 탑에 아직 없는 기물(상점 진열 · 보관함)의 대상 표시는 이것만 한다(BuildingTargets.OfUnplaced)
+        public virtual bool SlotFree => false;
 
         // 툴팁의 완결 문장 — 지금 등급 값으로 (CLAUDE.md §5-2)
         public abstract string Describe(int level);

@@ -41,6 +41,7 @@ namespace GnorpWar
         // 다음 발동까지 남은 처치 수(설명 창의 회색 줄 · 탑 칸 숫자)
         public int RemainingOf(Team team) => BattleManager.Fighting ? _kills - _count[(int)team] : _kills;   // 전투 밖(상점)에서는 지난 전투의 값이 남아 있으므로 처음 값
 
+        public override bool SlotFree => true;
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => HasBuyEffects(field[other].Definition);
         public override string Describe(int level) => $"타워 처치 {_kills}기마다 「구매할 때마다,」를 모두 발동시킵니다.";
     }

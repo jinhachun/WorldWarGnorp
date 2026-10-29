@@ -19,16 +19,31 @@ namespace GnorpWar
                     into.Add(other);
         }
 
-        private static bool Hits(OwnedBuilding self, OwnedBuilding[] field, int slot, int other, bool federated)
+        // 아직 탑에 없는 기물(상점 진열 · 보관함, 사용자 10/29) — 자리와 상관없이 대상이 정해지는 능력(SlotFree)만 field의 층에 표시한다.
+        // 능력은 자기 자리를 읽으므로(가장 위 찾기의 건너뛰기 등) field 맨 위 바깥 칸에 둔 셈으로 묻는다
+        public static void OfUnplaced(OwnedBuilding[] field, OwnedBuilding self, List<int> into)
+        {
+            into.Clear();
+            if (field == null || OwnedBuilding.IsEmpty(self))
+                return;
+            var placed = new OwnedBuilding[field.Length + 1];
+            field.CopyTo(placed, 0);
+            placed[field.Length] = self;
+            for (int other = 0; other < field.Length; other++)
+                if (!OwnedBuilding.IsEmpty(field[other]) && Hits(self, placed, field.Length, other, false, true))
+                    into.Add(other);
+        }
+
+        private static bool Hits(OwnedBuilding self, OwnedBuilding[] field, int slot, int other, bool federated, bool slotFreeOnly = false)
         {
             foreach (BuildingAction action in self.Actions)
-                if (action.TargetsFloor(field, slot, other, federated))
+                if ((!slotFreeOnly || action.SlotFree) && action.TargetsFloor(field, slot, other, federated))
                     return true;
             foreach (BuildingPassive passive in self.Passives)
-                if (passive.TargetsFloor(field, slot, other, federated))
+                if ((!slotFreeOnly || passive.SlotFree) && passive.TargetsFloor(field, slot, other, federated))
                     return true;
             foreach (UnitEffect effect in self.Effects)
-                if (effect.TargetsFloor(field, slot, other, federated))
+                if ((!slotFreeOnly || effect.SlotFree) && effect.TargetsFloor(field, slot, other, federated))
                     return true;
             return false;
         }

@@ -28,6 +28,7 @@ namespace GnorpWar
                 Scale(TopCooling(RunState.Field, -1, top - 1), factor);
         }
 
+        public override bool SlotFree => true;
         // 툴팁 대상 표시 — 팔기 전이라 자기 층(slot)은 빼고 같은 규칙으로 찾는다
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated)
         {
@@ -54,7 +55,7 @@ namespace GnorpWar
             OwnedBuilding.NotifyEffect(RunState.Field[floor]);
         }
 
-        public override string Describe(int level) => $"「판매 시,」 가장 위 기물의 쿨다운 영구히 ×{Factor(level):0.##}";
+        public override string Describe(int level) => $"「판매 시,」 쿨다운이 있는 가장 위 기물의 쿨다운 영구히 ×{Factor(level):0.##}";
         public override string Headline(int level) => $"×{Factor(level):0.##}";
     }
 }

@@ -21,6 +21,7 @@ namespace GnorpWar
                     BuffLinks.EffectToSlot(team, this, i, BuffKind.Haste);
         }
 
+        public override bool SlotFree => true;
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => BuildingTargets.Cooling(field, other);
         public override string Describe(int level) => string.Format(Description, $"{_seconds:0.#}");
     }

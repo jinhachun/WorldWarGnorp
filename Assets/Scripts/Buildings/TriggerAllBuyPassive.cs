@@ -22,6 +22,7 @@ namespace GnorpWar
                 }
         }
 
+        public override bool SlotFree => true;
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => HasBuyEffects(field[other].Definition);
         // 1회면 기획서 문구 그대로("발동시킵니다")
         public override string Describe(int level)

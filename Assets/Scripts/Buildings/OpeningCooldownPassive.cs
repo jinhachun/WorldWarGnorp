@@ -26,6 +26,7 @@ namespace GnorpWar
         }
 
         // 「내 모든 기물」 — 쿨다운 배율이 달라지는 것은 쿨다운이 있는 기물뿐
+        public override bool SlotFree => true;
         public override bool TargetsFloor(OwnedBuilding[] field, int slot, int other, bool federated) => BuildingTargets.Cooling(field, other);
         public override string Describe(int level) => Describe(level, false);
         public override string Describe(int level, bool mythic)

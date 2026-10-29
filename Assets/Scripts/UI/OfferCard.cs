@@ -148,6 +148,10 @@ namespace GnorpWar
         // 이 칸의 기물이 시작 등급에서 오른 횟수(중립외교 — 보통 0). 창틀 색 · 설명의 수치 · RANK UP 판정이 오른 등급을 따른다
         private int Upgrades => RunState.OfferUpgrades[_index];
 
+        // 툴팁을 띄운 동안의 이 진열 기물(사면 될 등급 그대로) — 내 탑의 대상 표시가 읽는다(ShopPanel.HoveredUnplaced)
+        private OwnedBuilding _tooltipBuilding;
+        public OwnedBuilding TooltipBuilding => BuildingTooltip.IsOwner(this) ? _tooltipBuilding : null;
+
         private void OnDisable()
         {
             _hovered = false;
@@ -212,6 +216,8 @@ namespace GnorpWar
                 BuildingTooltip.Hide(this);
             else
             {
+                if (_tooltipBuilding == null || _tooltipBuilding.Definition != building || _tooltipBuilding.Upgrades != Upgrades)
+                    _tooltipBuilding = new OwnedBuilding(building, Upgrades, 0, 0, 1f);
                 OwnedBuilding pair = RunState.FindMergeTarget(building, Upgrades);
                 // 사서 놓으면 걸릴 내 업그레이드 — 징병제가 있으면 소환 수에도 더해 보인다(아래의 업그레이드 줄과 숫자가 같은 말을 하게)
                 System.Collections.Generic.List<UpgradeHolding> upgrades = RunState.UpgradesOn(building);

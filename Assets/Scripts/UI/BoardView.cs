@@ -323,7 +323,7 @@ namespace GnorpWar
         }
 
         // ── 대상 표시(사용자 10/27 「더 바자르처럼」) — 이 탑의 층에 마우스를 올려 툴팁이 떴으면 그 기물의 효과를 받는 층에 꺾쇠(BuildingTargets · UiTargetMark).
-        // 탑만 — 보관함 기물을 가리켰을 때는 표시하지 않는다. 툴팁이 닫히면(마우스를 떼면 · 끄는 중) 그 프레임에 사라진다
+        // 탑만 — 상점에선 진열 카드 · 보관함 기물을 가리켜도 내 탑에 뜬다(자리 무관 대상만, 사용자 10/29 · BuildingTargets.OfUnplaced). 툴팁이 닫히면(마우스를 떼면 · 끄는 중) 그 프레임에 사라진다
         private readonly List<int> _targets = new List<int>();
         private OwnedBuilding[] _targetField;
 
@@ -333,19 +333,34 @@ namespace GnorpWar
             for (int i = 0; _stack && visible && i < count; i++)
                 if (_views[i].gameObject.activeSelf && _views[i].TooltipShown)
                     hovered = i;
+            OwnedBuilding unplaced = hovered < 0 && _stack && visible && InShop && _source == Source.AllyField ? _shop.HoveredUnplaced() : null;
             _targets.Clear();
-            if (hovered >= 0)
+            if (hovered >= 0 || unplaced != null)
             {
                 if (_targetField == null || _targetField.Length != count)
                     _targetField = new OwnedBuilding[count];
                 for (int i = 0; i < count; i++)
                     _targetField[i] = BuildingAt(i);
+            }
+            if (hovered >= 0)
+            {
                 // 전투 중엔 돌고 있는 보드의 연방제, 상점에선 그 기물에 걸린 업그레이드(툴팁의 업그레이드 줄과 같은 판정)
                 bool federated = BattleManager.Fighting ? Runner.AllAdjacent : BuildingTargets.Federated(_targetField[hovered]);
                 BuildingTargets.Of(_targetField, hovered, federated, _targets);
             }
+            else if (unplaced != null)
+                BuildingTargets.OfUnplaced(_targetField, unplaced, _targets);
             for (int i = 0; i < _views.Length; i++)
                 _views[i].ShowTarget(_targets.Contains(i));
+        }
+
+        // 툴팁을 띄운 칸의 기물(없으면 null) — 상점이 보관함 기물의 대상 표시에 읽는다(ShopPanel.HoveredUnplaced)
+        public OwnedBuilding TooltipBuilding()
+        {
+            for (int i = 0; _views != null && i < _views.Length; i++)
+                if (_views[i].gameObject.activeSelf && _views[i].TooltipShown)
+                    return BuildingAt(i);
+            return null;
         }
 
         // ── 튀는 칸을 맨 앞에(사용자 10/27) — 발동해 커졌다 작아지는(SlotView.Bounce) 동안 그 칸을 같은 부모의 맨 뒤 형제로 옮겨

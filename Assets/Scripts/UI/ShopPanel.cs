@@ -78,20 +78,7 @@ namespace GnorpWar
         private void Start()
         {
             _group = GetComponent<CanvasGroup>();
-            _offers = new OfferCard[RunState.Offers.Length];
-            // 짐꾼 줄의 가운데 = 무대(땅 선 · 먼 산)의 가운데(사용자 10/23 — 오른쪽으로 치우쳐 보였다)
-            float first = Mathf.Round((StageLeft + StageRight) * 0.5f - (_offers.Length - 1) * 0.5f * _offerStep);
-            for (int i = 0; i < _offers.Length; i++)
-            {
-                OfferCard card = Instantiate(_offerTemplate, _offerTemplate.transform.parent);
-                var rect = (RectTransform)card.transform;
-                rect.anchoredPosition = new Vector2(first + i * _offerStep, ((RectTransform)_offerTemplate.transform).anchoredPosition.y);
-                int index = i;
-                card.Bind(this, index);
-                card.Button.onClick.AddListener(() => BuyThrown(card, index));
-                card.gameObject.SetActive(true);
-                _offers[i] = card;
-            }
+            BuildOffers();
             BuildStage(((RectTransform)_offerTemplate.transform).anchoredPosition.y + OfferCard.GroundY);
             _reroll.onClick.AddListener(() =>
             {
@@ -127,6 +114,38 @@ namespace GnorpWar
                 // 끄는 조각과 끼울 자리 선도 그 층으로 — 팝업 안에 두면 왼쪽 패널 뒤에 그려진다
                 _insertLine.SetParent(_towerLayer, false);
                 _dragGhost.SetParent(_towerLayer, false);
+            }
+        }
+
+        // 툴팁을 띄운 진열 카드 · 보관함 기물(없으면 null) — 내 탑이 자리 무관 대상에 꺾쇠를 띄운다(BoardView.ShowTargets, 사용자 10/29)
+        public OwnedBuilding HoveredUnplaced()
+        {
+            if (_offers != null)
+                foreach (OfferCard card in _offers)
+                    if (card.TooltipBuilding != null)
+                        return card.TooltipBuilding;
+            return _storageView != null ? _storageView.TooltipBuilding() : null;
+        }
+
+        // 진열 짐꾼 줄 — 진열 칸 수만큼(나라 소식 「이주민 행렬」로 칸이 늘면 Update가 다시 세운다)
+        private void BuildOffers()
+        {
+            if (_offers != null)
+                foreach (OfferCard old in _offers)
+                    Destroy(old.gameObject);
+            _offers = new OfferCard[RunState.Offers.Length];
+            // 짐꾼 줄의 가운데 = 무대(땅 선 · 먼 산)의 가운데(사용자 10/23 — 오른쪽으로 치우쳐 보였다)
+            float first = Mathf.Round((StageLeft + StageRight) * 0.5f - (_offers.Length - 1) * 0.5f * _offerStep);
+            for (int i = 0; i < _offers.Length; i++)
+            {
+                OfferCard card = Instantiate(_offerTemplate, _offerTemplate.transform.parent);
+                var rect = (RectTransform)card.transform;
+                rect.anchoredPosition = new Vector2(first + i * _offerStep, ((RectTransform)_offerTemplate.transform).anchoredPosition.y);
+                int index = i;
+                card.Bind(this, index);
+                card.Button.onClick.AddListener(() => BuyThrown(card, index));
+                card.gameObject.SetActive(true);
+                _offers[i] = card;
             }
         }
 
@@ -453,6 +472,8 @@ namespace GnorpWar
 
         private void Update()
         {
+            if (_offers.Length != RunState.Offers.Length)
+                BuildOffers();
             for (int i = 0; i < _offers.Length; i++)
                 _offers[i].Show(RunState.Offers[i], RunState.CanBuy(i), RunState.ShopLocked);
             // 짐꾼 걸음과 같은 시계(프레임당 1/30초까지)

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 목책 신화 줄 — 효과는 PalisadeAtStartPassive가 이 표시를 보고 낸다(목책이 받은 피해의 N%를 공격한 쪽에)
+    // 목책 신화 줄 — 효과는 BuildPalisadeAction이 이 표시를 보고 낸다(목책이 받은 피해의 N%를 공격한 쪽에)
     [CreateAssetMenu(menuName = "GnorpWar/Passives/Palisade Mythic")]
     public class PalisadeMythicPassive : BuildingPassive
     {

@@ -53,6 +53,28 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 976dd71e95dbc3b40bee9ec981045914, type: 2}
   - {fileID: 11400000, guid: 60570dff93665384caef5696da3cb105, type: 2}
   - {fileID: 11400000, guid: 522a317d9a934d64faf4289c37a02d75, type: 2}
+  _newsTurns: 0300000006000000090000000c000000
+  _news:
+  - {fileID: 11400000, guid: bb47736868b92ea40a4e092cc1fb8cbc, type: 2}
+  - {fileID: 11400000, guid: 7db98ff5602d3d443a9ffb3d15b453f1, type: 2}
+  - {fileID: 11400000, guid: a4e3e4bc2ab3d034a8962c872d0060ed, type: 2}
+  - {fileID: 11400000, guid: 213569afb39febd469bcc0124480190f, type: 2}
+  - {fileID: 11400000, guid: 0813fd508c8106e4b8b1bd758e51d5af, type: 2}
+  - {fileID: 11400000, guid: 085399702ba3734469512067cb57233d, type: 2}
+  - {fileID: 11400000, guid: 4635de52b05653b499cd67430a33ac4a, type: 2}
+  - {fileID: 11400000, guid: f1a85edad0f5ad64d9fab95aa4f0e3c9, type: 2}
+  - {fileID: 11400000, guid: 608d8b441b2c6854c8ee09298db47d7d, type: 2}
+  _festivalTurn: 12
+  _festival: {fileID: 11400000, guid: 36cd3be3c92f93042a10fd7a09162d92, type: 2}
+  _diplomacyTurns: 0300000006000000
+  _diplomacyTitle: "\uD1B5\uC0C1 \uC81C\uC548"
+  _diplomacyLine: "{0}\uC758 {1} \uC601\uC8FC\uAC00 \uD1B5\uC0C1\uC744 \uC81C\uC548\uD569\uB2C8\uB2E4."
+  _diplomacyAccept: "\uBC1B\uC544\uB4E4\uC785\uB2C8\uB2E4"
+  _diplomacyTruce: "\uC774\uBC88 \uD134 \uB3D9\uC548 \uC774 \uC601\uC8FC\uB97C \uCE68\uB7B5\uD560
+    \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  _diplomacyTrade: "\uC55E\uC73C\uB85C {0} \uAE30\uBB3C\uC774 \uC0C1\uC810\uC5D0
+    \uB739\uB2C8\uB2E4."
+  _diplomacyDecline: "\uAC70\uC808\uD569\uB2C8\uB2E4"
   _lordColors:
   - {r: 0.5916666, g: 0.3, b: 1, a: 1}
   - {r: 0.83095247, g: 0.6, b: 1, a: 1}
@@ -188,6 +210,11 @@ MonoBehaviour:
   - {fileID: 21300000, guid: c6ab868672e7ad248a0132372644729b, type: 3}
   - {fileID: 21300000, guid: 0d7e2e4d86a743ac8fc1df8bf2ce4fbb, type: 3}
   - {fileID: 21300000, guid: f1fcd5080e684f229d704fe370435e91, type: 3}
+  _lordBodies:
+  - {fileID: 21300000, guid: 39f3187517d385e468bf4d86d28af2f6, type: 3}
+  - {fileID: 21300000, guid: 39f3187517d385e468bf4d86d28af2f6, type: 3}
+  - {fileID: 21300000, guid: 026d94d62ba44ff4eac91611bac7216f, type: 3}
+  - {fileID: 21300000, guid: 6a3c66b498adc6d4f8a19d019e0d6620, type: 3}
   _tempProfilePhoto: {fileID: 21300000, guid: d1ed7f78adbe45ba817cd805b80452b8, type: 3}
   _playerProfilePhoto: {fileID: 21300000, guid: 4febb8909fdc4ea88879a31785361c17, type: 3}
   _invadeMark: {fileID: 21300000, guid: 741ec81907ccfe9498789a463869cf99, type: 3}

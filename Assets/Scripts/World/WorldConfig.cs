@@ -85,6 +85,31 @@ namespace GnorpWar
         [Tooltip("종류마다 하나 — 이름 · 아이콘 · 툴팁 글 · 수치(World/EventLandDefinition)")]
         [SerializeField] private EventLandDefinition[] _events = new EventLandDefinition[0];
 
+        [Header("나라 소식 · 외교 — 플레이어만, 턴이 열릴 때(수입 뒤 · 상점 전) 팝업(아웃게임기획 §3-2)")]
+        [Tooltip("나라 소식이 뜨는 턴")]
+        [SerializeField] private int[] _newsTurns = { 3, 6, 9, 12 };
+        [Tooltip("무작위로 뽑는 소식 — 런 안에서 겹치지 않는다(건국 기념제는 아래 칸)")]
+        [SerializeField] private NationNewsDefinition[] _news = new NationNewsDefinition[0];
+        [Tooltip("이 턴에는 무작위 대신 건국 기념제")]
+        [SuffixLabel("턴", true)]
+        [SerializeField] private int _festivalTurn = 12;
+        [SerializeField] private NationNewsDefinition _festival;
+        [Tooltip("외교 제안이 오는 턴의 후보 — 런을 시작할 때 이 중 하나를 골라 그 턴에 한 번(나라 소식 다음)")]
+        [SerializeField] private int[] _diplomacyTurns = { 3, 6 };
+        [Tooltip("외교 팝업 글 — 제목 · 제안 줄({0} 국가 · {1} 영주 이름) · 받아들임 · 그 아래 효과 두 줄({0} 국가 — 침략 줄은 그 영주가 이웃일 때만) · 거절")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _diplomacyTitle = "통상 제안";
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _diplomacyLine = "{0}의 {1} 영주가 통상을 제안합니다.";
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _diplomacyAccept = "받아들입니다";
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _diplomacyTruce = "이번 턴 동안 이 영주를 침략할 수 없습니다.";
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _diplomacyTrade = "앞으로 {0} 기물이 상점에 뜹니다.";
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private string _diplomacyDecline = "거절합니다";
+
         [Header("영주 색 — 유닛 그림의 파란 자리 · 탑 지붕 · 깃발(Core/LordPaint). 내 색(파랑)은 BattleConfig의 열쇠 색")]
         [Tooltip("AI 영주의 색 — 영주 번호마다 11칸씩 건너뛰며 돌려 쓴다(반란으로 생긴 영주는 번호가 이어지므로 같은 색이 다시 나올 수 있다)")]
         [HideIf(nameof(HideNonBalance))]
@@ -111,6 +136,9 @@ namespace GnorpWar
         [Tooltip("전장 본진(성) 그림(Bases/Tower) — 칸 순서 = BuildingNation, 그 진영 국가의 것을 쓴다(사용자 10/22). 128×64 · 같은 몸통 · 같은 성문 자리 · 가운데 성벽 윗면은 아래에서 35px(탑 1층 바닥). 파란 자리(#81ABFF)는 영주 색. 비면 씬에 놓인 그림 그대로")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite[] _castles = new Sprite[0];
+        [Tooltip("영주 몸 그림(지도 · 땅 카드 · 왼쪽 패널 초상화 · 이벤트 장면 — UI/WorldLords.BodyOf) — 칸 순서 = BuildingNation(공용 칸은 킹덤 것), 그 영주 국가의 것을 쓴다(사용자 10/30). 파란 자리(#81ABFF)만 영주 색(Core/LordPaint). 크기는 국가마다 달라도 된다 — 몸 한가운데가 자리, 깃발은 몸 왼쪽 아래 기준")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _lordBodies = new Sprite[0];
         [Tooltip("영주 깃발 가운데 사진(UI/WorldLords.PhotoOf) — 비동기 멀티가 되면 영주마다 스팀 프로필 사진으로 바뀐다. 지금은 AI 영주가 모두 이 임시 그림 하나를 쓴다(사용자 10/23). 영주 색으로 칠하지 않는다")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _tempProfilePhoto;
@@ -159,6 +187,17 @@ namespace GnorpWar
 
         public WorldMapDefinition Map => _map;
         public EventLandDefinition EventOf(EventLandKind kind) => System.Array.Find(_events, e => e != null && e.Kind == kind);
+        public int[] NewsTurns => _newsTurns;
+        public NationNewsDefinition[] News => _news;
+        public int FestivalTurn => _festivalTurn;
+        public NationNewsDefinition Festival => _festival;
+        public int[] DiplomacyTurns => _diplomacyTurns;
+        public string DiplomacyTitle => _diplomacyTitle;
+        public string DiplomacyLine => _diplomacyLine;
+        public string DiplomacyAccept => _diplomacyAccept;
+        public string DiplomacyTruce => _diplomacyTruce;
+        public string DiplomacyTrade => _diplomacyTrade;
+        public string DiplomacyDecline => _diplomacyDecline;
         // 번호가 이웃한 영주(시작 때 = 이웃한 땅)의 색이 색상환에서 멀어지게 건너뛰며 고른다 — 건너뛰는 폭은 색 수(28)와 서로소여야 전부 한 번씩 돈다
         private const int ColorStride = 11;
         public Color LordColor(int lord) => _lordColors[lord * ColorStride % _lordColors.Length];
@@ -169,6 +208,7 @@ namespace GnorpWar
         public Sprite FrameEdge(BuildingNation nation) => (int)nation < _frameEdges.Length ? _frameEdges[(int)nation] : null;
         public Sprite FrameCorner(BuildingNation nation) => (int)nation < _frameCorners.Length ? _frameCorners[(int)nation] : null;
         public Sprite Castle(BuildingNation nation) => (int)nation < _castles.Length ? _castles[(int)nation] : null;
+        public Sprite LordBody(BuildingNation nation) => _lordBodies[(int)nation];
         public Sprite TempProfilePhoto => _tempProfilePhoto;
         public Sprite PlayerProfilePhoto => _playerProfilePhoto;
         public Sprite InvadeMark => _invadeMark;

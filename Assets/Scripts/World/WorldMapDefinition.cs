@@ -26,6 +26,15 @@ namespace GnorpWar
             public bool Event;
         }
 
+        // 바다를 건너 이어진 두 땅(사용자 10/30) — 이웃(Links)에는 이미 들어 있고, 이것은 지도에 점선을 긋고 영주가 건너 걷는 길이다. 굽기가 적는다
+        [System.Serializable]
+        public class SeaRoute
+        {
+            public int A, B;
+            [Tooltip("바다 칸들(위 왼쪽이 0, 0) — A 해안에 닿은 칸부터 B 해안에 닿은 칸까지")]
+            public Vector2Int[] Path = new Vector2Int[0];
+        }
+
         [System.Serializable]
         public class TerrainBuild
         {
@@ -42,8 +51,11 @@ namespace GnorpWar
         [SerializeField] private Region[] _regions = new Region[0];
         [Tooltip("지형마다 한 줄 — 맵에 쓰인 지형이 모두 있어야 한다")]
         [SerializeField] private TerrainBuild[] _terrainBuilds = new TerrainBuild[0];
+        [Tooltip("해로 — 굽기가 적는다(손으로 고치지 말 것)")]
+        [SerializeField] private SeaRoute[] _seaRoutes = new SeaRoute[0];
 
         public int RegionCount => _regions.Length;
+        public SeaRoute[] SeaRoutes => _seaRoutes;
         public MapDefinition TerrainOf(int region) => _regions[region].Terrain;
         public Vector2Int AnchorOf(int region) => _regions[region].Anchor;
 

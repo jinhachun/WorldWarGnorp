@@ -52,6 +52,8 @@ namespace GnorpWar
             // 침략 걸음 — Marching이면 From → Target, Returning이면 돌아오는 중. Clock = 그 걸음이 시작된 뒤 흐른 시간
             public bool Marching, Returning, Won;
             public float Clock;
+            // 해로로 건너는 걸음이면 From부터 Target까지 거치는 칸들(From · Target 포함), 아니면 null — 곧장 걷는다
+            public Vector2[] Way;
             // 걸음이 끝난 뒤 제자리 검사를 쉬는 시간(초)
             public float Grace;
             // 곧 맞아 날아갈 영주 — 침략자가 달려드는 동안 제자리에 선다
@@ -67,7 +69,7 @@ namespace GnorpWar
         // 땅마다 표시 자리가 차지한 칸 · 그 둘레로 그림이 비키는 칸 수(옆 · 위 · 아래) · 넉넉한 자리의 반 폭(칸)
         private RectInt[] _marks;
         private int _padSide, _padAbove, _padBelow, _bodyReach;
-        private Sprite _body, _flag;
+        private Sprite _flag;
         private Font _font;
         private int[] _owner;
         // 연합에 든 영주 → 그 연합(바탕 영주)의 번호
@@ -79,9 +81,9 @@ namespace GnorpWar
 
         public int Count => _walkers.Count;
 
-        // cells = [y × width + x] 땅 번호(바다는 음수), scale = 지도 한 칸의 크기(px), anchors = 땅마다 표시 자리, body = 유닛 몸 그림(영주 색으로 칠한다), flag = 드는 깃발(흰 그림 — 영주 색을 입힌다), font = 닉네임 글(도트 폰트)
+        // cells = [y × width + x] 땅 번호(바다는 음수), scale = 지도 한 칸의 크기(px), anchors = 땅마다 표시 자리, flag = 드는 깃발(흰 그림 — 영주 색을 입힌다), font = 닉네임 글(도트 폰트)
         // marks = 땅마다 표시 자리(아이콘 판 · 왕관)가 차지한 칸
-        public void Init(int[] cells, int width, int height, float scale, Vector2Int[] anchors, RectInt[] marks, Sprite body, Sprite flag, Font font)
+        public void Init(int[] cells, int width, int height, float scale, Vector2Int[] anchors, RectInt[] marks, Sprite flag, Font font)
         {
             _cells = cells;
             _width = width;
@@ -93,7 +95,6 @@ namespace GnorpWar
             _padAbove = Mathf.CeilToInt(FigureAbovePx / scale);
             _padBelow = Mathf.CeilToInt(FigureBelowPx / scale);
             _bodyReach = Mathf.CeilToInt(BodyHalfPx / scale);
-            _body = body;
             _flag = flag;
             _font = font;
             _spots = new Vector2Int[anchors.Length];
@@ -255,7 +256,7 @@ namespace GnorpWar
             rect.SetParent(transform, false);
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.sizeDelta = Vector2.zero;
-            RectTransform photo = Figure(rect, _body, _flag, PhotoOf(lord), color, PixelScale);
+            RectTransform photo = Figure(rect, BodyOf(lord), _flag, PhotoOf(lord), color, PixelScale);
             var walker = new Walker { Lord = home, Rect = rect, Photo = photo, Label = NameLabel(rect, NameOf?.Invoke(lord), lord == _pointed), Cell = Scatter(home, region), Rest = RestMin + (float)_random.NextDouble() * (RestMax - RestMin) };
             Place(walker, 1f);
             return walker;
@@ -325,6 +326,13 @@ namespace GnorpWar
             image.rectTransform.anchoredPosition = flagAt + new Vector2(flag.rect.width / 2f - PhotoAt.x, PhotoAt.y - flag.rect.height / 2f) * scale;
             return image.rectTransform;
         }
+
+        // 영주 → 몸 그림 — 그 영주 국가의 것(WorldConfig 「영주 몸 그림」, 사용자 10/30)
+        public static Sprite BodyOf(int lord) => RunState.Config.World.LordBody(RunState.NationOf(RunState.World.State.Lords[lord]));
+
+        // 그림 한 벌(몸 + 깃발)이 몸 한가운데에서 아래 · 위로 뻗는 길이(원본 px) — 몸 크기가 국가마다 달라도 자리를 맞춘다
+        public static (float Down, float Up) Reach(Sprite body, Sprite flag)
+            => (body.rect.height * 0.5f, Mathf.Max(body.rect.height * 0.5f, FlagAt.y + flag.rect.height - body.rect.height * 0.5f));
 
         // 영주 → 깃발 가운데 사진. 지금은 나 = WorldConfig 「플레이어 임시 프로필 사진」, AI 영주 = 「임시 프로필 사진」 하나 — 비동기 멀티가 되면 여기서 영주마다 스팀 프로필 사진을 돌려준다(사용자 10/23)
         public static Sprite PhotoOf(int lord)
@@ -399,8 +407,8 @@ namespace GnorpWar
         private readonly List<System.Action<List<RectTransform>>> _fallen = new List<System.Action<List<RectTransform>>>();
         private int _striker = -1;
 
-        // 전투의 1칸이 지도 그림에서 몇 px인가
-        private float UnitPixels => _body.rect.height * PixelScale;
+        // 전투의 1칸이 지도 그림에서 몇 px인가 — 1칸 = 유닛 그림 8px(PPU 8). 영주 몸 그림은 국가마다 크기가 달라 기준으로 쓰지 않는다
+        private const float UnitPixels = 8f * PixelScale;
 
         // rect = 날릴 그림(걷던 그림 그대로), away = 날아갈 가로 방향(부호만 본다 — 0이면 아무 쪽). struck = 맞아서 날아가나(맞은 자리에 구름이 터진다)
         private void Throw(RectTransform rect, float away, bool struck)
@@ -486,7 +494,7 @@ namespace GnorpWar
                 rect.SetParent(transform, false);
                 rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
                 rect.sizeDelta = Vector2.zero;
-                Figure(rect, _body, _flag, PhotoOf(lord), color, PixelScale);
+                Figure(rect, BodyOf(lord), _flag, PhotoOf(lord), color, PixelScale);
                 Vector2 cell = _spots[region] + new Vector2(_random.Next(-6, 7), _random.Next(-6, 7));
                 rect.anchoredPosition = new Vector2(Mathf.Round(cell.x * _scale), -Mathf.Round(cell.y * _scale));
                 standing.Add(rect);
@@ -586,6 +594,36 @@ namespace GnorpWar
                 }
             }
             StartMarch(walker, target, won);
+            // 국경을 맞대지 않은 땅이면 해로(사용자 10/30)를 따라 바다를 건넌다 — 내 땅 → 해로 첫 칸 → … → 끝 칸 → 그 땅
+            Vector2Int[] sea = SeaPath?.Invoke(region, lord);
+            if (sea != null)
+            {
+                walker.Way = new Vector2[sea.Length + 2];
+                walker.Way[0] = walker.From;
+                for (int k = 0; k < sea.Length; k++)
+                    walker.Way[k + 1] = sea[k];
+                walker.Way[sea.Length + 1] = target;
+            }
+        }
+
+        // (region, lord) → lord의 땅에서 해로로 region에 닿는 바다 칸들(국경을 맞대면 null) — UI/WorldMapView가 넣는다
+        public System.Func<int, int, Vector2Int[]> SeaPath;
+
+        // 꺾인 길 way의 k(0~1) 자리 — 길이에 고르게
+        private static Vector2 Along(Vector2[] way, float k)
+        {
+            float total = 0f;
+            for (int i = 1; i < way.Length; i++)
+                total += Vector2.Distance(way[i - 1], way[i]);
+            float left = total * k;
+            for (int i = 1; i < way.Length; i++)
+            {
+                float piece = Vector2.Distance(way[i - 1], way[i]);
+                if (left <= piece && piece > 0f)
+                    return Vector2.Lerp(way[i - 1], way[i], left / piece);
+                left -= piece;
+            }
+            return way[way.Length - 1];
         }
 
         private void StartMarch(Walker walker, Vector2 target, bool won)
@@ -597,6 +635,7 @@ namespace GnorpWar
             walker.From = walker.Cell;
             walker.Target = target;
             walker.HasTarget = false;
+            walker.Way = null;
         }
 
         private int LandsOf(int lord)
@@ -676,7 +715,7 @@ namespace GnorpWar
             float length = walker.Returning ? ReturnSeconds : MarchSeconds;
             float k = Mathf.Clamp01(walker.Clock / length);
             Vector2 before = walker.Cell;
-            walker.Cell = Vector2.Lerp(walker.From, walker.Target, k);
+            walker.Cell = walker.Way != null ? Along(walker.Way, k) : Vector2.Lerp(walker.From, walker.Target, k);
             Place(walker, walker.Cell.x - before.x);
             if (k < 1f)
                 return;
@@ -686,6 +725,8 @@ namespace GnorpWar
                 walker.Returning = true;
                 walker.Clock = 0f;
                 (walker.From, walker.Target) = (walker.Target, walker.From);
+                if (walker.Way != null)
+                    System.Array.Reverse(walker.Way);
                 return;
             }
             walker.Marching = false;

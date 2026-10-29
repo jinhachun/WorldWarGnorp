@@ -42,7 +42,7 @@ namespace GnorpWar
         private const int NearReach = 4;
         private const int NearSlots = 4;
         // 침략 화살표 — 손으로 찍은 도장 둘(오른쪽 · 오른쪽 아래)을 90도씩 돌려 여덟 방향으로 쓴다(임의 각도로 그으면 4px 격자에서 계단이 깨진다).
-        // # = 흰 몸, 검은 테두리는 몸을 한 칸 고르게 두른다
+        // # = 노란 몸(Reachable), 검은 테두리는 몸을 한 칸 고르게 두른다
         private static readonly string[] ArrowEast =
         {
             ".......#....",
@@ -75,6 +75,8 @@ namespace GnorpWar
         private const float ArrowMinPoke = 2f;
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 SeaColor = new Color32(0, 0, 0, 255);
+        // 갈 수 있는 땅의 색(화살표 몸 · 표시 칸 뒤 후광) — 숫자 노랑과 같은 값(사용자 10/30 「꺽쇠는 더 잘 보이게 노란색으로」)
+        private static readonly Color32 Reachable = ColorUtility.TryParseHtmlString(BuildingTooltip.NumberColor, out Color reachable) ? (Color32)reachable : (Color32)Color.yellow;
 
         // 표시의 자리(표시 자리 기준, 화면 px): 지형 아이콘 뒤 검은 판의 한 변 · 아이콘 높이(땅 번호는 지웠다 — 사용자 10/15)
         private const float IconBack = 36f;
@@ -86,8 +88,6 @@ namespace GnorpWar
         [SerializeField] private Font _dotFont;
         [Tooltip("침략할 수 있는 땅에 화살표와 함께 그 영주 색 빗금도 친다")]
         [SerializeField] private bool _hatch;
-        [Tooltip("지도 위를 돌아다니는 영주 그림 — 유닛 몸 그림 한 장(영주 색으로 칠한다, 왼쪽 패널의 영주 그림과 같은 것)")]
-        [SerializeField] private Sprite _lordSprite;
         [Tooltip("영주 그림이 드는 깃발 — 흰 그림(영주 색을 입힌다)")]
         [SerializeField] private Sprite _lordFlag;
         [Tooltip("내 땅 표시 — 내 땅마다 지형 아이콘 위에 늘 뜬다(사용자 10/15 「내 영토가 눈에 안 띈다」), 원본 크기")]
@@ -128,6 +128,11 @@ namespace GnorpWar
         private const float CrownGap = 2f;
         // [작은 땅 번호 × 땅 수 + 큰 땅 번호] = 두 땅이 맞댄 국경의 칸들 — 화살표가 여기서 나온다
         private readonly Dictionary<int, List<Vector2Int>> _borders = new Dictionary<int, List<Vector2Int>>();
+        // 해로(사용자 10/30) — 바다 건너 이웃인 두 땅과 그 사이 바다 칸들(WorldMapDefinition.SeaRoutes). 점선 한 토막 · 쉼의 길이(칸)
+        private WorldMapDefinition.SeaRoute[] _routes;
+        private const int RouteDash = 3;
+        // 이만큼(칸) 이상 맞대야 땅길로 이어진 국경 — 굽기(Editor/WorldMapBaker.MinBorder)와 같은 값
+        private const int LinkBorder = 6;
 
         // 마지막으로 칠한 것 — 달라졌을 때만 다시 칠한다
         private int[] _owner;
@@ -156,6 +161,7 @@ namespace GnorpWar
             _image = GetComponent<RawImage>();
             _home = ((RectTransform)transform).anchoredPosition;
             _cells = map.ReadCells(out _width, out _height);
+            _routes = map.SeaRoutes;
             int regions = map.RegionCount;
             _owner = new int[regions];
             _colors = new Color32[regions];
@@ -168,6 +174,8 @@ namespace GnorpWar
             _crowns = new Image[regions];
             _invadeMarks = new Image[regions];
             _invadeHome = new float[regions];
+            _halos = new Image[regions];
+            _haloSprite = MakeHalo();
             _specialIcons = new UpgradeIcon[regions];
             _specials = new UpgradeDefinition[regions];
             _eventCells = new Image[regions];
@@ -258,13 +266,22 @@ namespace GnorpWar
                 _eventIcons[region].enabled = false;
                 _eventIcons[region].GetComponent<Image>().raycastTarget = false;
                 cell.gameObject.SetActive(false);
+
+                // 갈 수 있는 땅 표시(칼 · 방문할 수 있는 이벤트 칸) 뒤 노란 후광 — 첫 자식이라 칸들 뒤에 그려진다. Update가 켜고 칸과 함께 키운다
+                Image halo = _halos[region] = NewImage(mark, "Halo");
+                halo.transform.SetAsFirstSibling();
+                halo.sprite = _haloSprite;
+                halo.SetNativeSize();
+                halo.preserveAspect = true;
+                halo.gameObject.SetActive(false);
             }
             BuildDecor(map);
             Bake();
             // 살아 있는 세계(파티클) — 첫 자식 오버레이라 표시 칸 · 영주 그림 아래에 그려진다
             new GameObject("Ambience", typeof(RectTransform), typeof(RawImage), typeof(WorldAmbience)).GetComponent<WorldAmbience>().Init(transform, map, _cells, _width, _height, _owner, _events, _marks);
             Lords = gameObject.AddComponent<WorldLords>();
-            Lords.Init(_cells, _width, _height, scale, _anchors, _marks, _lordSprite, _lordFlag, _dotFont);
+            Lords.Init(_cells, _width, _height, scale, _anchors, _marks, _lordFlag, _dotFont);
+            Lords.SeaPath = SeaPath;
         }
 
         // 표시 자리마다 차지하는 칸(장식 · 영주 그림이 비켜 간다)
@@ -360,7 +377,7 @@ namespace GnorpWar
 
         private void OnDestroy()
         {
-            foreach (Object made in new Object[] { _cellTexture, _nearIds, _nearDist, _lands, _arrows, _ramp, _lut, _material })
+            foreach (Object made in new Object[] { _cellTexture, _nearIds, _nearDist, _lands, _arrows, _ramp, _lut, _material, _haloSprite != null ? _haloSprite.texture : null, _haloSprite })
                 if (made != null)
                     Destroy(made);
         }
@@ -469,17 +486,23 @@ namespace GnorpWar
                 if (_owner[other] == _mine && _borders.TryGetValue(Mathf.Min(region, other) * regions + Mathf.Max(region, other), out List<Vector2Int> cells)
                     && (border == null || cells.Count > border.Count))
                     border = cells;
-            if (border == null)
+            // 길로 치지 않는 짧은 접점(LinkBorder칸 미만)뿐이면 해로가 있을 때 해로 끝에서 쏜다 — 27-28처럼 해협에서 살짝 닿은 땅
+            Vector2 from = Vector2.zero;
+            bool sea = (border == null || border.Count < LinkBorder) && SeaLanding(region, _mine, out from);
+            if (!sea && border == null)
                 return false;
-            // 국경 칸들의 한가운데에 가장 가까운 국경 칸 — 굽은 국경에서도 화살표가 국경 위에서 나오게
-            Vector2 mean = Vector2.zero;
-            foreach (Vector2Int cell in border)
-                mean += cell;
-            mean /= border.Count;
-            Vector2 from = border[0];
-            foreach (Vector2Int cell in border)
-                if (((Vector2)cell - mean).sqrMagnitude < (from - mean).sqrMagnitude)
-                    from = cell;
+            if (!sea)
+            {
+                // 국경 칸들의 한가운데에 가장 가까운 국경 칸 — 굽은 국경에서도 화살표가 국경 위에서 나오게
+                Vector2 mean = Vector2.zero;
+                foreach (Vector2Int cell in border)
+                    mean += cell;
+                mean /= border.Count;
+                from = border[0];
+                foreach (Vector2Int cell in border)
+                    if (((Vector2)cell - mean).sqrMagnitude < (from - mean).sqrMagnitude)
+                        from = cell;
+            }
             // 겨누는 곳 = 그 땅의 아이콘 한가운데(표시 자리의 조금 위)
             Vector2 to = _anchors[region] + new Vector2(0f, -IconY / CellPixels);
             // 방향 — 0 오른쪽 · 1 오른쪽 아래 · 2 아래 … 시계 방향으로 45도씩(칸 좌표는 아래가 +y)
@@ -492,7 +515,36 @@ namespace GnorpWar
             return true;
         }
 
-        // 도장을 시계 방향으로 90도씩 turns번 돌려 center에 찍는다(화살표 텍스처에) — 흰 몸과, 몸에 닿은(대각선 포함) 빈 칸의 검은 테두리
+        // lord의 땅에서 해로로 region에 닿는 길 — 바다 칸들(lord 쪽 해안부터 region 쪽 해안까지). lord의 땅이 region과 땅길로(LinkBorder칸 이상) 맞대면 해로를 안 쓴다(null)
+        private Vector2Int[] SeaPath(int region, int lord)
+        {
+            int regions = _owner.Length;
+            for (int other = 0; other < regions; other++)
+                if (_owner[other] == lord && _borders.TryGetValue(Mathf.Min(region, other) * regions + Mathf.Max(region, other), out List<Vector2Int> border) && border.Count >= LinkBorder)
+                    return null;
+            foreach (WorldMapDefinition.SeaRoute route in _routes)
+            {
+                if (route.B == region && _owner[route.A] == lord)
+                    return route.Path;
+                if (route.A == region && _owner[route.B] == lord)
+                {
+                    var path = (Vector2Int[])route.Path.Clone();
+                    System.Array.Reverse(path);
+                    return path;
+                }
+            }
+            return null;
+        }
+
+        // 해로로 region에 닿는 자리(region 쪽 해안의 바다 칸) — 해로 화살표는 여기서 나온다
+        private bool SeaLanding(int region, int lord, out Vector2 landing)
+        {
+            Vector2Int[] path = SeaPath(region, lord);
+            landing = path != null ? path[path.Length - 1] : Vector2.zero;
+            return path != null;
+        }
+
+        // 도장을 시계 방향으로 90도씩 turns번 돌려 center에 찍는다(화살표 텍스처에) — 노란 몸과, 몸에 닿은(대각선 포함) 빈 칸의 검은 테두리
         private void Stamp(string[] shape, int turns, Vector2 center)
         {
             int rows = shape.Length, columns = shape[0].Length;
@@ -520,7 +572,7 @@ namespace GnorpWar
                             Plot(near, SeaColor);
                     }
             foreach (Vector2Int cell in body)
-                Plot(cell, White);
+                Plot(cell, Reachable);
         }
 
         private void Plot(Vector2Int cell, Color32 color)
@@ -612,6 +664,20 @@ namespace GnorpWar
                     int flags = sea | (NearEdge(_cells, _width, _height, x, y, region, EdgeBand) ? 8 : 0) | (decor[pixel] ? 16 : 0) | tones[y * _width + x] << 5;
                     cells[pixel] = new Color32((byte)(region + 1), (byte)(right >= 0 && right != region ? right + 1 : 0), (byte)(down >= 0 && down != region ? down + 1 : 0), (byte)flags);
                 }
+            // 해로 점선 — 바다 칸의 G = 1(바다 칸은 G를 안 쓴다). 길을 따라 RouteDash칸 긋고 RouteDash칸 쉰다, 굵기 2칸
+            foreach (WorldMapDefinition.SeaRoute route in _routes)
+                for (int k = 0; k < route.Path.Length; k++)
+                {
+                    if (k / RouteDash % 2 == 1)
+                        continue;
+                    for (int dy = 0; dy <= 1; dy++)
+                        for (int dx = 0; dx <= 1; dx++)
+                        {
+                            int x = route.Path[k].x + dx, y = route.Path[k].y + dy;
+                            if (At(_cells, _width, _height, x, y) < 0 && x < _width && y < _height)
+                                cells[(_height - 1 - y) * _width + x].g = 1;
+                        }
+                }
             // 다섯 땅 이상이 4칸 안에 모이는 칸은 가까운 넷만 본다 — 지금 지도(40칸)에는 없다
             if (crowded > 0)
                 Debug.LogWarning($"WorldMapView: 이웃 땅이 {NearSlots}개를 넘는 칸 {crowded}개 — 가까운 {NearSlots}개만 본다");
@@ -673,12 +739,37 @@ namespace GnorpWar
             return texture;
         }
 
-        // 지금 갈 수 있는 땅의 표시(칼 · 방문할 수 있는 이벤트 칸)가 톡톡 튀는 높이(px) — 칸마다 BobStep초. 픽셀이 뭉개지지 않게 크기 대신 자리를 계단으로(사용자 10/27, Slay the Spire 지도 참고)
-        private static readonly float[] Bob = { 0f, 3f, 6f, 6f, 3f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
+        // 지금 갈 수 있는 땅의 표시(칼 · 방문할 수 있는 이벤트 칸)가 크게 작게 튀는 배율 — 칸마다 BobStep초, 계단으로(사용자 10/30 「위아래 대신 크게 작게」).
+        // 36px 칸이 40 · 44px로 커졌다 34px로 살짝 눌린 뒤 제자리 — 한 칸이 정수 px로 떨어지는 배율만 쓴다
+        private static readonly float[] Bob = { 1f, 40f / 36f, 44f / 36f, 44f / 36f, 40f / 36f, 34f / 36f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f };
         private const float BobStep = 0.07f;
         private Image[] _invadeMarks;
         private float[] _invadeHome;
         private int _bobTick = -1;
+        // 표시 칸 뒤 후광(MakeHalo) — 칸 밖으로 HaloBand px 띠 둘(안쪽이 진하다), 도트 한 칸 HaloDot px
+        private Image[] _halos;
+        private Sprite _haloSprite;
+        private const int HaloBand = 4, HaloDot = 2;
+        private const float HaloInner = 0.85f, HaloOuter = 0.4f;
+
+        // 노란 후광 그림 — 칸(IconBack px)보다 사방 HaloBand × 2 px 크고, 모서리는 둥글게. HaloDot px 계단
+        private static Sprite MakeHalo()
+        {
+            int side = (int)IconBack + HaloBand * 4, dots = side / HaloDot, inset = HaloBand * 2 / HaloDot, band = HaloBand / HaloDot;
+            var pixels = new Color32[side * side];
+            for (int y = 0; y < side; y++)
+                for (int x = 0; x < side; x++)
+                {
+                    int dx = Mathf.Max(inset - x / HaloDot, x / HaloDot - (dots - 1 - inset), 0), dy = Mathf.Max(inset - y / HaloDot, y / HaloDot - (dots - 1 - inset), 0);
+                    float outside = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = outside <= band ? HaloInner : outside <= band * 2 ? HaloOuter : 0f;
+                    pixels[y * side + x] = new Color32(Reachable.r, Reachable.g, Reachable.b, (byte)(alpha * 255));
+                }
+            var texture = new Texture2D(side, side, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "WorldMap Halo" };
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, side, side), new Vector2(0.5f, 0.5f), 100f);
+        }
 
         // 바다 물결 — 셰이더가 칸마다 그리고, 여기서는 0.1초마다 갈래별로 흘러간 칸 다섯 개만 넘긴다
         private void Update()
@@ -687,13 +778,30 @@ namespace GnorpWar
             if (_invadeMarks != null && bob != _bobTick)
             {
                 _bobTick = bob;
-                float lift = Bob[bob % Bob.Length];
+                var pulse = Vector3.one * Bob[bob % Bob.Length];
                 for (int region = 0; region < _invadeMarks.Length; region++)
                 {
+                    RectTransform shown = null;
                     if (_invadeMarks[region].gameObject.activeSelf)
-                        _invadeMarks[region].rectTransform.anchoredPosition = new Vector2(0f, _invadeHome[region] + lift);
+                    {
+                        shown = _invadeMarks[region].rectTransform;
+                        shown.anchoredPosition = new Vector2(0f, _invadeHome[region]);
+                        shown.localScale = pulse;
+                    }
                     if (_eventCells[region].gameObject.activeSelf)
-                        _eventCells[region].rectTransform.anchoredPosition = new Vector2(0f, IconY + (_events[region] == EventVisitable ? lift : 0f));
+                    {
+                        bool visitable = _events[region] == EventVisitable;
+                        _eventCells[region].rectTransform.localScale = visitable ? pulse : Vector3.one;
+                        if (visitable)
+                            shown = _eventCells[region].rectTransform;
+                    }
+                    Image halo = _halos[region];
+                    if (halo.gameObject.activeSelf != (shown != null))
+                        halo.gameObject.SetActive(shown != null);
+                    if (shown == null)
+                        continue;
+                    halo.rectTransform.anchoredPosition = shown.anchoredPosition;
+                    halo.rectTransform.localScale = pulse;
                 }
             }
             int tick = Mathf.FloorToInt(Time.unscaledTime / WaveTick);

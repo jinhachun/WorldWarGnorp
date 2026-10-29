@@ -139,11 +139,23 @@ namespace GnorpWar.Editor
                     to.GetArrayElementAtIndex(k).intValue = baker.Links[i][k];
                 region.FindPropertyRelative(nameof(WorldMapDefinition.Region.Anchor)).vector2IntValue = new Vector2Int(baker.AnchorX[i], baker.AnchorY[i]);
             }
+            SerializedProperty routes = so.FindProperty("_seaRoutes");
+            routes.arraySize = WorldMapBaker.SeaRoutes.Length;
+            for (int r = 0; r < routes.arraySize; r++)
+            {
+                SerializedProperty route = routes.GetArrayElementAtIndex(r);
+                route.FindPropertyRelative(nameof(WorldMapDefinition.SeaRoute.A)).intValue = WorldMapBaker.SeaRoutes[r].a;
+                route.FindPropertyRelative(nameof(WorldMapDefinition.SeaRoute.B)).intValue = WorldMapBaker.SeaRoutes[r].b;
+                SerializedProperty cells = route.FindPropertyRelative(nameof(WorldMapDefinition.SeaRoute.Path));
+                cells.arraySize = baker.RoutePaths[r].Length;
+                for (int k = 0; k < cells.arraySize; k++)
+                    cells.GetArrayElementAtIndex(k).vector2IntValue = new Vector2Int(baker.RoutePaths[r][k] % width, baker.RoutePaths[r][k] / width);
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
             int links = 0;
             foreach (int[] row in baker.Links)
                 links += row.Length;
-            Debug.Log($"[World] 지도를 구웠다 — {path} ({width}×{height}) · 땅 {regions.arraySize}개(영주 땅 {WorldMapRidges.LordCount} + 띠 {WorldMapRidges.RidgeCount}) · 이웃 {links / 2}쌍(국경 {WorldMapBaker.MinBorder}칸 이상)");
+            Debug.Log($"[World] 지도를 구웠다 — {path} ({width}×{height}) · 땅 {regions.arraySize}개(영주 땅 {WorldMapRidges.LordCount} + 띠 {WorldMapRidges.RidgeCount}) · 이웃 {links / 2}쌍(국경 {WorldMapBaker.MinBorder}칸 이상 + 해로 {WorldMapBaker.SeaRoutes.Length})");
         }
 
         // 굽기 검사(10/26 — 영주 땅 30 + 산맥 · 강 띠 10) — 못 맞춘 까닭(맞으면 null)과 잰 값 한 줄:

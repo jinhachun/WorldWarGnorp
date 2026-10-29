@@ -146,6 +146,8 @@ Shader "GnorpWar/WorldMap"
 
             static const float3 EdgeColor = float3(16, 16, 16);
             static const float3 SelectedColor = float3(255, 217, 90);
+            // 해로 점선 — 흰색(땅 · 선과 같은 톤)
+            static const float3 RouteColor = float3(255, 255, 255);
             // 바다(사용자 10/25 남청 「1안」) — 바탕 · 물결 줄
             static const float3 SeaFill = float3(31, 78, 140), SeaWave = float3(58, 110, 178);
             // 물결 — 이 칸 간격의 줄마다 짧은 가로 줄(줄마다 어긋나게) — 줄 간격 · 한 줄의 반복 · 줄 길이(칸)
@@ -294,7 +296,8 @@ Shader "GnorpWar/WorldMap"
                 float x = at.x, y = size.y - 1 - at.y;
                 float4 cell = tex2Dlod(_MainTex, float4(uv, 0, 0));
                 float region = Byte(cell.r) - 1;
-                float3 pixel = region < 0 ? SeaPixel(x, y) : LandPixel(x, y, region, cell, uv);
+                // 바다 칸의 G = 해로 점선(WorldMapView.Bake — 사용자 10/30)
+                float3 pixel = region < 0 ? (Byte(cell.g) > 0 ? RouteColor : SeaPixel(x, y)) : LandPixel(x, y, region, cell, uv);
                 float4 arrow = tex2Dlod(_Arrows, float4(uv, 0, 0));
                 if (arrow.a > 0.5)
                     pixel = Bytes(arrow.rgb);

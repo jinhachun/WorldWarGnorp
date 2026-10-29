@@ -141,6 +141,144 @@ namespace GnorpWar.Editor
                     Area[c]++;
             MeasureBorders();
             PlaceAnchors();
+            AddSeaRoutes();
+        }
+
+        // 해로(사용자 10/30 「구석 땅에 걸리면 막막하다」) — 바다를 건너 이웃이 되는 땅 쌍(땅 번호 0부터: 27-28 · 17-30).
+        // 출발 칸(fromX, fromY) · 도착 칸(toX, toY)이 있으면 그 칸에 가장 가까운 해안에서 떠나고 닿는다, 없으면(−1) 가장 짧은 길.
+        // 27-28은 맞닿을 듯한 해협 대신 27의 남동쪽 해안에서 떠나 28 곶의 남동쪽 해안에 닿는다(사용자 10/30 「해로가 너무 짧다」 — 해협에 닿으면 27의 육지 화살표와 겹친다).
+        // 칸(Cells)은 건드리지 않는다 — 지도 모양은 그대로이고 이웃 표에 쌍만 더해진다
+        public static readonly (int a, int b, int fromX, int fromY, int toX, int toY)[] SeaRoutes = { (26, 27, 63, 318, 140, 284), (16, 29, -1, -1, -1, -1) };
+        // 해로 길이 해안에서 떨어지려는 거리(칸) · 그보다 가까운 칸 한 칸 더 다가갈 때마다 붙는 비용
+        private const int RouteClearance = 4;
+        private const float RouteHug = 2f;
+        // [해로] = 바다 칸 번호(y × Width + x)들 — a 해안에 닿은 칸부터 b 해안에 닿은 칸까지(8방향으로 이어진다)
+        public int[][] RoutePaths;
+
+        private void AddSeaRoutes()
+        {
+            // 바다 칸마다 가장 가까운 땅까지 거리(체비쇼프) — 해로가 해안에 붙지 않게
+            var shore = Enumerable.Repeat(int.MaxValue, Width * Height).ToArray();
+            var queue = new Queue<int>();
+            for (int i = 0; i < Cells.Length; i++)
+                if (Cells[i] != Sea)
+                {
+                    shore[i] = 0;
+                    queue.Enqueue(i);
+                }
+            while (queue.Count > 0)
+            {
+                int u = queue.Dequeue(), ux = u % Width, uy = u / Width;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int nx = ux + dx, ny = uy + dy;
+                        if (nx < 0 || ny < 0 || nx >= Width || ny >= Height || shore[ny * Width + nx] != int.MaxValue)
+                            continue;
+                        shore[ny * Width + nx] = shore[u] + 1;
+                        queue.Enqueue(ny * Width + nx);
+                    }
+            }
+            var links = Array.ConvertAll(Links, row => row.ToList());
+            RoutePaths = new int[SeaRoutes.Length][];
+            for (int r = 0; r < SeaRoutes.Length; r++)
+            {
+                (int a, int b, int fromX, int fromY, int toX, int toY) = SeaRoutes[r];
+                // 떠나는 a의 해안 칸 · 닿는 b 앞바다 칸 — 고른 칸이 있으면 거기에 가장 가까운 하나, 없으면 전부
+                List<int> starts = Closest(i => Cells[i] == a && Touches(i, Sea), fromX, fromY);
+                var ends = new HashSet<int>(Closest(i => Cells[i] == Sea && Touches(i, b), toX, toY));
+                RoutePaths[r] = SeaPath(starts, ends, b, shore);
+                links[a].Add(b);
+                links[b].Add(a);
+            }
+            Links = Array.ConvertAll(links, list => list.ToArray());
+        }
+
+        // pick을 만족하는 칸들 — (x, y)가 있으면 그중 거기에 가장 가까운 하나만(x < 0이면 전부)
+        private List<int> Closest(Func<int, bool> pick, int x, int y)
+        {
+            var found = new List<int>();
+            int best = int.MaxValue;
+            for (int i = 0; i < Cells.Length; i++)
+            {
+                if (!pick(i))
+                    continue;
+                if (x < 0)
+                {
+                    found.Add(i);
+                    continue;
+                }
+                int d = (i % Width - x) * (i % Width - x) + (i / Width - y) * (i / Width - y);
+                if (d < best)
+                {
+                    best = d;
+                    found.Clear();
+                    found.Add(i);
+                }
+            }
+            return found;
+        }
+
+        // cell(땅 칸)의 4방향 이웃에 region 칸이 있나
+        private bool Touches(int cell, int region)
+        {
+            int x = cell % Width, y = cell / Width;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + DX[k], ny = y + DY[k];
+                if (nx >= 0 && ny >= 0 && nx < Width && ny < Height && Cells[ny * Width + nx] == region)
+                    return true;
+            }
+            return false;
+        }
+
+        // starts(해안 칸)에 닿은 바다 칸에서 ends(region 앞바다 칸) 중 하나까지 바다만 건너는 가장 싼 길(8방향, 해안에 가까울수록 비싸다)
+        private int[] SeaPath(List<int> starts, HashSet<int> ends, int region, int[] shore)
+        {
+            var cost = Enumerable.Repeat(float.MaxValue, Width * Height).ToArray();
+            var previous = Enumerable.Repeat(-1, Width * Height).ToArray();
+            var heap = new Heap();
+            foreach (int start in starts)
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = start % Width + DX[k], ny = start / Width + DY[k];
+                    if (nx < 0 || ny < 0 || nx >= Width || ny >= Height || Cells[ny * Width + nx] != Sea)
+                        continue;
+                    cost[ny * Width + nx] = 0;
+                    heap.Enqueue(ny * Width + nx, 0, 0);
+                }
+            while (heap.TryDequeue(out int u, out _, out float d))
+            {
+                if (d > cost[u])
+                    continue;
+                if (ends.Contains(u))
+                {
+                    var path = new List<int>();
+                    for (int at = u; at >= 0; at = previous[at])
+                        path.Add(at);
+                    path.Reverse();
+                    return path.ToArray();
+                }
+                int ux = u % Width, uy = u / Width;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int nx = ux + dx, ny = uy + dy;
+                        if ((dx == 0 && dy == 0) || nx < 0 || ny < 0 || nx >= Width || ny >= Height)
+                            continue;
+                        int v = ny * Width + nx;
+                        // 대각선은 양옆 두 칸도 바다여야 건넌다(땅 모서리를 스쳐 넘지 않게)
+                        if (Cells[v] != Sea || (dx != 0 && dy != 0 && (Cells[uy * Width + nx] != Sea || Cells[ny * Width + ux] != Sea)))
+                            continue;
+                        float step = (dx != 0 && dy != 0 ? 1.4142f : 1f) * (1f + RouteHug * Math.Max(0, RouteClearance - shore[v]));
+                        if (d + step >= cost[v])
+                            continue;
+                        cost[v] = d + step;
+                        previous[v] = u;
+                        heap.Enqueue(v, 0, cost[v]);
+                    }
+            }
+            throw new InvalidOperationException($"해로가 바다로 {region + 1}번 땅에 닿지 못한다");
         }
 
         // 북 · 서 판 가장자리까지 대륙(사용자 10/25 — 삼국지 지도: 위 변은 오른쪽 위 꼭짓점까지 · 왼쪽 변도 땅, 남 · 동만 해안).

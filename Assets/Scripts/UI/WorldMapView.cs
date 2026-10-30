@@ -42,7 +42,7 @@ namespace GnorpWar
         private const int NearReach = 4;
         private const int NearSlots = 4;
         // 침략 화살표 — 손으로 찍은 도장 둘(오른쪽 · 오른쪽 아래)을 90도씩 돌려 여덟 방향으로 쓴다(임의 각도로 그으면 4px 격자에서 계단이 깨진다).
-        // # = 노란 몸(Reachable), 검은 테두리는 몸을 한 칸 고르게 두른다
+        // # = 흰 몸, 검은 테두리는 몸을 한 칸 고르게 두른다
         private static readonly string[] ArrowEast =
         {
             ".......#....",
@@ -75,7 +75,7 @@ namespace GnorpWar
         private const float ArrowMinPoke = 2f;
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 SeaColor = new Color32(0, 0, 0, 255);
-        // 갈 수 있는 땅의 색(화살표 몸 · 표시 칸 뒤 후광) — 숫자 노랑과 같은 값(사용자 10/30 「꺽쇠는 더 잘 보이게 노란색으로」)
+        // 갈 수 있는 땅의 색(표시 칸 뒤 후광 — 화살표 몸은 흰색, 사용자 10/30) — 숫자 노랑과 같은 값(사용자 10/30 「꺽쇠는 더 잘 보이게 노란색으로」)
         private static readonly Color32 Reachable = ColorUtility.TryParseHtmlString(BuildingTooltip.NumberColor, out Color reachable) ? (Color32)reachable : (Color32)Color.yellow;
 
         // 표시의 자리(표시 자리 기준, 화면 px): 지형 아이콘 뒤 검은 판의 한 변 · 아이콘 높이(땅 번호는 지웠다 — 사용자 10/15)
@@ -572,7 +572,7 @@ namespace GnorpWar
                             Plot(near, SeaColor);
                     }
             foreach (Vector2Int cell in body)
-                Plot(cell, Reachable);
+                Plot(cell, White);
         }
 
         private void Plot(Vector2Int cell, Color32 color)

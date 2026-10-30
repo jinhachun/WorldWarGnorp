@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace GnorpWar
 {
-    // 전장 탑의 대상 표시(사용자 10/27 「더 바자르처럼」) — 툴팁을 띄운 층 기물의 효과를 받는 층의 네 모서리에 흰 꺾쇠(모양은 TargetMarkShape · 검은 1px 받침).
+    // 전장 탑의 대상 표시(사용자 10/27 「더 바자르처럼」) — 툴팁을 띄운 층 기물의 효과를 받는 층의 네 모서리에 노란 꺾쇠(모양은 TargetMarkShape · 검은 1px 받침).
     // 전장 탑 호버(UI/TowerHover)가 매 프레임 Show(진영, 층들)을 부르고, 안 부른 프레임에는 지운다. 메시 하나(PixelMesh). FxDirector가 만든다
     public class TargetMarkFx : MonoBehaviour
     {
@@ -54,9 +54,9 @@ namespace GnorpWar
                     Rect box = _tower.FloorRect(floor);
                     int x = PixelMesh.ToGrid(box.xMin), y = PixelMesh.ToGrid(box.yMin);
                     int w = Mathf.RoundToInt(box.width / PixelMesh.Pixel), h = Mathf.RoundToInt(box.height / PixelMesh.Pixel);
-                    // 검은 받침을 먼저(사방 1px 크게), 흰 꺾쇠를 그 위에 — 흰 벽 위에서도 읽히게
+                    // 검은 받침을 먼저(사방 1px 크게), 노란 꺾쇠를 그 위에 — 흰 벽 위에서도 읽히게
                     Draw(x, y, w, h, Inset - 1, Thick + 2, Arm + 2, Color.black);
-                    Draw(x, y, w, h, Inset, Thick, Arm, Color.white);
+                    Draw(x, y, w, h, Inset, Thick, Arm, TargetMarkShape.Color);
                 }
             _mesh.End();
         }

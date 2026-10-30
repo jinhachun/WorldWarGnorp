@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace GnorpWar
 {
-    // UI 탑 층의 대상 표시 — 툴팁을 띄운 기물의 효과를 받는 층(BuildingTargets)의 네 모서리 흰 꺾쇠(모양은 Fx/TargetMarkShape).
+    // UI 탑 층의 대상 표시 — 툴팁을 띄운 기물의 효과를 받는 층(BuildingTargets)의 네 모서리 노란 꺾쇠(모양은 Fx/TargetMarkShape).
     // 그림 없이 메시로 — 탑 그림의 픽셀 한 칸(3px) 격자. SlotView가 처음 필요할 때 자기 자식으로 만든다(칸에 꽉 차게 · 맨 위 · 레이캐스트 끔)
     [RequireComponent(typeof(CanvasRenderer))]
     public class UiTargetMark : Graphic
@@ -20,9 +20,9 @@ namespace GnorpWar
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
-            // 검은 받침을 먼저(사방 1칸 크게), 흰 꺾쇠를 그 위에 — 흰 벽 · 벽돌 위에서도 읽히게(전장 유닛 꺾쇠 Fx/HoverMark와 같은 법)
+            // 검은 받침을 먼저(사방 1칸 크게), 노란 꺾쇠를 그 위에 — 흰 벽 · 벽돌 위에서도 읽히게(전장 유닛 꺾쇠 Fx/HoverMark와 같은 법)
             Draw(vh, Inset - 1, Thick + 2, Arm + 2, Color.black);
-            Draw(vh, Inset, Thick, Arm, color);
+            Draw(vh, Inset, Thick, Arm, TargetMarkShape.Color);
         }
 
         private void Draw(VertexHelper vh, int inset, int thick, int arm, Color32 c)

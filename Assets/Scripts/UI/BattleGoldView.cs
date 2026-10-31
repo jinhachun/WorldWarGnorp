@@ -23,10 +23,11 @@ namespace GnorpWar
         // 날아오는 중인 골드(아직 숫자에 안 보인다)
         private int _inFlight;
         private int _shown = int.MinValue;
+        private float _punchAge = float.MaxValue;
         private float _homeX = float.NaN;
 
         // 동전이 날아갈 자리(화면 좌표)
-        public Vector3 Target => _icon.rectTransform.position;
+        public Vector3 Target => _icon.rectTransform.TransformPoint(_icon.rectTransform.rect.center);
 
         public void Launch(int amount) => _inFlight += amount;
 
@@ -38,10 +39,19 @@ namespace GnorpWar
             if (!RunState.Started)
                 return;
             int gold = RunState.Gold - _inFlight;
-            if (gold == _shown)
-                return;
-            _shown = gold;
-            _label.text = gold.ToString();
+            if (gold != _shown)
+            {
+                // 처음 한 번은 튀지 않는다 — 동전이 닿아 바뀔 때마다 다시 튄다(위 줄 골드와 같은 튐 — 쌓이지 않는다)
+                if (_shown != int.MinValue)
+                    _punchAge = 0f;
+                _shown = gold;
+                _label.text = gold.ToString();
+            }
+            BattleConfig config = RunState.Config;
+            _punchAge += Juice.RealDeltaTime;
+            float punch = Juice.Punch(_punchAge, config.GoldPunch * config.JuiceIntensity, config.GoldPunchHold, Mathf.Max(0.001f, config.GoldPunchSeconds));
+            _label.rectTransform.localScale = Vector3.one * (punch == 1f ? 1f : Juice.SnapScale(punch, _label.fontSize));
+            _icon.rectTransform.localScale = Vector3.one * (punch == 1f ? 1f : Juice.SnapScale(punch, _icon.rectTransform.sizeDelta.y));
         }
 
         // Overlay 캔버스라 월드 좌표 = 화면 픽셀. 칸의 기준점은 왼쪽 위

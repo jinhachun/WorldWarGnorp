@@ -58,7 +58,6 @@ namespace GnorpWar
         [SerializeField] private Sprite _puddle;
         [SerializeField] private Sprite _cave;
         [Header("그 밖의 그림")]
-        [SerializeField] private Sprite _coin;
         [SerializeField] private Sprite _glow;
         [SerializeField] private Sprite _lordFlag;
         [Header("인물 — 대장장이 · 사제 · 선동가")]
@@ -133,6 +132,8 @@ namespace GnorpWar
         private int _chosen = -1;
         // 결과 연출에서 땅에 닿은 뒤 할 일(한 번)
         private System.Action _landed;
+        // 결과 연출이 끝나는 때(초) — 기본은 날아감 + 머묾, 동전이 늦게 닿으면 그 뒤로
+        private float _resultEnd;
         private bool _landedDone;
         // 대장간 — 탑 층에 붙인 누름 받이(닫을 때 뗀다) · 날아가는 동안 비워 보일 층
         private readonly List<EventVisitTarget> _slotTargets = new List<EventVisitTarget>();
@@ -1791,14 +1792,22 @@ namespace GnorpWar
             }
         }
 
-        // 동전 하나가 from에서 to로(화면 위 왼쪽 기준) — 닿으면 사라진다
-        private void Coin(Vector2 from, Vector2 to, float delay)
+        // ── 골드 동전(Fx/GoldCoinFx — 사용자 11/1). 위 줄 판(UI/WorldSidePanel)이 돌린다 — 판을 닫아도 끝까지 닿는다. 자리는 화면 위 왼쪽 기준 px,
+        // 돌려주는 값 = 마지막 동전이 닿기까지(초, delay 포함 — 장면 끝을 그 뒤로 미룬다). 결과 연출은 고른 그 프레임에 부른다(골드는 이미 바뀌어 있다 — 위 줄 숫자가 먼저 바뀌지 않게)
+
+        // 얻은 골드 — at에서 터져 골드 칸으로. 마지막 동전이 닿으면 landed(소식 결과 연출이 아직 돌 때만)
+        private float NewsGain(Vector2 at, int gold, float delay, System.Action landed) =>
+            _panel.GainCoins(World(at), gold, delay, () => { if (_newsPlay) landed?.Invoke(); });
+
+        // 낸 골드 — 골드 칸에서 하나씩 나가 to(지금 자리를 매 프레임 읽는다)로
+        private float NewsSpend(System.Func<Vector2> to, int gold, float delay) =>
+            _panel.SpendCoins(_ => World(to()), gold, delay);
+
+        // 화면 위 왼쪽 기준 px → 월드 좌표(Local의 반대)
+        private Vector3 World(Vector2 at)
         {
-            Image coin = NewImage(_things, "Coin", _coin, Color.white);
-            coin.SetNativeSize();
-            At(coin.rectTransform, from.x, from.y, new Vector2(0.5f, 0.5f));
-            _flights.Add(new Flight { Rect = coin.rectTransform, From = Anchored(from), To = Anchored(to), Start = _clock + delay, Seconds = FlySeconds,
-                Landed = () => coin.gameObject.SetActive(false) });
+            Rect area = _root.rect;
+            return _root.TransformPoint(new Vector3(area.xMin + at.x, area.yMax - at.y, 0f));
         }
 
         // 지금부터 날아간다(Fly는 0초부터 센다)
@@ -1979,22 +1988,16 @@ namespace GnorpWar
                 pile.gameObject.SetActive(false);
                 foreach (var anim in _anims)
                     anim.Image.gameObject.SetActive(false);
-                for (int i = 0; i < 6; i++)
-                    Coin(at + new Vector2((i - 2.5f) * 12f, 0f), Middle(_panel.GoldIcon), i * 0.04f);
-                NewsFloats(chosen, gold, at.x, at.y - 90f);
             });
-            return 0.2f + FlySeconds + 0.3f;
+            float coins = NewsGain(at, gold, 0.2f, () => NewsFloats(chosen, gold, at.x, at.y - 90f));
+            return Mathf.Max(0.2f + FlySeconds + 0.3f, coins);
         }
 
         // ② 골드에서 동전이 굴로 들어가고, 굴 앞에 받침목 틀이 땅 아래에서 그림 px 계단으로 올라온다
         private float MineDig(NewsChoice chosen, int gold)
         {
             RectTransform cave = _boxes[1].Thing;
-            Cue(0f, () =>
-            {
-                for (int i = 0; i < 10; i++)
-                    Coin(Middle(_panel.GoldIcon), Middle(cave), i * 0.05f);
-            });
+            float coins = NewsSpend(() => Middle(cave), -gold, 0f);
             Sprite sprite = RunState.Config.World.NewsMineFrame;
             Image frame = NewImage(_things, "MineFrame", sprite, Color.white);
             frame.rectTransform.sizeDelta = sprite.rect.size * K;
@@ -2003,7 +2006,7 @@ namespace GnorpWar
             for (int i = 1; i <= steps; i++)
                 Cue(0.8f + i * 0.06f, () => frame.rectTransform.anchoredPosition += new Vector2(0f, K));
             Cue(0.8f, () => NewsFloats(chosen, gold, Center + MineX, Ground - 170f));
-            return 0.8f + steps * 0.06f + 0.3f;
+            return Mathf.Max(0.8f + steps * 0.06f + 0.3f, coins);
         }
 
         // ── 황충 발생 — 밭을 덮은 메뚜기 떼 · 돈자루(① 돈으로 쫓는다) · 밭(② 밭을 내준다 — 남은 일손으로 생산 기물 하나)
@@ -2044,14 +2047,11 @@ namespace GnorpWar
         private float LocustPay(NewsChoice chosen, int gold)
         {
             RectTransform bag = _boxes[0].Thing;
-            Cue(0f, () =>
-            {
-                for (int i = 0; i < 4; i++)
-                    Coin(Middle(_panel.GoldIcon), Middle(bag), i * 0.06f);
-                NewsFloats(chosen, gold, Middle(bag).x, Ground - 150f);
-            });
-            Cue(0.5f, () => _scatterAt = _clock);
-            return 1.8f;
+            float coins = NewsSpend(() => Middle(bag), -gold, 0f);
+            Cue(0f, () => NewsFloats(chosen, gold, Middle(bag).x, Ground - 150f));
+            // 떼는 마지막 동전이 자루에 닿을 때 흩어진다
+            Cue(Mathf.Max(0.5f, coins), () => _scatterAt = _clock);
+            return Mathf.Max(1.8f, coins + 1.3f);
         }
 
         // ② 밭 가운데에서 새 생산 기물의 층이 탑으로 날아간다
@@ -2122,12 +2122,7 @@ namespace GnorpWar
             if (chosen.Gold < 0)
             {
                 Vector2 bag = new Vector2(Center + AnvilX - 90f, Ground - 20f);
-                Cue(0f, () =>
-                {
-                    for (int i = 0; i < 4; i++)
-                        Coin(Middle(_panel.GoldIcon), bag, i * 0.06f);
-                });
-                start = 0.6f;
+                start = Mathf.Max(0.6f, NewsSpend(() => bag, -gold, 0f));
             }
             Cue(start, () => NewsFloats(chosen, gold, Center + AnvilX - 150f, Ground - 150f));
             if (at < 0)
@@ -2191,18 +2186,15 @@ namespace GnorpWar
         private float AlchemyBrew(NewsChoice chosen, int gold, int at, OwnedBuilding[] before)
         {
             Vector2 pot = new Vector2(Center + CauldronX, Ground - RunState.Config.World.NewsCauldron.rect.height * K * 0.5f);
-            Cue(0f, () =>
-            {
-                for (int i = 0; i < 4; i++)
-                    Coin(Middle(_panel.GoldIcon), pot, i * 0.06f);
-                NewsFloats(chosen, gold, pot.x - 110f, Ground - 150f);
-            });
+            // 층은 마지막 동전이 솥에 닿은 뒤에 온다
+            float paid = Mathf.Max(0.6f, NewsSpend(() => pot, -gold, 0f));
+            Cue(0f, () => NewsFloats(chosen, gold, pot.x - 110f, Ground - 150f));
             if (at < 0)
-                return 0.6f;
+                return paid;
             Color to = RunState.LastAlchemySucceeded ? BuildingRarity.Mythic.FrameColor() : Drained;
             Sprite[] smoke = RunState.Config.World.NewsSmoke;
             // 공중 연기는 결과가 뜰 때 걷힌다(ShowAlchemy — 솥 위 연기는 남는다)
-            return FloorTrip(at, before[at].Definition, _rarityBefore[at].FrameColor(), to, pot - new Vector2(0f, 150f), 0.6f, () =>
+            return FloorTrip(at, before[at].Definition, _rarityBefore[at].FrameColor(), to, pot - new Vector2(0f, 150f), paid, () =>
             {
                 _puffs.Add(Anim(smoke, pot.x - 50f, pot.y - 130f, 2));
                 _puffs.Add(Anim(smoke, pot.x + 50f, pot.y - 150f, 0));
@@ -2290,17 +2282,9 @@ namespace GnorpWar
         private float MigrantsToll(NewsChoice chosen, int gold)
         {
             RectTransform box = _boxes[1].Thing;
-            Cue(0f, () =>
-            {
-                for (int i = 0; i < _newsGroup.Count; i++)
-                    Coin(Middle(_newsGroup[i]), Middle(box), i * 0.08f);
-            });
-            Cue(0.6f, () =>
-            {
-                for (int i = 0; i < 5; i++)
-                    Coin(Middle(box), Middle(_panel.GoldIcon), i * 0.04f);
-                NewsFloats(chosen, gold, Center + 130f, Ground - 120f);
-            });
+            for (int i = 0; i < _newsGroup.Count; i++)
+                _panel.MoveCoin(World(Middle(_newsGroup[i])), World(Middle(box)), i * 0.08f);
+            float coins = NewsGain(Middle(box), gold, 0.6f, () => NewsFloats(chosen, gold, Center + 130f, Ground - 120f));
             Cue(0.9f, () =>
             {
                 foreach (Actor actor in _actors)
@@ -2311,7 +2295,7 @@ namespace GnorpWar
                     actor.Speed = NewsWalkSpeed;
                 }
             });
-            return 2.4f;
+            return Mathf.Max(2.4f, coins);
         }
 
         // ① 볏단이 수레로 → 동전이 골드로
@@ -2325,13 +2309,8 @@ namespace GnorpWar
                 Vector2 to = top + new Vector2((i - (_newsLoads.Count - 1) * 0.5f) * 30f, 0f);
                 Cue(i * 0.15f, () => FlyNow(sheaf, Middle(sheaf), to));
             }
-            Cue(0.8f, () =>
-            {
-                for (int i = 0; i < 5; i++)
-                    Coin(top, Middle(_panel.GoldIcon), i * 0.04f);
-                NewsFloats(chosen, gold, Center + 250f, Ground - 170f);
-            });
-            return 1.4f;
+            float coins = NewsGain(top, gold, 0.8f, () => NewsFloats(chosen, gold, Center + 250f, Ground - 170f));
+            return Mathf.Max(1.4f, coins);
         }
 
         // ② 밭 오른쪽에 새 밭 한 칸이 땅 아래에서 그림 px 계단으로 올라온다
@@ -2399,24 +2378,24 @@ namespace GnorpWar
         // ② 골드가 물통으로 → 물통이 차례로 불길로 날아가 불길이 하나씩 꺼진다
         private float FireDouse(NewsChoice chosen, int gold)
         {
-            Cue(0f, () =>
-            {
-                for (int i = 0; i < _newsLoads.Count; i++)
-                    Coin(Middle(_panel.GoldIcon), Middle(_newsLoads[i]), i * 0.08f);
-                NewsFloats(chosen, gold, Center - 160f, Ground - 170f);
-            });
+            // 동전은 물통들에 고르게 나눠 들어가고, 물통은 마지막 동전이 닿은 뒤에 날아간다
+            var buckets = _newsLoads.ToArray();
+            float paid = buckets.Length == 0 ? 0f :
+                _panel.SpendCoins(k => World(Middle(buckets[k % buckets.Length])), -gold, 0f);
+            float start = Mathf.Max(0.5f, paid);
+            Cue(0f, () => NewsFloats(chosen, gold, Center - 160f, Ground - 170f));
             for (int i = 0; i < _newsLoads.Count && i < _flames.Count; i++)
             {
                 RectTransform bucket = _newsLoads[i];
                 Image flame = _flames[i];
-                Cue(0.5f + i * 0.25f, () =>
+                Cue(start + i * 0.25f, () =>
                     FlyNow(bucket, Middle(bucket), Middle(flame.rectTransform)).Landed = () =>
                     {
                         bucket.gameObject.SetActive(false);
                         flame.gameObject.SetActive(false);
                     });
             }
-            return 0.5f + 3 * 0.25f + FlySeconds;
+            return start + 3 * 0.25f + FlySeconds;
         }
 
         // 소식 장면의 움직임 — 사람의 걸음 · 들썩임, 불꽃 그림, 결과 연출의 할 일
@@ -2858,7 +2837,11 @@ namespace GnorpWar
                 {
                     if (!RunState.CanSkipUpgrade || RunState.PendingUpgrades[0] != _crisis)
                         return;
+                    int before = RunState.Gold;
                     RunState.SkipUpgrade();
+                    // 「건너뛰기 +N골드」 버튼에서 동전이 터져 위 줄 골드로(판이 닫혀도 판이 끝까지 돌린다)
+                    RectTransform button = (RectTransform)_action.transform;
+                    _panel.GainCoins(button.TransformPoint(button.rect.center), RunState.Gold - before, 0f);
                 }
                 BeginFlash();
                 return;
@@ -2878,6 +2861,7 @@ namespace GnorpWar
         {
             _step = Step.Result;
             _clock = 0f;
+            _resultEnd = FlySeconds + HoldSeconds;
             _chosen = thing.Choice;
             _landedDone = false;
             _caretImage.gameObject.SetActive(false);
@@ -2969,18 +2953,13 @@ namespace GnorpWar
                 {
                     // 보물 창고 — 뚜껑이 들리고 동전이 튀어 오른 뒤 위 줄 골드로
                     thing.Visual.anchoredPosition += new Vector2(0f, 30f);
-                    float[] ox = { -90f, -40f, 10f, 60f, 110f, -10f }, oy = { 90f, 132f, 156f, 126f, 84f, 192f };
-                    Vector2 gold = Middle(_panel.GoldIcon);
-                    for (int i = 0; i < ox.Length; i++)
+                    // 상자 입에서 터진다 · 「+N」은 마지막 동전이 닿을 때 · 장면은 그 뒤 「머묾」만큼 더 있다
+                    float landed = _panel.GainCoins(World(new Vector2(Center, Ground - _chest.rect.height * K - 20f)), choice.Gold, FlySeconds, () =>
                     {
-                        Image coin = NewImage(_things, "Coin", _coin, Color.white);
-                        coin.SetNativeSize();
-                        coin.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-                        Vector2 at = new Vector2(Center + ox[i], Ground - _chest.rect.height * K - oy[i]);
-                        At(coin.rectTransform, at.x, at.y, new Vector2(0.5f, 0.5f));
-                        _flights.Add(new Flight { Rect = coin.rectTransform, From = Anchored(at), To = Anchored(gold), Start = FlySeconds + i * 0.03f, Seconds = FlySeconds });
-                    }
-                    _landed = () => FloatText($"<color={BuildingTooltip.NumberColor}>+{choice.Gold}</color>", Center + 150f, Ground - _chest.rect.height * K - 130f);
+                        if (_step == Step.Result)
+                            FloatText($"<color={BuildingTooltip.NumberColor}>+{choice.Gold}</color>", Center + 150f, Ground - _chest.rect.height * K - 130f);
+                    });
+                    _resultEnd = Mathf.Max(_resultEnd, landed + HoldSeconds);
                     break;
                 }
             }
@@ -3083,7 +3062,7 @@ namespace GnorpWar
                     _landedDone = true;
                     _landed?.Invoke();
                 }
-                if (_clock >= FlySeconds + HoldSeconds)
+                if (_clock >= _resultEnd)
                     BeginFlash();
             }
             else if (_step == Step.Flash && !(_crisis != null || _aftermath ? _motion.Closing : _map.Flashing))

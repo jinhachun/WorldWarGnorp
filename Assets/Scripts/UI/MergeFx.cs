@@ -162,7 +162,7 @@ namespace GnorpWar
             return new Vector3(Mathf.Round(p.x / grid) * grid, Mathf.Round(p.y / grid) * grid, p.z);
         }
 
-        // ── 판매(손맛 J3) — 판 기물의 층 조각이 그 자리(at — 칸이나 끌어 놓은 자리)에서 칸 단위로 작아져 사라진다. 동전은 위 줄이 날린다(UI/WorldSidePanel.FlyCoins)
+        // ── 판매(손맛 J3) — 판 기물의 층 조각이 그 자리(at — 칸이나 끌어 놓은 자리)에서 칸 단위로 작아져 사라진다. 동전은 위 줄이 날린다(UI/WorldSidePanel.GainCoins)
         public void SellAway(OwnedBuilding building, Vector3 at, float seconds)
         {
             RectTransform piece = Piece(building.Definition, building.Rarity, at);

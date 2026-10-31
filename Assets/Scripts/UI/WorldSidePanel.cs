@@ -197,29 +197,52 @@ namespace GnorpWar
             _goldShown = _goldRollAge >= roll ? _goldTo : Juice.Roll(_goldFrom, _goldTo, _goldRollAge / roll);
             float punch = Juice.Punch(_goldPunchAge, config.GoldPunch * config.JuiceIntensity, config.GoldPunchHold, Mathf.Max(0.001f, config.GoldPunchSeconds));
             _statusGold.rectTransform.localScale = Vector3.one * (punch == 1f ? 1f : Juice.SnapScale(punch, _statusGold.fontSize));
+            // 골드 아이콘도 같이 톡(동전이 닿거나 나갈 때마다 다시 걸린다 — 커지는 크기는 튐 하나로 묶여 쌓이지 않는다)
+            _goldImage.rectTransform.localScale = Vector3.one * (punch == 1f ? 1f : Juice.SnapScale(punch, _goldImage.rectTransform.sizeDelta.y));
             return _goldShown;
         }
 
-        // 판매한 골드 — from(화면 좌표)에서 동전이 위 줄 골드 아이콘으로 날아가(전투 동전과 같은 모양 — Fx/GoldCoinFx) 닿을 때마다 숫자가 오른다.
-        // 골드는 이미 들어가 있다 — 보이는 것만. 이 판(늘 켜져 있다)에서 돌린다 — 상점을 닫아도 동전이 끝까지 닿게. delay = 출발 전 기다림(판 기물이 작아지는 동안)
-        public void FlyCoins(Vector3 from, int gold, float delay)
+        // ── 골드 동전(Fx/GoldCoinFx — 사용자 11/1). 골드는 이미 들어가(빠져) 있다 — 보이는 숫자는 날아가는 중인 몫을 빼고(내는 골드면 더하고) 보인다.
+        // 이 판(늘 켜져 있다)에서 돌린다 — 상점 · 팝업을 닫아도 동전이 끝까지 닿게. 돌려주는 값 = 마지막 동전이 닿기까지(초, delay 포함)
+
+        // 얻은 골드 — from(월드 좌표)에서 터져 위 줄 골드 아이콘으로, 닿을 때마다 그 몫만큼 숫자가 오른다. delay = 출발 전 기다림. done = 마지막 동전이 닿을 때
+        public float GainCoins(Vector3 from, int gold, float delay, System.Action done = null)
         {
-            BattleConfig config = RunState.Config;
-            if (gold <= 0 || _goldImage == null || config == null || !isActiveAndEnabled)
-                return;
-            _goldInFlight += gold;
-            int coins = Mathf.Clamp(gold, config.SellCoinsMin, Mathf.Max(config.SellCoinsMin, config.SellCoinsMax));
-            RectTransform icon = _goldImage.rectTransform;
-            Transform layer = _goldImage.canvas.rootCanvas.transform;
-            for (int k = 0; k < coins; k++)
+            if (gold <= 0 || _goldImage == null || !isActiveAndEnabled)
             {
-                // 골드를 동전 수로 고르게 나눈다(남는 몫은 앞 동전부터 하나씩 — 골드가 동전보다 적으면 0인 동전도 난다)
-                int share = gold / coins + (k < gold % coins ? 1 : 0);
-                StartCoroutine(GoldCoinFx.Fly(layer, _goldImage.sprite, from, () => icon.TransformPoint(icon.rect.center), delay + k * GoldCoinFx.CoinGap,
-                    () => _goldInFlight = Mathf.Max(0, _goldInFlight - share)));
+                done?.Invoke();
+                return 0f;
             }
-            // 소리 자리(J6): 판매 동전
+            _goldInFlight += gold;
+            RectTransform icon = _goldImage.rectTransform;
+            return GoldCoinFx.Gain(this, CoinLayer, _goldImage.sprite, from, gold, () => icon.TransformPoint(icon.rect.center), delay,
+                share => _goldInFlight -= share, done);
+            // 소리 자리(J6): 동전
         }
+
+        // 낸 골드 — 위 줄 골드 아이콘에서 하나씩 튀어나가(나갈 때마다 그 몫만큼 숫자가 준다) to(k번째 동전의 목적지, 월드 좌표)로
+        public float SpendCoins(System.Func<int, Vector3> to, int gold, float delay, System.Action done = null)
+        {
+            if (gold <= 0 || _goldImage == null || !isActiveAndEnabled)
+            {
+                done?.Invoke();
+                return 0f;
+            }
+            _goldInFlight -= gold;
+            RectTransform icon = _goldImage.rectTransform;
+            return GoldCoinFx.Spend(this, CoinLayer, _goldImage.sprite, () => icon.TransformPoint(icon.rect.center), gold, to, delay,
+                share => _goldInFlight += share, done);
+        }
+
+        // 골드 칸에 닿지 않는 동전 하나(이주민이 통행세 상자에 넣는 동전 — 금액과 무관)
+        public void MoveCoin(Vector3 from, Vector3 to, float delay)
+        {
+            if (_goldImage != null && isActiveAndEnabled)
+                GoldCoinFx.Move(this, CoinLayer, _goldImage.sprite, from, to, delay);
+        }
+
+        // 동전은 맨 위 캔버스의 맨 앞에(팝업 위로도)
+        private Transform CoinLayer => _goldImage.canvas.rootCanvas.transform;
 
         // 탑 기둥의 가로 자리(1층 틀 칸의 가운데)
         public float TowerX => FrameBars.TowerCenter;

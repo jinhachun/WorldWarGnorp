@@ -470,7 +470,7 @@ namespace GnorpWar
             if (_side == null)
                 _side = FindAnyObjectByType<WorldSidePanel>();
             if (_side != null)
-                _side.FlyCoins(at, RunState.Gold - gold, config.SellShrinkSeconds);
+                _side.GainCoins(at, RunState.Gold - gold, config.SellShrinkSeconds);
         }
 
         // 끌어 놓은 칸이 탁 앉는다(손맛 J3) — 놓은 뒤 그 기물이 있는 칸(탑 · 보관함). 합치기면 합치기 재생이 맡는다

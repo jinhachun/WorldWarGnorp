@@ -336,13 +336,6 @@ namespace GnorpWar
         [SuffixLabel("초", true)]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _sellShrinkSeconds = 0.15f;
-        [Tooltip("판매 — 날아가는 동전 수(받은 골드 수를 이 사이로 자른다)")]
-        [SuffixLabel("개", true)]
-        [HideIf(nameof(HideNonBalance))]
-        [SerializeField] private int _sellCoinsMin = 3;
-        [SuffixLabel("개", true)]
-        [HideIf(nameof(HideNonBalance))]
-        [SerializeField] private int _sellCoinsMax = 5;
         [Tooltip("위 줄 골드 숫자가 새 값까지 굴러가는 시간")]
         [SuffixLabel("초", true)]
         [HideIf(nameof(HideNonBalance))]
@@ -370,6 +363,49 @@ namespace GnorpWar
         [SuffixLabel("초", true)]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _offerPopStagger = 0.07f;
+
+        [Header("손맛 — 골드 동전(K3 · 연출만 — 규칙과 무관, Fx/GoldCoinFx). 얻는 곳 · 내는 곳 전부(전투 · 상점 판매 · 이벤트 · 나라 소식). 칸 = UI 픽셀 칸(1칸 = 3px) · 움직임은 위 세기 배율을 곱한다 · 시간은 실제 시간")]
+        [Tooltip("동전 수 — 골드가 두 배가 될 때마다 이만큼 는다(1골드 = 1개 · 로그로 줄어든다). 골드보다 많지는 않다")]
+        [SuffixLabel("개", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinsPerDouble = 2f;
+        [Tooltip("동전 수 상한")]
+        [SuffixLabel("개", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _coinsMax = 12;
+        [Tooltip("터짐 — 동전마다 이 사이의 높이로 튀어 오른다(내는 골드는 절반)")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinBurstHeightMin = 20f;
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinBurstHeightMax = 40f;
+        [Tooltip("터짐 — 퍼지는 반지름(얻는 골드는 나온 곳 둘레 원 안 · 내는 골드는 옆으로 절반, 동전마다 다르다)")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinBurstSpread = 30f;
+        [Tooltip("터짐 — 튀어 올랐다 떨어져 앉기까지(통통 한 번은 그 절반)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinBurstSeconds = 0.4f;
+        [Tooltip("통통 — 튀어 오른 높이에 대한 비율")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinBounce = 0.25f;
+        [Tooltip("머묾 — 앉은 뒤 첫 동전이 빨려 가기까지. 다음 동전부터 아래 간격씩 더 머문다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinHold = 0.12f;
+        [Tooltip("동전이 차례로 빨려 가는(내는 골드는 튀어나가는) 간격")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinGap = 0.03f;
+        [Tooltip("빨려 들어감 — 점점 빨라지며 골드 칸(목적지)에 닿기까지")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinFlySeconds = 0.35f;
+        [Tooltip("빨려 들어가는 길이 옆으로 휘는 정도(길이에 대한 비율 — 0이면 곧은 길). 동전마다 번갈아 반대쪽")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _coinCurve = 0.12f;
 
         [Header("손맛 — 팝업 열림 · 닫힘(K1 · 연출만 — 규칙과 무관, UI/PopupMotion). 칸 = UI 픽셀 칸(1칸 = 3px) · 움직임은 위 세기 배율을 곱한다 · 시간은 실제 시간")]
         [Tooltip("열림 — 판이 이만큼 위에서 계단 3번으로 내려앉는다(알파도 3계단 · 어둠도 3계단으로 짙어짐). 업그레이드 카드는 열린 뒤 진열 카드 튐(위 묶음)으로 왼쪽부터 차례로")]
@@ -454,8 +490,17 @@ namespace GnorpWar
         public float DropThump => _dropThump;
         public float DropThumpSeconds => _dropThumpSeconds;
         public float SellShrinkSeconds => _sellShrinkSeconds;
-        public int SellCoinsMin => _sellCoinsMin;
-        public int SellCoinsMax => _sellCoinsMax;
+        public float CoinsPerDouble => _coinsPerDouble;
+        public int CoinsMax => _coinsMax;
+        public float CoinBurstHeightMin => _coinBurstHeightMin;
+        public float CoinBurstHeightMax => _coinBurstHeightMax;
+        public float CoinBurstSpread => _coinBurstSpread;
+        public float CoinBurstSeconds => _coinBurstSeconds;
+        public float CoinBounce => _coinBounce;
+        public float CoinHold => _coinHold;
+        public float CoinGap => _coinGap;
+        public float CoinFlySeconds => _coinFlySeconds;
+        public float CoinCurve => _coinCurve;
         public float GoldRollSeconds => _goldRollSeconds;
         public float GoldPunch => _goldPunch;
         public float GoldPunchHold => _goldPunchHold;

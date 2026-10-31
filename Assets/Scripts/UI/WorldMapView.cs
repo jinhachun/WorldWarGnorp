@@ -108,6 +108,8 @@ namespace GnorpWar
         private readonly List<int> _arrowPlotted = new List<int>();
         // 땅마다 화살표를 그렸나 — 판도 · 침략 가능 · 방문 가능이 바뀌어도 이것이 같으면 다시 그리지 않는다
         private bool[] _arrowWanted;
+        // 화살표가 지금 한 칸 앞으로 나가 있나(콕 찌르기 — Update)
+        private bool _arrowPoked;
         private int[] _cells;
         private int _width, _height;
         private Vector2Int[] _anchors;
@@ -463,8 +465,14 @@ namespace GnorpWar
             }
             _lands.SetPixels32(_landPixels);
             _lands.Apply();
-            if (!arrows)
-                return;
+            if (arrows)
+                DrawArrows();
+        }
+
+        // 화살표를 모두 지우고 다시 그린다 — 판도가 바뀔 때와 콕 찌를 때(_arrowPoked)
+        private void DrawArrows()
+        {
+            int regions = _owner.Length;
             foreach (int pixel in _arrowPlotted)
                 _arrowPixels[pixel] = default;
             _arrowPlotted.Clear();
@@ -511,6 +519,9 @@ namespace GnorpWar
             float angle = direction * Mathf.PI / 4f;
             float advance = Mathf.Clamp((to - from).magnitude - ArrowClearance - ArrowHalf, ArrowMinPoke - ArrowHalf, ArrowAdvance);
             Vector2 center = from + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * advance;
+            // 콕 찌르기(손맛 J5 · 사용자 10/31) — 가리키는 쪽으로 한 칸(대각선은 가로세로 한 칸씩)
+            if (_arrowPoked)
+                center += new Vector2(Mathf.Round(Mathf.Cos(angle)), Mathf.Round(Mathf.Sin(angle)));
             Stamp(direction % 2 == 0 ? ArrowEast : ArrowSouthEast, direction / 2, center);
             return true;
         }
@@ -803,6 +814,14 @@ namespace GnorpWar
                     halo.rectTransform.anchoredPosition = shown.anchoredPosition;
                     halo.rectTransform.localScale = pulse;
                 }
+            }
+            // 침략 화살표가 표시와 같은 박자로 콕 찌른다 — 표시가 커져 있는 동안 한 칸 앞으로
+            bool poked = Bob[bob % Bob.Length] > 1f;
+            if (_arrows != null && poked != _arrowPoked)
+            {
+                _arrowPoked = poked;
+                if (Arrows > 0)
+                    DrawArrows();
             }
             int tick = Mathf.FloorToInt(Time.unscaledTime / WaveTick);
             if (_material == null || tick == _waveTick)

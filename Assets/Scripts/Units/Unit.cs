@@ -1413,6 +1413,15 @@ namespace GnorpWar
                 if (top != null && HeadClear())
                     StartClimb(top, ref velocity);
             }
+            // 땅에서 혼자 걷다 발 모서리가 땅 꼭짓점에 걸려 서 버리면 건축가처럼 살짝 뛰어 넘는다 — 밀어 줄 뒤 유닛이 없는 뒤쪽 유닛이 판 끝까지 제자리에 서 있었다.
+            // 앞에 아군·적이 맞닿아 있으면(줄 · 맞붙음) 뛰지 않는다 — 그건 계단 · 피라미드 규칙이 세운 것
+            bool snagged = onGroundSurface && !allyAhead && !blockedByEnemy && !_climbing && velocity.x * Forward > 0f && _advanceSpeed < MoveSpeed * BuildStallSpeedRatio;
+            _buildStallTimer = snagged ? _buildStallTimer + Time.fixedDeltaTime : 0f;
+            if (_buildStallTimer >= BuildStallSeconds)
+            {
+                velocity.y = JumpSpeed(BuildStallHopHeight, _rb);
+                _buildStallTimer = 0f;
+            }
             _rb.linearVelocity = velocity;
         }
 

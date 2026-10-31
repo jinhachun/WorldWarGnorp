@@ -170,6 +170,7 @@ namespace GnorpWar
                     break;
                 case EventLandKind.Agitator:
                     choice.Lord.Happiness = Mathf.Max(0, choice.Lord.Happiness - choice.Drop);
+                    choice.Lord.Incited = true;
                     what = $"영주 {choice.Lord.Id}번 행복도 {choice.Happiness} → {choice.Lord.Happiness}";
                     break;
                 case EventLandKind.Shrine:

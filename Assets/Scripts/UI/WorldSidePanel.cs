@@ -277,6 +277,9 @@ namespace GnorpWar
                 y = Place(_share.rectTransform, center, y) - LineGap;
             }
             _nation.text = (mine ? RunState.Nation : RunState.World.NationOf(lord)).DisplayName();
+            // 유령 영주 — 회색 상태 줄(사용자 11/1, 글은 땅 툴팁과 같다)
+            if (!mine && RunState.World.GhostOf(lord) != null)
+                _nation.text += $"\n<color={BuildingTooltip.NoteColor}>{LandHover.GhostLine}</color>";
             y = PlaceText(_nation, center, y);
             // 그 영주가 가진 업그레이드 — 내 것은 위 줄에 있다
             var holdings = mine ? new System.Collections.Generic.List<UpgradeHolding>() : RunState.UpgradesOf(lord);

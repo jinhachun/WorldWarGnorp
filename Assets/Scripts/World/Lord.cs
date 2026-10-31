@@ -13,5 +13,7 @@ namespace GnorpWar
         public bool Alive = true;
         // 마지막 침략을 이겼나 — 다음 턴 수입의 승리 보너스가 읽는다
         public bool WonLastInvasion;
+        // 선동가 이벤트(RunState.Events)가 행복도를 깎은 영주 — 반란이 일어나면 요약에 그 영주 이름을 쓴다(표시용)
+        public bool Incited;
     }
 }

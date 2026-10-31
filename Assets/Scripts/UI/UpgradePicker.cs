@@ -6,8 +6,8 @@ namespace GnorpWar
 {
     // 업그레이드 고르기 창(아웃게임기획 §4, 사용자 10/13) — 고를 것(RunState.PendingUpgrades)이 있으면 지도 씬 어디서든 카드가 뜨고, 하나를 누르면 닫힌다(대기가 남았으면 다음 것).
     //   합치기 보상: 상점에서 합치기 연출이 끝난 직후, 카드 셋.
-    //   지역 특수 업그레이드(신화): 국가를 고른 직후(시작) · 영주를 멸망시키고 지도로 돌아와 AI 턴 재생이 끝난 뒤, 카드 1~3장 + 머리말 + 카드 아래 「건너뛰기 +N골드」 버튼.
-    //   국가 위기(신화 — 목숨이 0이 된 전투 뒤 지도로 돌아와 AI 턴 재생이 끝난 뒤, 사용자 10/23): 카드 1~3장 + 「국가 위기」 머리말 + 그 아래 읽는 글 한 줄. 건너뛰기 없음.
+    //   지역 특수 업그레이드(신화 — 영주를 멸망시킨 보상): 이 창이 아니라 전투 결과 장면(UI/EventVisitPopup.OpenAftermath)으로 넘긴다(사용자 10/31).
+    //   국가 위기(신화 — 목숨이 0이 된 전투 뒤 지도로 돌아와 AI 턴 재생이 끝난 뒤, 사용자 10/23): 이 창이 아니라 이벤트 장면(UI/EventVisitPopup.OpenCrisis)으로 넘긴다(사용자 10/31).
     //   공화정(이미 셋을 모두 얻었다 — UpgradeOffer.Granted, 사용자 10/14): 합치기 보상처럼 카드 셋 + 공화정 머리말. 고르는 게 아니라 카드 · 판 어디를 눌러도 닫히고, 카드 강조가 없다.
     // 떠 있는 동안에는 화면 전체를 덮는 판이 지도 · 상점 조작을 막는다.
     // 카드 = 등급 색 외곽선(기물 등급 테두리와 같은 색 · 같은 강조 — BuildingRarity.FrameColor, UI/ButtonHover) · 아이콘(원본 크기) · 이름 · 그 등급의 효과 한 줄.
@@ -48,30 +48,40 @@ namespace GnorpWar
         // 카드 외곽선의 두께(px) — 이만큼 겹쳐 놓는다
         private const float Outline = 4f;
         private const string RepublicHeader = "원탁 회의 — 모두 얻었습니다";
-        // 국가 위기(RunState.UpgradeOffer.Crisis, 사용자 10/23) — 머리말(도트) 아래 읽는 글 한 줄(깔끔 — 카드 효과 글의 복제). 머리말은 그 한 줄만큼 위로 올린다
-        private const string CrisisHeader = "국가 위기";
-        private const string CrisisBody = "백성들이 새로운 국가 구조를 요구합니다. 하나를 고르십시오.";
 
-        private float _dimAlpha;
         private string _specialHeader;
-        private Vector2 _headerHome;
-        private Text _crisisBody;
+        // 국가 위기를 띄울 이벤트 장면 — 같은 씬에서 찾는다(Awake)
+        private EventVisitPopup _visit;
         private RunState.UpgradeOffer _shown;
         private float _shownAt;
+        // 판 열림 · 닫힘(UI/PopupMotion) — 어두운 판 위의 카드 · 머리말 · 건너뛰기를 묶은 판(실행 중 만든다)
+        private PopupMotion _motion;
+        // 카드 돌리기 — 새 카드 셋이 뜬 뒤 흐른 실제 시간 · 첫 카드가 나오기까지(판이 열리는 중이면 다 열린 뒤)
+        private float _dealClock, _dealDelay;
+        private CanvasGroup[] _cardGroups;
 
         private void Awake()
         {
-            _dimAlpha = _dim.color.a;
             _specialHeader = _header.text;
-            _headerHome = _header.rectTransform.anchoredPosition;
-            _crisisBody = CrisisLine();
+            _visit = FindAnyObjectByType<EventVisitPopup>(FindObjectsInactive.Include);
+            _cardGroups = new CanvasGroup[_cards.Length];
             for (int i = 0; i < _cards.Length; i++)
             {
                 int choice = i;
                 _cards[i].Button.onClick.AddListener(() => Choose(choice));
                 _cards[i].Nation = NationMark((RectTransform)_cards[i].Button.transform);
+                _cardGroups[i] = _cards[i].Button.gameObject.AddComponent<CanvasGroup>();
             }
             _skip.onClick.AddListener(Skip);
+            // 어두운 판과 같은 크기의 판을 끼워 카드 · 머리말 · 건너뛰기를 옮긴다(자리는 그대로) — 이 판이 내려앉고 어둠은 짙어진다
+            var sheet = (RectTransform)new GameObject("Sheet", typeof(RectTransform)).transform;
+            sheet.SetParent(_dim.transform, false);
+            sheet.anchorMin = Vector2.zero;
+            sheet.anchorMax = Vector2.one;
+            sheet.offsetMin = sheet.offsetMax = Vector2.zero;
+            foreach (Transform part in new Transform[] { _cardRow, _header.transform, _skip.transform })
+                part.SetParent(sheet, false);
+            _motion = PopupMotion.Attach(sheet, _dim);
         }
 
         // 카드 오른쪽 위 구석, 종족 테두리(NationFrame)의 모서리 「+」 장식 안쪽 — 원본 크기(Simple + Set Native Size, CLAUDE.md §5-1). 누르기를 가리지 않는다
@@ -89,24 +99,6 @@ namespace GnorpWar
             mark.raycastTarget = false;
             mark.enabled = false;
             return mark;
-        }
-
-        // 위기 글 한 줄 — 머리말의 원래 자리(같은 틀 · 가운데 정렬)에 놓는다. 글꼴 · 크기 · 색은 카드 효과 글 그대로
-        private Text CrisisLine()
-        {
-            Text line = Instantiate(_cards[0].Body, _header.transform.parent);
-            line.name = "CrisisBody";
-            RectTransform rect = line.rectTransform, header = _header.rectTransform;
-            rect.anchorMin = header.anchorMin;
-            rect.anchorMax = header.anchorMax;
-            rect.pivot = header.pivot;
-            rect.sizeDelta = header.sizeDelta;
-            rect.anchoredPosition = _headerHome;
-            line.alignment = TextAnchor.MiddleCenter;
-            line.horizontalOverflow = HorizontalWrapMode.Overflow;
-            line.text = CrisisBody;
-            line.enabled = false;
-            return line;
         }
 
         private void Skip()
@@ -135,24 +127,49 @@ namespace GnorpWar
 
         private void Update()
         {
-            bool block = RunState.PendingUpgrades.Count > 0 && !_replay.activeInHierarchy;
-            if (_dim.gameObject.activeSelf != block)
-                _dim.gameObject.SetActive(block);
+            // 국가 위기는 이벤트 장면으로 넘긴다 — 이 창은 뜨지 않는다(장면이 열려 있는 동안 · 닫히는 동안은 다시 열지 않는다)
+            bool crisis = RunState.PendingUpgrades.Count > 0 && RunState.PendingUpgrades[0].Crisis;
+            if (crisis && !_replay.activeInHierarchy && _visit != null && !_visit.Busy)
+                _visit.OpenCrisis(RunState.PendingUpgrades[0]);
+            // 멸망 보상도 이벤트 장면(UI/EventVisitPopup.OpenAftermath — 여는 쪽은 WorldManager)이 고르게 한다
+            bool fall = RunState.PendingUpgrades.Count > 0 && RunState.PendingUpgrades[0].Fall;
+            bool block = RunState.PendingUpgrades.Count > 0 && !crisis && !fall && !_replay.activeInHierarchy;
             if (!block)
             {
+                // 카드가 보이던 판은 닫힘 연출 뒤에 끈다(그동안 마지막 카드가 그대로 보인다) · 막기만 하던 판은 바로
+                if (_dim.gameObject.activeSelf && !_motion.Closing)
+                {
+                    if (_motion.Shown)
+                    {
+                        // 카드는 흐려지지 않고 판과 함께 올라갔다 사라진다 — 반투명이면 안쪽 검은 판 너머로 등급 색 바탕이 비쳐 카드가 그 색으로 번쩍인다
+                        foreach (CanvasGroup group in _cardGroups)
+                        {
+                            group.ignoreParentGroups = true;
+                            group.blocksRaycasts = false;
+                        }
+                        _motion.Close(() => _dim.gameObject.SetActive(false));
+                    }
+                    else
+                        _dim.gameObject.SetActive(false);
+                }
                 _shown = null;
                 return;
             }
+            if (!_dim.gameObject.activeSelf)
+                _dim.gameObject.SetActive(true);
             // 막기만 하는 동안(합치기 연출)에는 판이 투명하다
             bool cards = !_shop.MergePlaying;
-            _dim.color = new Color(_dim.color.r, _dim.color.g, _dim.color.b, cards ? _dimAlpha : 0f);
             if (_cardRow.gameObject.activeSelf != cards)
                 _cardRow.gameObject.SetActive(cards);
+            if (cards && !_motion.Shown)
+                _motion.Open();
+            _dealClock += Mathf.Min(Juice.RealDeltaTime, 1f / 30f);
+            Deal();
             if (!cards)
             {
+                _dim.color = new Color(_dim.color.r, _dim.color.g, _dim.color.b, 0f);
                 // 머리말은 카드와 함께 뜬다(공화정 항목은 합치기 연출 동안 이미 대기열에 있다)
                 _header.enabled = false;
-                _crisisBody.enabled = false;
                 // 건너뛰기도 카드와 함께 — 안 끄면 지난 지역 특수 고르기의 버튼이 합치기 연출 동안 남아 보인다
                 _skip.gameObject.SetActive(false);
                 _shown = null;
@@ -168,9 +185,7 @@ namespace GnorpWar
             _shown = offer;
             _shownAt = Time.unscaledTime;
             _header.enabled = offer.Rarity == BuildingRarity.Mythic || offer.Granted;
-            _header.text = offer.Granted ? RepublicHeader : offer.Crisis ? CrisisHeader : _specialHeader;
-            _crisisBody.enabled = offer.Crisis;
-            _header.rectTransform.anchoredPosition = _headerHome + (offer.Crisis ? new Vector2(0f, _header.rectTransform.sizeDelta.y) : Vector2.zero);
+            _header.text = offer.Granted ? RepublicHeader : _specialHeader;
             _skip.gameObject.SetActive(RunState.CanSkipUpgrade);
             _skipLabel.text = $"건너뛰기 <color={BuildingTooltip.NumberColor}>+{RunState.UpgradeSkipGold}</color>골드";
             int count = offer.Choices.Length;
@@ -203,6 +218,29 @@ namespace GnorpWar
                 }
                 card.Name.text = choice.DisplayName;
                 card.Body.text = BuildingTooltip.Highlight(choice.Describe(choice.ValueAt(offer.Rarity)));
+            }
+            // 새 카드 셋은 왼쪽부터 차례로 나온다 — 판이 열리는 중이면 다 열린 뒤에
+            _dealClock = 0f;
+            _dealDelay = _motion.Opening ? PopupMotion.OpenSeconds : 0f;
+            Deal();
+        }
+
+        // 카드 돌리기(손맛 K1) — 차례가 온 카드가 나타나며 진열 카드처럼 튄다(BattleConfig 「손맛 — 상점 · UI」의 진열 카드 튐 값). 차례 전 카드는 안 보이고 눌리지 않는다
+        private void Deal()
+        {
+            BattleConfig config = RunState.Config;
+            float stagger = config != null ? config.OfferPopStagger : 0f;
+            for (int i = 0; i < _cards.Length; i++)
+            {
+                float age = _dealClock - _dealDelay - i * stagger;
+                bool dealt = age >= 0f;
+                // 소리 자리(J6): 업그레이드 카드 튐(age가 0을 넘는 순간)
+                _cardGroups[i].ignoreParentGroups = false;
+                _cardGroups[i].alpha = dealt ? 1f : 0f;
+                _cardGroups[i].blocksRaycasts = dealt;
+                float pop = config == null || !dealt ? 1f : Juice.Punch(age, config.OfferPop * config.JuiceIntensity, 0f, Mathf.Max(0.001f, config.OfferPopSeconds));
+                var rect = (RectTransform)_cards[i].Button.transform;
+                rect.localScale = Vector3.one * (pop == 1f ? 1f : Juice.SnapScale(pop, rect.rect.width / UiHitRings.Pixel));
             }
         }
     }

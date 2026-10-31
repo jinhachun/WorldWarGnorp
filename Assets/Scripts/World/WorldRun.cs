@@ -95,6 +95,9 @@ namespace GnorpWar
         private readonly List<RunRecord.Loaded> _ghostPool = new List<RunRecord.Loaded>();
 
         public Ghost GhostOf(Lord lord) => _ghosts.TryGetValue(lord.Id, out Ghost ghost) ? ghost : null;
+        // 땅을 다 잃고 사라진 유령(정산이 _ghosts에서 뺀 것) — 사라진 뒤에도 닉네임을 읽는다(요약 · 결과 장면)
+        private readonly Dictionary<int, Ghost> _fallenGhosts = new Dictionary<int, Ghost>();
+        public Ghost FallenGhostOf(Lord lord) => _fallenGhosts.TryGetValue(lord.Id, out Ghost ghost) ? ghost : null;
         public int GhostCount => _ghosts.Count;
 
         // 영주의 국가 — 유령이면 그 기록의 국가, AI면 빌드 방향의 국가(나는 RunState.Nation)
@@ -287,6 +290,8 @@ namespace GnorpWar
                 if (!lord.Alive)
                 {
                     _towers.Remove(lord.Id);
+                    if (_ghosts.TryGetValue(lord.Id, out Ghost fallen))
+                        _fallenGhosts[lord.Id] = fallen;
                     _ghosts.Remove(lord.Id);   // 그 기록은 이번 런에 다시 쓰지 않는다
                 }
             foreach (Lord lord in created)

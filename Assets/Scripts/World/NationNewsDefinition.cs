@@ -15,12 +15,32 @@ namespace GnorpWar
         [SerializeField] private string _story = "";
         [SerializeField] private NewsChoice _first = new NewsChoice();
         [SerializeField] private NewsChoice _second = new NewsChoice();
+        [Tooltip("소식 장면의 무대(UI/EventVisitPopup.BuildNews) — Plain이면 내 영주 하나")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private NewsScene _scene;
 
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
+        public NewsScene Scene => _scene;
         public string DisplayName => _displayName;
         public string Story => _story;
         public NewsChoice Choice(int index) => index == 0 ? _first : _second;
+    }
+
+    // 소식 장면의 무대 — 그 소식의 이야기를 그린다(K2-3, 사용자 11/1 — 틀마다 하나씩 먼저)
+    public enum NewsScene
+    {
+        Plain,
+        Migrants,
+        Harvest,
+        Fire,
+        GoldMine,
+        Locust,
+        Caravan,
+        Master,
+        Scholar,
+        Alchemist,
+        Festival,
     }
 
     // 고르기 하나에 따라오는 기물 쪽 일 — 숫자 효과(골드 · 수입 · 리롤 · 칸 · 단계)와 같이 건다

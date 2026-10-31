@@ -148,6 +148,78 @@ namespace GnorpWar
         [Tooltip("지도에서 침략할 수 있는 땅의 표시 자리에 뜨는 칼(UI/WorldMapView) — 「침략」 버튼과 같은 그림, 원본 크기")]
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private Sprite _invadeMark;
+        [Tooltip("지도 반란 — 들고일어난 백성 무리(UI/WorldLords.Rebel). 흰색, 막대 끝에 대화재의 불길을 얹어 횃불이 된다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _mapRebels;
+        [Tooltip("지도 영주 소멸 — 사라진 영주 자리에 남는 쓰러진 깃발(UI/WorldLords). 영주 색으로 칠하고 약 1초에 걸쳐 흐려진다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _mapFallenFlag;
+        [Tooltip("유령 영주(다른 플레이어의 기록) 표시 — 지도 머리 위 이름 옆(UI/WorldLords). 흰색")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _ghostBadge;
+        [Tooltip("국가 위기 장면에서 백성이 든 팻말 — 판 안쪽 검은 칸에 업그레이드 아이콘이 원본 크기로 들어간다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _placard;
+        [Tooltip("통일 장면(UI/EventVisitPopup.OpenEnd)에서 내 영주 머리에 내려앉는 왕관(임시 그림, 덮어쓰면 반영)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _eventCrown;
+        [Tooltip("나라 소식 장면(UI/EventVisitPopup.BuildNews) 그림(임시 그림, 덮어쓰면 반영) — 이주민 행렬: 이주민들(돌려 쓴다) · 성문 · 통행세 상자")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _newsMigrants = new Sprite[0];
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsGate;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsTollBox;
+        [Tooltip("풍년! — 밭 · 볏단 · 수레(피난민 이벤트의 수레와 같은 그림)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsField;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsCart;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsSheaf;
+        [Tooltip("대화재 — 물동이 · 불길(장마다 차례로 바뀐다 — 이펙트라 색을 쓴다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsBucket;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _newsFlame = new Sprite[0];
+        [Tooltip("금광 발견 — 금덩이 더미 · 갱도 받침목 틀(굴은 이벤트 방문의 굴 그림)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsGoldPile;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsMineFrame;
+        [Tooltip("황충 발생 — 메뚜기(여럿 반복) · 돈자루(명장 방문도 쓴다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsLocust;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsMoneyBag;
+        [Tooltip("대상단 도착 — 상인(공용 인물) · 귀한 상자 · 짐 더미")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsMerchant;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsRareChest;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsBundles;
+        [Tooltip("학자 등용 — 학자(공용 인물) · 벼슬 패 · 책")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsScholar;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsTablet;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsBooks;
+        [Tooltip("연금술사의 제안 — 연금술사(공용 인물) · 솥 · 연기(장마다 차례로 — 이펙트라 회색)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsAlchemist;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsCauldron;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _newsSmoke = new Sprite[0];
+        [Tooltip("건국 기념제 — 폭죽(작게 → 크게, 이펙트라 색을 쓴다) · 선물 상자 · 훈장")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite[] _newsFirework = new Sprite[0];
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsGift;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private Sprite _newsMedal;
 
         [Header("영주 닉네임 — 지도의 영주 그림 위 · 왼쪽 패널 · 승리 글(임시 이름, 사용자 10/12)")]
         [Tooltip("이름 목록(값은 에셋에 — 흔한 외국 이름의 한글 표기, 사용자 10/12) — 한 런에서 영주마다 하나씩 겹치지 않게 돌려 쓰고, 다 쓰면 뒤에 숫자를 붙인다(제임스2)")]
@@ -212,6 +284,35 @@ namespace GnorpWar
         public Sprite TempProfilePhoto => _tempProfilePhoto;
         public Sprite PlayerProfilePhoto => _playerProfilePhoto;
         public Sprite InvadeMark => _invadeMark;
+        public Sprite MapRebels => _mapRebels;
+        public Sprite MapFallenFlag => _mapFallenFlag;
+        public Sprite GhostBadge => _ghostBadge;
+        public Sprite Placard => _placard;
+        public Sprite EventCrown => _eventCrown;
+        public Sprite[] NewsMigrants => _newsMigrants;
+        public Sprite NewsGate => _newsGate;
+        public Sprite NewsTollBox => _newsTollBox;
+        public Sprite NewsField => _newsField;
+        public Sprite NewsCart => _newsCart;
+        public Sprite NewsSheaf => _newsSheaf;
+        public Sprite NewsBucket => _newsBucket;
+        public Sprite[] NewsFlame => _newsFlame;
+        public Sprite NewsGoldPile => _newsGoldPile;
+        public Sprite NewsMineFrame => _newsMineFrame;
+        public Sprite NewsLocust => _newsLocust;
+        public Sprite NewsMoneyBag => _newsMoneyBag;
+        public Sprite NewsMerchant => _newsMerchant;
+        public Sprite NewsRareChest => _newsRareChest;
+        public Sprite NewsBundles => _newsBundles;
+        public Sprite NewsScholar => _newsScholar;
+        public Sprite NewsTablet => _newsTablet;
+        public Sprite NewsBooks => _newsBooks;
+        public Sprite NewsAlchemist => _newsAlchemist;
+        public Sprite NewsCauldron => _newsCauldron;
+        public Sprite[] NewsSmoke => _newsSmoke;
+        public Sprite[] NewsFirework => _newsFirework;
+        public Sprite NewsGift => _newsGift;
+        public Sprite NewsMedal => _newsMedal;
         public string NationDescription(BuildingNation nation) => (int)nation < _nationDescriptions.Length ? _nationDescriptions[(int)nation] : "";
         public int GoldPerLand => _goldPerLand;
         public int ShopTierMax => _shopTierMax;

@@ -218,6 +218,45 @@ MonoBehaviour:
   _tempProfilePhoto: {fileID: 21300000, guid: d1ed7f78adbe45ba817cd805b80452b8, type: 3}
   _playerProfilePhoto: {fileID: 21300000, guid: 4febb8909fdc4ea88879a31785361c17, type: 3}
   _invadeMark: {fileID: 21300000, guid: 741ec81907ccfe9498789a463869cf99, type: 3}
+  _mapRebels: {fileID: 21300000, guid: e18b6dc7962b4e629a5495b8fbc2194c, type: 3}
+  _mapFallenFlag: {fileID: 21300000, guid: e236a8411266448d92ce83ba05cb10e4, type: 3}
+  _ghostBadge: {fileID: 21300000, guid: 352e3f5f75614b38bb865d11fc9ce84d, type: 3}
+  _placard: {fileID: 21300000, guid: 3d7ab5da79e3410b9d070c31065610f3, type: 3}
+  _eventCrown: {fileID: 21300000, guid: d6db6a0e54864ac59bbd830a12cb2b7a, type: 3}
+  _newsMigrants:
+  - {fileID: 21300000, guid: 3e27537251a5407b91872a4f5a5818af, type: 3}
+  - {fileID: 21300000, guid: 2eacdc2bffe04e1eb5192dc80b26d089, type: 3}
+  _newsGate: {fileID: 21300000, guid: 50bd255cf12c4d1684bf869a05a69961, type: 3}
+  _newsTollBox: {fileID: 21300000, guid: 73180f9023794329bce954732eb0ee7c, type: 3}
+  _newsField: {fileID: 21300000, guid: 2e56f96542af43d3b8951fee540f54b4, type: 3}
+  _newsCart: {fileID: 21300000, guid: d41e588475d4409f91c1f0f34c762e7e, type: 3}
+  _newsSheaf: {fileID: 21300000, guid: 98935267d3a84f30a553893563b87ce5, type: 3}
+  _newsBucket: {fileID: 21300000, guid: 6555291eaf404da39cd7e513cc4d2a7d, type: 3}
+  _newsFlame:
+  - {fileID: 21300000, guid: c5fa0b81f724463e848768b553eb25f9, type: 3}
+  - {fileID: 21300000, guid: 35086bf19e4240b1a824ab332f93d725, type: 3}
+  - {fileID: 21300000, guid: b624e72c1a4840509c1ca1b817f33d32, type: 3}
+  _newsGoldPile: {fileID: 21300000, guid: 6f154098950b4919ae6d3982af661c68, type: 3}
+  _newsMineFrame: {fileID: 21300000, guid: b50e1a8c8f504170a5e3b00a92c53d04, type: 3}
+  _newsLocust: {fileID: 21300000, guid: 95dc54239975476db9b7c26666a6cf11, type: 3}
+  _newsMoneyBag: {fileID: 21300000, guid: cc065111b1164cac823e193d2c976165, type: 3}
+  _newsMerchant: {fileID: 21300000, guid: 2fe739f493a24bc4813c57fdd4373ec9, type: 3}
+  _newsRareChest: {fileID: 21300000, guid: 3aa1846303d842ecad828d4abad56096, type: 3}
+  _newsBundles: {fileID: 21300000, guid: 8a8f4cc065b249d3a8fec13042e522bc, type: 3}
+  _newsScholar: {fileID: 21300000, guid: ccb72e1d6cef4e0cadcc9652487d1136, type: 3}
+  _newsTablet: {fileID: 21300000, guid: b6361db5150a4d43889e23c8b856c13c, type: 3}
+  _newsBooks: {fileID: 21300000, guid: 2e2874a9c4b741e5bf8550f436cbb217, type: 3}
+  _newsAlchemist: {fileID: 21300000, guid: a685b7666df344e3ba2245ff84946a56, type: 3}
+  _newsCauldron: {fileID: 21300000, guid: e3c7cd37efd04cca95cc4994d66a2686, type: 3}
+  _newsSmoke:
+  - {fileID: 21300000, guid: 71fd00c2b82548b28a851deed99d3cd2, type: 3}
+  - {fileID: 21300000, guid: 148532cf67274b57b7233f5c0f9d2041, type: 3}
+  - {fileID: 21300000, guid: 336a93d2bc3f436d9d317d0d83a19990, type: 3}
+  _newsFirework:
+  - {fileID: 21300000, guid: 0e9fd276685a4ef7a4c827533aca6cb6, type: 3}
+  - {fileID: 21300000, guid: 79070012302b4f71a4180e5c839faa25, type: 3}
+  _newsGift: {fileID: 21300000, guid: 0aaaf9d313bf48fcba5ce15fe6f47caf, type: 3}
+  _newsMedal: {fileID: 21300000, guid: 0e5c7f68bc0f4e689353b64bb992ce88, type: 3}
   _lordNames:
   - "\uC81C\uC784\uC2A4"
   - "\uBA54\uB9AC"

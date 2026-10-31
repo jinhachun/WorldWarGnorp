@@ -72,7 +72,7 @@ namespace GnorpWar
         // 영주의 닉네임(표시용 — 규칙은 읽지 않는다). 런 동안 영주 번호에 고정이고, 런마다 목록의 다른 자리에서 시작한다
         // 유령 영주는 그 기록의 닉네임(비었으면 AI처럼 목록의 이름)
         public static string NameOf(Lord lord)
-            => World?.GhostOf(lord) is WorldRun.Ghost ghost && !string.IsNullOrEmpty(ghost.Record.Nickname) ? ghost.Record.Nickname : _config.World.LordName(lord.Id, _nameOffset);
+            => (World?.GhostOf(lord) ?? World?.FallenGhostOf(lord)) is WorldRun.Ghost ghost && !string.IsNullOrEmpty(ghost.Record.Nickname) ? ghost.Record.Nickname : _config.World.LordName(lord.Id, _nameOffset);
         private static int _nameOffset;
         // 적 진영 = 침략한 영주, 고르기 전에는 미리 보는 땅의 영주(없으면 흰색)
         public static Color LordColor(Team team)
@@ -350,14 +350,14 @@ namespace GnorpWar
             {
                 while (fallen.Count > UpgradeChoices)
                     fallen.RemoveAt(Random.Range(0, fallen.Count));
-                Pending.Add(new UpgradeOffer { Rarity = BuildingRarity.Mythic, Choices = fallen.ToArray() });
+                Pending.Add(new UpgradeOffer { Rarity = BuildingRarity.Mythic, Choices = fallen.ToArray(), Fall = true });
                 UpgradesChanged?.Invoke();
             }
             ApplyBattleResult(won ? Player : _opponentTower, won ? _opponentTower : Player);
         }
 
         // 국가 위기(사용자 10/23) — 목숨이 0이 되는 순간 런에 한 번. 이번 런 지도에 놓이지 않은 지역 특수(WorldRun.UnplacedSpecials) 중 내가 안 가진 것 무작위 셋에서 하나를 고른다.
-        // 고르기 창은 지도로 돌아와 AI 턴 재생이 끝난 뒤에 뜨고(UI/UpgradePicker), 건너뛸 수 없다. 후보가 없으면 위기 상태만 된다
+        // 고르기 장면은 지도로 돌아와 AI 턴 재생이 끝난 뒤에 뜨고(UI/UpgradePicker → UI/EventVisitPopup.OpenCrisis), 건너뛸 수 없다. 후보가 없으면 위기 상태만 된다
         private static void OfferCrisis()
         {
             // 국가주의는 뺀다 — 목숨 0이라 효과가 0이다(총괄 결정 10/23)
@@ -555,13 +555,20 @@ namespace GnorpWar
                 return events;
             }
             int moved = 0, vanished = 0, before = state.Lords.Count;
+            // 사라진 유령 영주의 닉네임 · 선동가가 부추겨 반란이 난 영주의 이름 — 요약에 쓴다(정산 전에 읽는다)
+            var ghosts = new System.Collections.Generic.List<string>();
+            var incited = new System.Collections.Generic.List<string>();
             World.AiPhase((attacker, target, region, won) =>
             {
                 events.Add(new WorldEvent { Lord = attacker.Id, Region = region, Won = won });
                 if (won)
                     moved++;
                 if (!target.Alive)
+                {
                     vanished++;
+                    if (World.GhostOf(target) != null)
+                        ghosts.Add(NameOf(target));
+                }
             });
             // 반란 — 정산 전에 누가 어느 땅을 들고 무너지는지 적어 두고, 정산 뒤에 그 땅의 새 영주를 읽는다
             int invasions = events.Count;
@@ -574,6 +581,8 @@ namespace GnorpWar
                     if (state.Owner[region] == lord.Id)
                         regions.Add(region);
                 events.Add(new WorldEvent { Rebellion = true, Lord = lord.Id, Regions = regions.ToArray() });
+                if (lord.Incited)
+                    incited.Add(NameOf(lord));
             }
             World.Settle();
             for (int i = invasions; i < events.Count; i++)
@@ -598,12 +607,19 @@ namespace GnorpWar
             TurnSummary = !coalition && state.Coalitions.Count > 0 ? $"남은 연합은 {state.AiLords}개이고, 가장 큰 연합의 땅은 {largest}개입니다."
                 : $"영주들의 침략으로 땅 {moved}개의 주인이 바뀌었습니다.\n"
                 + (vanished > 0 ? $"땅을 모두 잃은 영주 {vanished}명이 사라졌습니다.\n" : "")
+                + (ghosts.Count > 0 ? $"{Names(ghosts)}의 기록이 사라졌습니다.\n" : "")
                 + (rebels > 0 ? $"반란이 {rebels}번 일어나 새 영주 {risen}명이 들어섰습니다.\n" : "")
+                + (incited.Count > 0 ? $"선동가가 부추긴 {Names(incited)}의 땅에서 반란이 났습니다.\n" : "")
                 + (coalition
                     ? $"남은 영주 {merged}명이 연합 {formed.Count}개로 뭉쳤습니다.\n가장 큰 연합의 땅은 {largest}개입니다."
                     : $"남은 영주는 {state.AiLords}명이고, 가장 큰 영주의 땅은 {largest}개입니다.");
             return events;
         }
+
+        // 요약 줄의 이름들 — 셋까지 쓰고 나머지는 「외 N명」(한 줄을 넘지 않게)
+        private static string Names(System.Collections.Generic.List<string> names)
+            => names.Count <= SummaryNames ? string.Join(", ", names) : $"{string.Join(", ", names.GetRange(0, SummaryNames))} 외 {names.Count - SummaryNames}명";
+        private const int SummaryNames = 3;
 
         // ShopAs로 도는 탑의 국가 — 진열의 국가 비율(HomeOffer)이 읽는다
         private static BuildingNation _shopNation;
@@ -920,8 +936,10 @@ namespace GnorpWar
             public UpgradeDefinition[] Choices;
             // 공화정 — 후보를 이미 모두 얻었다. 화면은 보여 주기만 하고, 닫아도(ChooseUpgrade) 다시 얻지 않는다
             public bool Granted;
-            // 국가 위기(OfferCrisis) — 화면은 위기 머리말을 쓰고 건너뛰기를 숨긴다
+            // 국가 위기(OfferCrisis) — 화면은 카드 창 대신 이벤트 장면(UI/EventVisitPopup.OpenCrisis)으로 띄우고, 건너뛸 수 없다
             public bool Crisis;
+            // 멸망 보상(FinishBattle) — 화면은 카드 창 대신 전투 결과 장면(UI/EventVisitPopup.OpenAftermath)으로 띄운다. 건너뛸 수 있다
+            public bool Fall;
         }
 
         private const int UpgradeChoices = 3;

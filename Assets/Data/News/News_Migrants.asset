@@ -37,3 +37,4 @@ MonoBehaviour:
     _tierAdvance: 0
     _action: 0
     _chance: 0
+  _scene: 1

@@ -37,6 +37,8 @@ namespace GnorpWar
         private const int FigureScale = 4;
         private static readonly Color Faded = new Color(1f, 1f, 1f, 0.35f);
         private const string UnknownLine = "가 봐야 압니다";
+        // 유령 영주의 땅 — 이름 아래 회색 상태 줄(사용자 11/1)
+        public const string GhostLine = "다른 플레이어의 기록";
         // 프리팹 UI_LandCard 안 왕관 그림 — 이 컴포넌트의 참조는 씬에 있어 이름으로 찾는다
         private const string LandsIconName = "LandsIcon";
 
@@ -166,6 +168,8 @@ namespace GnorpWar
                 figure.anchoredPosition = new Vector2(0f, -(up - down) * 0.5f * FigureScale);
                 WorldLords.Figure(figure, lordBody, _lordFlag, WorldLords.PhotoOf(lord.Id), RunState.ColorOf(lord), FigureScale);
                 _name.text = $"<size={NameSize}>{(mine ? "내 영지" : coalition ? RunState.NameOf(lord) + " 연합" : RunState.NameOf(lord))}</size>";
+                if (!mine && RunState.World.GhostOf(lord) != null)
+                    _name.text += $"\n<size={SubSize}>{Note(GhostLine)}</size>";
                 // 내 국가 · 땅 수는 위 줄과 왼쪽 패널에서 이미 읽힌다
                 owned = !mine;
                 if (owned)

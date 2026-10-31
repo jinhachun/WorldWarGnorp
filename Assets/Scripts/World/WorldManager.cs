@@ -8,7 +8,7 @@ namespace GnorpWar
     // 지도 씬 — 한 턴이 여기서 열리고 닫힌다(전투 씬 BattleManager의 짝). 씬이 뜰 때 RunState.Phase를 보고:
     // 지도 단계면 턴을 열고(BeginTurn — 씬을 오가도 턴당 한 번) 명령을 받는다: 땅을 눌러 고르고 「침략」(전투 씬으로) · 「상점」(지도 위 팝업 — 턴이 열릴 때 저절로 한 번 내려온다) · 「쉬기」.
     // 전투가 끝나 돌아왔거나(Aftermath) 쉬었으면 AI 영주들의 턴을 돌리고(EndTurn) 그 사건들을 지도에서 차례로 재생한 뒤 요약 → 「다음 턴」.
-    // 통일 · 게임 오버도 여기서 띄운다 → 「새 런」. 규칙은 RunState에, 그림은 UI/WorldMapView · UI/WorldSidePanel에 있다
+    // 통일 · 게임 오버도 여기서 띄운다(이벤트 장면 UI/EventVisitPopup.OpenEnd) → 「새 런」. 규칙은 RunState에, 그림은 UI/WorldMapView · UI/WorldSidePanel에 있다
     public class WorldManager : MonoBehaviour
     {
         public const string SceneName = "World";
@@ -17,6 +17,9 @@ namespace GnorpWar
         // AI 턴 재생 — 반란 · 연합 하나를 보여 주는 시간(초) · 침략 걸음들이 다 출발하기까지의 상한(초, 침략이 많으면 출발 간격이 짧아진다)
         private const float EventSeconds = 0.15f;
         private const float ReplaySeconds = 3f;
+        // 반란 — 그 턴의 반란은 모두 한꺼번에 이 시간(초) 동안 벌어진다(사용자 11/1). 무리가 솟은 뒤 땅 색이 바뀌는 때(초, 그 안에서)
+        private const float RebellionSeconds = 0.6f;
+        private const float RebellionApply = 0.25f;
         // 침략 걸음이 잇달아 출발하는 간격(초) · 땅 색이 도착보다 얼마나 먼저 바뀌는지(초)
         private const float MarchStagger = 0.12f;
         private const float ApplyLead = 0.02f;
@@ -49,7 +52,7 @@ namespace GnorpWar
         [SerializeField] private ShopPanel _shopPopup;
         [Tooltip("AI 턴을 재생하는 동안 화면 전체를 덮는 투명한 판 — 누르면 재생을 건너뛴다")]
         [SerializeField] private Button _skip;
-        [Tooltip("왼쪽 패널의 알림(고른 땅 자리) — AI 턴 · 그 요약 · 통일 · 게임 오버와 「다음 턴」 · 「새 런」")]
+        [Tooltip("왼쪽 패널의 알림(고른 땅 자리) — AI 턴 · 그 요약과 「다음 턴」(통일 · 게임 오버는 이벤트 장면)")]
         [SerializeField] private GameObject _notice;
         [SerializeField] private Text _noticeTitle;
         [SerializeField] private Text _noticeBody;
@@ -100,6 +103,7 @@ namespace GnorpWar
                 Lord lord = RunState.World.State.Lords[id];
                 return lord.IsPlayer ? null : RunState.NameOf(lord);
             };
+            _map.Lords.IsGhost = id => RunState.World.GhostOf(RunState.World.State.Lords[id]) != null;
             _map.Clicked += Select;
             _invade.onClick.AddListener(Invade);
             _rest.onClick.AddListener(Rest);
@@ -118,6 +122,7 @@ namespace GnorpWar
             _noticeTitle.alignment = TextAnchor.MiddleCenter;
             _noticeBody.alignment = TextAnchor.UpperCenter;
             ((RectTransform)_next.transform).anchoredPosition = new Vector2(noticeWidth * 0.5f, ((RectTransform)_next.transform).anchoredPosition.y);
+            _noticeMotion = PopupMotion.Attach((RectTransform)_notice.transform);
             _nationCard.gameObject.SetActive(false);
             // 방문을 마쳤다(RunState.ChooseVisit · DeclineVisit가 효과 · 닫힘 · Phase = Aftermath까지) — 쉬기와 같은 길
             if (_visit != null)
@@ -148,6 +153,8 @@ namespace GnorpWar
 
             if (RunState.Phase == RunState.RunPhase.Aftermath)
             {
+                if (RunState.LastOutcome == RunState.Outcome.Win)
+                    _beaten = RunState.Opponent;
                 FellBeaten();
                 PlayAiTurn();
             }
@@ -330,7 +337,9 @@ namespace GnorpWar
             ShowNotice("영주들의 차례", "화면을 누르면 건너뜁니다.", null);
         }
 
-        // 왼쪽 패널의 알림 — 제목 · 읽는 글 · 버튼(next가 null이면 버튼 없이)
+        // 왼쪽 패널의 알림 — 제목 · 읽는 글 · 버튼(next가 null이면 버튼 없이). 꺼져 있다 켜질 때만 판이 내려앉는다(떠 있는 채 글만 바뀌면 그대로)
+        private PopupMotion _noticeMotion;
+
         private void ShowNotice(string title, string body, string next)
         {
             _noticeTitle.text = title;
@@ -338,7 +347,10 @@ namespace GnorpWar
             _next.gameObject.SetActive(next != null);
             if (next != null)
                 _nextLabel.text = next;
+            if (_notice.activeSelf)
+                return;
             _notice.SetActive(true);
+            _noticeMotion.Open();
         }
 
         // 재생 일정을 짠다 — 침략은 영주가 그 땅으로 걸어 들어가는 걸음(UI/WorldLords)이고, 여럿이 조금씩 어긋나 동시에 걷는다.
@@ -356,12 +368,23 @@ namespace GnorpWar
             _eventApplied = new bool[count];
             var lordFree = new Dictionary<int, float>();
             var regionFree = new Dictionary<int, float>();
-            float cursor = 0f;
+            float cursor = 0f, rebellion = -1f;
             _replayEnd = 0f;
             for (int i = 0; i < count; i++)
             {
                 WorldEvent e = _events[i];
-                if (e.Rebellion || e.Coalition)
+                if (e.Rebellion)
+                {
+                    if (rebellion < 0f)
+                    {
+                        rebellion = _replayEnd;
+                        cursor = _replayEnd += RebellionSeconds;
+                    }
+                    _eventStart[i] = rebellion;
+                    _eventApply[i] = rebellion + RebellionApply;
+                    continue;
+                }
+                if (e.Coalition)
                 {
                     _eventStart[i] = _eventApply[i] = _replayEnd;
                     cursor = _replayEnd += EventSeconds;
@@ -421,7 +444,7 @@ namespace GnorpWar
             ShowNotice("영주들의 차례", RunState.TurnSummary, "다음 턴");
         }
 
-        // 연합 결성 팝업을 띄울 연합들 — 고르기 창(UI/UpgradePicker — 멸망 보상 · 국가 위기)이 먼저 닫힌 뒤에 뜬다(Update)
+        // 연합 결성 팝업을 띄울 연합들 — 이긴 전투의 결과 장면(멸망 보상) · 국가 위기가 먼저 닫힌 뒤에 뜬다(Update)
         private List<WorldState.Coalition> _formed;
 
         private void ShowEnd()
@@ -430,20 +453,24 @@ namespace GnorpWar
             _stage = Stage.Summary;
             _selected = WorldMapView.None;
             _skip.gameObject.SetActive(false);
-            ShowNotice(RunState.Cleared ? "통일!" : "게임 오버",
-                RunState.Cleared ? $"턴 {_turn}에 모든 땅을 차지했습니다." : $"턴 {_turn}에 국가 위기를 넘기지 못하고 무너졌습니다.", "새 런");
+            // 왼쪽 알림 판이 아니라 이벤트 장면(UI/EventVisitPopup.OpenEnd) — 통일한 전투의 결과 장면(멸망 보상)이 먼저 닫힌 뒤에 뜬다(Update)
+            _notice.SetActive(false);
+            _ending = true;
         }
 
-        private void Next()
+        // 런의 끝 장면을 띄울 차례를 기다리는 중
+        private bool _ending;
+        // 이긴 전투의 결과 장면을 띄울 차례를 기다리는 중 — 방금 쓰러뜨린(물러나게 한) 영주
+        private Lord _beaten;
+
+        // 끝 장면의 「새 런」
+        private void NewRun()
         {
-            if (RunState.IsOver)
-            {
-                RunState.StartNew(_config);
-                SceneManager.LoadScene(SceneName);
-            }
-            else
-                BeginTurn();
+            RunState.StartNew(_config);
+            SceneManager.LoadScene(SceneName);
         }
+
+        private void Next() => BeginTurn();
 
         private void Update()
         {
@@ -473,7 +500,9 @@ namespace GnorpWar
                     if (!_eventStarted[i] && _replayClock >= _eventStart[i])
                     {
                         _eventStarted[i] = true;
-                        if (!e.Rebellion && !e.Coalition)
+                        if (e.Rebellion)
+                            _map.Lords.Rebel(e.Lord, e.Regions);
+                        else if (!e.Coalition)
                             _map.Lords.March(e.Lord, e.Region, e.Won);
                     }
                     // 연합은 재생에서 땅을 칠하지 않는다 — 연합 결성 팝업을 닫을 때 바뀐다(CloseCoalitions)
@@ -487,10 +516,21 @@ namespace GnorpWar
                 if (_replayClock >= _replayEnd)
                     FinishReplay();
             }
+            // 이긴 전투의 결과 장면(멸망 · 연합 물러남 · 연합 멸망 — 멸망 보상도 여기서 고른다) — AI 턴 재생이 끝난 뒤(요약 · 연합 결성 · 런의 끝보다 먼저)
+            if (_beaten != null && (_stage == Stage.Summary || _stage == Stage.Coalition) && !_visit.Busy)
+            {
+                _visit.OpenAftermath(_beaten);
+                _beaten = null;
+            }
             if (_stage == Stage.Coalition && _formed != null && RunState.PendingUpgrades.Count == 0 && !_visit.Busy)
             {
                 _visit.OpenCoalitions(_formed);
                 _formed = null;
+            }
+            if (_ending && RunState.PendingUpgrades.Count == 0 && !_visit.Busy)
+            {
+                _ending = false;
+                _visit.OpenEnd(RunState.Cleared, _turn, NewRun);
             }
 
             bool command = _stage == Stage.Command;

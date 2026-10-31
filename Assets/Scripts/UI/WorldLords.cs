@@ -236,8 +236,16 @@ namespace GnorpWar
                 if (lord == mine)
                     Destroy(fallen.Rect.gameObject);
                 else
-                    // 침략자가 달려들어 친 영주(Doomed)는 친 쪽의 반대로, 그 밖(반란 · 재생 건너뛰기)은 아무 쪽으로
-                    Throw(fallen.Rect, fallen.Doomed && _threats.TryGetValue(lord, out Vector2 from) ? fallen.Cell.x - from.x : 0f, fallen.Doomed);
+                {
+                    // 섰던 자리에 그 영주 색의 쓰러진 깃발이 남았다가 흐려진다(사용자 11/1)
+                    DropFlag(fallen.Rect.anchoredPosition, lord, colorOf(lord));
+                    // 침략자가 달려들어 친 영주(Doomed)는 친 쪽의 반대로, 반란 무리에 밀려난 영주는 무리의 반대로(무리에 맞는다), 그 밖(재생 건너뛰기)은 아무 쪽으로
+                    if (_rebelFrom.TryGetValue(lord, out Vector2 mob))
+                        Throw(fallen.Rect, fallen.Cell.x - mob.x, true);
+                    else
+                        Throw(fallen.Rect, fallen.Doomed && _threats.TryGetValue(lord, out Vector2 from) ? fallen.Cell.x - from.x : 0f, fallen.Doomed);
+                    _rebelFrom.Remove(lord);
+                }
                 _walkers.Remove(lord);
             }
             for (int region = 0; region < owner.Length; region++)
@@ -257,8 +265,15 @@ namespace GnorpWar
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.sizeDelta = Vector2.zero;
             RectTransform photo = Figure(rect, BodyOf(lord), _flag, PhotoOf(lord), color, PixelScale);
-            var walker = new Walker { Lord = home, Rect = rect, Photo = photo, Label = NameLabel(rect, NameOf?.Invoke(lord), lord == _pointed), Cell = Scatter(home, region), Rest = RestMin + (float)_random.NextDouble() * (RestMax - RestMin) };
+            var walker = new Walker { Lord = home, Rect = rect, Photo = photo, Label = NameLabel(rect, NameOf?.Invoke(lord), lord == _pointed, IsGhost != null && IsGhost(lord)), Cell = Scatter(home, region), Rest = RestMin + (float)_random.NextDouble() * (RestMax - RestMin) };
             Place(walker, 1f);
+            // 반란 무리가 선 땅에 들어선 새 영주는 땅에서 솟는다 — 솟는 동안은 걷지 않는다
+            if (_rebelRegions.Contains(region))
+            {
+                walker.Grace = RiseSteps * RiseStep;
+                _risers.Add(new Riser { Rect = rect, At = rect.anchoredPosition });
+                rect.anchoredPosition = rect.anchoredPosition + new Vector2(0f, -RiseSteps * PixelScale);
+            }
             return walker;
         }
 
@@ -278,8 +293,12 @@ namespace GnorpWar
         // 영주 번호 → 머리 위에 띄울 닉네임(null이면 안 띄운다 — 나). 지도를 만든 쪽(WorldManager)이 넣는다
         public System.Func<int, string> NameOf;
 
-        // 머리 위 닉네임 — 도트 폰트 12, 검은 테두리(어느 채움 색 위에서도 읽히게). name이 null이면 만들지 않는다. 가리킨 영주의 것만 보인다(Point)
-        private RectTransform NameLabel(RectTransform parent, string name, bool shown)
+        // 영주 번호 → 유령 영주(다른 플레이어의 기록)인가 — 이름 옆에 표시를 단다. 지도를 만든 쪽(WorldManager)이 넣는다
+        public System.Func<int, bool> IsGhost;
+
+        // 머리 위 닉네임 — 도트 폰트 12, 검은 테두리(어느 채움 색 위에서도 읽히게). name이 null이면 만들지 않는다. 가리킨 영주의 것만 보인다(Point).
+        // ghost면 이름 왼쪽에 유령 표시(WorldConfig 「유령 영주 표시」, 원본의 2배 — 글자 높이 12px에 맞춘다)
+        private RectTransform NameLabel(RectTransform parent, string name, bool shown, bool ghost)
         {
             if (name == null)
                 return null;
@@ -297,6 +316,12 @@ namespace GnorpWar
             var outline = label.GetComponent<Outline>();
             outline.effectColor = Color.black;
             outline.effectDistance = new Vector2(1f, 1f);
+            Sprite badge = RunState.Config.World.GhostBadge;
+            if (ghost && badge != null)
+            {
+                Image mark = Part(label.rectTransform, badge, Vector2.zero, Color.white, true, false, GhostBadgeScale);
+                mark.rectTransform.anchoredPosition = new Vector2(-Mathf.Round(label.preferredWidth * 0.5f) - GhostBadgeGap - badge.rect.width * GhostBadgeScale * 0.5f, 0f);
+            }
             label.gameObject.SetActive(shown);
             return label.rectTransform;
         }
@@ -342,7 +367,7 @@ namespace GnorpWar
         }
 
         // 그림 한 겹 — 원본 크기의 정수배(scale). outline이면 검은 테두리를 두르고, mirror면 좌우로 뒤집어 그린다
-        private static void Part(RectTransform parent, Sprite sprite, Vector2 position, Color color, bool outline, bool mirror, int scale)
+        private static Image Part(RectTransform parent, Sprite sprite, Vector2 position, Color color, bool outline, bool mirror, int scale)
         {
             var image = new GameObject(sprite.name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
             image.transform.SetParent(parent, false);
@@ -356,7 +381,7 @@ namespace GnorpWar
             if (mirror)
                 image.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
             if (!outline)
-                return;
+                return image;
             // 테두리는 가로 · 세로 두 번 — Outline 하나는 대각선 네 방향만 덮어서 깃발 끝 같은 뾰족한 픽셀의 옆이 빈다. 둘을 겹치면 둘레 여덟 방향이 다 덮인다
             foreach (Vector2 distance in new[] { new Vector2(scale, 0f), new Vector2(0f, scale) })
             {
@@ -364,6 +389,7 @@ namespace GnorpWar
                 edge.effectColor = Color.black;
                 edge.effectDistance = distance;
             }
+            return image;
         }
 
         // ── 죽은 영주(땅을 다 잃음)는 전투의 시체(Fx/CorpseFx)처럼 날아간다(사용자 10/12) — 친 쪽의 반대로 비스듬히 위로, 빙글 돌며 포물선으로.
@@ -571,6 +597,169 @@ namespace GnorpWar
             }
         }
 
+        // ── 반란(사용자 11/1) — 무너지는 영주의 땅마다 횃불 든 백성 무리(WorldConfig 「지도 반란」 + 대화재의 불길)가 땅에서 솟아 들썩인다.
+        // 옛 영주는 무리에 맞아 반대쪽으로 날아가고(Sync), 그 땅에 들어선 새 영주는 땅에서 솟는다(NewWalker). 움직임은 원본 1px씩 계단으로
+        private const int RiseSteps = 3;
+        private const float RiseStep = 0.05f;
+        private const float BobStep = 0.1f;
+        private const float FlameStep = 0.1f;
+        private const float MobSeconds = 1.2f, MobFadeSeconds = 0.3f;
+        // 쓰러진 깃발이 흐려지는 시간(초) — 1/4씩 네 번
+        private const float FlagFadeSeconds = 1f;
+        private const int FadeSteps = 4;
+        // 유령 표시 — 원본의 몇 배 · 이름과의 사이(px)
+        private const int GhostBadgeScale = 2;
+        private const float GhostBadgeGap = 3f;
+
+        private class Mob
+        {
+            public RectTransform Rect;
+            public Vector2 At;
+            public float Age;
+            public Image[] Images;
+            public Image[] Flames;
+            public int Region;
+        }
+
+        private class Riser
+        {
+            public RectTransform Rect;
+            public Vector2 At;
+            public float Age;
+        }
+
+        private class FallenFlag
+        {
+            public Image Image;
+            public float Age;
+        }
+
+        private readonly List<Mob> _mobs = new List<Mob>();
+        private readonly List<Riser> _risers = new List<Riser>();
+        private readonly List<FallenFlag> _flags = new List<FallenFlag>();
+        // 무리가 선 땅(새 영주가 솟는 자리) · 무리에 밀려날 영주 → 무리가 선 칸
+        private readonly HashSet<int> _rebelRegions = new HashSet<int>();
+        private readonly Dictionary<int, Vector2> _rebelFrom = new Dictionary<int, Vector2>();
+
+        // lord의 땅 regions에서 반란이 일어난다 — 땅 색이 바뀌기(WorldEvent.Apply → Sync) 조금 전에 부른다
+        public void Rebel(int lord, int[] regions)
+        {
+            WorldConfig world = RunState.Config.World;
+            if (world.MapRebels == null || regions.Length == 0)
+                return;
+            foreach (int region in regions)
+            {
+                var rect = (RectTransform)new GameObject("Rebels", typeof(RectTransform)).transform;
+                rect.SetParent(transform, false);
+                rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+                rect.sizeDelta = Vector2.zero;
+                // 뿌리 = 무리의 왼쪽 아래(발이 영주 그림의 발과 같은 높이) — 홀수 폭 그림이 반 픽셀에 걸리지 않게 왼쪽 아래 기준으로 둔다
+                Vector2 spot = _spots[region];
+                Vector2 at = new Vector2(Mathf.Round(spot.x * _scale) - Mathf.Floor(world.MapRebels.rect.width * PixelScale * 0.5f), -Mathf.Round(spot.y * _scale) - BodyHalfPx);
+                var images = new List<Image> { Corner(Part(rect, world.MapRebels, Vector2.zero, Color.white, true, false, PixelScale), Vector2.zero) };
+                // 횃불 — 무리 양 끝 사람이 든 막대(원본 1 · 9열) 끝에 대화재의 불길(원본 크기)
+                var flames = new List<Image>();
+                if (world.NewsFlame.Length > 0)
+                    foreach (int column in new[] { 1, 9 })
+                    {
+                        Sprite flame = world.NewsFlame[0];
+                        Image image = Corner(Part(rect, flame, Vector2.zero, Color.white, false, false, 1),
+                            new Vector2(Mathf.Round((column + 0.5f) * PixelScale - flame.rect.width * 0.5f), world.MapRebels.rect.height * PixelScale - 1f));
+                        flames.Add(image);
+                        images.Add(image);
+                    }
+                rect.anchoredPosition = at + new Vector2(0f, -RiseSteps * PixelScale);
+                _mobs.Add(new Mob { Rect = rect, At = at, Images = images.ToArray(), Flames = flames.ToArray(), Region = region });
+                _rebelRegions.Add(region);
+            }
+            _rebelFrom[lord] = _spots[regions[0]];
+        }
+
+        // 그림 한 겹을 왼쪽 아래 기준으로 옮긴다(홀수 크기도 픽셀 칸에 맞는다)
+        private static Image Corner(Image image, Vector2 position)
+        {
+            image.rectTransform.pivot = Vector2.zero;
+            image.rectTransform.anchoredPosition = position;
+            return image;
+        }
+
+        // 사라진 영주가 섰던 자리(at = 몸 한가운데, px)에 그 영주 색의 쓰러진 깃발 — 다른 그림들 아래에 깔린다
+        private void DropFlag(Vector2 at, int lord, Color color)
+        {
+            Sprite sprite = RunState.Config.World.MapFallenFlag;
+            if (sprite == null)
+                return;
+            var rect = (RectTransform)new GameObject("FallenFlag", typeof(RectTransform)).transform;
+            rect.SetParent(transform, false);
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.sizeDelta = Vector2.zero;
+            rect.anchoredPosition = new Vector2(Mathf.Round(at.x) - PixelScale, Mathf.Round(at.y - BodyOf(lord).rect.height * PixelScale * 0.5f));
+            // 지도의 땅 겹들 위, 영주 그림들 아래 — 가장 아래에 있는 영주 그림의 자리로(이 컴포넌트는 지도 오브젝트에 붙어 있어 맨 앞으로 보내면 땅 아래에 묻힌다)
+            int below = rect.GetSiblingIndex();
+            foreach (Walker walker in _walkers.Values)
+                below = Mathf.Min(below, walker.Rect.GetSiblingIndex());
+            rect.SetSiblingIndex(below);
+            _flags.Add(new FallenFlag { Image = Corner(Part(rect, sprite, Vector2.zero, color, true, false, PixelScale), Vector2.zero) });
+        }
+
+        private void StepRebels(float dt)
+        {
+            for (int i = _mobs.Count - 1; i >= 0; i--)
+            {
+                Mob mob = _mobs[i];
+                mob.Age += dt;
+                if (mob.Age >= MobSeconds + MobFadeSeconds)
+                {
+                    Destroy(mob.Rect.gameObject);
+                    _rebelRegions.Remove(mob.Region);
+                    _mobs.RemoveAt(i);
+                    continue;
+                }
+                // 솟기 → 들썩이기(1px 위아래) → 흐려지기
+                int risen = Mathf.Min(RiseSteps, Mathf.FloorToInt(mob.Age / RiseStep));
+                int bob = risen == RiseSteps ? Mathf.FloorToInt(mob.Age / BobStep) % 2 : 0;
+                mob.Rect.anchoredPosition = mob.At + new Vector2(0f, (risen - RiseSteps + bob) * PixelScale);
+                Sprite[] frames = RunState.Config.World.NewsFlame;
+                foreach (Image flame in mob.Flames)
+                    flame.sprite = frames[Mathf.FloorToInt(mob.Age / FlameStep) % frames.Length];
+                float alpha = mob.Age < MobSeconds ? 1f : 1f - Mathf.Ceil((mob.Age - MobSeconds) / MobFadeSeconds * FadeSteps) / FadeSteps;
+                foreach (Image image in mob.Images)
+                    image.color = new Color(1f, 1f, 1f, alpha);
+            }
+            for (int i = _risers.Count - 1; i >= 0; i--)
+            {
+                Riser riser = _risers[i];
+                riser.Age += dt;
+                int risen = Mathf.Min(RiseSteps, Mathf.FloorToInt(riser.Age / RiseStep));
+                if (riser.Rect == null || risen == RiseSteps)
+                {
+                    if (riser.Rect != null)
+                        riser.Rect.anchoredPosition = riser.At;
+                    _risers.RemoveAt(i);
+                    continue;
+                }
+                riser.Rect.anchoredPosition = riser.At + new Vector2(0f, (risen - RiseSteps) * PixelScale);
+            }
+            for (int i = _flags.Count - 1; i >= 0; i--)
+            {
+                FallenFlag flag = _flags[i];
+                flag.Age += dt;
+                if (flag.Age >= FlagFadeSeconds)
+                {
+                    Destroy(flag.Image.transform.parent.gameObject);
+                    _flags.RemoveAt(i);
+                    continue;
+                }
+                Color color = flag.Image.color;
+                color.a = 1f - Mathf.Floor(flag.Age / FlagFadeSeconds * FadeSteps) / FadeSteps;
+                flag.Image.color = color;
+            }
+        }
+
+        // 떠 있는 반란 무리 · 쓰러진 깃발의 수(검사용)
+        public int Mobs => _mobs.Count;
+        public int FallenFlags => _flags.Count;
+
         // 날아가는 그림의 수 · 떠 있는 구름 조각의 수(검사용)
         public int Flying => _flyers.Count;
         public int Clouds => _clouds.Count;
@@ -700,6 +889,7 @@ namespace GnorpWar
             // 한 프레임이 길어도 걸음이 건너뛰지 않게 프레임당 진행을 묶는다
             float dt = Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
             StepFlyers(dt);
+            StepRebels(dt);
             foreach (Walker walker in _walkers.Values)
             {
                 if (walker.Marching)

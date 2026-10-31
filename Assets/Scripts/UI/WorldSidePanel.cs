@@ -232,8 +232,8 @@ namespace GnorpWar
             WorldState state = world.State;
             if (_owned == null)
                 Build();
-            // 글 기둥의 한가운데
-            float center = _title.rectTransform.anchoredPosition.x;
+            // 글 기둥의 한가운데 — 탑 기둥을 안 쓰면(알림 · 국가 고르기) 패널 전체의 가운데(아래 알림 · 버튼과 같은 줄, 사용자 10/31)
+            float center = land ? FrameBars.InfoCenter : FrameBars.PanelCenter;
 
             // 상점이 열린 동안에는 고른 땅과 상관없이 나를 보여 준다(사용자 10/12 — 탑 기둥도 내 탑이다). 그 아래는 비운다
             bool any = land && !shop && selected >= 0;

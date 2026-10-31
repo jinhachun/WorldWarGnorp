@@ -21,6 +21,8 @@ namespace GnorpWar
         public const float InfoWidth = Pillar - InfoLeft;
         // 탑 기둥(세로선 ~ 칸막이)의 가운데 — 정수 px로(도트가 반 픽셀에 걸리지 않게)
         public static float TowerCenter => Mathf.Floor((Pillar + Bar + PanelEdge) * 0.5f);
+        // 패널 전체(바깥 막대 ~ 칸막이)의 가운데 — 탑 기둥을 안 쓰는 동안(알림 · 국가 고르기) 패널은 한 칸이다
+        public static float PanelCenter => Mathf.Floor((InfoLeft + PanelEdge) * 0.5f);
         // 바닥 막대의 위 끝(화면 판 높이 1080) — 탑은 여기에 선다
         public const float Floor = 1080f - Outer - Bar;
     }

@@ -102,6 +102,14 @@ namespace GnorpWar
                 part.SetParent(content, false);
             content.SetAsFirstSibling();
             _motion = PopupMotion.Attach(content);
+            // 목록 기둥과 탑 기둥 사이 세로선 — 지도 화면(UI/WorldSidePanel)과 같은 자리 · 굵기. 테두리처럼 제자리에 있고, 테두리 매듭이 그 위에 그려진다(사용자 10/31)
+            var pillar = new GameObject("Pillar", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            pillar.transform.SetParent(transform, false);
+            pillar.raycastTarget = false;
+            pillar.rectTransform.anchorMin = pillar.rectTransform.anchorMax = pillar.rectTransform.pivot = new Vector2(0f, 1f);
+            pillar.rectTransform.anchoredPosition = new Vector2(FrameBars.Pillar, 0f);
+            pillar.rectTransform.sizeDelta = new Vector2(FrameBars.Bar, ((RectTransform)transform).rect.height);
+            pillar.transform.SetSiblingIndex(transform.Find("Frame").GetSiblingIndex());
         }
 
         private PopupMotion _motion;

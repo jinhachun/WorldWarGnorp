@@ -108,6 +108,16 @@ namespace GnorpWar
             _next.onClick.AddListener(Next);
             _skip.gameObject.SetActive(false);
             _notice.SetActive(false);
+            // 알림은 패널 전체 가운데 정렬 · 양옆 막대에서 Pad씩 — 위의 영주 그림 · 이름과 같은 가운데(UI/WorldSidePanel, 사용자 10/31)
+            var notice = (RectTransform)_notice.transform;
+            float noticeLeft = FrameBars.InfoLeft + FrameBars.Pad, noticeWidth = (FrameBars.PanelCenter - noticeLeft) * 2f;
+            notice.anchoredPosition = new Vector2(noticeLeft, notice.anchoredPosition.y);
+            notice.sizeDelta = new Vector2(noticeWidth, notice.sizeDelta.y);
+            foreach (Text text in new[] { _noticeTitle, _noticeBody })
+                text.rectTransform.sizeDelta = new Vector2(noticeWidth, text.rectTransform.sizeDelta.y);
+            _noticeTitle.alignment = TextAnchor.MiddleCenter;
+            _noticeBody.alignment = TextAnchor.UpperCenter;
+            ((RectTransform)_next.transform).anchoredPosition = new Vector2(noticeWidth * 0.5f, ((RectTransform)_next.transform).anchoredPosition.y);
             _nationCard.gameObject.SetActive(false);
             // 방문을 마쳤다(RunState.ChooseVisit · DeclineVisit가 효과 · 닫힘 · Phase = Aftermath까지) — 쉬기와 같은 길
             if (_visit != null)

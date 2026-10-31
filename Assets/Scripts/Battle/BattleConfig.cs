@@ -371,6 +371,22 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _offerPopStagger = 0.07f;
 
+        [Header("손맛 — 팝업 열림 · 닫힘(K1 · 연출만 — 규칙과 무관, UI/PopupMotion). 칸 = UI 픽셀 칸(1칸 = 3px) · 움직임은 위 세기 배율을 곱한다 · 시간은 실제 시간")]
+        [Tooltip("열림 — 판이 이만큼 위에서 계단 3번으로 내려앉는다(알파도 3계단 · 어둠도 3계단으로 짙어짐). 업그레이드 카드는 열린 뒤 진열 카드 튐(위 묶음)으로 왼쪽부터 차례로")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _popupDrop = 6f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _popupOpenSeconds = 0.12f;
+        [Tooltip("닫힘 — 판이 이만큼 계단 2번으로 올라가며 흐려진다(어둠도 같이 옅어짐)")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _popupRise = 4f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _popupCloseSeconds = 0.08f;
+
         [Header("안전 상한 — 끝없는 소환 · 발동 사슬 방어(Battle/ChainGuard). 넘친 것은 버리고 콘솔 경고 한 줄. 정상 빌드에서 잰 최대보다 넉넉히(10/26)")]
         [Tooltip("소환 안에서 또 소환한 깊이(유닛이 나오는 순간의 효과가 또 소환 …) — 넘는 소환은 건너뛴다")]
         [HideIf(nameof(HideNonBalance))]
@@ -448,6 +464,10 @@ namespace GnorpWar
         public float OfferPop => _offerPop;
         public float OfferPopSeconds => _offerPopSeconds;
         public float OfferPopStagger => _offerPopStagger;
+        public float PopupDrop => _popupDrop;
+        public float PopupOpenSeconds => _popupOpenSeconds;
+        public float PopupRise => _popupRise;
+        public float PopupCloseSeconds => _popupCloseSeconds;
         public int MaxSummonDepth => _maxSummonDepth;
         public int MaxStepSummons => _maxStepSummons;
         public int MaxUnits => _maxUnits;

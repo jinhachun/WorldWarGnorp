@@ -17,10 +17,15 @@ namespace GnorpWar
 
         private CanvasGroup _group;
         private bool _wasFighting;
-        private float _shownAt = float.NegativeInfinity;
+        // 뜬 뒤 흐른 실제 시간(Juice.RealDeltaTime — 녹화 중에도 녹화 시간대로)
+        private float _age = 1e6f;
+        private RectTransform _rect;
+        private Vector2 _home;
 
         private void Awake()
         {
+            _rect = (RectTransform)transform;
+            _home = _rect.anchoredPosition;
             _group = GetComponent<CanvasGroup>();
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
@@ -34,11 +39,15 @@ namespace GnorpWar
             {
                 _title.text = RunState.Map.DisplayName;
                 _body.text = BuildingTooltip.ColorNumbers(RunState.Map.Description);
-                _shownAt = Time.unscaledTime;
+                _age = 0f;
+                // 소리 자리(J6): 팝업 열림(지형 배너)
             }
             _wasFighting = fighting;
-            float t = Time.unscaledTime - _shownAt;
-            _group.alpha = t < HoldSeconds ? 1f : 1f - Mathf.Clamp01((t - HoldSeconds) / FadeSeconds);
+            _age += Mathf.Min(Juice.RealDeltaTime, 1f / 30f);
+            float t = _age;
+            // 나타남 — 팝업 열림 문법(UI/PopupMotion): 위에서 3계단 내려앉으며 3계단으로 짙어진다
+            _rect.anchoredPosition = _home + new Vector2(0f, PopupMotion.OpenOffset(t));
+            _group.alpha = t < HoldSeconds ? PopupMotion.OpenAlpha(t) : 1f - Mathf.Clamp01((t - HoldSeconds) / FadeSeconds);
         }
     }
 }

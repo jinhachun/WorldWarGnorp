@@ -87,7 +87,24 @@ namespace GnorpWar
         {
             _start.onClick.AddListener(Begin);
             _rowTemplate.gameObject.SetActive(false);
+            // 처음 열림(UI/PopupMotion) — 검은 바탕 · 테두리(Frame)는 제자리, 목록 · 탑 · 무대를 같은 크기의 판에 옮겨(자리는 그대로) 그 판이 내려앉는다.
+            // 바탕까지 흐려지면 뒤의 지도가 비친다(닉네임 판과 같은 이유)
+            var content = (RectTransform)new GameObject("Content", typeof(RectTransform)).transform;
+            content.SetParent(transform, false);
+            content.anchorMin = Vector2.zero;
+            content.anchorMax = Vector2.one;
+            content.offsetMin = content.offsetMax = Vector2.zero;
+            var parts = new List<Transform>();
+            foreach (Transform child in transform)
+                if (child != content && child.name != "Frame")
+                    parts.Add(child);
+            foreach (Transform part in parts)
+                part.SetParent(content, false);
+            content.SetAsFirstSibling();
+            _motion = PopupMotion.Attach(content);
         }
+
+        private PopupMotion _motion;
 
         // choices = 고를 수 있는 국가(목록 순서) · world = 국가마다의 무대 내용
         public void Open(BuildingNation[] choices, WorldConfig world)
@@ -135,6 +152,7 @@ namespace GnorpWar
             _group.alpha = 1f;
             _exitClock = -1f;
             gameObject.SetActive(true);
+            _motion.Open();
             Select(0);
         }
 

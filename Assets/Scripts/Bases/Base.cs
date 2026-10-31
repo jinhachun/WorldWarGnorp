@@ -240,6 +240,64 @@ namespace GnorpWar
             _collider = GetComponent<Collider2D>();
         }
 
+        // ── 본진 피격 손맛(Docs/폴리싱_계획.md J2) — 성이 좌우로 1px 흔들리고, 화면이 약하게 흔들린다. 색 번쩍임은 없다(큰 성이 번쩍이면 눈이 아프다 — 사용자 10/31)
+        // 간격(BattleConfig 「손맛」) 안에 들어온 타격은 한 번으로 묶는다 — 여럿이 계속 때려도 성이 쉴 새 없이 떨지 않게. 실제 시간으로 돈다
+        // 흔들림은 본진 오브젝트를 옮긴다(탑 층 · 깃발도 같이) — 끝나면 제자리. 무너지는 일격에는 흔들지 않는다(무너짐 연출이 제자리에서 시작해야 한다)
+        private Vector3 _restPosition;
+        private bool _hitFxOn;
+        private float _hitFxLeft;
+        private float _hitFxGap;
+        private bool _hitFxShake;
+
+        private void HitFx()
+        {
+            BattleConfig config = BattleManager.Config;
+            if (config == null || _hitFxGap > 0f)
+                return;
+            if (!_hitFxOn)
+                _restPosition = transform.position;
+            _hitFxOn = true;
+            _hitFxLeft = config.CastleHitSeconds;
+            _hitFxGap = config.CastleHitGap;
+            _hitFxShake = IsAlive;
+            if (IsAlive && FxDirector.Instance != null)
+                FxDirector.Instance.Shake(config.CastleHitCameraShake * config.JuiceIntensity);
+            // 소리 자리(J6): 본진 피격
+        }
+
+        private void EndHitFx()
+        {
+            if (!_hitFxOn)
+                return;
+            _hitFxOn = false;
+            _hitFxLeft = 0f;
+            if (_hitFxShake)
+                transform.position = _restPosition;
+            _hitFxShake = false;
+        }
+
+        private void Update()
+        {
+            if (!_hitFxOn && _hitFxGap <= 0f)
+                return;
+            float dt = Juice.RealDeltaTime;
+            _hitFxGap -= dt;
+            if (!_hitFxOn)
+                return;
+            _hitFxLeft -= dt;
+            if (_hitFxLeft <= 0f)
+            {
+                EndHitFx();
+                return;
+            }
+            if (_hitFxShake)
+            {
+                // 프레임마다 좌우로 번갈아 — 그림 px 단위
+                int px = Mathf.RoundToInt(BattleManager.Config.CastleHitShakePixels * BattleManager.Config.JuiceIntensity);
+                transform.position = _restPosition + new Vector3((Time.frameCount % 2 == 0 ? 1 : -1) * px * PixelMesh.Pixel, 0f, 0f);
+            }
+        }
+
         // 최대 체력은 라운드에 따라 오른다(RunState.BaseHpBonus) — 런 상태를 BattleManager.Awake가 시작한 뒤에 계산
         private void Start()
         {
@@ -441,7 +499,17 @@ namespace GnorpWar
             _hp -= amount;
             if (amount > 0f)
                 BattleManager.NoteProgress();
-            DamageNumbers.Damage(this, _team, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), amount);
+            DamageNumbers.Damage(this, _team, new Vector2(_collider.bounds.center.x, _collider.bounds.max.y), amount, attacker);
+            if (!_small && amount > 0f)
+            {
+                // 무너지는 일격 — 흔들던 성을 제자리에 둔다. 강한 흔들림은 BattleManager.Finish
+                if (!IsAlive)
+                {
+                    EndHitFx();
+                    _hitFxGap = 0f;
+                }
+                HitFx();
+            }
             // 성채 신화 — 내 타워들(본진 · 작은 타워)이 받은 피해를 공격한 쪽에 그대로. 이 한 방에 무너져도 돌려준다
             if (TowerBook.ReflectsDamage(_team))
                 DamageReflect.Back(attacker, amount, hitDirection, this);

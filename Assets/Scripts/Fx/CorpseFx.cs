@@ -26,10 +26,17 @@ namespace GnorpWar
             // 지나온 길의 먼지(DustFx) — 크기 배율 · 다음 조각까지 남은 시간
             public float Size;
             public float Puff;
+            // 사망 순간 흰 실루엣(J2) — 그동안 사방 1px 크다. 던진 프레임 + 1까지는 끝내지 않는다(적어도 한 프레임은 보이게)
+            public bool Popping;
+            public int PopFrame;
         }
+
+        // 사망 순간 실루엣 색 — 흰 몸에서도 말 · 영주 색 자리 · 1px 커진 테두리가 번쩍 읽힌다
+        private static readonly Color PopColor = Color.white;
 
         private Corpse[] _corpses;
         private SpriteRenderer[] _parts;
+        private Color[] _partColors;
         private int _next;
         private int _activeCount;
         private BattleConfig _config;
@@ -43,6 +50,7 @@ namespace GnorpWar
             _camera = Camera.main;
             _corpses = new Corpse[_config.CorpseMax];
             _parts = new SpriteRenderer[_corpses.Length * PartsPerCorpse];
+            _partColors = new Color[_parts.Length];
             for (int i = 0; i < _corpses.Length; i++)
             {
                 var root = new GameObject("Corpse");
@@ -58,8 +66,8 @@ namespace GnorpWar
             }
         }
 
-        // back = 유닛의 후방(-전방) 부호. 그림은 지금 놓인 그대로(위치·뒤집힘·크기) 본뜬다 — 부르는 쪽이 자세를 기본으로 되돌린 뒤 부른다
-        public void Throw(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back, float size)
+        // back = 유닛의 후방(-전방) 부호. 그림은 지금 놓인 그대로(위치·뒤집힘·크기) 본뜬다 — 부르는 쪽이 자세를 기본으로 되돌린 뒤 부른다. height = 유닛 키(월드)
+        public void Throw(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back, float size, float height)
         {
             if (_corpses == null || _corpses.Length == 0)
                 return;
@@ -88,7 +96,32 @@ namespace GnorpWar
             c.Age = 0f;
             c.Size = size;
             c.Puff = DustFx.TrailInterval;
+            // 사망 순간 흰 실루엣 + 키 기준 사방 1px 크게(그림 1px 단위 — Juice.SnapScale)
+            c.Popping = _config.DeathPopSeconds > 0f;
+            c.PopFrame = Time.frameCount;
+            if (c.Popping)
+            {
+                float heightPx = height / PixelMesh.Pixel;
+                c.Root.localScale = Vector3.one * (heightPx >= 1f ? Juice.SnapScale((heightPx + 2f) / heightPx, heightPx) : 1f);
+                for (int p = index * PartsPerCorpse; p < (index + 1) * PartsPerCorpse; p++)
+                {
+                    _partColors[p] = _parts[p].color;
+                    _parts[p].color = PopColor;
+                }
+            }
+            else
+                c.Root.localScale = Vector3.one;
             c.Root.gameObject.SetActive(true);
+        }
+
+        // 흰 실루엣을 끝내고 본뜬 색 · 크기로
+        private void EndPop(int index)
+        {
+            ref Corpse c = ref _corpses[index];
+            c.Popping = false;
+            c.Root.localScale = Vector3.one;
+            for (int p = index * PartsPerCorpse; p < (index + 1) * PartsPerCorpse; p++)
+                _parts[p].color = _partColors[p];
         }
 
         // 시체의 뿌리는 회전 없음·스케일 1로 유닛 중심에 놓였다 — 월드 값을 그대로 옮기면 같은 자리·같은 모습이 된다
@@ -124,6 +157,8 @@ namespace GnorpWar
                 if (!c.Active)
                     continue;
                 c.Age += dt;
+                if (c.Popping && c.Age >= _config.DeathPopSeconds && Time.frameCount > c.PopFrame + 1)
+                    EndPop(i);
                 float t = c.Age;
                 float y = c.Origin.y + c.Velocity.y * t - 0.5f * gravity * t * t;
                 if (t >= lifetime || y < floor)

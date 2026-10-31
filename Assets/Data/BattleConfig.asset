@@ -295,6 +295,32 @@ MonoBehaviour:
   _axeFlightSeconds: 0.9
   _axeArcHeight: 8
   _axeSpin: 900
+  _juiceIntensity: 1
+  _hpGhostDelay: 0.4
+  _hpGhostDrop: 0.35
+  _baseHitFlash: 0.06
+  _baseHitShake: 2
+  _baseHitShakeSeconds: 0.25
+  _hpNumberPunch: 0.5
+  _hpNumberPunchHold: 0.15
+  _hpNumberPunchSeconds: 0.3
+  _hpRollSeconds: 0.25
+  _lowHpRatio: 0.3
+  _lowHpPulseSeconds: 1.2
+  _unitBarSeconds: 2
+  _unitBarFadeSeconds: 0.3
+  _numberPunch: 1
+  _numberPunchHold: 0.06
+  _numberPunchSeconds: 0.15
+  _bigNumberSize: 2
+  _meleeLeanPixels: 1
+  _muzzleFlashPixels: 2
+  _deathPopSeconds: 0.04
+  _castleHitShakePixels: 1
+  _castleHitSeconds: 0.1
+  _castleHitGap: 0.15
+  _castleHitCameraShake: 0.15
+  _collapseShake: 0.4
   _maxSummonDepth: 8
   _maxStepSummons: 400
   _maxUnits: 999

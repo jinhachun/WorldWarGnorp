@@ -30,10 +30,13 @@ namespace GnorpWar
         private const int CellW = 5;
         private const int CellH = 7;
         private const int Advance = 4;
+        // 글자 픽셀 배율 상한(J2) — 큰 숫자 + 튐이 겹쳐도 이 이상 크지 않게. 4배면 숫자 키가 유닛 키의 3.5배라 전선을 덮었다(10/31 캡처)
+        private const int MaxScale = 3;
 
-        private static readonly Color32 EnemyHurt = new Color32(255, 220, 60, 255);
-        private static readonly Color32 AllyHurt = new Color32(255, 80, 70, 255);
-        private static readonly Color32 Healed = new Color32(90, 255, 110, 255);
+        // 체력바 잔상(UI/BaseHealthBar · Fx/UnitHealthBars)도 이 색을 쓴다
+        public static readonly Color32 EnemyHurt =new Color32(255, 220, 60, 255);
+        public static readonly Color32 AllyHurt = new Color32(255, 80, 70, 255);
+        public static readonly Color32 Healed = new Color32(90, 255, 110, 255);
 
         // 위에서 아래로 3칸씩 — 탑 층 표시(TowerBadge)의 숫자도 이 그림
         public static readonly string[] Glyphs =
@@ -50,6 +53,8 @@ namespace GnorpWar
             public float Amount;
             public float Age;
             public Color32 Color;
+            // 크기 단계(J2) — 큰 유닛이 때린 피해가 섞였나(한 단계 크다)
+            public bool Big;
         }
 
         [Tooltip("Sprite-Unlit-Default 재질 — 복제해 글꼴 텍스처를 입힌다")]
@@ -69,16 +74,19 @@ namespace GnorpWar
 
         private static DamageNumbers _instance;
 
-        public static void Damage(object target, Team victim, Vector2 point, float amount)
+        // attacker = 때린 쪽 — 크기(BattleConfig 「큰 숫자」) 이상인 유닛이면 숫자가 한 단계 크다(사용자 10/31). 유닛이 아니면(타워 · 효과) 보통
+        public static void Damage(object target, Team victim, Vector2 point, float amount, object attacker = null)
         {
-            if (_instance != null)
-                _instance.Show(target, point, amount, victim == Team.Ally ? AllyHurt : EnemyHurt);
+            if (_instance == null)
+                return;
+            bool big = attacker is Unit unit && BattleManager.Config != null && unit.Size >= BattleManager.Config.BigNumberSize;
+            _instance.Show(target, point, amount, victim == Team.Ally ? AllyHurt : EnemyHurt, big);
         }
 
         public static void Heal(object target, Vector2 point, float amount)
         {
             if (_instance != null)
-                _instance.Show(target, point, amount, Healed);
+                _instance.Show(target, point, amount, Healed, false);
         }
 
         private void Awake()
@@ -112,7 +120,7 @@ namespace GnorpWar
                 _instance = null;
         }
 
-        private void Show(object target, Vector2 point, float amount, Color32 color)
+        private void Show(object target, Vector2 point, float amount, Color32 color, bool big)
         {
             if (amount <= 0f)
                 return;
@@ -123,6 +131,7 @@ namespace GnorpWar
                 if (e.Active && e.Age < MergeWindow && e.Color.Equals(color))
                 {
                     e.Amount += amount;
+                    e.Big |= big;
                     return;
                 }
             }
@@ -133,6 +142,7 @@ namespace GnorpWar
                     && Mathf.Abs(e.Position.x - point.x) < NearbyMergeX && Mathf.Abs(e.Position.y - point.y) < NearbyMergeY)
                 {
                     e.Amount += amount;
+                    e.Big |= big;
                     return;
                 }
             }
@@ -148,6 +158,7 @@ namespace GnorpWar
                 Position = point + new Vector2(Random.Range(-JitterX, JitterX), 0f),
                 Amount = amount,
                 Color = color,
+                Big = big,
             };
             _latest[target] = index;
         }
@@ -171,7 +182,7 @@ namespace GnorpWar
                     _free.Push(i);
                     continue;
                 }
-                quads = WriteNumber(ref e, quads);
+                quads = WriteNumber(ref e, i, quads);
             }
 
             if (quads == 0 && _drawnQuads == 0)
@@ -187,7 +198,7 @@ namespace GnorpWar
         }
 
         // 숫자 하나를 quad 칸들에 쓴다 — 다음 빈 quad 번호를 돌려준다
-        private int WriteNumber(ref Entry e, int quad)
+        private int WriteNumber(ref Entry e, int index, int quad)
         {
             int value = Mathf.Clamp(Mathf.RoundToInt(e.Amount), 1, MaxValue);
             int digits = 1;
@@ -199,17 +210,33 @@ namespace GnorpWar
             Color32 color = e.Color;
             color.a = (byte)(255f * (t < FadeFrom ? 1f : 1f - (t - FadeFrom) / (1f - FadeFrom)));
 
-            float width = (digits * Advance + 1) * Pixel;
-            float left = e.Position.x - width * 0.5f;
-            float bottom = e.Position.y + rise;
-            float w = CellW * Pixel;
-            float h = CellH * Pixel;
+            // 크기(J2) — 글자 픽셀 하나가 그림 몇 px인가(정수 — 3×5 글자가 고르지 않게 늘지 않게). 큰 유닛이 때린 숫자는 한 단계 크고,
+            // 나올 때 튐 단계만큼 더 컸다가 탄성으로 돌아온다(Juice.Punch를 정수 단계로 끊는다). 큰 숫자는 1px씩 떨린다
+            int scale = 1;
+            Vector2 shake = Vector2.zero;
+            BattleConfig config = BattleManager.Config;
+            if (config != null)
+            {
+                bool big = e.Big;
+                int steps = big ? 2 : 1;
+                float punch = config.NumberPunch * config.JuiceIntensity;
+                scale = Mathf.Clamp(steps + Mathf.RoundToInt(Juice.Punch(e.Age, punch, config.NumberPunchHold, Mathf.Max(0.001f, config.NumberPunchSeconds)) - 1f), 1, MaxScale);
+                // 떨림은 게임의 난수를 쓰지 않는다 — 프레임 · 칸 번호로 -1 · 0 · 1
+                if (big && config.JuiceIntensity > 0f)
+                    shake = new Vector2((Time.frameCount + index) % 3 - 1, (Time.frameCount / 2 + index) % 3 - 1) * Pixel;
+            }
+
+            float width = (digits * Advance + 1) * Pixel * scale;
+            float left = e.Position.x - width * 0.5f + shake.x;
+            float bottom = e.Position.y + rise + shake.y;
+            float w = CellW * Pixel * scale;
+            float h = CellH * Pixel * scale;
             const float glyphU = 1f / 10f;
 
             // 오른쪽 자리부터
             for (int d = digits - 1; d >= 0; d--, value /= 10)
             {
-                float x = left + d * Advance * Pixel;
+                float x = left + d * Advance * Pixel * scale;
                 float u = (value % 10) * glyphU;
                 int v = quad * 4;
                 _vertices[v] = new Vector3(x, bottom, 0f);

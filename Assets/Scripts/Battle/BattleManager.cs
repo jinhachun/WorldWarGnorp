@@ -257,6 +257,13 @@ namespace GnorpWar
             // 판은 그 자리에 멈추고, 진 쪽 본진이 땅속으로 무너진 뒤(실제 시간 — Fx/BaseCollapse, 클릭하면 건너뜀) 결과 창
             Time.timeScale = 0f;
             Base loser = won ? _enemyBase : _allyBase;
+            // 본진이 맞아 무너졌으면(데스매치 판정이 아니면) 마지막 일격 — 세게 흔들리며 무너짐(Docs/폴리싱_계획.md J2). 흔들림은 실제 시간이라 멈춘 판에서도 돈다
+            if (!loser.IsAlive)
+            {
+                if (FxDirector.Instance != null)
+                    FxDirector.Instance.Shake(_config.CollapseShake * _config.JuiceIntensity);
+                // 소리 자리(J6): 본진 무너짐 일격
+            }
             BaseCollapse.Play(loser, loser.Definition.CollapseCameraSeconds, loser.Definition.CollapseSeconds);
             StartCoroutine(OpenResultAfterCollapse());
         }

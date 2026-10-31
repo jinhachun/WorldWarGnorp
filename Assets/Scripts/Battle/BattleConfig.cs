@@ -207,6 +207,102 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _axeSpin = 900f;
 
+        [Header("손맛 — 체력바 잔상 · 흔들림 · 튐(연출만 — 규칙과 무관, Docs/폴리싱_계획.md)")]
+        [Tooltip("세기 배율 — 흔들림 · 튐 크기에 곱한다. 0이면 흔들림 · 튐이 꺼진다(잔상 바는 남는다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _juiceIntensity = 1f;
+        [Tooltip("잔상 바 — 맞은 뒤 깎인 구간(본진 흰색 · 유닛 노랑/빨강)이 이만큼 그대로 남았다가 따라 줄어든다. 회복은 초록 구간이 먼저 차고 채움이 이만큼 뒤에 따라 찬다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _hpGhostDelay = 0.4f;
+        [Tooltip("잔상 바가 따라 줄어드는(회복이면 채움이 따라 차는) 시간 — 감속하며 멈춘다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _hpGhostDrop = 0.35f;
+        [Tooltip("본진 피격 — 채움이 흰색으로 번쩍이는 시간(실제 시간)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _baseHitFlash = 0.06f;
+        [Tooltip("본진 피격 — 체력바 흔들림 폭(UI 픽셀 칸 — 1칸 = 3px). 세기 배율을 곱하고 칸 단위로 끊는다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _baseHitShake = 2f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _baseHitShakeSeconds = 0.25f;
+        [Tooltip("본진 피격 — 체력 숫자가 1 + 이 값 배로 커져 잠깐 머물렀다가, 살짝 작게 넘쳤다 돌아온다(세기 배율을 곱한다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _hpNumberPunch = 0.5f;
+        [Tooltip("커진 숫자가 그대로 머무는 시간")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _hpNumberPunchHold = 0.15f;
+        [Tooltip("머문 뒤 1배로 돌아오는 시간")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _hpNumberPunchSeconds = 0.3f;
+        [Tooltip("체력 숫자가 새 값까지 굴러가는 시간")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _hpRollSeconds = 0.25f;
+        [Tooltip("본진 체력이 이 몫(0~1) 아래면 채움이 붉게 숨쉰다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _lowHpRatio = 0.3f;
+        [Tooltip("붉게 숨쉬는 한 주기")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _lowHpPulseSeconds = 1.2f;
+        [Tooltip("유닛 체력바 — 맞은 유닛 머리 위에 이만큼(게임 시간) 보인다. 또 맞거나 회복하면 다시 센다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _unitBarSeconds = 2f;
+        [Tooltip("유닛 체력바가 계단식으로 흐려지며 사라지는 시간(보이는 시간의 끝 몫)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _unitBarFadeSeconds = 0.3f;
+
+        [Header("손맛 — 전투 타격감(J2 · 연출만 — 규칙과 무관). 흔들림은 위 세기 배율을 곱한다")]
+        [Tooltip("피해 숫자 — 나올 때 글자 픽셀이 이만큼 단계(1 = 한 픽셀이 화면 두 배) 더 커졌다가 탄성으로 돌아온다. 큰 유닛이 때린 숫자는 그 위로 한 단계 크다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _numberPunch = 1f;
+        [Tooltip("커진 피해 숫자가 그대로 머무는 시간(게임 시간)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _numberPunchHold = 0.06f;
+        [Tooltip("머문 뒤 제 크기로 돌아오는 시간(게임 시간)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _numberPunchSeconds = 0.15f;
+        [Tooltip("큰 숫자 — 때린 유닛의 크기가 이 이상이면 피해 숫자가 한 단계 크고 1px 떨린다(1 = 프리팹 그대로 · 사용자 10/31). 타워 · 효과가 준 피해는 늘 보통")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _bigNumberSize = 2f;
+        [Tooltip("근접 공격 — 무기를 찌르는 동안 몸이 이만큼(그림 px) 앞으로 쏠렸다 돌아온다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _meleeLeanPixels = 1;
+        [Tooltip("발사 섬광 — 화살 · 돌이 떠나는 자리에 한 프레임 보이는 흰 점의 크기(그림 px)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _muzzleFlashPixels = 2;
+        [Tooltip("사망 — 시체가 날아가기 시작할 때 이만큼(게임 시간) 흰 실루엣 + 사방 1px 크게")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _deathPopSeconds = 0.04f;
+        [Tooltip("본진 피격 — 성 그림이 좌우로 흔들리는 폭(그림 px)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _castleHitShakePixels = 1;
+        [Tooltip("본진 피격 — 성 흔들림 시간(실제 시간)")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _castleHitSeconds = 0.1f;
+        [Tooltip("본진 피격 연출(성 흔들림 · 화면 흔들림)을 다시 걸기까지 — 이 안에 들어온 타격은 한 번으로 묶는다(실제 시간). 여럿이 계속 때려도 성이 쉴 새 없이 떨지 않게")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _castleHitGap = 0.15f;
+        [Tooltip("본진 피격 — 화면 흔들림(충격량 · CameraShake). 약하게")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _castleHitCameraShake = 0.15f;
+        [Tooltip("마지막 일격의 화면 흔들림(충격량 — CameraShake 상한 0.4에서 잘린다)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _collapseShake = 0.4f;
+
         [Header("안전 상한 — 끝없는 소환 · 발동 사슬 방어(Battle/ChainGuard). 넘친 것은 버리고 콘솔 경고 한 줄. 정상 빌드에서 잰 최대보다 넉넉히(10/26)")]
         [Tooltip("소환 안에서 또 소환한 깊이(유닛이 나오는 순간의 효과가 또 소환 …) — 넘는 소환은 건너뛴다")]
         [HideIf(nameof(HideNonBalance))]
@@ -239,6 +335,32 @@ namespace GnorpWar
         public float AxeFlightSeconds => _axeFlightSeconds;
         public float AxeArcHeight => _axeArcHeight;
         public float AxeSpin => _axeSpin;
+        public float JuiceIntensity => _juiceIntensity;
+        public float HpGhostDelay => _hpGhostDelay;
+        public float HpGhostDrop => _hpGhostDrop;
+        public float BaseHitFlash => _baseHitFlash;
+        public float BaseHitShake => _baseHitShake;
+        public float BaseHitShakeSeconds => _baseHitShakeSeconds;
+        public float HpNumberPunch => _hpNumberPunch;
+        public float HpNumberPunchHold => _hpNumberPunchHold;
+        public float HpNumberPunchSeconds => _hpNumberPunchSeconds;
+        public float HpRollSeconds => _hpRollSeconds;
+        public float LowHpRatio => _lowHpRatio;
+        public float LowHpPulseSeconds => _lowHpPulseSeconds;
+        public float UnitBarSeconds => _unitBarSeconds;
+        public float UnitBarFadeSeconds => _unitBarFadeSeconds;
+        public float NumberPunch => _numberPunch;
+        public float NumberPunchHold => _numberPunchHold;
+        public float NumberPunchSeconds => _numberPunchSeconds;
+        public float BigNumberSize => _bigNumberSize;
+        public int MeleeLeanPixels => _meleeLeanPixels;
+        public int MuzzleFlashPixels => _muzzleFlashPixels;
+        public float DeathPopSeconds => _deathPopSeconds;
+        public int CastleHitShakePixels => _castleHitShakePixels;
+        public float CastleHitSeconds => _castleHitSeconds;
+        public float CastleHitGap => _castleHitGap;
+        public float CastleHitCameraShake => _castleHitCameraShake;
+        public float CollapseShake => _collapseShake;
         public int MaxSummonDepth => _maxSummonDepth;
         public int MaxStepSummons => _maxStepSummons;
         public int MaxUnits => _maxUnits;

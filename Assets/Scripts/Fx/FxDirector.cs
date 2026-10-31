@@ -40,11 +40,13 @@ namespace GnorpWar
             gameObject.AddComponent<FireTrails>().Init(pixel);
             gameObject.AddComponent<RingFx>().Init(pixel);
             gameObject.AddComponent<StatusDots>().Init(pixel);
+            gameObject.AddComponent<UnitHealthBars>().Init(pixel);
             gameObject.AddComponent<PillarFx>().Init(pixel);
             gameObject.AddComponent<FloorMultiplier>().Init(pixel);
             gameObject.AddComponent<AltitudeMark>().Init(pixel);
             gameObject.AddComponent<HealFx>().Init(pixel);
             gameObject.AddComponent<DustFx>().Init(pixel);
+            gameObject.AddComponent<MuzzleFlash>().Init(pixel);
             gameObject.AddComponent<BaseCollapse>().Init();
             gameObject.AddComponent<HoverMark>().Init(pixel);
             gameObject.AddComponent<TargetMarkFx>().Init(pixel);
@@ -75,11 +77,11 @@ namespace GnorpWar
             GetParticle(_deathPuff, position, Quaternion.identity).Play();
         }
 
-        // 죽은 유닛의 모습이 튕겨 날아간다(CorpseFx) — 죽는 자리에 먼지가 터지고 지나온 길에 먼지가 남는다(DustFx). back = 유닛의 후방 부호 · size = 먼지 크기 배율
-        public void Corpse(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back, float size)
+        // 죽은 유닛의 모습이 튕겨 날아간다(CorpseFx) — 죽는 자리에 먼지가 터지고 지나온 길에 먼지가 남는다(DustFx). back = 유닛의 후방 부호 · size = 먼지 크기 배율 · height = 유닛 키(월드)
+        public void Corpse(Vector2 position, SpriteRenderer[] bodies, SpriteRenderer weapon, float back, float size, float height)
         {
             DustFx.Burst(position, size);
-            _corpses.Throw(position, bodies, weapon, back, size);
+            _corpses.Throw(position, bodies, weapon, back, size, height);
         }
 
         // 풀에서 꺼낸다(Pooled). 재생이 끝나면 파괴 대신 꺼져서 풀로 돌아가게 한다 — 프리팹은 끝나면 파괴(Destroy)로 돼 있다
@@ -126,8 +128,11 @@ namespace GnorpWar
 
         public void HitStop(float seconds)
         {
+            // 손맛 세기 배율(BattleConfig) — 0이면 히트스톱이 꺼진다
+            if (BattleManager.Config != null)
+                seconds *= BattleManager.Config.JuiceIntensity;
             // 판이 끝나 멈춘 상태(timeScale 0)는 건드리지 않는다
-            if (_hitStopping || Time.timeScale <= 0f || Time.realtimeSinceStartup - _hitStopEndedAt < HitStopMinGap)
+            if (seconds <= 0f || _hitStopping || Time.timeScale <= 0f || Time.realtimeSinceStartup - _hitStopEndedAt < HitStopMinGap)
                 return;
             StartCoroutine(HitStopRoutine(seconds));
         }

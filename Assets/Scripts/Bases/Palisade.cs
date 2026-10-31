@@ -203,7 +203,7 @@ namespace GnorpWar
             _hp -= amount;
             if (amount > 0f)
                 BattleManager.NoteProgress();
-            DamageNumbers.Damage(this, _team, new Vector2(_box.bounds.center.x, _box.bounds.max.y), amount);
+            DamageNumbers.Damage(this, _team, new Vector2(_box.bounds.center.x, _box.bounds.max.y), amount, attacker);
             if (_reflect > 0f)
                 DamageReflect.Back(attacker, amount * _reflect, hitDirection, this);
             if (IsAlive)

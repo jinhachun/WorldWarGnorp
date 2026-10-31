@@ -95,6 +95,8 @@ namespace GnorpWar
         private bool _squashVertical = true;
         private float _flashTimer;
         private float _thrustTime = ThrustDuration;
+        // 근접 돌진 — 찌르는 동안 몸(_visual)이 쏠리는 쪽(뿌리 기준 좌우 부호, 0 = 쏠리지 않음)
+        private float _thrustLean;
         private Vector2 _thrustDirection;
         private bool _bigKnockbackUsed;
         // 돌격 충전 — 적 없이 실제로 달린 시간. 막혀 서 있으면 0으로
@@ -1345,6 +1347,7 @@ namespace GnorpWar
                         float damage = AttackDamage * (charge ? _definition.ChargeDamageMultiplier : 1f) * DamageScale;
                         float push = _definition.PushPower * (charge ? _definition.ChargePushMultiplier : 1f);
                         Strike(target, damage, hitDirection, push);
+                        // 소리 자리(J6): 근접 타격
                     }
                     _attackScale = 1f;
                     foreach (TeamEffects.Entry e in TeamEffects.For(_team))
@@ -1352,7 +1355,7 @@ namespace GnorpWar
                             e.Effect.OnAttack(this, target, e.Stacks);
                     _runTime = 0f;
                     if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
-                        StartThrust(hitDirection);
+                        StartThrust(hitDirection, _definition.AttackType != AttackType.Ranged);
                     _attackCooldown = NextCooldown(_attackCooldown, IntervalAfter(target));
                 }
                 return;
@@ -1462,7 +1465,10 @@ namespace GnorpWar
                         if (e.Effect.AppliesFor(dealer._team, dealer._definition))
                             e.Effect.OnDealtDamage(dealer, this, amount);
             }
-            DamageNumbers.Damage(this, _team, new Vector2(_rb.position.x, Top), amount);
+            DamageNumbers.Damage(this, _team, new Vector2(_rb.position.x, Top), amount, attacker);
+            // 소리 자리(J6): 유닛 피격
+            if (amount > 0f)
+                UnitHealthBars.Hit(this, _hp + amount);
             // 맞은 면(공격이 들어온 쪽)에서 공격 방향으로 파편이 튄다
             if (FxDirector.Instance != null)
                 FxDirector.Instance.HitSpark(_rb.position - hitDirection * SparkSurfaceOffset, hitDirection, SparkColor);
@@ -1597,12 +1603,15 @@ namespace GnorpWar
         // 투사체가 떠나는 자리 = 지금 그림의 무기 자리 — 뒤돌아 있으면 뒤쪽 무기 자리에서 나간다(사용자 10/13)
         private Vector2 WeaponPoint => _weapon.position;
 
-        private void StartThrust(Vector2 worldDirection)
+        // lean = 근접 공격 — 몸도 그쪽으로 쏠렸다 돌아온다(돌진, Docs/폴리싱_계획.md J2)
+        private void StartThrust(Vector2 worldDirection, bool lean = false)
         {
             // 좌우 반전된 몸 기준으로 바꿔야 칼끝이 실제 타겟을 향한다
             Vector2 local = _visual.InverseTransformDirection(worldDirection);
             _thrustDirection = local.sqrMagnitude > 0.0001f ? local.normalized : Vector2.right;
             _thrustTime = 0f;
+            float side = _visual.parent.InverseTransformVector(worldDirection).x;   // 뿌리의 좌우 뒤집기(스케일 -1)까지 따른다
+            _thrustLean = lean && Mathf.Abs(side) > 0.01f ? Mathf.Sign(side) : 0f;
         }
 
         private void UpdateThrust()
@@ -1618,7 +1627,15 @@ namespace GnorpWar
                 return;
             }
 
-            float lunge = Mathf.Sin(_thrustTime / ThrustDuration * Mathf.PI) * ThrustDistance;
+            float swing = Mathf.Sin(_thrustTime / ThrustDuration * Mathf.PI);
+            float lunge = swing * ThrustDistance;
+            // 몸 쏠림 — 그림 1px 단위로 끊는다(찌름 가운데 몫에서 앞으로 · 처음과 끝은 제자리). 위치는 매 프레임 찌그러짐이 다시 정한다
+            if (_thrustLean != 0f && BattleManager.Config != null)
+            {
+                int px = Mathf.RoundToInt(swing * BattleManager.Config.MeleeLeanPixels);
+                if (px != 0)
+                    _visual.localPosition += new Vector3(_thrustLean * px * PixelMesh.Pixel, 0f, 0f);
+            }
             // 찌르기 기준점 = 무기를 든 손(쉬는 위치에서 팔 길이만큼 몸 쪽) — 기사는 말 위, 보통은 몸 가운데
             Vector2 anchor = (Vector2)_weaponRestPosition - new Vector2(WeaponReach, 0f);
             _weapon.localPosition = anchor + _thrustDirection * (WeaponReach + lunge);
@@ -2373,8 +2390,9 @@ namespace GnorpWar
             if (FxDirector.Instance != null)
             {
                 // 먼지 크기 — 키 1 = 1, 키가 클수록 조금 크게(키 2 이상 = 1.5)
-                FxDirector.Instance.Corpse(_rb.position, _bodyRenderers, _weaponRenderer, -Forward, Mathf.Clamp(0.5f + _halfHeight, 1f, 1.5f));
+                FxDirector.Instance.Corpse(_rb.position, _bodyRenderers, _weaponRenderer, -Forward, Mathf.Clamp(0.5f + _halfHeight, 1f, 1.5f), _halfHeight * 2f);
                 FxDirector.Instance.Shake(DeathShake);
+                // 소리 자리(J6): 유닛 사망
             }
             _visual.gameObject.SetActive(false);
 

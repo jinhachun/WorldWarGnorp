@@ -323,12 +323,23 @@ namespace GnorpWar
             if (Button("승리로 끝", 130f, false, Fight)) BattleManager.CheatFinish(true);
             if (Button("패배로 끝", 130f, false, Fight)) BattleManager.CheatFinish(false);
             NewLine();
+            if (Button("본진 피해", 130f, false, Fight)) NudgeAllyBase(-0.1f);
+            if (Button("본진 회복", 130f, false, Fight)) NudgeAllyBase(0.1f);
+            NewLine();
             foreach (float speed in Speeds)
                 if (Button(speed > 0f ? $"배속 ×{speed:0}" : "배속 끔", 130f, _speed == speed, Fight))
                     SetSpeed(speed);
             NewLine();
             _y += Gap;
             DrawBattleValues();
+        }
+
+        // 내 본진 체력을 최대 체력의 ratio만큼 바꾼다(체력바 손맛 확인용 — 1 아래로는 안 내려간다)
+        private static void NudgeAllyBase(float ratio)
+        {
+            Base target = Base.For(Team.Ally);
+            if (target != null)
+                target.CheatSetHp(target.Hp + target.MaxHp * ratio);
         }
 
         // ── 탭: 런

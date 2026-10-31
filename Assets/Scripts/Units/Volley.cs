@@ -57,6 +57,8 @@ namespace GnorpWar
         private static void Launch(Shot s, Team team, Vector2 origin, IDamageable shooter)
         {
             Projectile shot = Pooled.Get(s.Prefab, origin, Quaternion.identity);
+            MuzzleFlash.At(origin);
+            // 소리 자리(J6): 활 · 투석 발사
             shot.Launch(team, s.Damage, s.Push, s.Target, s.Arc, s.Splash, shooter);
             if (s.Pierce)
                 shot.Pierce(s.PierceBonus);

@@ -20,8 +20,9 @@ namespace GnorpWar
         {
             int seconds = (int)RampLabel.LastElapsed;
             _time.text = $"전투 시간 {seconds / 60}:{seconds % 60:00}";
+            // 이번 전투에 져서 목숨을 잃었으면(게임 오버가 아니면) 결과 창이 뜨는 순간 그 하트가 깨진다(손맛 J3) — 진 전투는 목숨 1
             if (_row == null)
-                _row = new HeartRow(_hearts, _heart);
+                _row = new HeartRow(_hearts, _heart, RunState.LastOutcome == RunState.Outcome.Lose && !RunState.IsOver ? RunState.Lives + 1 : -1);
             _row.Show(0f);
             _wins.text = $"땅 {RunState.Lands}/{RunState.RegionCount}";
         }

@@ -162,6 +162,32 @@ namespace GnorpWar
             return new Vector3(Mathf.Round(p.x / grid) * grid, Mathf.Round(p.y / grid) * grid, p.z);
         }
 
+        // ── 판매(손맛 J3) — 판 기물의 층 조각이 그 자리(at — 칸이나 끌어 놓은 자리)에서 칸 단위로 작아져 사라진다. 동전은 위 줄이 날린다(UI/WorldSidePanel.FlyCoins)
+        public void SellAway(OwnedBuilding building, Vector3 at, float seconds)
+        {
+            RectTransform piece = Piece(building.Definition, building.Rarity, at);
+            StartCoroutine(RunSell(piece, seconds));
+            // 소리 자리(J6): 판매
+        }
+
+        private IEnumerator RunSell(RectTransform piece, float seconds)
+        {
+            Layer.SetAsLastSibling();
+            float px = piece.rect.width / Dot;
+            for (float t = 0f; t < seconds && piece != null; t += Step())
+            {
+                // 점점 빨리 작아진다 — 그림 1px 단위로 끊는다
+                float k = t / seconds;
+                piece.localScale = Vector3.one * Juice.SnapScale(1f - k * k, px);
+                yield return null;
+            }
+            if (piece != null)
+            {
+                _made.Remove(piece.gameObject);
+                Destroy(piece.gameObject);
+            }
+        }
+
         // 즉시 끝 상태로 — 그림을 다 치우고 실제 칸을 다시 보인다
         public void Finish()
         {
@@ -330,7 +356,8 @@ namespace GnorpWar
             flash.rectTransform.sizeDelta = piece.sizeDelta;
             for (float t = 0f; t < PunchSeconds && piece != null; t += Step())
             {
-                piece.localScale = Vector3.one * Mathf.Lerp(PunchScale, 1f, t / PunchSeconds);
+                // 커졌다가 1보다 살짝 작게 넘쳤다 앉는다(손맛 J3 — 선형에서 탄성으로)
+                piece.localScale = Vector3.one * Juice.Punch(t, PunchScale - 1f, 0f, PunchSeconds);
                 flash.color = new Color(1f, 1f, 1f, FlashAlpha * Mathf.Clamp01(1f - t / FlashSeconds));
                 yield return null;
             }

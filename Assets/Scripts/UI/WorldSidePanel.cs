@@ -158,7 +158,7 @@ namespace GnorpWar
             bar.text = "";
             float x = StatusCell(_turnImage, _statusTurn, 0f, turn.ToString());
             float goldX = x + StatusGap;
-            x = StatusCell(_goldImage, _statusGold, goldX, $"<color={BuildingTooltip.NumberColor}>{RunState.Gold}<size={_statusGold.fontSize - 12}>(+{RunState.TurnGoldNow})</size></color>");   // 수입은 한 단계 작게(도트 폰트 12의 배수 — 사용자 10/29 「20(+19)」)
+            x = StatusCell(_goldImage, _statusGold, goldX, $"<color={BuildingTooltip.NumberColor}>{RollGold()}<size={_statusGold.fontSize - 12}>(+{RunState.TurnGoldNow})</size></color>");   // 수입은 한 단계 작게(도트 폰트 12의 배수 — 사용자 10/29 「20(+19)」)
             // 골드 칸(아이콘 + 숫자)을 가리키면 턴 수입 — 승리 보너스는 이길지 모르니 숫자 옆이 아니라 여기에만
             _goldTip.Set(null, "턴 수입", BuildingTooltip.Highlight($"턴마다 {RunState.TurnGoldNow}골드를 얻습니다.\n침략에 이기면 {RunState.Config.WinBonus}골드를 더 얻습니다."));
             ((RectTransform)_goldTip.transform).anchoredPosition = new Vector2(goldX, 0f);
@@ -171,6 +171,54 @@ namespace GnorpWar
             _mine.Show(RunState.UpgradesOf(RunState.World.State.Player));
             // 밀 수 있는 폭 = 줄의 폭(끈 자리는 그대로 둔다)
             _mine.Root.sizeDelta = new Vector2(_mine.Width, UpgradeRow.BoxSize);
+        }
+
+        // ── 위 줄 골드 손맛(J3 — Docs/폴리싱_계획.md) — 날아오는 중인 몫(판매 동전)은 빼고 보이고, 새 값까지 굴러가며 바뀔 때마다 튄다(왼쪽 가운데 기준)
+        private int _goldInFlight;
+        private int _goldShown = int.MinValue, _goldFrom, _goldTo;
+        private float _goldRollAge = float.MaxValue, _goldPunchAge = float.MaxValue;
+
+        private int RollGold()
+        {
+            BattleConfig config = RunState.Config;
+            float dt = Juice.RealDeltaTime;
+            int target = RunState.Gold - _goldInFlight;
+            if (_goldShown == int.MinValue)
+                _goldShown = _goldFrom = _goldTo = target;
+            else if (target != _goldTo)
+            {
+                _goldFrom = _goldShown;
+                _goldTo = target;
+                _goldRollAge = _goldPunchAge = 0f;
+            }
+            _goldRollAge += dt;
+            _goldPunchAge += dt;
+            float roll = Mathf.Max(0.001f, config.GoldRollSeconds);
+            _goldShown = _goldRollAge >= roll ? _goldTo : Juice.Roll(_goldFrom, _goldTo, _goldRollAge / roll);
+            float punch = Juice.Punch(_goldPunchAge, config.GoldPunch * config.JuiceIntensity, config.GoldPunchHold, Mathf.Max(0.001f, config.GoldPunchSeconds));
+            _statusGold.rectTransform.localScale = Vector3.one * (punch == 1f ? 1f : Juice.SnapScale(punch, _statusGold.fontSize));
+            return _goldShown;
+        }
+
+        // 판매한 골드 — from(화면 좌표)에서 동전이 위 줄 골드 아이콘으로 날아가(전투 동전과 같은 모양 — Fx/GoldCoinFx) 닿을 때마다 숫자가 오른다.
+        // 골드는 이미 들어가 있다 — 보이는 것만. 이 판(늘 켜져 있다)에서 돌린다 — 상점을 닫아도 동전이 끝까지 닿게. delay = 출발 전 기다림(판 기물이 작아지는 동안)
+        public void FlyCoins(Vector3 from, int gold, float delay)
+        {
+            BattleConfig config = RunState.Config;
+            if (gold <= 0 || _goldImage == null || config == null || !isActiveAndEnabled)
+                return;
+            _goldInFlight += gold;
+            int coins = Mathf.Clamp(gold, config.SellCoinsMin, Mathf.Max(config.SellCoinsMin, config.SellCoinsMax));
+            RectTransform icon = _goldImage.rectTransform;
+            Transform layer = _goldImage.canvas.rootCanvas.transform;
+            for (int k = 0; k < coins; k++)
+            {
+                // 골드를 동전 수로 고르게 나눈다(남는 몫은 앞 동전부터 하나씩 — 골드가 동전보다 적으면 0인 동전도 난다)
+                int share = gold / coins + (k < gold % coins ? 1 : 0);
+                StartCoroutine(GoldCoinFx.Fly(layer, _goldImage.sprite, from, () => icon.TransformPoint(icon.rect.center), delay + k * GoldCoinFx.CoinGap,
+                    () => _goldInFlight = Mathf.Max(0, _goldInFlight - share)));
+            }
+            // 소리 자리(J6): 판매 동전
         }
 
         // 탑 기둥의 가로 자리(1층 틀 칸의 가운데)

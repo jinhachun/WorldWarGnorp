@@ -232,6 +232,13 @@ namespace GnorpWar
         // index칸 그림의 화면 자리(지금 그려진 모습 기준)
         public Vector3 SlotPosition(int index) => _views[index].transform.position;
 
+        // 끌어 놓은 칸이 탁 앉는다(손맛 J3 — UI/ShopPanel이 놓은 뒤 부른다)
+        public void Thump(int index)
+        {
+            if (index >= 0 && index < _views.Length)
+                _views[index].Thump();
+        }
+
         // 지금 보이는 칸들과 지붕을 감싸는 화면 사각형(Overlay 캔버스 — 화면 픽셀). 하나도 안 보이면 false (UI/BaseUpgradeRow가 겹침을 피한다)
         public bool ScreenBounds(out Rect bounds)
         {

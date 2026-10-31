@@ -303,6 +303,74 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private float _collapseShake = 0.4f;
 
+        [Header("손맛 — 상점 · UI(J3 · 연출만 — 규칙과 무관). 칸 수는 UI 픽셀 칸(1칸 = 3px) · 움직임은 위 세기 배율을 곱한다 · 시간은 실제 시간")]
+        [Tooltip("버튼 — 마우스를 올리면 이만큼 떠오른다(누를 수 있는 버튼만)")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _buttonRise = 1f;
+        [Tooltip("버튼 — 누르는 동안 제자리에서 이만큼 내려앉는다. 상태마다 그림이 따로 있는 버튼(지도 명령 버튼)은 그림이 눌림을 보이므로 내려앉지 않는다")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _buttonSink = 1f;
+        [Tooltip("버튼 — 놓으면 떠오른 자리로 튀어 돌아오는 시간")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _buttonBounceSeconds = 0.22f;
+        [Tooltip("버튼 — 놓을 때 탄성. 클수록 떠오른 자리를 더 지나쳤다 앉는다(4면 1칸 더 솟았다 앉는다 · 0이면 넘치지 않음)")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _buttonOvershoot = 4f;
+        [Tooltip("못 누르는 버튼을 누르면 좌우로 흔들리는 폭")]
+        [SuffixLabel("칸", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _buttonDeniedShake = 2f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _buttonDeniedSeconds = 0.25f;
+        [Tooltip("끌어 놓은 칸 — 납작하게 눌렸다(가로 1 + 이 값 · 세로 1 − 이 값) 탄성으로 돌아온다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _dropThump = 0.15f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _dropThumpSeconds = 0.25f;
+        [Tooltip("판매 — 판 기물이 그 자리에서 작아져 사라지는 시간. 그 뒤 동전이 위 줄 골드로 날아간다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _sellShrinkSeconds = 0.15f;
+        [Tooltip("판매 — 날아가는 동전 수(받은 골드 수를 이 사이로 자른다)")]
+        [SuffixLabel("개", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _sellCoinsMin = 3;
+        [SuffixLabel("개", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _sellCoinsMax = 5;
+        [Tooltip("위 줄 골드 숫자가 새 값까지 굴러가는 시간")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _goldRollSeconds = 0.3f;
+        [Tooltip("골드가 바뀌면 숫자가 1 + 이 값 배로 커져 잠깐 머물렀다가 탄성으로 돌아온다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _goldPunch = 0.35f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _goldPunchHold = 0.08f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _goldPunchSeconds = 0.25f;
+        [Tooltip("목숨을 잃은 하트 — 두 쪽으로 갈라져 떨어지며 사라지는 시간")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _heartBreakSeconds = 0.9f;
+        [Tooltip("진열 카드 — 짐꾼이 제자리에 닿으면 층 조각이 1 + 이 값 배로 튀었다 탄성으로 돌아온다")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _offerPop = 0.25f;
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _offerPopSeconds = 0.25f;
+        [Tooltip("진열 카드 튐이 칸마다 늦는 시간 — 왼쪽부터 차례로 튄다")]
+        [SuffixLabel("초", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _offerPopStagger = 0.07f;
+
         [Header("안전 상한 — 끝없는 소환 · 발동 사슬 방어(Battle/ChainGuard). 넘친 것은 버리고 콘솔 경고 한 줄. 정상 빌드에서 잰 최대보다 넉넉히(10/26)")]
         [Tooltip("소환 안에서 또 소환한 깊이(유닛이 나오는 순간의 효과가 또 소환 …) — 넘는 소환은 건너뛴다")]
         [HideIf(nameof(HideNonBalance))]
@@ -361,6 +429,25 @@ namespace GnorpWar
         public float CastleHitGap => _castleHitGap;
         public float CastleHitCameraShake => _castleHitCameraShake;
         public float CollapseShake => _collapseShake;
+        public float ButtonRise => _buttonRise;
+        public float ButtonSink => _buttonSink;
+        public float ButtonBounceSeconds => _buttonBounceSeconds;
+        public float ButtonOvershoot => _buttonOvershoot;
+        public float ButtonDeniedShake => _buttonDeniedShake;
+        public float ButtonDeniedSeconds => _buttonDeniedSeconds;
+        public float DropThump => _dropThump;
+        public float DropThumpSeconds => _dropThumpSeconds;
+        public float SellShrinkSeconds => _sellShrinkSeconds;
+        public int SellCoinsMin => _sellCoinsMin;
+        public int SellCoinsMax => _sellCoinsMax;
+        public float GoldRollSeconds => _goldRollSeconds;
+        public float GoldPunch => _goldPunch;
+        public float GoldPunchHold => _goldPunchHold;
+        public float GoldPunchSeconds => _goldPunchSeconds;
+        public float HeartBreakSeconds => _heartBreakSeconds;
+        public float OfferPop => _offerPop;
+        public float OfferPopSeconds => _offerPopSeconds;
+        public float OfferPopStagger => _offerPopStagger;
         public int MaxSummonDepth => _maxSummonDepth;
         public int MaxStepSummons => _maxStepSummons;
         public int MaxUnits => _maxUnits;

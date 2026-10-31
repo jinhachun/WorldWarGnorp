@@ -28,24 +28,28 @@ namespace GnorpWar
             int coins = Mathf.Clamp(amount, 1, MaxCoins);
             Vector3 from = Camera.main.WorldToScreenPoint(at);
             for (int k = 0; k < coins; k++)
-                StartCoroutine(Fly(from, k < coins - 1 ? 1 : amount - (coins - 1), k * CoinGap));
+            {
+                int share = k < coins - 1 ? 1 : amount - (coins - 1);
+                StartCoroutine(Fly(transform, _coin, from, () => _gold.Target, k * CoinGap, () => _gold.Arrive(share)));
+            }
         }
 
         private const int MaxCoins = 5;
-        private const float CoinGap = 0.08f;
+        public const float CoinGap = 0.08f;
 
-        private IEnumerator Fly(Vector3 from, int amount, float delay)
+        // 동전 하나 — from(화면 좌표)에서 톡 튀었다가 target으로 점점 빨라지며 날아가 닿으면 arrived. 상점 판매(UI/WorldSidePanel.FlyCoins)도 같은 동전을 쓴다
+        public static IEnumerator Fly(Transform layer, Sprite sprite, Vector3 from, System.Func<Vector3> target, float delay, System.Action arrived)
         {
             if (delay > 0f)
                 yield return new WaitForSecondsRealtime(delay);
             var coin = new GameObject("Coin", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
             coin.raycastTarget = false;
-            coin.sprite = _coin;
+            coin.sprite = sprite;
             coin.preserveAspect = true;
             // 노란 동전 — 색은 이펙트에만(아트 톤). 골드 숫자와 같은 노랑
             ColorUtility.TryParseHtmlString(BuildingTooltip.NumberColor, out Color yellow);
             coin.color = yellow;
-            coin.rectTransform.SetParent(transform, false);
+            coin.rectTransform.SetParent(layer, false);
             coin.SetNativeSize();
             coin.rectTransform.position = from;
             // 톡 — 위로 튀었다 살짝 내려앉는다
@@ -60,10 +64,10 @@ namespace GnorpWar
             for (float t = 0f; t < FlySeconds && coin != null; t += Time.unscaledDeltaTime)
             {
                 float k = t / FlySeconds;
-                coin.rectTransform.position = Vector3.Lerp(start, _gold.Target, k * k);
+                coin.rectTransform.position = Vector3.Lerp(start, target(), k * k);
                 yield return null;
             }
-            _gold.Arrive(amount);
+            arrived();
             if (coin != null)
                 Destroy(coin.gameObject);
         }

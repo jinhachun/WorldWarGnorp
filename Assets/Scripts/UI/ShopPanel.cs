@@ -395,22 +395,29 @@ namespace GnorpWar
         {
             if (!_dragging || source == BoardView.Source.EnemyField)
                 return;
+            // 놓은 기물 — 옮기면 끈 그 기물, 사면 새로 생긴 기물(놓은 뒤 그 칸이 탁 앉는다)
+            OwnedBuilding moved = _dragFromOffer ? null : BuildingAt(_dragSource, _dragIndex);
+            System.Collections.Generic.HashSet<OwnedBuilding> before = _dragFromOffer ? Owned() : null;
+            _merged = false;
             if (_insertAt >= 0 && source == BoardView.Source.AllyField)
             {
                 if (_dragFromOffer)
                     RunState.BuyInsert(_dragIndex, _insertAt);
                 else
                     RunState.MoveInsert(_dragSource == BoardView.Source.Storage, _dragIndex, _insertAt);
-                return;
-            }
-            bool storage = source == BoardView.Source.Storage;
-            if (_dragFromOffer)
-            {
-                _buyFrom = _dragGhost.position;
-                RunState.BuyInto(_dragIndex, storage, index);
             }
             else
-                RunState.Swap(_dragSource == BoardView.Source.Storage, _dragIndex, storage, index);
+            {
+                bool storage = source == BoardView.Source.Storage;
+                if (_dragFromOffer)
+                {
+                    _buyFrom = _dragGhost.position;
+                    RunState.BuyInto(_dragIndex, storage, index);
+                }
+                else
+                    RunState.Swap(_dragSource == BoardView.Source.Storage, _dragIndex, storage, index);
+            }
+            ThumpWhere(_dragFromOffer ? NewBuilding(before) : moved);
         }
 
         // 보관함 상자의 빈 자리에 놓았다 — 보관함 빈 칸에 넣고 그 자리에서 떨어뜨린다. 꽉 찼으면 안 받는다.
@@ -445,7 +452,55 @@ namespace GnorpWar
         public void DropOnSell()
         {
             if (_dragging && !_dragFromOffer)
-                RunState.Sell(_dragSource == BoardView.Source.Storage, _dragIndex);
+                SellWithFx(_dragSource == BoardView.Source.Storage, _dragIndex, _dragGhost.position);
+        }
+
+        // 판매 + 손맛(J3) — 판 기물이 at(화면 자리)에서 작아져 사라지고, 받은 골드만큼 동전이 위 줄 골드로 날아간다(닿을 때 숫자가 오른다)
+        private WorldSidePanel _side;
+
+        private void SellWithFx(bool storage, int index, Vector3 at)
+        {
+            OwnedBuilding building = storage ? RunState.Storage[index] : RunState.Field[index];
+            int gold = RunState.Gold;
+            RunState.Sell(storage, index);
+            if (OwnedBuilding.IsEmpty(building) || System.Array.IndexOf(storage ? RunState.Storage : RunState.Field, building) >= 0)
+                return;   // 안 팔렸다
+            BattleConfig config = RunState.Config;
+            _merge.SellAway(building, at, config.SellShrinkSeconds);
+            if (_side == null)
+                _side = FindAnyObjectByType<WorldSidePanel>();
+            if (_side != null)
+                _side.FlyCoins(at, RunState.Gold - gold, config.SellShrinkSeconds);
+        }
+
+        // 끌어 놓은 칸이 탁 앉는다(손맛 J3) — 놓은 뒤 그 기물이 있는 칸(탑 · 보관함). 합치기면 합치기 재생이 맡는다
+        private void ThumpWhere(OwnedBuilding building)
+        {
+            if (OwnedBuilding.IsEmpty(building) || _merged)
+                return;
+            int index = System.Array.IndexOf(RunState.Field, building);
+            if (index >= 0)
+                _fieldView.Thump(index);
+            else if ((index = System.Array.IndexOf(RunState.Storage, building)) >= 0)
+                _storageView.Thump(index);
+            // 소리 자리(J6): 칸에 놓음
+        }
+
+        // 방금 산 기물 — before에 없던 탑 · 보관함 기물(없으면 null)
+        private static OwnedBuilding NewBuilding(System.Collections.Generic.HashSet<OwnedBuilding> before)
+        {
+            foreach (OwnedBuilding[] row in new[] { RunState.Field, RunState.Storage })
+                foreach (OwnedBuilding building in row)
+                    if (!OwnedBuilding.IsEmpty(building) && !before.Contains(building))
+                        return building;
+            return null;
+        }
+
+        private static System.Collections.Generic.HashSet<OwnedBuilding> Owned()
+        {
+            var owned = new System.Collections.Generic.HashSet<OwnedBuilding>(RunState.Field);
+            owned.UnionWith(RunState.Storage);
+            return owned;
         }
 
         // --- 표시 ---
@@ -466,7 +521,8 @@ namespace GnorpWar
         {
             if (!SelectionSellable)
                 return;
-            RunState.Sell(_selectedSource == BoardView.Source.Storage, _selectedIndex);
+            bool storage = _selectedSource == BoardView.Source.Storage;
+            SellWithFx(storage, _selectedIndex, (storage ? _storageView : _fieldView).SlotPosition(_selectedIndex));
             _hasSelection = false;
         }
 

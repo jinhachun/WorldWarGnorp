@@ -274,10 +274,16 @@ namespace GnorpWar
                 if (p > 0f)
                     _waitHidden = false;
                 if (p >= 1f)
+                {
                     _enterClock = -1f;
+                    // 제자리에 닿으면 층 조각이 튄다 — 왼쪽 칸부터 차례로
+                    _popAge = RunState.Config != null ? -_index * RunState.Config.OfferPopStagger : 0f;
+                    // 소리 자리(J6): 진열 카드 튐
+                }
             }
             else
                 _waitHidden = false;
+            Pop(dt);
             if (_carry.gameObject.activeSelf == _waitHidden)
                 _carry.gameObject.SetActive(!_waitHidden);
             for (int i = _ghosts.Count - 1; i >= 0; i--)
@@ -302,6 +308,18 @@ namespace GnorpWar
                 // 걸음 뒤 절반에 3단으로 사라진다
                 ghost.Group.alpha = p < 0.5f ? 1f : p < 0.75f ? 2f / 3f : 1f / 3f;
             }
+        }
+
+        // 진열 카드 튐(손맛 J3) — 짐꾼이 도착한 뒤 층 조각이 커졌다 탄성으로 앉는다. 그림 1px(UI 픽셀 칸) 단위로 끊는다
+        private float _popAge = float.MaxValue;
+
+        private void Pop(float dt)
+        {
+            BattleConfig config = RunState.Config;
+            _popAge += dt;
+            float pop = config == null || _popAge < 0f ? 1f : Juice.Punch(_popAge, config.OfferPop * config.JuiceIntensity, 0f, Mathf.Max(0.001f, config.OfferPopSeconds));
+            var floor = (RectTransform)_floor.transform;
+            floor.localScale = Vector3.one * (pop == 1f ? 1f : Juice.SnapScale(pop, floor.rect.width / UiHitRings.Pixel));
         }
 
         // 지금 짐꾼을 복제 껍데기로 떼어 direction 쪽(1 = 오른쪽 · -1 = 왼쪽)으로 걸어 나가게 한다 — withLoad면 층 조각을 인 채로. 안 보이는 짐꾼이면 내보내지 않고 거짓

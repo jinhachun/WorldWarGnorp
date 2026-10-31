@@ -54,7 +54,7 @@ namespace GnorpWar
         public void Bounce() => _bounce = 0f;
 
         // 커졌다 작아지는 중 — 그동안 BoardView가 이 칸을 같은 줄의 맨 앞에 그린다
-        public bool Bouncing => _bounce < BounceDuration;
+        public bool Bouncing => _bounce < BounceDuration || (RunState.Config != null && _thump < RunState.Config.DropThumpSeconds);
 
         // 마우스를 올리지 않은 테두리는 한 단계 어둡게 — 올리면(끄는 중 놓을 자리 포함) 제 밝기로 강조된다
         private const float IdleDim = 0.65f;
@@ -62,12 +62,30 @@ namespace GnorpWar
         public static Color Highlight(Color color, bool hovered)
             => hovered ? color : new Color(color.r * IdleDim, color.g * IdleDim, color.b * IdleDim, color.a);
 
+        // 끌어 놓은 칸이 탁 앉는 튐(손맛 J3) — 납작하게 눌렸다 탄성으로 돌아온다(ShopPanel이 놓은 뒤 부른다)
+        private float _thump = float.MaxValue;
+
+        public void Thump() => _thump = 0f;
+
         private void Update()
         {
             // 한 프레임이 길어도(전투 시작 프레임 등) 튐이 건너뛰어지지 않게 프레임당 진행을 묶는다
-            _bounce += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
-            transform.localScale = Vector3.one * Mathf.Lerp(BounceScale, 1f, Mathf.Clamp01(_bounce / BounceDuration));
+            float dt = Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
+            _bounce += dt;
+            _thump += dt;
+            // 커졌다가 1보다 살짝 작게 넘쳤다 앉는다(손맛 J3 — 선형에서 탄성으로)
+            float scale = Juice.Punch(_bounce, BounceScale - 1f, 0f, BounceDuration);
+            float squash = 0f;
+            BattleConfig config = RunState.Config;
+            if (config != null && _thump < config.DropThumpSeconds)
+                squash = config.DropThump * config.JuiceIntensity * (1f - Juice.OutBack(_thump / config.DropThumpSeconds));
+            // 칸 그림 1px(UI 픽셀 칸) 단위로 끊는다 — 점이 고르지 않게 늘지 않게
+            Vector2 size = ((RectTransform)transform).rect.size / UiHitRings.Pixel;
+            transform.localScale = new Vector3(Snap(scale * (1f + squash), size.x), Snap(scale * (1f - squash), size.y), 1f);
         }
+
+        // 제 크기(1)는 그대로 — 칸 크기가 픽셀 칸의 정수배가 아니어도 쉬는 칸이 어긋나지 않게
+        private static float Snap(float scale, float sizePx) => scale == 1f ? 1f : Juice.SnapScale(scale, sizePx);
 
         private void OnDisable()
         {

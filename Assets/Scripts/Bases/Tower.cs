@@ -246,7 +246,8 @@ namespace GnorpWar
 
             view.Bounce += dt;
             float t = Mathf.Clamp01(view.Bounce / BounceDuration);
-            view.Icon.transform.localScale = Vector3.one * (IconSize(view.Icon.sprite) * Mathf.Lerp(BounceScale, 1f, t));
+            // 커졌다가 1보다 살짝 작게 넘쳤다 앉는다(손맛 J3 — 선형에서 탄성으로)
+            view.Icon.transform.localScale = Vector3.one * (IconSize(view.Icon.sprite) * Juice.Punch(view.Bounce, BounceScale - 1f, 0f, BounceDuration));
             view.Flash.color = new Color(1f, 1f, 1f, FlashAlpha * (1f - t));
             // 커졌다 작아지는 동안 아이콘은 기물 그림들 가운데 맨 앞에(사용자 10/27) — 이웃 층 · 유닛 · 맞음 링 · 버프 선 위. 끝나면 성과 같은 순서로
             int order = t < 1f ? BounceSortingOrder : _castle.sortingOrder;

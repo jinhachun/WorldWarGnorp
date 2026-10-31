@@ -52,6 +52,8 @@ namespace GnorpWar
         private string _specialHeader;
         // 국가 위기를 띄울 이벤트 장면 — 같은 씬에서 찾는다(Awake)
         private EventVisitPopup _visit;
+        // 건너뛰기 골드의 동전을 돌릴 왼쪽 패널 — 같은 씬에서 찾는다(Awake)
+        private WorldSidePanel _side;
         private RunState.UpgradeOffer _shown;
         private float _shownAt;
         // 판 열림 · 닫힘(UI/PopupMotion) — 어두운 판 위의 카드 · 머리말 · 건너뛰기를 묶은 판(실행 중 만든다)
@@ -64,6 +66,7 @@ namespace GnorpWar
         {
             _specialHeader = _header.text;
             _visit = FindAnyObjectByType<EventVisitPopup>(FindObjectsInactive.Include);
+            _side = FindAnyObjectByType<WorldSidePanel>(FindObjectsInactive.Include);
             _cardGroups = new CanvasGroup[_cards.Length];
             for (int i = 0; i < _cards.Length; i++)
             {
@@ -106,7 +109,12 @@ namespace GnorpWar
             if (Time.unscaledTime - _shownAt < ClickGuard)
                 return;
             _shownAt = Time.unscaledTime;
+            int before = RunState.Gold;
             RunState.SkipUpgrade();
+            // 「건너뛰기 +N골드」 버튼에서 동전이 터져 위 줄 골드로(창이 닫혀도 왼쪽 패널이 끝까지 돌린다, 사용자 11/1)
+            RectTransform button = (RectTransform)_skip.transform;
+            if (_side != null)
+                _side.GainCoins(button.TransformPoint(button.rect.center), RunState.Gold - before, 0f);
         }
 
         // 판(어두운 판 — 이 오브젝트의 자식)을 누름 — 공화정 창이면 닫는다. 카드 누르기는 버튼이 먼저 받는다

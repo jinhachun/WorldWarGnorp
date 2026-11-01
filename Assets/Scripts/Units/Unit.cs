@@ -602,6 +602,71 @@ namespace GnorpWar
         private const int SpawnSpreadSlots = 5;
         // 주변 검색(적 찾기·사냥·칼 던질 띠) 간격 — 매 물리 스텝(0.02초)마다 하면 유닛이 수백일 때 프레임이 무너진다
         private const float TargetScanInterval = 0.1f;
+
+        // ── 유닛 수 단계(LOD — BattleConfig 「성능」, 사용자 11/1 「600명 넘으면 렉」). 규칙은 같고 다시 판단하는 빈도만 준다:
+        // 1단계 = 접촉 분석을 N스텝에 한 번(유닛마다 차례 엇갈림 · 건너뛴 스텝은 지난 결과) · 주변 검색 간격 늘림 / 2단계 = 더 드물게 · 산 안쪽은 더 · 찌그러짐 생략.
+        // 떠 있거나 뛰는 중 · 밀려나는 중인 유닛은 단계와 무관하게 매 스텝 본다(착지 · 등반이 늦지 않게)
+        private static int _lod;
+        private static float _lodStepTime = float.NaN;
+        private static int _lodStep;
+        private static int _lodInterval = 1, _lodInnerInterval = 1;
+        private static float _lodScanScale = 1f;
+        // 이보다 빠르게 위아래로 움직이면 매 스텝 본다
+        private const float LodRestSpeed = 0.5f;
+        private int _lodPhase;
+        private bool _contactsValid;
+        // 지난 접촉 분석(FixedUpdate) — 건너뛴 스텝에 그대로 쓴다
+        private bool _cGrounded, _cBlockedByEnemy, _cOnDeck, _cOnGroundSurface;
+        private Unit _cAllyBelow, _cAllyAbove, _cEnemyBelow, _cAllyInFront;
+        private int _cBelowLayer;
+        private float _cFrontSupport;
+
+        // 이번 스텝에 접촉을 새로 볼 차례인가 — 0단계 · 첫 스텝 · 움직이는 중 · 기댄 유닛이 죽었으면 늘. 아니면 간격마다(유닛마다 엇갈려)
+        private bool ContactsDue()
+        {
+            if (_lod == 0 || !_contactsValid || _climbing || _slamJumping || _knockbackTimer > 0f || Mathf.Abs(_rb.linearVelocity.y) > LodRestSpeed)
+                return true;
+            if ((_cAllyBelow != null && !_cAllyBelow.IsAlive) || (_cAllyAbove != null && !_cAllyAbove.IsAlive)
+                || (_cEnemyBelow != null && !_cEnemyBelow.IsAlive) || (_cAllyInFront != null && !_cAllyInFront.IsAlive))
+                return true;
+            // 산 안쪽(위아래가 다 아군) — 2단계에서 더 드물게
+            int interval = _cAllyBelow != null && _cAllyAbove != null ? _lodInnerInterval : _lodInterval;
+            return (_lodStep + _lodPhase) % interval == 0;
+        }
+
+        // 물리 스텝마다 한 번 — 살아 있는 유닛 수(ChainGuard)로 단계를 정한다. 내려갈 때는 경계보다 히스테리시스만큼 적어져야
+        private static void UpdateLod()
+        {
+            if (Time.fixedTime == _lodStepTime)
+                return;
+            _lodStepTime = Time.fixedTime;
+            _lodStep++;
+            BattleConfig config = BattleManager.Config;
+            if (config == null)
+            {
+                _lod = 0;
+                _lodInterval = _lodInnerInterval = 1;
+                _lodScanScale = 1f;
+                return;
+            }
+            int units = ChainGuard.Units;
+            int level = units >= config.LodUnits2 ? 2 : units >= config.LodUnits1 ? 1 : 0;
+            if (level < _lod)
+            {
+                int keep = units >= config.LodUnits2 - config.LodHysteresis ? 2 : units >= config.LodUnits1 - config.LodHysteresis ? 1 : 0;
+                level = Mathf.Min(_lod, keep);
+            }
+            _lod = level;
+            _lodInterval = Mathf.Max(1, level == 2 ? config.LodContactInterval2 : level == 1 ? config.LodContactInterval1 : 1);
+            _lodInnerInterval = Mathf.Max(1, level == 2 ? config.LodInnerInterval2 : _lodInterval);
+            _lodScanScale = level == 2 ? config.LodScanScale2 : level == 1 ? config.LodScanScale1 : 1f;
+        }
+
+        // 주변 검색(적 · 회복 대상 · 걷기 앞길 · 뒤돌기) 간격 — 단계마다 늘어난다
+        private static float ScanInterval => TargetScanInterval * _lodScanScale;
+
+        // 지금 단계(0~2) — 측정 · 시험이 읽는다
+        public static int Lod => _lod;
         // 프로파일러 구간
         private static readonly Unity.Profiling.ProfilerMarker ContactsMarker = new Unity.Profiling.ProfilerMarker("Unit.Contacts");
         private static readonly Unity.Profiling.ProfilerMarker ScanMarker = new Unity.Profiling.ProfilerMarker("Unit.Scan");
@@ -850,6 +915,9 @@ namespace GnorpWar
         {
             foreach (Unit front in _climbCandidates)
             {
+                // 지난 스텝의 접촉을 다시 쓰는 중(유닛 수 단계)이면 그새 죽었을 수 있다
+                if (!front.IsAlive)
+                    continue;
                 Unit top = ClimbTarget(front);
                 if (top != null)
                     return top;
@@ -983,6 +1051,9 @@ namespace GnorpWar
             _supportScanTimer = Random.Range(0f, TargetScanInterval);
             _walkScanTimer = Random.Range(0f, TargetScanInterval);
             _turnBackScanTimer = Random.Range(0f, TargetScanInterval);
+            // 접촉 분석 차례도 유닛마다 흩는다(유닛 수 단계) · 새 생애의 첫 스텝은 늘 새로 본다
+            _lodPhase = Random.Range(0, 60);
+            _contactsValid = false;
             _turnBackX = float.NaN;
             _cachedPatient = null;
             _aheadOnBaseUnit = false;
@@ -1022,6 +1093,7 @@ namespace GnorpWar
 
         private void FixedUpdate()
         {
+            UpdateLod();
             if (!IsAlive)
                 return;
 
@@ -1090,7 +1162,10 @@ namespace GnorpWar
             // 접촉 법선은 상대 → 나 방향: 위를 향하면 발밑, 전방 반대를 향하면 앞에서 막힌 것
             bool grounded = false;
             bool blockedByEnemy = false;
-            _climbCandidates.Clear();
+            // 유닛 수 단계 — 이번 스텝에 접촉을 새로 볼 차례가 아니면 지난 분석을 그대로 쓴다(아래 루프를 건너뛴다)
+            bool analyze = ContactsDue();
+            if (analyze)
+                _climbCandidates.Clear();
             Unit allyBelow = null;
             Unit allyAbove = null;
             Unit enemyBelow = null;
@@ -1100,9 +1175,10 @@ namespace GnorpWar
             float frontSupport = float.NegativeInfinity;   // 발밑 아군 중 가장 앞(전방 좌표)
             bool allyBehind = false, allyAhead = false;   // 같은 높이에서 뒤·앞에 아군이 붙어 있나(등반 착지 자리 고르기)
             Unit allyInFront = null;                      // 앞에 맞닿은 아군 중 가장 느린 쪽(밀어붙이지 않기)
-            _onBase = false;
+            if (analyze)
+                _onBase = false;
             ContactsMarker.Begin();
-            int count = _rb.GetContacts(_contacts);
+            int count = analyze ? _rb.GetContacts(_contacts) : 0;
             for (int i = 0; i < count; i++)
             {
                 ContactPoint2D contact = _contacts[i];
@@ -1148,6 +1224,35 @@ namespace GnorpWar
                     _climbCandidates.Add(touched);   // 기둥 검사(물리)는 비싸다 — 정말 뛸 수 있는 자리(땅을 딛고 걷기·싸움 분기)에서만 FindClimbTarget으로
             }
             ContactsMarker.End();
+            if (analyze)
+            {
+                _contactsValid = true;
+                _cGrounded = grounded;
+                _cBlockedByEnemy = blockedByEnemy;
+                _cAllyBelow = allyBelow;
+                _cAllyAbove = allyAbove;
+                _cEnemyBelow = enemyBelow;
+                _cOnDeck = onDeck;
+                _cOnGroundSurface = onGroundSurface;
+                _cBelowLayer = belowLayer;
+                _cFrontSupport = frontSupport;
+                _cAllyInFront = allyInFront;
+            }
+            else
+            {
+                grounded = _cGrounded;
+                blockedByEnemy = _cBlockedByEnemy;
+                allyBelow = _cAllyBelow;
+                allyAbove = _cAllyAbove;
+                enemyBelow = _cEnemyBelow;
+                onDeck = _cOnDeck;
+                onGroundSurface = _cOnGroundSurface;
+                belowLayer = _cBelowLayer;
+                frontSupport = _cFrontSupport;
+                allyInFront = _cAllyInFront;
+                allyBehind = _allyBehind;
+                allyAhead = _allyAhead;
+            }
             _allyBehind = allyBehind;
             _allyAhead = allyAhead;
             Engaged = blockedByEnemy;
@@ -1270,7 +1375,7 @@ namespace GnorpWar
                 if (_supportScanTimer <= 0f)
                 {
                     _cachedPatient = FindHealTarget(null);
-                    _supportScanTimer = TargetScanInterval;
+                    _supportScanTimer = ScanInterval;
                 }
                 if (_cachedPatient != null && !_cachedPatient.IsDamaged)
                     _cachedPatient = null;
@@ -1375,7 +1480,7 @@ namespace GnorpWar
                     if (turning && float.IsNaN(x))
                         _turnBackRetryAt = Time.fixedTime + BattleManager.TargetHold;
                     _turnBackX = x;
-                    _turnBackScanTimer = TargetScanInterval;
+                    _turnBackScanTimer = ScanInterval;
                 }
                 if (!float.IsNaN(_turnBackX))
                 {
@@ -1394,7 +1499,7 @@ namespace GnorpWar
             if (_walkScanTimer <= 0f)
             {
                 _aheadOnBaseUnit = IsAheadOnBaseUnit();
-                _walkScanTimer = TargetScanInterval;
+                _walkScanTimer = ScanInterval;
             }
             // 기다림이 풀린 동안(Released)에는 기지 위 유닛 뒤 · 머리 위 아군 때문에 서지 않는다 — 기다려 줄 상대가 더 오지 않는다
             velocity.x = (_aheadOnBaseUnit || holdForAbove) && !Released ? 0f : Forward * MoveSpeed;
@@ -1555,7 +1660,8 @@ namespace GnorpWar
             }
 
             // 맞은 축으로 눌렸다가 출렁이며 원래 모양으로. 발바닥 높이는 고정
-            float t = Mathf.Min(_squashTime / SquashDuration, 1f);
+            // 유닛 수 2단계에서는 출렁임을 건너뛴다(늘 제 모양)
+            float t = _lod >= 2 ? 1f : Mathf.Min(_squashTime / SquashDuration, 1f);
             float wobble = SquashAmount * (1f - t) * Mathf.Cos(t * Mathf.PI * 3f);
             float scaleX = _squashVertical ? 1f + wobble : 1f - wobble;
             float scaleY = _squashVertical ? 1f - wobble : 1f + wobble;
@@ -1904,7 +2010,7 @@ namespace GnorpWar
                 }
             }
 
-            _targetScanTimer = TargetScanInterval;
+            _targetScanTimer = ScanInterval;
             bool found = FindTarget(out target, out targetPoint);
             _cachedTarget = found ? target : null;
             _cachedTargetCollider = found ? _foundCollider : null;
@@ -2143,7 +2249,7 @@ namespace GnorpWar
             if (_walkScanTimer <= 0f || float.IsNegativeInfinity(_flyFloor))
             {
                 _flyFloor = PileTopBelow();
-                _walkScanTimer = TargetScanInterval;
+                _walkScanTimer = ScanInterval;
             }
             float vy = Mathf.Clamp((_flyFloor + _definition.FlyHeight - Feet) / FlyEase, -FlyClimbSpeed, FlyClimbSpeed);
             float vx = Forward * MoveSpeed;

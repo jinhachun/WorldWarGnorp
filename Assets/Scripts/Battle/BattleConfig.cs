@@ -439,6 +439,34 @@ namespace GnorpWar
         [HideIf(nameof(HideNonBalance))]
         [SerializeField] private int _maxFireDepth = 8;
 
+        [Header("성능 — 유닛 수 단계(LOD · 사용자 11/1 「600명 넘으면 렉」). 규칙(공격 · 피해 · 이동 판정)은 같고 「다시 판단하는 빈도」만 준다(Units/Unit). 유닛 수 = 살아 있는 유닛(양 진영 합)")]
+        [Tooltip("1단계 — 이 수부터 접촉 분석(발밑 · 앞막힘 · 등반 후보)을 「1단계 간격」 스텝에 한 번(유닛마다 차례 엇갈림) · 주변 검색 간격 늘림")]
+        [SuffixLabel("기", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _lodUnits1 = 300;
+        [Tooltip("2단계 — 이 수부터 「2단계 간격」 · 위아래가 다 아군인(산 안쪽) 유닛은 「산 안쪽 간격」 · 맞을 때 찌그러짐 생략")]
+        [SuffixLabel("기", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _lodUnits2 = 600;
+        [Tooltip("내려갈 때는 경계보다 이만큼 적어져야 한 단계 내려간다(경계에서 오락가락하지 않게)")]
+        [SuffixLabel("기", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _lodHysteresis = 30;
+        [SuffixLabel("스텝", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _lodContactInterval1 = 2;
+        [SuffixLabel("스텝", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _lodContactInterval2 = 3;
+        [SuffixLabel("스텝", true)]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private int _lodInnerInterval2 = 6;
+        [Tooltip("주변 검색(적 · 회복 대상 · 걷기 앞길) 간격 배율 — 1단계 · 2단계")]
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _lodScanScale1 = 1.5f;
+        [HideIf(nameof(HideNonBalance))]
+        [SerializeField] private float _lodScanScale2 = 2f;
+
         // 밸런싱 창(Editor/BalanceWindow)의 「밸런스와 무관한 값 숨기기」 — 그 창이 그리는 동안만 켜진다. 일반 인스펙터에서는 늘 전부 보인다
         private bool HideNonBalance => BalanceView.HideNonBalance;
 
@@ -517,6 +545,14 @@ namespace GnorpWar
         public int MaxStepSummons => _maxStepSummons;
         public int MaxUnits => _maxUnits;
         public int MaxFireDepth => _maxFireDepth;
+        public int LodUnits1 => _lodUnits1;
+        public int LodUnits2 => _lodUnits2;
+        public int LodHysteresis => _lodHysteresis;
+        public int LodContactInterval1 => _lodContactInterval1;
+        public int LodContactInterval2 => _lodContactInterval2;
+        public int LodInnerInterval2 => _lodInnerInterval2;
+        public float LodScanScale1 => _lodScanScale1;
+        public float LodScanScale2 => _lodScanScale2;
 
         public WorldConfig World => _world;
         public AssetIds AssetIds => _assetIds;

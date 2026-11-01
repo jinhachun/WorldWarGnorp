@@ -83,6 +83,17 @@ namespace GnorpWar
         [Tooltip("지금 읽는 곳 없음 — 회복량 · 교황청 내려치기 피해 · 전투력 표시가 모두 공격력(Attack Damage)을 따른다(사용자 10/22)")]
         [BoxGroup("화염 · 회복")]
         [SerializeField] private float _healAmount = 0f;
+        [Tooltip("번개 전용(AttackType.Chain) — 첫 대상 뒤로 튀는 수(효과가 더할 수 있다 — UnitEffect.ExtraChainBounces)")]
+        [BoxGroup("번개")]
+        [SuffixLabel("기", true)]
+        [SerializeField] private int _chainBounces = 3;
+        [Tooltip("번개 전용 — 방금 맞은 적에서 이 거리 안의 아직 안 맞은 적 유닛 중 가장 가까운 적에게 튄다")]
+        [BoxGroup("번개")]
+        [SuffixLabel("칸", true)]
+        [SerializeField] private float _chainRadius = 3f;
+        [Tooltip("번개 전용 — 튈 때마다 피해에 곱한다(0.7 = 30%씩 준다)")]
+        [BoxGroup("번개")]
+        [SerializeField] private float _chainFalloff = 0.7f;
         [Tooltip("점프 착지 충격(코끼리) — 이 간격(초)마다 제자리에서 뛰었다가, 땅에 닿으면 반경 안의 적 유닛(탑·기지 제외)을 띄우며 피해. 0이면 없음")]
         [BoxGroup("점프 착지 충격")]
         [SuffixLabel("초", true)]
@@ -172,6 +183,9 @@ namespace GnorpWar
         public float ProjectileSplashRadius => _projectileSplashRadius;
         public float FlameThickness => _flameThickness;
         public float HealAmount => _healAmount;
+        public int ChainBounces => _chainBounces;
+        public float ChainRadius => _chainRadius;
+        public float ChainFalloff => _chainFalloff;
         public float SlamInterval => _slamInterval;
         public float SlamJumpHeight => _slamJumpHeight;
         public float SlamRadius => _slamRadius;

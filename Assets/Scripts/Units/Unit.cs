@@ -1441,6 +1441,10 @@ namespace GnorpWar
                     {
                         FireProjectile(target, targetPoint);
                     }
+                    else if (_definition.AttackType == AttackType.Chain)
+                    {
+                        ChainLightning(target, targetPoint);
+                    }
                     else
                     {
                         // 달려와서 치는 첫 타격은 돌격 — 피해·밀치기에 배율
@@ -1456,7 +1460,7 @@ namespace GnorpWar
                             e.Effect.OnAttack(this, target, e.Stacks);
                     _runTime = 0f;
                     if (_definition.AttackType != AttackType.Flame)   // 화염은 입(무기 자리)이 움직이면 안 된다
-                        StartThrust(hitDirection, _definition.AttackType != AttackType.Ranged);
+                        StartThrust(hitDirection, _definition.AttackType != AttackType.Ranged && _definition.AttackType != AttackType.Chain);
                     _attackCooldown = NextCooldown(_attackCooldown, IntervalAfter(target));
                 }
                 return;
@@ -2199,7 +2203,8 @@ namespace GnorpWar
         // 사거리 안에서 체력 비율이 가장 낮은 다친 아군(자기·exclude 제외)
         public Unit FindHealTarget(List<Unit> exclude)
         {
-            Physics2D.OverlapCircle(_rb.position, _definition.AttackRange, _allyFilter, _overlaps);
+            // 사거리 변경(영혼 수확 — 지원병 사거리)도 회복 거리에 얹힌다
+            Physics2D.OverlapCircle(_rb.position, AttackRange, _allyFilter, _overlaps);
             Unit best = null;
             float bestRatio = 1f;
             foreach (Collider2D col in _overlaps)
@@ -2318,6 +2323,60 @@ namespace GnorpWar
                 Vector2 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : new Vector2(Forward, 0f);
                 Strike(damageable, AttackDamage * DamageScale, direction, _definition.PushPower);
             }
+        }
+
+        // 번개(주술사) — 첫 대상을 치고, 방금 맞은 적에서 번개 반경 안의 아직 안 맞은 적 유닛 중 가장 가까운 적에게 차례로 튄다. 튈 때마다 피해 × 감쇠.
+        // 튀는 수 = 유닛 값 + 켜진 효과(번개 토템). 피해는 직접 타격(Strike)이라 딜 미터기는 이 유닛 종류 몫이다. 연출은 Fx/LightningFx
+        private readonly List<IDamageable> _chainHit = new List<IDamageable>();
+
+        private void ChainLightning(IDamageable target, Vector2 targetPoint)
+        {
+            int bounces = _definition.ChainBounces;
+            foreach (TeamEffects.Entry e in TeamEffects.For(_team))
+                bounces += e.Effect.ExtraChainBounces(_team, _definition, e.Stacks);
+            float damage = AttackDamage * DamageScale;
+            Vector2 from = WeaponPoint;
+            Vector2 at = target is Unit first ? first.Position : targetPoint;
+            _chainHit.Clear();
+            for (int hop = 0; target != null; hop++)
+            {
+                Vector2 direction = at - from;
+                direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : new Vector2(Forward, 0f);
+                _chainHit.Add(target);
+                LightningFx.Strike(from, at);
+                if (FxDirector.Instance != null)
+                    FxDirector.Instance.HitSpark(at, direction, ChainSparkColor);
+                Strike(target, damage, direction, _definition.PushPower);
+                if (hop >= bounces)
+                    break;
+                Unit next = NextChainTarget(at);
+                target = next;
+                from = at;
+                if (next != null)
+                    at = next.Position;
+                damage *= _definition.ChainFalloff;
+            }
+        }
+
+        private static readonly Color ChainSparkColor = new Color(0.2f, 0.45f, 1f); // LightningFx 띠와 같은 파랑
+
+        private Unit NextChainTarget(Vector2 from)
+        {
+            Physics2D.OverlapCircle(from, _definition.ChainRadius, _enemyFilter, _overlaps);
+            Unit best = null;
+            float bestDistance = float.MaxValue;
+            foreach (Collider2D col in _overlaps)
+            {
+                if (!col.TryGetComponent(out Unit enemy) || enemy._team == _team || !enemy.IsAlive || _chainHit.Contains(enemy))
+                    continue;
+                float distance = (enemy._rb.position - from).sqrMagnitude;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = enemy;
+                }
+            }
+            return best;
         }
 
         // 점프 착지 충격 — 발밑 반경 안의 적 유닛(탑·기지 제외)에게 피해를 주고 위로 띄운다

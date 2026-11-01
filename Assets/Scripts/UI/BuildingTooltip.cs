@@ -325,6 +325,8 @@ namespace GnorpWar
                 traits.Add("앞에 있는 적을 한꺼번에 불태웁니다.");
             if (unit.AttackType == AttackType.Sweep)
                 traits.Add("앞에 있는 적을 한꺼번에 칩니다.");
+            if (unit.AttackType == AttackType.Chain)
+                traits.Add(ColorNumbers($"번개가 근처 적 {unit.ChainBounces}기에게 튑니다."));
             if (unit.AttackType == AttackType.Build)
                 traits.Add("작은 타워를 짓습니다.");
             if (unit.Flies)

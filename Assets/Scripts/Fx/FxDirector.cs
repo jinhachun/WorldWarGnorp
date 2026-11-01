@@ -38,6 +38,7 @@ namespace GnorpWar
             // 전투 시각화 부품(Docs/전투시각화_계획.md) — 모두 같은 픽셀 재질 · 부품마다 메시 하나
             gameObject.AddComponent<ArrowTrails>().Init(pixel);
             gameObject.AddComponent<FireTrails>().Init(pixel);
+            gameObject.AddComponent<LightningFx>().Init(pixel);
             gameObject.AddComponent<RingFx>().Init(pixel);
             gameObject.AddComponent<StatusDots>().Init(pixel);
             gameObject.AddComponent<UnitHealthBars>().Init(pixel);

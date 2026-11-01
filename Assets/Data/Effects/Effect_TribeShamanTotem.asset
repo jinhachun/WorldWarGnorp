@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b87fe1babd1e1284eb31b0f6a5eb5e98, type: 3}
+  m_Name: Effect_TribeShamanTotem
+  m_EditorClassIdentifier: Assembly-CSharp::GnorpWar.ChainBounceEffect
+  _categories:
+  - {fileID: 11400000, guid: 3e7547717ad9ff84baa58587a0d5fc1d, type: 2}
+  _units: []
+  _description: "\uC8FC\uC220\uC0AC \uBC88\uAC1C\uAC00 \uD280\uB294 \uC218 +{0}\n\uACBD\uBCF4\uBCD1\uC774
+    {1}\uAE30 \uC8FD\uC744 \uB54C\uB9C8\uB2E4\n\uC804\uD22C \uB3D9\uC548 \uD280\uB294
+    \uC218 +{2}, \uCD5C\uB300 +{3}"
+  _trait: 
+  _bouncer: {fileID: 11400000, guid: 360f201c4a536264784a21d439d46c17, type: 2}
+  _bonus: 1
+  _every: 30
+  _perDeaths: 1
+  _maxFromDeaths: 3

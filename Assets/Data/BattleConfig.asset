@@ -112,6 +112,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 34b38f40e0cbb3d418ad3c659db89633, type: 2}
   - {fileID: 11400000, guid: 26563e1708100194aa122e0c7a7c3bc9, type: 2}
   - {fileID: 11400000, guid: 67aefee4eb89a974aace39dc3eab3991, type: 2}
+  - {fileID: 11400000, guid: ee64e05aee1c46a4ca73a14ea3e75845, type: 2}
+  - {fileID: 11400000, guid: b7815612398b12c49b270316f0e7dda0, type: 2}
+  - {fileID: 11400000, guid: e8e85725571fcc449a0fc912ed2efb76, type: 2}
+  - {fileID: 11400000, guid: bb6a64220abf4384aadfa6e8b48d2139, type: 2}
   _upgrades:
   - {fileID: 11400000, guid: a1c996e8770c95d4bbfac2a051678051, type: 2}
   - {fileID: 11400000, guid: 76cef2535c62d71498521484c452ff02, type: 2}
@@ -321,7 +325,47 @@ MonoBehaviour:
   _castleHitGap: 0.15
   _castleHitCameraShake: 0.15
   _collapseShake: 0.4
+  _buttonRise: 1
+  _buttonSink: 1
+  _buttonBounceSeconds: 0.22
+  _buttonOvershoot: 4
+  _buttonDeniedShake: 2
+  _buttonDeniedSeconds: 0.25
+  _dropThump: 0.15
+  _dropThumpSeconds: 0.25
+  _sellShrinkSeconds: 0.15
+  _goldRollSeconds: 0.3
+  _goldPunch: 0.35
+  _goldPunchHold: 0.08
+  _goldPunchSeconds: 0.25
+  _heartBreakSeconds: 0.9
+  _offerPop: 0.25
+  _offerPopSeconds: 0.25
+  _offerPopStagger: 0.07
+  _coinsPerDouble: 2
+  _coinsMax: 12
+  _coinBurstHeightMin: 20
+  _coinBurstHeightMax: 40
+  _coinBurstSpread: 30
+  _coinBurstSeconds: 0.4
+  _coinBounce: 0.25
+  _coinHold: 0.12
+  _coinGap: 0.03
+  _coinFlySeconds: 0.35
+  _coinCurve: 0.12
+  _popupDrop: 6
+  _popupOpenSeconds: 0.12
+  _popupRise: 4
+  _popupCloseSeconds: 0.08
   _maxSummonDepth: 8
   _maxStepSummons: 400
   _maxUnits: 999
   _maxFireDepth: 8
+  _lodUnits1: 300
+  _lodUnits2: 600
+  _lodHysteresis: 30
+  _lodContactInterval1: 2
+  _lodContactInterval2: 3
+  _lodInnerInterval2: 6
+  _lodScanScale1: 1.5
+  _lodScanScale2: 2

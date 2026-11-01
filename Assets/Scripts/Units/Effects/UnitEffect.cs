@@ -149,5 +149,7 @@ namespace GnorpWar
         public virtual float BaseBlockChance(Team team) => 0f;
         // 이 진영의 본진이 피해를 받은 직후(살아 있을 때 — 왕성 수비대)
         public virtual void OnBaseDamaged(Base home) { }
+        // 이 진영의 번개 유닛 unit의 번개가 더 튀는 수(번개 토템) — 효과끼리 더한다
+        public virtual int ExtraChainBounces(Team team, UnitDefinition unit, int stacks) => 0;
     }
 }

@@ -25,6 +25,8 @@ namespace GnorpWar
         [SerializeField] private UnitDefinition _back;
         [Tooltip("연계로 태어난 유닛의 처치도 발동한다(「연계는 한 번만」의 예외 — 확률이라 저절로 끊긴다)")]
         [SerializeField] private bool _chainAgain;
+        [Tooltip("켜면 본진이 아니라 처치된 유닛이 쓰러진 자리(땅)에 소환한다(폭풍의 대주술사: 주술사가 처치한 적이 아군 원시 졸병으로 일어남 — 사용자 11/1)")]
+        [SerializeField] private bool _atVictim;
 
         private int Count(int level) => OwnedBuilding.Scaled(_count, _countPerTier, level);
         private float Chance(int level) => OwnedBuilding.Scaled(_chance, _chancePerTier, level);
@@ -35,6 +37,14 @@ namespace GnorpWar
                 return;
             if (Chance(Level(killer.Team)) < 100f && Random.value * 100f >= Chance(Level(killer.Team)))
                 return;
+            if (_atVictim)
+            {
+                Vector2 at = victim.Position;
+                Vector2 ground = new Vector2(at.x, Ground.Instance != null ? Ground.Instance.HeightAt(at.x) : at.y);
+                BoardRunner.For(killer.Team).Summon(_summon, Count(Level(killer.Team)), -1, ground, Source(killer.Team), chained: true);
+                BuffLinks.EffectFromUnit(killer.Team, this, killer.Position, ground, BuffKind.Summon);
+                return;
+            }
             SummonFor(killer, _back != null && killer.Definition == _summon ? _back : _summon);
         }
 

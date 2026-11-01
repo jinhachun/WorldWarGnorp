@@ -73,7 +73,7 @@ namespace GnorpWar
             else
             {
                 perSecond = unit.AttackDamage * unit.DamageScale / unit.AttackInterval;
-                if (definition.AttackType == AttackType.Flame || definition.AttackType == AttackType.Sweep)
+                if (definition.AttackType == AttackType.Flame || definition.AttackType == AttackType.Sweep || definition.AttackType == AttackType.Chain)
                     perSecond *= config.PowerAreaScale;
             }
             return Mathf.Sqrt(unit.Hp * Mathf.Max(0f, perSecond)) * config.PowerDisplayScale;

@@ -145,8 +145,6 @@ namespace GnorpWar
         public BuildingDefinition SummonedBy { get; private set; }
         // 연계로 태어났나 — 「소환하면 · 죽으면 · 처치하면 소환」 효과가 낸 유닛(BoardRunner.Summon의 chained). 이 유닛의 죽음 · 처치는 그런 연계 소환을 다시 부르지 않는다(사용자 10/26: 서로 영향 주는 연계는 한 번만)
         public bool ChainBorn { get; private set; }
-        // 이 유닛을 낸 칸(BoardRunner.Summon의 sourceSlot) — 칸 없는 소환이면 -1. 준 피해를 그 칸 몫으로 센다(Battle/DamageMeter)
-        public int SourceSlot { get; private set; } = -1;
 
         // 효과별 이 유닛의 다음 사용 시각(톱니거인의 주기 소환 등) — 생애마다 비운다
         private readonly Dictionary<UnitEffect, float> _effectReadyAt = new Dictionary<UnitEffect, float>();
@@ -785,7 +783,6 @@ namespace GnorpWar
         public void NotifySummoned(int sourceSlot, BuildingDefinition source, bool chained)
         {
             SummonedBy = source;
-            SourceSlot = sourceSlot;
             ChainBorn = chained;
             // 훅이 또 소환하면 그 유닛의 효과가 목록에 붙는다 — 지금 개수까지만(Perish와 같다)
             List<TeamEffects.Entry> effects = TeamEffects.For(_team);
@@ -929,7 +926,6 @@ namespace GnorpWar
             Life++;
             SummonedBy = null;
             ChainBorn = false;
-            SourceSlot = -1;
             CombatPower.NoteSpawn(_team);
             _counted = true;
             ChainGuard.UnitEnabled(_team);

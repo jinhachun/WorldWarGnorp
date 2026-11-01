@@ -20,6 +20,9 @@ namespace GnorpWar
             public bool HighGround;
             public bool Boosted;
             public bool Extra;
+            // 쏘게 한 기물의 칸(망루) — 딜 미터기가 그 칸 몫으로 센다. FromSlot이 꺼져 있으면 쏜 쪽 몫
+            public bool FromSlot;
+            public int Slot;
         }
 
         private readonly List<Shot> _queue = new List<Shot>();
@@ -66,6 +69,8 @@ namespace GnorpWar
                 shot.HighGround(s.Boosted);
             if (s.Extra)
                 shot.MarkExtra();
+            if (s.FromSlot)
+                shot.CreditTo(s.Slot);
         }
     }
 }

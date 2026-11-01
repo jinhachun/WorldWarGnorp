@@ -30,6 +30,8 @@ namespace GnorpWar
         private int _shooterLife;
         // 쏜 유닛의 종류(타워의 화살이면 null) — 화살이 맞았을 때의 효과(OnArrowHit)의 적용 분류는 쏠 때 기준
         private UnitDefinition _shooterDefinition;
+        // 쏘게 한 기물의 칸(망루) — 딜 미터기가 그 칸 몫으로 센다(Battle/DamageMeter). 없으면 -1
+        private int _creditSlot = -1;
         private bool _spent;
         // 관통 — 적을 맞혀도 멈추지 않고 땅·벽에 닿을 때까지. 한 적은 한 번만
         private bool _pierce;
@@ -113,6 +115,7 @@ namespace GnorpWar
             _heal = 0f;
             _owner = null;
             _shooter = null;
+            _creditSlot = -1;
             _pierce = false;
             _highGround = false;
             _highGroundBoost = false;
@@ -148,6 +151,9 @@ namespace GnorpWar
                 ArrowTrails.FollowFire(this);
         }
 
+        // Launch 뒤에 — 이 탄의 피해는 slot 칸의 기물 몫이다(망루, 딜 미터기)
+        public void CreditTo(int slot) => _creditSlot = slot;
+
         // Launch 뒤에 — 이번 비행은 적을 관통한다(관통탄 특허국)
         public void Pierce(float hitBonus = 0f)
         {
@@ -182,7 +188,9 @@ namespace GnorpWar
         {
             // 타워(본진 · 작은 타워)의 화살이 건물(본진 · 작은 타워)을 맞히면 피해 ×배율(BattleConfig — 사용자 10/22). 유닛에게는 그대로
             float damage = _shooter is Base && target is Base ? _damage * BattleManager.TowerVsBuildingDamage : _damage;
+            DamageMeter.Hit(_team, _shooterDefinition, _creditSlot);
             target.TakeDamage(damage, direction, _push, Shooter);
+            DamageMeter.EndHit();
             if (_slowSeconds > 0f && target is Unit slowed && slowed.IsAlive)
                 slowed.Slow(_slowFactor, _slowSeconds);
             if (_shooterDefinition != null && target is Unit hit && hit.IsAlive)
@@ -314,7 +322,9 @@ namespace GnorpWar
 
                 Vector2 away = (Vector2)col.bounds.center - center;
                 Vector2 direction = (away.normalized + Vector2.up * SplashLiftBias).normalized;
+                DamageMeter.Hit(_team, _shooterDefinition, _creditSlot);
                 damageable.TakeDamage(_damage, direction, _push, Shooter);
+                DamageMeter.EndHit();
             }
         }
     }

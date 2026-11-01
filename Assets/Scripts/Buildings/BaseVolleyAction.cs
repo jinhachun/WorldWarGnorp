@@ -20,13 +20,13 @@ namespace GnorpWar
         {
             Base home = Base.For(board.Team);
             if (home != null)
-                home.ShootNearestUnit(Arrows(level));
+                home.ShootNearestUnit(Arrows(level), slot);
             OwnedBuilding self = board.Slots[slot].Building;
             if (_mythicMark == null || System.Array.IndexOf(self.Passives, _mythicMark) < 0)
                 return;
             foreach (Base small in Base.SmallTowers())
                 if (small.Team == board.Team)
-                    small.ShootNearestUnit(Arrows(level));
+                    small.ShootNearestUnit(Arrows(level), slot);
         }
 
         public override string Describe(int level) => $"본진이 가장 가까운 적에게 화살 {Arrows(level)}발을 쏩니다.";

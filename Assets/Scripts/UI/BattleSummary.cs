@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace GnorpWar
 {
     // 결과 창 — 판(검은 속 + 회색 2px 선 + 매듭, 스타일 가이드 「판 선」)과 딜 미터기(사용자 10/21).
-    // 딜 미터기 = 내 탑 층마다 그 기물이 낸 유닛들이 이번 전투에 준 피해(많은 순 · 1위는 영주 색 그대로, 나머지는 어둡게) + 「타워」 · 「기타」 줄(작은 아이콘, 맨 아래).
+    // 딜 미터기 = 유닛 종류마다 이번 전투에 준 피해 + 직접 피해를 낸 기물(망루 · 뼈 투척) 줄(사용자 11/1 — 기물이 아니라 유닛 기준. 많은 순 · 1위는 영주 색 그대로, 나머지는 어둡게) + 「타워」 · 「기타」 줄(작은 아이콘, 맨 아래).
     // 「나 / 적」 탭(사용자 10/22)으로 적 진영의 같은 표를 본다 — 적 기물 이름은 빨강, 막대는 적 영주 색. 판 크기는 두 쪽 중 긴 쪽에 맞춰 고정, 기본은 「나」.
     // 숫자는 전투 상태(Battle/DamageMeter)를 읽기만 한다. 판 높이 · 너비는 줄 수 · 이름 길이에 맞춰 이 코드가 정한다 — 제목 · 영향 · 버튼은 판의 위 · 아래 모서리에 붙어 따라온다.
     // 열리면 판이 위에서 계단으로 내려앉고, 막대가 위에서부터 차례로 차오르며 숫자가 굴러 올라간다(실제 시간 — 결과 창은 timeScale 0). 아무 클릭 · 키나 누르면 바로 끝 상태로
@@ -74,11 +74,11 @@ namespace GnorpWar
         // 한 진영의 줄 거리 — 기물 줄(많은 순) · 타워 · 기타 줄
         private class Sheet
         {
-            public readonly List<(string Name, Sprite Icon, float Value)> Buildings = new List<(string, Sprite, float)>();
-            public readonly List<(string Name, Sprite Icon, float Value)> Small = new List<(string, Sprite, float)>();
+            public readonly List<(string Name, Sprite Icon, UnitDefinition Unit, float Value)> Big = new List<(string, Sprite, UnitDefinition, float)>();
+            public readonly List<(string Name, Sprite Icon, UnitDefinition Unit, float Value)> Small = new List<(string, Sprite, UnitDefinition, float)>();
             public float Max;
-            public float Height => Buildings.Count + Small.Count == 0 ? BigRow
-                : Buildings.Count * (BigRow + RowGap) + (Small.Count > 0 && Buildings.Count > 0 ? GroupGap - RowGap : 0f) + Small.Count * (SmallRow + RowGap) - RowGap;
+            public float Height => Big.Count + Small.Count == 0 ? BigRow
+                : Big.Count * (BigRow + RowGap) + (Small.Count > 0 && Big.Count > 0 ? GroupGap - RowGap : 0f) + Small.Count * (SmallRow + RowGap) - RowGap;
         }
 
         private class Row
@@ -126,7 +126,7 @@ namespace GnorpWar
             float rowsHeight = 0f;
             foreach (Sheet sheet in _sheets)
             {
-                foreach (var r in sheet.Buildings) nameColumn = Mathf.Max(nameColumn, NameWidth(r.Name));
+                foreach (var r in sheet.Big) nameColumn = Mathf.Max(nameColumn, NameWidth(r.Name));
                 rowsHeight = Mathf.Max(rowsHeight, sheet.Height);
             }
             nameColumn = Mathf.Ceil(nameColumn / 8f) * 8f;
@@ -159,12 +159,12 @@ namespace GnorpWar
             float nameX = Pad + IconColumn + Gap;
             float y = 0f;
             bool topTaken = false;
-            foreach (var r in sheet.Buildings)
+            foreach (var r in sheet.Big)
             {
                 AddRow(r, true, y, nameX, barX, sheet.Max, ref topTaken);
                 y -= BigRow + RowGap;
             }
-            if (sheet.Small.Count > 0 && sheet.Buildings.Count > 0)
+            if (sheet.Small.Count > 0 && sheet.Big.Count > 0)
                 y -= GroupGap - RowGap;
             foreach (var r in sheet.Small)
             {
@@ -189,11 +189,14 @@ namespace GnorpWar
             Fill(team);
         }
 
-        // 줄 모으기 — 유닛을 내는 기물(0이어도 보여 준다: 회복만 하는 기물) · 피해를 낸 기물, 많은 순. 그다음 타워 · 기타(피해가 있을 때만).
-        // 적 기물 이름은 빨강(§5-2-9), 「기타」 아이콘의 열쇠 색 자리는 그 진영 영주 색
+        // 줄 모으기 — 피해를 낸 유닛(종류별, 사용자 11/1 — 기물이 아니라 유닛 기준) · 직접 피해를 낸 기물(망루 · 뼈 투척), 섞어서 많은 순. 그다음 타워 · 기타(피해가 있을 때만).
+        // 적 진영 이름은 빨강(§5-2-9), 「기타」 아이콘의 열쇠 색 자리는 그 진영 영주 색
         private Sheet Collect(Team team)
         {
             var sheet = new Sheet();
+            foreach (KeyValuePair<UnitDefinition, float> unit in DamageMeter.UnitsOf(team))
+                if (unit.Value > 0f)
+                    sheet.Big.Add((unit.Key.DisplayName, null, unit.Key, unit.Value));
             IReadOnlyDictionary<int, float> dealt = DamageMeter.Of(team);
             BoardRunner board = BoardRunner.For(team);
             // 같은 기물이 여러 층에 있으면 한 줄로 — 층 피해 합 · 이름 뒤 「×N」(등급이 달라도 같은 기물이면 합친다, 사용자 10/21)
@@ -206,7 +209,7 @@ namespace GnorpWar
                     if (OwnedBuilding.IsEmpty(owned))
                         continue;
                     float value = dealt.TryGetValue(i, out float v) ? v : 0f;
-                    if (owned.Definition.Unit == null && value <= 0f)
+                    if (value <= 0f)
                         continue;
                     if (!grouped.TryGetValue(owned.Definition, out var sum))
                         order.Add(owned.Definition);
@@ -215,19 +218,19 @@ namespace GnorpWar
             foreach (BuildingDefinition definition in order)
             {
                 var sum = grouped[definition];
-                sheet.Buildings.Add((sum.Count > 1 ? $"{definition.DisplayName} ×{sum.Count}" : definition.DisplayName, definition.IconLarge, sum.Value));
+                sheet.Big.Add((sum.Count > 1 ? $"{definition.DisplayName} ×{sum.Count}" : definition.DisplayName, definition.IconLarge, null, sum.Value));
             }
-            sheet.Buildings.Sort((a, b) => b.Value.CompareTo(a.Value));
+            sheet.Big.Sort((a, b) => b.Value.CompareTo(a.Value));
             if (dealt.TryGetValue(DamageMeter.Tower, out float tower) && tower > 0f)
-                sheet.Small.Add(("타워", _towerIcon, tower));
+                sheet.Small.Add(("타워", _towerIcon, null, tower));
             if (dealt.TryGetValue(DamageMeter.Other, out float other) && other > 0f)
-                sheet.Small.Add(("기타", LordPaint.Of(_otherIcon, team), other));
-            foreach (var r in sheet.Buildings) sheet.Max = Mathf.Max(sheet.Max, r.Value);
+                sheet.Small.Add(("기타", LordPaint.Of(_otherIcon, team), null, other));
+            foreach (var r in sheet.Big) sheet.Max = Mathf.Max(sheet.Max, r.Value);
             foreach (var r in sheet.Small) sheet.Max = Mathf.Max(sheet.Max, r.Value);
             return sheet;
         }
 
-        private void AddRow((string Name, Sprite Icon, float Value) data, bool big, float y, float nameX, float barX, float max, ref bool topTaken)
+        private void AddRow((string Name, Sprite Icon, UnitDefinition Unit, float Value) data, bool big, float y, float nameX, float barX, float max, ref bool topTaken)
         {
             // 줄 하나 = 부품 프리팹 UI_MeterRow(아이콘 · 이름 · 막대(Filled — §5-1 게이지 예외) · 숫자) — 자리는 줄 높이에 맞춰 여기서 놓는다
             float height = big ? BigRow : SmallRow;
@@ -236,10 +239,22 @@ namespace GnorpWar
             Place(root, 0f, y, 0f, height);
 
             var icon = root.Find("Icon").GetComponent<Image>();
-            icon.sprite = data.Icon;
-            icon.SetNativeSize();
-            Vector2 iconSize = icon.rectTransform.sizeDelta;
-            Place(icon.rectTransform, Pad + (IconColumn - iconSize.x) * 0.5f, -(height - iconSize.y) * 0.5f, iconSize.x, iconSize.y);
+            RectTransform iconRect = icon.rectTransform;
+            if (data.Unit != null)
+            {
+                // 유닛 줄 — 유닛 카드와 같은 그림(부품을 짜 맞춘 것, 그 진영 영주 색). 아이콘 칸은 비우고 그 자리에 그린다
+                icon.enabled = false;
+                iconRect = (RectTransform)new GameObject("UnitIcon", typeof(RectTransform)).transform;
+                iconRect.SetParent(root, false);
+                BuildingTooltip.DrawUnitIcon(iconRect, data.Unit, _team == Team.Enemy);
+            }
+            else
+            {
+                icon.sprite = data.Icon;
+                icon.SetNativeSize();
+            }
+            Vector2 iconSize = iconRect.sizeDelta;
+            Place(iconRect, Pad + (IconColumn - iconSize.x) * 0.5f, -(height - iconSize.y) * 0.5f, iconSize.x, iconSize.y);
 
             Text name = root.Find("Name").GetComponent<Text>();
             name.text = data.Name;

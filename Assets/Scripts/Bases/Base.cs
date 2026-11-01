@@ -356,7 +356,8 @@ namespace GnorpWar
 
         // 찾아 둔 대상(_targets)에게 화살 arrows발 — 가까운 적부터 한 발씩 나눠 쏜다. 쿨다운은 부르는 쪽이 돌린다.
         // extra = 처치해서 더 쏜 발(노란 꼬리 — Fx/ArrowTrails). 여러 발이면 첫 발 뒤로 짧은 시차를 두고 연달아 나간다(Units/Volley — 대상은 지금 정한 그대로)
-        private void Shoot(int arrows, bool extra = false)
+        // slot = 쏘게 한 기물의 칸(망루 — 딜 미터기가 그 칸 몫으로 센다), 평소 사격은 -1
+        private void Shoot(int arrows, bool extra = false, int slot = -1)
         {
             float damage = Stat(TowerStat.Attack);
             // 타워는 늘 높은 고도 — 적 유닛에게 기름투하대 보너스(적 본진엔 없음) · 관통탄
@@ -389,13 +390,15 @@ namespace GnorpWar
                     HighGround = target.isUnit,   // 타워는 적 유닛에게 늘 높은 고도(기름투하대)
                     Boosted = highGround > 1f,
                     Extra = extra,
+                    FromSlot = slot >= 0,
+                    Slot = slot,
                 }, i, _team, _muzzle.position, this);
             }
         }
 
         // 전장에서 가장 가까운 적 유닛 하나에게 화살 arrows발(망루 — 사거리와 상관없이). 쏠 수 없거나(죽음 · 데스매치) 적 유닛이 없으면 false.
         // 대상만 이 자리에서 정하고 쏘는 길은 Shoot 그대로 — 평소 사격의 쿨다운은 건드리지 않는다
-        public bool ShootNearestUnit(int arrows)
+        public bool ShootNearestUnit(int arrows, int slot)
         {
             if (!IsAlive || !CanAttack || arrows <= 0)
                 return false;
@@ -412,7 +415,7 @@ namespace GnorpWar
                 return false;
             _targets.Clear();
             _targets.Add((best, nearest.Position, true));
-            Shoot(arrows);
+            Shoot(arrows, false, slot);
             return true;
         }
 

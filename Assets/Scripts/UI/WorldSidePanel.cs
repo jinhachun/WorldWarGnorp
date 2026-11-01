@@ -368,7 +368,22 @@ namespace GnorpWar
                     PlaceText(_landBody, center, y - LineGap);
                 }
             }
-            ShowTower(mine ? RunState.Field : world.TowerOf(lord).Field, !mine, RunState.ColorOf(lord));
+            // 멀리 있는 영주의 탑은 층만 보이고 기물은 가린다(사용자 11/1) — 국경을 맞댄 영주 = 다 보임 · 그 너머(2칸) = 위쪽 절반을 가림 · 더 먼 영주 = 다 가림
+            OwnedBuilding[] field = mine ? RunState.Field : world.TowerOf(lord).Field;
+            int distance = mine ? 0 : Distance(state, lord);
+            ShowTower(field, !mine, RunState.ColorOf(lord), distance <= 1 ? field.Length : distance == 2 ? field.Length / 2 : 0);
+        }
+
+        // 나에서 lord까지 국경을 몇 번 건너나 — 1 = 맞댐 · 2 = 맞댄 영주와 맞댐 · 3 = 그보다 멀다
+        private static int Distance(WorldState state, Lord lord)
+        {
+            System.Collections.Generic.List<Lord> near = state.Neighbors(state.Player);
+            if (near.Contains(lord))
+                return 1;
+            foreach (Lord next in near)
+                if (next != null && state.Neighbors(next).Contains(lord))
+                    return 2;
+            return 3;
         }
 
         // 「침략」 ↔ 「방문」 — 글과 아이콘만 바꾼다(켜고 끄기 · 못 누름은 WorldManager)
@@ -608,8 +623,9 @@ namespace GnorpWar
             return y - CellHeight;
         }
 
-        // field = 보여 줄 탑(없으면 null — 탑을 숨긴다). 층 수만큼 1층부터 쌓고 맨 위에 그 영주 색 지붕(전장 탑과 같다)
-        private void ShowTower(OwnedBuilding[] field, bool enemy, Color color)
+        // field = 보여 줄 탑(없으면 null — 탑을 숨긴다). 층 수만큼 1층부터 쌓고 맨 위에 그 영주 색 지붕(전장 탑과 같다).
+        // seen = 기물이 보이는 층 수(1층부터) — 그 위 층은 빈 층에 검은 「?」(지도의 미지의 땅과 같은 그림)
+        private void ShowTower(OwnedBuilding[] field, bool enemy, Color color, int seen = int.MaxValue)
         {
             if (_slotTemplate == null)
                 return;
@@ -634,8 +650,10 @@ namespace GnorpWar
                     _slots[i].gameObject.SetActive(shown);
                 if (!shown)
                     continue;
+                bool hidden = i >= seen;
                 _slots[i].Bind(null, enemy ? BoardView.Source.EnemyField : BoardView.Source.AllyField, i);
-                _slots[i].Show(field[i], null, false, false);
+                _slots[i].Show(hidden ? null : field[i], null, false, false);
+                _slots[i].ShowUnknown(hidden ? _unknownIconLarge : null);
             }
             // 대상 표시(사용자 10/27) — 층에 마우스를 올려 툴팁이 떴으면 그 기물의 효과를 받는 층에 꺾쇠(BoardView와 같은 길)
             int hovered = -1;

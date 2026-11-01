@@ -197,6 +197,32 @@ namespace GnorpWar
                 _targetMark.gameObject.SetActive(on);
         }
 
+        // 가린 층(멀리 있는 영주의 탑 — UI/WorldSidePanel)의 검은 「?」 — 아이콘 자리 한가운데, 원본 크기(§5-1). null이면 숨긴다
+        private Image _unknown;
+
+        public void ShowUnknown(Sprite mark)
+        {
+            if (_unknown == null)
+            {
+                if (mark == null)
+                    return;
+                _unknown = new GameObject("Unknown", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                _unknown.raycastTarget = false;
+                _unknown.preserveAspect = true;
+                RectTransform rect = _unknown.rectTransform;
+                rect.SetParent(_icon.transform, false);
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+            }
+            if (mark != null && _unknown.sprite != mark)
+            {
+                _unknown.sprite = mark;
+                _unknown.SetNativeSize();
+            }
+            if (_unknown.enabled != (mark != null))
+                _unknown.enabled = mark != null;
+        }
+
         // 지금 툴팁을 띄운 칸(마우스를 올린 칸) — 탑을 그리는 쪽이 대상 표시를 낼 때 읽는다
         public bool TooltipShown => BuildingTooltip.IsOwner(this);
 
